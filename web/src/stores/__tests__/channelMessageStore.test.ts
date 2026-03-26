@@ -64,7 +64,7 @@ describe("Channel Message Store", () => {
     it("should prepend on load-more (beforeId)", async () => {
       const existing = { ...mockMessage, id: 10, content: "Existing" };
       useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [existing], hasMore: true, loading: false, loadingMore: false } },
+        cache: { [CH]: { messages: [existing], hasMore: true, loading: false, loadingMore: false, error: null } },
       });
       vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [{ ...mockMessage, id: 5, content: "Older" }], has_more: false });
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH, 50, 10); });
@@ -77,7 +77,7 @@ describe("Channel Message Store", () => {
 
     it("should replace on refresh (no beforeId)", async () => {
       useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [{ ...mockMessage, content: "Old" }], hasMore: false, loading: false, loadingMore: false } },
+        cache: { [CH]: { messages: [{ ...mockMessage, content: "Old" }], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [mockMessage], has_more: false });
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH); });
@@ -86,7 +86,7 @@ describe("Channel Message Store", () => {
 
     it("should isolate channels", async () => {
       useChannelMessageStore.setState({
-        cache: { 2: { messages: [{ ...mockMessage, id: 99, channel_id: 2, content: "Ch2" }], hasMore: false, loading: false, loadingMore: false } },
+        cache: { 2: { messages: [{ ...mockMessage, id: 99, channel_id: 2, content: "Ch2" }], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [mockMessage], has_more: false });
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH); });
@@ -130,7 +130,7 @@ describe("Channel Message Store", () => {
 
     it("should append to existing", () => {
       useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [{ ...mockMessage, id: 0, content: "First" }], hasMore: false, loading: false, loadingMore: false } },
+        cache: { [CH]: { messages: [{ ...mockMessage, id: 0, content: "First" }], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       act(() => { useChannelMessageStore.getState().addMessage(CH, mockMessage); });
       expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(2);
@@ -138,7 +138,7 @@ describe("Channel Message Store", () => {
 
     it("should deduplicate", () => {
       useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false } },
+        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       act(() => { useChannelMessageStore.getState().addMessage(CH, { ...mockMessage }); });
       expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(1);
@@ -146,7 +146,7 @@ describe("Channel Message Store", () => {
 
     it("should isolate channels", () => {
       useChannelMessageStore.setState({
-        cache: { 2: { messages: [], hasMore: false, loading: false, loadingMore: false } },
+        cache: { 2: { messages: [], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       act(() => { useChannelMessageStore.getState().addMessage(CH, mockMessage); });
       expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(1);
@@ -157,7 +157,7 @@ describe("Channel Message Store", () => {
   describe("updateMessage", () => {
     it("should update content", () => {
       useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false } },
+        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       act(() => { useChannelMessageStore.getState().updateMessage(CH, { id: 1, content: "Updated", edited_at: "2024-01-02T00:00:00Z" }); });
       expect(useChannelMessageStore.getState().cache[CH].messages[0].content).toBe("Updated");
@@ -167,7 +167,7 @@ describe("Channel Message Store", () => {
   describe("removeMessage", () => {
     it("should remove from cache", () => {
       useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false } },
+        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       act(() => { useChannelMessageStore.getState().removeMessage(CH, 1); });
       expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(0);

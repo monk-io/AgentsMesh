@@ -202,7 +202,7 @@ describe("Channel Store", () => {
 
     it("should not affect per-channel message cache", () => {
       useChannelMessageStore.setState({
-        cache: { 1: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false } },
+        cache: { 1: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
       act(() => { useChannelStore.getState().setCurrentChannel(mockChannel); });
       expect(useChannelMessageStore.getState().cache[1]?.messages).toHaveLength(1);
