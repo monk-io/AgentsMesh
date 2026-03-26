@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
@@ -178,7 +179,9 @@ func TestCopyDirSelective_DanglingSymlink(t *testing.T) {
 	dst := t.TempDir()
 
 	// Create a dangling symlink (target does not exist)
-	require.NoError(t, os.Symlink("/nonexistent/target", filepath.Join(src, "broken-link")))
+	// Use filepath.FromSlash for cross-platform compatibility
+	danglingTarget := filepath.FromSlash("/nonexistent/target")
+	require.NoError(t, os.Symlink(danglingTarget, filepath.Join(src, "broken-link")))
 	// Also create a real file so we can verify the copy still works
 	require.NoError(t, os.WriteFile(filepath.Join(src, "good-file.txt"), []byte("ok"), 0644))
 
@@ -189,13 +192,17 @@ func TestCopyDirSelective_DanglingSymlink(t *testing.T) {
 	destLink := filepath.Join(dst, "broken-link")
 	target, err := os.Readlink(destLink)
 	require.NoError(t, err)
-	assert.Equal(t, "/nonexistent/target", target)
+	assert.Equal(t, danglingTarget, target)
 
 	// Regular file should still be copied
 	assert.FileExists(t, filepath.Join(dst, "good-file.txt"))
 }
 
 func TestCopyDirSelective_SkipsSocketFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix domain sockets not reliably supported on Windows")
+	}
+
 	// Use a short base path to avoid macOS 104-char Unix socket limit
 	baseDir, err := os.MkdirTemp("/tmp", "cp-")
 	require.NoError(t, err)
@@ -234,8 +241,8 @@ func TestCopyDirSelective_SkipsSocketFile(t *testing.T) {
 }
 
 func TestCopyDirSelective_SkipsUnreadableFile(t *testing.T) {
-	if os.Getuid() == 0 {
-		t.Skip("root can read any file, skip this test")
+	if os.Getuid() == 0 || runtime.GOOS == "windows" {
+		t.Skip("file permission tests not reliable on root or Windows")
 	}
 
 	src := t.TempDir()
@@ -283,8 +290,8 @@ func TestCopyDirSelective_SymlinkErrorDoesNotAbort(t *testing.T) {
 }
 
 func TestCopyDirSelective_MkdirErrorDoesNotAbort(t *testing.T) {
-	if os.Getuid() == 0 {
-		t.Skip("root can create any directory, skip this test")
+	if os.Getuid() == 0 || runtime.GOOS == "windows" {
+		t.Skip("file permission tests not reliable on root or Windows")
 	}
 
 	src := t.TempDir()
