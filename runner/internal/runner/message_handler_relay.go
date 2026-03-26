@@ -143,7 +143,11 @@ func (h *RunnerMessageHandler) setupRelayClientHandlers(relayClient relay.RelayC
 
 	relayClient.SetInputHandler(func(data []byte) {
 		if pod.Terminal != nil {
-			if err := pod.Terminal.Write(data); err != nil {
+			// Apply agent-specific input adaptation (e.g. Codex newline→space).
+			// Without this, relay input bypasses adaptTerminalInput and TUI
+			// agents receive raw newlines that trigger premature submission.
+			adapted := adaptTerminalInput(data, pod.AgentType)
+			if err := pod.Terminal.Write(adapted); err != nil {
 				log.Error("Failed to write relay input to terminal", "pod_key", podKey, "error", err)
 			}
 		}

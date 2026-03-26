@@ -39,7 +39,13 @@ func NewPodPromptHook(router TerminalInputRouter, msgWriter SystemMessageWriter)
 				continue
 			}
 
-			if err := router.RouteInput(podKey, []byte(prompt)); err != nil {
+			// Send prompt + Enter as a single write so that the text and
+			// submission key land in the same PTY stdin buffer.  This is
+			// required for TUI agents like Codex CLI (ratatui raw mode)
+			// that process stdin in event-loop batches — two separate
+			// writes may be split across frames, preventing auto-execution.
+			payload := append([]byte(prompt), '\r')
+			if err := router.RouteInput(podKey, payload); err != nil {
 				slog.Warn("pod unreachable for prompt",
 					"pod_key", podKey,
 					"channel", mc.Channel.Name,
@@ -48,14 +54,6 @@ func NewPodPromptHook(router TerminalInputRouter, msgWriter SystemMessageWriter)
 				// Write a system message so the user knows the pod didn't receive it
 				writeOfflineNotice(ctx, msgWriter, mc.Message.ChannelID, podKey)
 				continue
-			}
-
-			// Send Enter key to confirm the input
-			if err := router.RouteInput(podKey, []byte("\r")); err != nil {
-				slog.Error("failed to send enter to pod",
-					"pod_key", podKey,
-					"error", err,
-				)
 			}
 		}
 
