@@ -186,7 +186,7 @@ describe("Channel Store", () => {
     it("should leave and refresh", async () => {
       useChannelStore.setState({ channels: [{ ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] }], currentChannel: mockChannel });
       vi.mocked(channelApi.leavePod).mockResolvedValue({ message: "ok" });
-      vi.mocked(channelApi.get).mockResolvedValue({ channel: { ...mockChannel, pods: [] } });
+      vi.mocked(channelApi.get).mockResolvedValue({ channel: { ...mockChannel, pods: [] } as never });
       await act(async () => { await useChannelStore.getState().leaveChannel(1, "pod-123"); });
       expect(useChannelStore.getState().channels[0].pods).toHaveLength(0);
     });
