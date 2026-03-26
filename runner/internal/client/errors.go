@@ -16,6 +16,7 @@ const (
 	ErrCodeDiskFull        = "DISK_FULL"
 	ErrCodePrepareScript   = "PREPARE_SCRIPT_FAILED"
 	ErrCodePTYError        = "PTY_READ_ERROR"
+	ErrCodeResourceDownload = "RESOURCE_DOWNLOAD_FAILED"
 )
 
 // PodError represents an error that occurred during pod operations.

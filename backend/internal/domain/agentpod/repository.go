@@ -55,6 +55,9 @@ type PodRepository interface {
 	MarkStaleAsDisconnected(ctx context.Context, threshold time.Time) (int64, error)
 	// CleanupStale marks stale disconnected pods as terminated. Returns rows affected.
 	CleanupStale(ctx context.Context, threshold time.Time) (int64, error)
+	// TimeoutInitializingPods marks pods stuck in "initializing" beyond the threshold as "error".
+	// Returns the timed-out pods so callers can publish events per organization.
+	TimeoutInitializingPods(ctx context.Context, createdBefore time.Time) ([]*Pod, error)
 	// UpdateByKeyAndStatusCounted is like UpdateByKeyAndStatus but returns rows affected.
 	UpdateByKeyAndStatusCounted(ctx context.Context, podKey, status string, updates map[string]interface{}) (int64, error)
 	// UpdateTerminatedWithFallbackError updates a terminated pod, setting error_code

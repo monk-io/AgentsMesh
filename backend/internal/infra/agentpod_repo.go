@@ -233,6 +233,36 @@ func (r *podRepo) CleanupStale(ctx context.Context, threshold time.Time) (int64,
 	return result.RowsAffected, result.Error
 }
 
+func (r *podRepo) TimeoutInitializingPods(ctx context.Context, createdBefore time.Time) ([]*agentpod.Pod, error) {
+	// Find pods stuck in initializing
+	var pods []*agentpod.Pod
+	if err := r.db.WithContext(ctx).
+		Where("status = ? AND created_at < ?", agentpod.StatusInitializing, createdBefore).
+		Find(&pods).Error; err != nil {
+		return nil, err
+	}
+	if len(pods) == 0 {
+		return nil, nil
+	}
+
+	// Mark them as error with a descriptive message
+	now := time.Now()
+	errorMsg := "Pod initialization timed out. The runner may be unreachable or the setup process (git clone, sandbox preparation) may have stalled."
+	result := r.db.WithContext(ctx).Model(&agentpod.Pod{}).
+		Where("status = ? AND created_at < ?", agentpod.StatusInitializing, createdBefore).
+		Updates(map[string]interface{}{
+			"status":        agentpod.StatusError,
+			"error_code":    "INIT_TIMEOUT",
+			"error_message": errorMsg,
+			"finished_at":   now,
+		})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return pods, nil
+}
+
 func (r *podRepo) UpdateByKeyAndStatusCounted(ctx context.Context, podKey, status string, updates map[string]interface{}) (int64, error) {
 	result := r.db.WithContext(ctx).Model(&agentpod.Pod{}).
 		Where("pod_key = ? AND status = ?", podKey, status).

@@ -92,7 +92,7 @@ func (b *PodBuilder) setup(ctx context.Context) (string, string, string, error) 
 				slog.Warn("Failed to clean up sandbox after download error", "path", sandboxRoot, "error", rmErr)
 			}
 		}
-		return "", "", "", fmt.Errorf("failed to download resources: %w", err)
+		return "", "", "", err
 	}
 
 	logger.Pod().Info("Sandbox setup completed",
@@ -154,17 +154,25 @@ func (b *PodBuilder) downloadResources(ctx context.Context, sandboxRoot, workDir
 		return nil
 	}
 
+	b.sendProgress("preparing", 72, "Downloading resources...")
+
 	cacheDir := filepath.Join(b.deps.Config.WorkspaceRoot, "cache", "skills")
 	cacheManager, err := cache.NewSkillCacheManager(cacheDir)
 	if err != nil {
-		return fmt.Errorf("failed to create skill cache manager: %w", err)
+		return &client.PodError{
+			Code:    client.ErrCodeResourceDownload,
+			Message: fmt.Sprintf("failed to create skill cache manager: %v", err),
+		}
 	}
 
 	downloader := cache.NewDownloader(cacheManager)
 	for _, res := range b.cmd.ResourcesToDownload {
 		result, err := downloader.DownloadAndExtract(ctx, res, sandboxRoot, workDir)
 		if err != nil {
-			return fmt.Errorf("failed to download resource %s: %w", res.Sha, err)
+			return &client.PodError{
+				Code:    client.ErrCodeResourceDownload,
+				Message: fmt.Sprintf("failed to download resource %s: %v", res.Sha, err),
+			}
 		}
 		if result.CacheHit {
 			slog.Info("Resource cache hit", "sha", res.Sha)
@@ -172,6 +180,8 @@ func (b *PodBuilder) downloadResources(ctx context.Context, sandboxRoot, workDir
 			slog.Info("Resource downloaded", "sha", res.Sha, "bytes", result.BytesRead)
 		}
 	}
+
+	b.sendProgress("preparing", 76, "Resources downloaded")
 	return nil
 }
 

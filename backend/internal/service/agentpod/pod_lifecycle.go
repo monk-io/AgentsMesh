@@ -121,3 +121,30 @@ func (s *PodService) CleanupStalePods(ctx context.Context, maxIdleHours int) (in
 	threshold := time.Now().Add(-time.Duration(maxIdleHours) * time.Hour)
 	return s.repo.CleanupStale(ctx, threshold)
 }
+
+// TimeoutInitializingPods marks pods stuck in "initializing" for longer than
+// the given duration as "error" and publishes status change events so the
+// frontend receives immediate feedback instead of spinning forever.
+func (s *PodService) TimeoutInitializingPods(ctx context.Context, maxInitDuration time.Duration) (int64, error) {
+	threshold := time.Now().Add(-maxInitDuration)
+	pods, err := s.repo.TimeoutInitializingPods(ctx, threshold)
+	if err != nil {
+		return 0, err
+	}
+
+	// Publish error events so WebSocket clients get notified with error details
+	if s.eventPublisher != nil {
+		for _, pod := range pods {
+			s.eventPublisher.PublishPodErrorEvent(
+				ctx,
+				pod.OrganizationID,
+				pod.PodKey,
+				agentpod.StatusInitializing,
+				"INIT_TIMEOUT",
+				"Pod initialization timed out. The runner may be unreachable or the setup process (git clone, sandbox preparation) may have stalled.",
+			)
+		}
+	}
+
+	return int64(len(pods)), nil
+}

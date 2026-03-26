@@ -52,6 +52,45 @@ func startSubscriptionJobs(db *gorm.DB, appConfig *config.Config, emailSvc email
 	return scheduler
 }
 
+// PodInitTimeoutChecker is an interface for timing out stuck initializing pods.
+type PodInitTimeoutChecker interface {
+	TimeoutInitializingPods(ctx context.Context, maxInitDuration time.Duration) (int64, error)
+}
+
+// startPodInitTimeoutChecker starts a background goroutine that periodically
+// checks for pods stuck in "initializing" state and marks them as "error".
+func startPodInitTimeoutChecker(checker PodInitTimeoutChecker) (stop func()) {
+	stopCh := make(chan struct{})
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-stopCh:
+				return
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				count, err := checker.TimeoutInitializingPods(ctx, 5*time.Minute)
+				cancel()
+				if err != nil {
+					slog.Error("pod init timeout check failed", "error", err)
+				} else if count > 0 {
+					slog.Info("timed out initializing pods", "count", count)
+				}
+			}
+		}
+	}()
+
+	return func() {
+		close(stopCh)
+		<-done
+	}
+}
+
 // LoopSchedulerStopper is an interface for stopping the loop scheduler
 type LoopSchedulerStopper interface {
 	Stop()

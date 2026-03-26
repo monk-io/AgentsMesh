@@ -321,6 +321,10 @@ func main() {
 	// Start scheduled jobs
 	subscriptionScheduler := startSubscriptionJobs(db, cfg, services.email, appLogger.Logger)
 
+	// Start pod init timeout checker (times out pods stuck in "initializing")
+	stopPodInitTimeout := startPodInitTimeoutChecker(services.pod)
+	defer stopPodInitTimeout()
+
 	// Start HTTP server
 	srv := startHTTPServer(cfg, router)
 

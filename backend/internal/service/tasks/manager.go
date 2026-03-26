@@ -15,6 +15,11 @@ type StalePodCleaner interface {
 	MarkStaleAsDisconnected(ctx context.Context, threshold time.Time) (int64, error)
 }
 
+// InitTimeoutHandler times out pods stuck in initializing state.
+type InitTimeoutHandler interface {
+	TimeoutInitializingPods(ctx context.Context, maxInitDuration time.Duration) (int64, error)
+}
+
 // DefaultConfig returns default task manager configuration
 func DefaultConfig() Config {
 	return Config{
@@ -39,17 +44,23 @@ type Config struct {
 
 // Manager coordinates all background tasks
 type Manager struct {
-	podCleaner StalePodCleaner
-	redis      *redis.Client
-	logger     *slog.Logger
-	cfg        Config
-	scheduler  *infraTasks.Scheduler
-	workers    *infraTasks.WorkerPool
-	wg         sync.WaitGroup
+	podCleaner     StalePodCleaner
+	initTimeout    InitTimeoutHandler
+	redis          *redis.Client
+	logger         *slog.Logger
+	cfg            Config
+	scheduler      *infraTasks.Scheduler
+	workers        *infraTasks.WorkerPool
+	wg             sync.WaitGroup
 
 	// Services
 	pipelinePoller *PipelinePollerService
 	taskProcessor  *TaskProcessorService
+}
+
+// SetInitTimeoutHandler sets the handler for pod initialization timeout checks.
+func (m *Manager) SetInitTimeoutHandler(h InitTimeoutHandler) {
+	m.initTimeout = h
 }
 
 // NewManager creates a new task manager
@@ -160,6 +171,16 @@ func (m *Manager) registerScheduledTasks() {
 			return m.cleanupStalePods(ctx)
 		},
 	})
+
+	// Pod Init Timeout - times out pods stuck in "initializing" for too long
+	_ = m.scheduler.Register(&infraTasks.Task{
+		Name:       "pod_init_timeout",
+		Interval:   1 * time.Minute,
+		RunOnStart: false,
+		Func: func(ctx context.Context) error {
+			return m.timeoutInitializingPods(ctx)
+		},
+	})
 }
 
 // monitorWorkerResults monitors worker results for logging/metrics
@@ -191,6 +212,24 @@ func (m *Manager) cleanupStalePods(ctx context.Context) error {
 	if rowsAffected > 0 {
 		m.logger.Info("cleaned up stale pods",
 			"count", rowsAffected)
+	}
+
+	return nil
+}
+
+// timeoutInitializingPods marks pods stuck in "initializing" as "error"
+func (m *Manager) timeoutInitializingPods(ctx context.Context) error {
+	if m.initTimeout == nil {
+		return nil
+	}
+
+	count, err := m.initTimeout.TimeoutInitializingPods(ctx, 5*time.Minute)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		m.logger.Info("timed out initializing pods", "count", count)
 	}
 
 	return nil

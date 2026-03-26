@@ -21,6 +21,7 @@ const (
 // This allows the service to be decoupled from the eventbus implementation
 type EventPublisher interface {
 	PublishPodEvent(ctx context.Context, eventType PodEventType, orgID int64, podKey, status, previousStatus, agentStatus string)
+	PublishPodErrorEvent(ctx context.Context, orgID int64, podKey, previousStatus, errorCode, errorMessage string)
 }
 
 // EventBusPublisher implements EventPublisher using EventBus
@@ -85,5 +86,30 @@ func (p *EventBusPublisher) PublishPodEvent(ctx context.Context, eventType PodEv
 			"type", eventType,
 			"pod_key", podKey,
 		)
+	}
+}
+
+// PublishPodErrorEvent publishes a pod error event with error code and message.
+func (p *EventBusPublisher) PublishPodErrorEvent(ctx context.Context, orgID int64, podKey, previousStatus, errorCode, errorMessage string) {
+	if p.eventBus == nil {
+		return
+	}
+
+	data := &eventbus.PodStatusChangedData{
+		PodKey:         podKey,
+		Status:         "error",
+		PreviousStatus: previousStatus,
+		ErrorCode:      errorCode,
+		ErrorMessage:   errorMessage,
+	}
+
+	event, err := eventbus.NewEntityEvent(eventbus.EventPodStatusChanged, orgID, "pod", podKey, data)
+	if err != nil {
+		p.logger.Error("failed to create pod error event", "error", err, "pod_key", podKey)
+		return
+	}
+
+	if err := p.eventBus.Publish(ctx, event); err != nil {
+		p.logger.Error("failed to publish pod error event", "error", err, "pod_key", podKey)
 	}
 }
