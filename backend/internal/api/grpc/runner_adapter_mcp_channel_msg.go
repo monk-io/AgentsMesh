@@ -81,8 +81,15 @@ func (a *GRPCRunnerAdapter) mcpGetMessages(ctx context.Context, tc *middleware.T
 		limit = 100
 	}
 
+	// mentioned_pod is mutually exclusive with time filters
+	hasMention := params.MentionedPod != nil && *params.MentionedPod != ""
+	hasTimeFilter := (params.BeforeTime != nil && *params.BeforeTime != "") || (params.AfterTime != nil && *params.AfterTime != "")
+	if hasMention && hasTimeFilter {
+		return nil, newMcpError(400, "mentioned_pod cannot be combined with before_time/after_time")
+	}
+
 	// If filtering by mentioned pod, use dedicated method
-	if params.MentionedPod != nil && *params.MentionedPod != "" {
+	if hasMention {
 		messages, hasMore, err := a.channelService.GetMessagesMentioning(ctx, params.ChannelID, *params.MentionedPod, limit)
 		if err != nil {
 			return nil, newMcpError(500, "failed to get messages")

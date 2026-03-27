@@ -139,14 +139,26 @@ func TestGetMessages(t *testing.T) {
 	})
 
 	t.Run("with before filter", func(t *testing.T) {
+		// Use spaced timestamps for reliable time comparison in SQLite
+		base := time.Date(2025, 6, 1, 12, 0, 0, 0, time.UTC)
 		allMsgs, _, _ := svc.GetMessages(ctx, ch.ID, nil, nil, 10)
-		if len(allMsgs) >= 3 {
-			before := allMsgs[2].CreatedAt
-			msgs, _, err := svc.GetMessages(ctx, ch.ID, &before, nil, 10)
-			if err != nil {
-				t.Fatalf("GetMessages failed: %v", err)
-			}
-			t.Logf("All: %d, before filter: %d", len(allMsgs), len(msgs))
+		for i, m := range allMsgs {
+			ts := base.Add(time.Duration(i) * time.Second)
+			db.Model(&channel.Message{}).Where("id = ?", m.ID).Update("created_at", ts)
+		}
+		// Re-fetch with updated timestamps
+		allMsgs, _, _ = svc.GetMessages(ctx, ch.ID, nil, nil, 10)
+		if len(allMsgs) < 3 {
+			t.Skip("Need at least 3 messages")
+		}
+		// before allMsgs[2].CreatedAt should return messages 0, 1
+		before := allMsgs[2].CreatedAt
+		msgs, _, err := svc.GetMessages(ctx, ch.ID, &before, nil, 10)
+		if err != nil {
+			t.Fatalf("GetMessages failed: %v", err)
+		}
+		if len(msgs) != 2 {
+			t.Errorf("Expected 2 messages before index 2, got %d", len(msgs))
 		}
 	})
 }

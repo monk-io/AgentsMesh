@@ -3,6 +3,7 @@ package infra
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
@@ -12,6 +13,13 @@ import (
 
 // Compile-time interface compliance check.
 var _ channel.ChannelRepository = (*channelRepository)(nil)
+
+// escapeLikePattern escapes SQL LIKE special characters (%, _) in a string.
+func escapeLikePattern(s string) string {
+	s = strings.ReplaceAll(s, "%", `\%`)
+	s = strings.ReplaceAll(s, "_", `\_`)
+	return s
+}
 
 // channelAccess is the GORM model for the channel_access table.
 type channelAccess struct {
@@ -141,6 +149,8 @@ func (r *channelRepository) GetMessages(ctx context.Context, channelID int64, be
 	}
 	// After-only: return oldest-first so hasMore means "newer messages exist beyond the limit".
 	// All other cases: newest-first so hasMore means "older messages exist" (load-more / scroll-up).
+	// IMPORTANT: Service layer (message.go GetMessages) depends on this ordering to decide
+	// whether to reverse the slice. Keep these two in sync when modifying sort direction.
 	order := "created_at DESC"
 	if after != nil && before == nil {
 		order = "created_at ASC"
@@ -165,11 +175,15 @@ func (r *channelRepository) GetMessagesMentioning(ctx context.Context, channelID
 	// positives from pod keys appearing elsewhere in the JSON (e.g. reply_to, sender context).
 	// Works cross-database (PostgreSQL JSONB cast to text and SQLite text no-op).
 	// Text LIKE fallback: matches legacy "@podKey" mentions in content.
-	podValuePattern := `%"` + podKey + `"%`
-	textPattern := "%@" + podKey + "%"
+	escaped := escapeLikePattern(podKey)
+	podValuePattern := `%"` + escaped + `"%`
+	textPattern := "%@" + escaped + "%"
 	if err := r.db.WithContext(ctx).
 		Where(`channel_id = ? AND is_deleted = FALSE AND ((CAST(metadata AS TEXT) LIKE '%mentioned_pods%' AND CAST(metadata AS TEXT) LIKE ?) OR content LIKE ?)`,
 			channelID, podValuePattern, textPattern).
+		Preload("SenderUser").
+		Preload("SenderPodInfo").
+		Preload("SenderPodInfo.AgentType").
 		Order("created_at DESC").
 		Limit(limit + 1).
 		Find(&messages).Error; err != nil {
