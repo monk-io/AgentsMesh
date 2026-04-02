@@ -37,6 +37,9 @@ func CreateDeps(cfg *config.Config) (RunnerDeps, error) {
 		client.WithGRPCServerURL(cfg.ServerURL),
 		client.WithGRPCRunnerVersion(cfg.Version),
 	}
+	if cfg.TLSServerName != "" {
+		connOpts = append(connOpts, client.WithGRPCTLSServerName(cfg.TLSServerName))
+	}
 	// Wire endpoint auto-discovery: persist new endpoints to config file.
 	if cfg.ConfigFilePath != "" {
 		cfgFile := cfg.ConfigFilePath

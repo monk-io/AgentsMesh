@@ -67,6 +67,17 @@ func TestWithGRPCEndpointChanged(t *testing.T) {
 	assert.True(t, called)
 }
 
+func TestDefaultTLSServerName(t *testing.T) {
+	conn := NewGRPCConnection("localhost:9443", "n", "o", "", "", "")
+	assert.Equal(t, "agentmesh-backend", conn.tlsServerName)
+}
+
+func TestWithGRPCTLSServerName(t *testing.T) {
+	conn := NewGRPCConnection("localhost:9443", "n", "o", "", "", "",
+		WithGRPCTLSServerName("custom-server"))
+	assert.Equal(t, "custom-server", conn.tlsServerName)
+}
+
 func TestMultipleOptions(t *testing.T) {
 	conn := NewGRPCConnection("localhost:9443", "n", "o", "", "", "",
 		WithGRPCHeartbeatInterval(15*time.Second),

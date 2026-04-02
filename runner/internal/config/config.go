@@ -24,7 +24,8 @@ type Config struct {
 	CertFile     string `mapstructure:"cert_file"`     // Path to client certificate
 	KeyFile      string `mapstructure:"key_file"`      // Path to client private key
 	CAFile       string `mapstructure:"ca_file"`       // Path to CA certificate
-	GRPCEndpoint string `mapstructure:"grpc_endpoint"` // gRPC server endpoint (e.g., grpc.example.com:9443)
+	GRPCEndpoint  string `mapstructure:"grpc_endpoint"`   // gRPC server endpoint (e.g., grpc.example.com:9443)
+	TLSServerName string `mapstructure:"tls_server_name"` // TLS ServerName (SNI) override; default "agentmesh-backend"
 
 	// Organization (set during registration, used for org-scoped API paths)
 	OrgSlug string `mapstructure:"org_slug"`

@@ -64,6 +64,16 @@ func WithGRPCCertUrgentDays(days int) GRPCConnectionOption {
 	}
 }
 
+// WithGRPCTLSServerName overrides the TLS ServerName (SNI) sent during handshake.
+// Use this when the server certificate SANs don't include the public hostname
+// (e.g. the cert has "agentmesh-backend" but you connect to "agentsmesh.ai").
+// Default: "agentmesh-backend".
+func WithGRPCTLSServerName(name string) GRPCConnectionOption {
+	return func(c *GRPCConnection) {
+		c.tlsServerName = name
+	}
+}
+
 // WithGRPCEndpointChanged sets a callback invoked when auto-discovery detects a new
 // gRPC endpoint. The callback should persist the new endpoint to the config file so
 // the runner continues to use it after a restart.

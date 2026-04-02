@@ -50,17 +50,22 @@ func (c *GRPCConnection) Connect() error {
 		return fmt.Errorf("failed to create TLS credentials: %w", err)
 	}
 
-	// Fix advancedtls SNI bug: advancedtls.ClientHandshake sets ServerName to the
-	// full authority string (e.g. "agentsmesh.ai:9443" including port), unlike
-	// standard gRPC credentials which strips the port via net.SplitHostPort.
-	// An SNI with port violates RFC 6066 and is rejected by some network middleboxes
-	// (corporate firewalls, DPI). Set the correct hostname-only ServerName here so
-	// advancedtls won't overwrite it with the authority.
-	host, _, err := net.SplitHostPort(dialTarget)
-	if err != nil {
-		host = dialTarget // No port in dialTarget, use as-is
+	// Override TLS ServerName (SNI) to fix two issues:
+	// 1. advancedtls bug: sets ServerName to full authority with port (e.g. "agentsmesh.ai:9443"),
+	//    violating RFC 6066 and rejected by some network middleboxes.
+	// 2. ServerName mismatch: public hostname (e.g. "agentsmesh.ai") may not be in the
+	//    server certificate's SANs. A configurable tlsServerName (default "agentmesh-backend")
+	//    lets users match the SNI to an actual SAN in the cert.
+	serverName := c.tlsServerName
+	if serverName == "" {
+		// Fallback: extract hostname from dial target (strip port per RFC 6066)
+		host, _, err := net.SplitHostPort(dialTarget)
+		if err != nil {
+			host = dialTarget
+		}
+		serverName = host
 	}
-	if err := creds.OverrideServerName(host); err != nil { //nolint:staticcheck // advancedtls has no other public API to set ServerName; the unexported serverNameOverride field is inaccessible
+	if err := creds.OverrideServerName(serverName); err != nil { //nolint:staticcheck // advancedtls has no other public API to set ServerName; the unexported serverNameOverride field is inaccessible
 		logger.GRPC().Warn("Failed to override TLS server name", "error", err)
 	}
 

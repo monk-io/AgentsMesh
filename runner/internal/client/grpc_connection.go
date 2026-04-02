@@ -32,6 +32,11 @@ type GRPCConnection struct {
 	keyFile  string
 	caFile   string
 
+	// TLS ServerName override for SNI. When non-empty, used instead of the
+	// hostname extracted from the dial target. Solves mismatches when the
+	// server cert SANs don't include the public hostname (e.g. agentsmesh.ai).
+	tlsServerName string
+
 	// gRPC components
 	conn   *grpc.ClientConn
 	creds  credentials.TransportCredentials                                            // advancedtls credentials for hot-reload
@@ -135,6 +140,7 @@ func NewGRPCConnection(endpoint, nodeID, orgSlug, certFile, keyFile, caFile stri
 		stopCh:                   make(chan struct{}),
 		reconnectCh:              make(chan struct{}, 1),
 		initResultCh:             make(chan *runnerv1.InitializeResult, 1),
+		tlsServerName:            "agentmesh-backend",
 		runnerVersion:            "dev",
 		mcpPort:                  19000,
 		certRenewalCheckInterval: 24 * time.Hour,

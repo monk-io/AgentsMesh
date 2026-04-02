@@ -130,6 +130,7 @@ func (c *GRPCConnection) createFallbackTLSCredentials() (credentials.TransportCr
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      caPool,
 		MinVersion:   tls.VersionTLS13,
+		ServerName:   c.tlsServerName, // Match SNI to server cert SAN
 		// Skip default verification (which includes hostname check) since grpcAuthority
 		// overrides SNI to a non-routable hostname. Chain verification is
 		// performed in VerifyConnection below.
