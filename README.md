@@ -21,6 +21,7 @@
   <a href="https://github.com/AgentsMesh/AgentsMesh/actions/workflows/ci.yml"><img src="https://github.com/AgentsMesh/AgentsMesh/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://github.com/AgentsMesh/AgentsMesh/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSL--1.1-blue" alt="License" /></a>
   <a href="https://hub.docker.com/u/agentsmesh"><img src="https://img.shields.io/badge/docker-hub-blue?logo=docker" alt="Docker Hub" /></a>
+  <a href="https://github.com/RoggeOhta/awesome-codex-cli"><img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Codex CLI" /></a>
 </p>
 
 <p align="center">
