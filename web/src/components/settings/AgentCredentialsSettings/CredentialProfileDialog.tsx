@@ -13,13 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CredentialFormFields } from "../CredentialFormFields";
 import type { CredentialProfileDialogProps, CredentialFormData } from "./types";
 
 /**
- * CredentialProfileDialog - Dynamic dialog for adding or editing credential profiles.
- *
- * Renders form fields based on credentialFields (from AgentFile ENV SECRET/TEXT declarations).
- * Each field uses the full ENV name as key (e.g. "ANTHROPIC_API_KEY").
+ * CredentialProfileDialog - Dialog for adding or editing credential profiles.
+ * Renders dynamic form fields from AgentFile ENV SECRET/TEXT declarations.
  */
 export function CredentialProfileDialog({
   open,
@@ -64,19 +63,11 @@ export function CredentialProfileDialog({
     try {
       setSubmitting(true);
       setError(null);
-
       const credentials: Record<string, string> = {};
       for (const [key, value] of Object.entries(fieldValues)) {
         if (value) credentials[key] = value;
       }
-
-      const formData: CredentialFormData = {
-        name: formName,
-        description: formDescription,
-        credentials,
-      };
-
-      await onSubmit(formData);
+      await onSubmit({ name: formName, description: formDescription, credentials });
       onOpenChange(false);
     } catch (err) {
       console.error("Failed to save profile:", err);
@@ -86,24 +77,14 @@ export function CredentialProfileDialog({
     }
   };
 
-  const getFieldLabel = (fieldName: string): string => {
-    const i18nKey = `settings.agentCredentials.fields.${fieldName}`;
-    const translated = t(i18nKey);
-    return translated !== i18nKey ? translated : fieldName;
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {editingProfile
-              ? t("settings.agentCredentials.editProfile")
-              : t("settings.agentCredentials.addProfile")}
+            {editingProfile ? t("settings.agentCredentials.editProfile") : t("settings.agentCredentials.addProfile")}
           </DialogTitle>
-          <DialogDescription>
-            {t("settings.agentCredentials.customProfileDescription")}
-          </DialogDescription>
+          <DialogDescription>{t("settings.agentCredentials.customProfileDescription")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
@@ -111,65 +92,27 @@ export function CredentialProfileDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="cred-name">{t("settings.agentCredentials.name")}</Label>
-            <Input
-              id="cred-name"
-              value={formName}
-              onChange={(e) => setFormName(e.target.value)}
-              placeholder={t("settings.agentCredentials.namePlaceholder")}
-            />
+            <Input id="cred-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t("settings.agentCredentials.namePlaceholder")} />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="cred-desc">{t("settings.agentCredentials.descriptionLabel")}</Label>
-            <Textarea
-              id="cred-desc"
-              value={formDescription}
-              onChange={(e) => setFormDescription(e.target.value)}
-              placeholder={t("settings.agentCredentials.descriptionPlaceholder")}
-              rows={2}
-            />
+            <Textarea id="cred-desc" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder={t("settings.agentCredentials.descriptionPlaceholder")} rows={2} />
           </div>
 
-          {credentialFields.map((field) => (
-            <div key={field.name} className="grid gap-2">
-              <Label htmlFor={`cred-${field.name}`}>
-                {getFieldLabel(field.name)}
-                {field.optional && (
-                  <span className="text-xs text-muted-foreground ml-1">
-                    ({t("common.optional")})
-                  </span>
-                )}
-              </Label>
-              <Input
-                id={`cred-${field.name}`}
-                type={field.type === "secret" ? "password" : "text"}
-                value={fieldValues[field.name] || ""}
-                onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                placeholder={
-                  editingProfile && field.type === "secret"
-                    ? t("settings.agentCredentials.secretPlaceholder")
-                    : ""
-                }
-              />
-              {editingProfile && field.type === "secret" && (
-                <p className="text-xs text-muted-foreground">
-                  {t("settings.agentCredentials.secretEditHint")}
-                </p>
-              )}
-            </div>
-          ))}
+          <CredentialFormFields
+            credentialFields={credentialFields}
+            fieldValues={fieldValues}
+            onFieldChange={handleFieldChange}
+            isEditing={!!editingProfile}
+            t={t}
+          />
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t("common.cancel")}
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button onClick={handleSubmit} disabled={submitting || !formName.trim()}>
-            {submitting
-              ? t("common.saving")
-              : editingProfile
-              ? t("common.save")
-              : t("common.create")}
+            {submitting ? t("common.saving") : editingProfile ? t("common.save") : t("common.create")}
           </Button>
         </DialogFooter>
       </DialogContent>
