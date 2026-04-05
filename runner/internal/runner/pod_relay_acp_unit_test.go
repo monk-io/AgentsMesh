@@ -41,6 +41,24 @@ func TestACPPodRelay_SendSnapshot_NilClient(t *testing.T) {
 	}
 }
 
+func TestACPPodRelay_SetupHandlers_Resync(t *testing.T) {
+	mc := relay.NewMockClient("wss://relay.example.com")
+	mc.SetConnected(true)
+
+	// Create a minimal ACPClient-less relay to verify Resync triggers SendSnapshot.
+	// With nil acpClient, SendSnapshot is a no-op (no panic, no message).
+	r := NewACPPodRelay("pod-1", nil, nil)
+	r.SetupHandlers(mc)
+
+	// Simulate browser sending Resync.
+	mc.SimulateMessage(relay.MsgTypeResync, nil)
+
+	// nil acpClient → SendSnapshot returns early, 0 snapshots sent.
+	if mc.CountSentByType(relay.MsgTypeAcpSnapshot) != 0 {
+		t.Error("should not send snapshot when ACP client is nil")
+	}
+}
+
 func TestACPPodRelay_OnRelayConnected_NoPanic(t *testing.T) {
 	mc := relay.NewMockClient("wss://relay.example.com")
 	r := NewACPPodRelay("pod-1", nil, nil)

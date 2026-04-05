@@ -51,6 +51,11 @@ export function dispatchRelayMessage(
     case MsgType.AcpCommand: {
       const parsed = decodeJsonPayload(payload);
       if (parsed !== null) {
+        // AcpSnapshot serves the same role as terminal Snapshot for ACP pods:
+        // mark received so scheduleSnapshotRetry stops sending redundant Resyncs.
+        if (type === MsgType.AcpSnapshot) {
+          conn.snapshotReceived = true;
+        }
         callbacks.onAcpMessage(conn.podKey, type, parsed);
       }
       break;
