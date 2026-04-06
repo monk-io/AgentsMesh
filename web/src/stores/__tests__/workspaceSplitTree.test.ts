@@ -191,10 +191,10 @@ describe("workspaceSplitTree", () => {
       const result = removeLeaf(tree, "b-id");
       expect(result).not.toBeNull();
       if (result!.type === "split") {
-        expect(result.children).toHaveLength(2);
+        expect(result!.children).toHaveLength(2);
         // [50, 20] → normalize to [71.4, 28.6]
-        expect(result.sizes[0]).toBeCloseTo(71.4, 0);
-        expect(result.sizes[1]).toBeCloseTo(28.6, 0);
+        expect(result!.sizes[0]).toBeCloseTo(71.4, 0);
+        expect(result!.sizes[1]).toBeCloseTo(28.6, 0);
       }
     });
 
@@ -207,12 +207,12 @@ describe("workspaceSplitTree", () => {
       const result = removeLeaf(tree, "a-id");
       expect(result).not.toBeNull();
       if (result!.type === "split") {
-        expect(result.children).toHaveLength(2);
+        expect(result!.children).toHaveLength(2);
         // inner collapsed: first child is now leaf B
-        expect(result.children[0].type).toBe("leaf");
-        expect((result.children[0] as SplitTreeLeaf).paneId).toBe("b");
-        expect(result.children[1].type).toBe("leaf");
-        expect((result.children[1] as SplitTreeLeaf).paneId).toBe("c");
+        expect(result!.children[0].type).toBe("leaf");
+        expect((result!.children[0] as SplitTreeLeaf).paneId).toBe("b");
+        expect(result!.children[1].type).toBe("leaf");
+        expect((result!.children[1] as SplitTreeLeaf).paneId).toBe("c");
       }
     });
 
@@ -226,7 +226,7 @@ describe("workspaceSplitTree", () => {
       const result = removeLeaf(tree, "nonexistent");
       expect(result).not.toBeNull();
       if (result!.type === "split") {
-        expect(result.children).toHaveLength(2);
+        expect(result!.children).toHaveLength(2);
       }
     });
   });
