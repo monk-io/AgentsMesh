@@ -19,22 +19,24 @@ vi.mock('@/lib/api', () => ({
 
 import { ticketApi } from '@/lib/api'
 
-const mkTicket = (slug: string, status: string) => ({
+import type { TicketStatus, TicketPriority } from '@/lib/api'
+
+const mkTicket = (slug: string, status: TicketStatus, priority: TicketPriority = 'medium') => ({
   id: parseInt(slug.replace(/\D/g, '')) || 1,
-  number: 1, slug, title: 'T', status, priority: 'medium',
+  number: 1, slug, title: 'T', status, priority,
   created_at: '', updated_at: '',
 })
 
 const mkBoardResponse = () => ({
   board: {
     columns: [
-      { status: 'backlog', count: 10, tickets: [mkTicket('B-1', 'backlog'), mkTicket('B-2', 'backlog')] },
-      { status: 'todo', count: 0, tickets: [] },
-      { status: 'in_progress', count: 3, tickets: [mkTicket('IP-1', 'in_progress')] },
-      { status: 'in_review', count: 1, tickets: [mkTicket('IR-1', 'in_review')] },
-      { status: 'done', count: 50, tickets: [mkTicket('D-1', 'done')] },
+      { status: 'backlog' as const, count: 10, tickets: [mkTicket('B-1', 'backlog'), mkTicket('B-2', 'backlog')] },
+      { status: 'todo' as const, count: 0, tickets: [] as ReturnType<typeof mkTicket>[] },
+      { status: 'in_progress' as const, count: 3, tickets: [mkTicket('IP-1', 'in_progress')] },
+      { status: 'in_review' as const, count: 1, tickets: [mkTicket('IR-1', 'in_review')] },
+      { status: 'done' as const, count: 50, tickets: [mkTicket('D-1', 'done')] },
     ],
-    priority_counts: { high: 5, medium: 8, low: 2 },
+    priority_counts: { high: 5, medium: 8, low: 2 } as Record<string, number>,
   },
 })
 
