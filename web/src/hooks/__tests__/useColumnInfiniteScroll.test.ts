@@ -3,12 +3,10 @@ import { renderHook } from '@testing-library/react'
 import { useColumnInfiniteScroll } from '../useColumnInfiniteScroll'
 
 // Track IntersectionObserver instances
-let lastObserverCallback: IntersectionObserverCallback | null = null
 let mockObserve: ReturnType<typeof vi.fn>
 let mockDisconnect: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
-  lastObserverCallback = null
   mockObserve = vi.fn()
   mockDisconnect = vi.fn()
 
