@@ -49,6 +49,20 @@ jobs:
           find . -name "*.Dockerfile" -o -name "Dockerfile" | xargs -r \
             sed -i 's|docker\.1ms\.run/library/||g'
 
+      - name: Generate AI CLI configs for Runner
+        working-directory: deploy/dev
+        run: |
+          mkdir -p ai-cli-configs/claude ai-cli-configs/codex ai-cli-configs/gemini
+          echo '{"permissions":{"allow":["Bash","Read","Write","Edit","Glob","Grep"],"deny":[]}}' \
+            > ai-cli-configs/claude/settings.json
+          cat > ai-cli-configs/codex/config.toml <<'CODEOF'
+          approval_policy = "never"
+          sandbox_mode = "workspace-write"
+          CODEOF
+          sed -i 's/^          //' ai-cli-configs/codex/config.toml
+          echo '{"sandboxMode":"none","autoApprove":true}' \
+            > ai-cli-configs/gemini/settings.json
+
       - name: Generate .env for CI
         working-directory: deploy/dev
         run: |
