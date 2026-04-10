@@ -15,7 +15,9 @@ import (
 func (h *RunnerHandler) ListAvailableRunners(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 
-	runners, err := h.runnerService.ListAvailableRunners(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	filter := policy.RunnerPolicy.ListFilter(sub)
+	runners, err := h.runnerService.ListAvailableRunners(c.Request.Context(), tenant.OrganizationID, filter.VisibilityUserID)
 	if err != nil {
 		apierr.InternalError(c, "Failed to list runners")
 		return
@@ -45,22 +47,17 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Verify runner belongs to organization and is visible to the requester
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
-	subject := policy.From(tenant)
-	ownerID := int64(0)
-	if r.RegisteredByUserID != nil {
-		ownerID = *r.RegisteredByUserID
-	}
-	if !policy.RunnerPolicy.AllowRead(subject, policy.ResourceContext{
-		OrgID: r.OrganizationID, OwnerID: ownerID, Visibility: r.Visibility,
-	}) {
+	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
+		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -71,9 +68,8 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 		limit = 50
 	}
 
-	// Members only see their own pods on this runner
-	podOwnerFilter := policy.PodPolicy.FilterList(subject)
-	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, req.Status, podOwnerFilter, limit, req.Offset)
+	podFilter := policy.PodPolicy.ListFilter(sub)
+	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, req.Status, podFilter.OwnerOnly, limit, req.Offset)
 	if err != nil {
 		apierr.InternalError(c, "Failed to list pods")
 		return
@@ -108,21 +104,17 @@ func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Verify runner belongs to organization and is visible to the requester
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
-	ownerID := int64(0)
-	if r.RegisteredByUserID != nil {
-		ownerID = *r.RegisteredByUserID
-	}
-	if !policy.RunnerPolicy.AllowRead(policy.From(tenant), policy.ResourceContext{
-		OrgID: r.OrganizationID, OwnerID: ownerID, Visibility: r.Visibility,
-	}) {
+	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
+		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

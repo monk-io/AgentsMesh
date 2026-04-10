@@ -22,9 +22,8 @@ func (h *PodHandler) TerminatePod(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
-	if !policy.PodPolicy.AllowWrite(policy.From(tenant), policy.ResourceContext{
-		OrgID: pod.OrganizationID, OwnerID: pod.CreatedByID,
-	}) {
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	if !policy.PodPolicy.AllowWrite(sub, policy.PodResource(pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

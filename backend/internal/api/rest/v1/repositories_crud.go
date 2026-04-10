@@ -17,7 +17,9 @@ import (
 func (h *RepositoryHandler) ListRepositories(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 
-	repos, err := h.repositoryService.ListByOrganizationForUser(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	filter := policy.RepositoryPolicy.ListFilter(sub)
+	repos, err := h.repositoryService.ListByOrganizationForUser(c.Request.Context(), tenant.OrganizationID, filter.VisibilityUserID)
 	if err != nil {
 		apierr.InternalError(c, "Failed to list repositories")
 		return
@@ -37,9 +39,9 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	userID := middleware.GetUserID(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Only admins may create repositories
-	if !policy.RepositoryPolicy.AllowWrite(policy.From(tenant), policy.ResourceContext{OrgID: tenant.OrganizationID}) {
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
 		apierr.ForbiddenAdmin(c)
 		return
 	}
@@ -120,13 +122,10 @@ func (h *RepositoryHandler) GetRepository(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
-	ownerID := int64(0)
-	if repo.ImportedByUserID != nil {
-		ownerID = *repo.ImportedByUserID
-	}
-	if !policy.RepositoryPolicy.AllowRead(policy.From(tenant), policy.ResourceContext{
-		OrgID: repo.OrganizationID, OwnerID: ownerID, Visibility: repo.Visibility,
-	}) {
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	if !policy.RepositoryPolicy.AllowRead(sub, policy.VisibleResource(
+		repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -150,9 +149,9 @@ func (h *RepositoryHandler) UpdateRepository(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Only admins may update repositories
-	if !policy.RepositoryPolicy.AllowWrite(policy.From(tenant), policy.ResourceContext{OrgID: tenant.OrganizationID}) {
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
 		apierr.ForbiddenAdmin(c)
 		return
 	}
@@ -163,7 +162,9 @@ func (h *RepositoryHandler) UpdateRepository(c *gin.Context) {
 		return
 	}
 
-	if repo.OrganizationID != tenant.OrganizationID {
+	if !policy.RepositoryPolicy.AllowWrite(sub, policy.VisibleResource(
+		repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -207,9 +208,9 @@ func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Only admins may delete repositories
-	if !policy.RepositoryPolicy.AllowWrite(policy.From(tenant), policy.ResourceContext{OrgID: tenant.OrganizationID}) {
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
 		apierr.ForbiddenAdmin(c)
 		return
 	}
@@ -220,7 +221,9 @@ func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
 		return
 	}
 
-	if repo.OrganizationID != tenant.OrganizationID {
+	if !policy.RepositoryPolicy.AllowWrite(sub, policy.VisibleResource(
+		repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

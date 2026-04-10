@@ -4,63 +4,75 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 )
 
 // --- Subject helpers ---
 
-func subjectMember(orgID, userID int64) Subject {
-	return Subject{OrgID: orgID, UserID: userID, Role: "member"}
-}
+func member(orgID, userID int64) Subject  { return NewSubject(orgID, userID, "member") }
+func admin(orgID, userID int64) Subject   { return NewSubject(orgID, userID, "admin") }
+func owner(orgID, userID int64) Subject   { return NewSubject(orgID, userID, "owner") }
+func apikey(orgID, userID int64) Subject  { return NewSubject(orgID, userID, "apikey") }
 
-func subjectAdmin(orgID, userID int64) Subject {
-	return Subject{OrgID: orgID, UserID: userID, Role: "admin"}
-}
+// --- NewSubject ---
 
-func subjectOwnerRole(orgID, userID int64) Subject {
-	return Subject{OrgID: orgID, UserID: userID, Role: "owner"}
-}
-
-func subjectAPIKey(orgID, userID int64) Subject {
-	return Subject{OrgID: orgID, UserID: userID, Role: "apikey"}
-}
-
-// --- From() ---
-
-func TestFrom(t *testing.T) {
-	tc := &middleware.TenantContext{
-		OrganizationID: 5,
-		UserID:         7,
-		UserRole:       "admin",
-	}
-	s := From(tc)
+func TestNewSubject(t *testing.T) {
+	s := NewSubject(5, 7, "admin")
 	assert.Equal(t, int64(5), s.OrgID)
 	assert.Equal(t, int64(7), s.UserID)
 	assert.Equal(t, "admin", s.Role)
+}
+
+// --- Typed constructors ---
+
+func TestPodResource(t *testing.T) {
+	rc := PodResource(1, 10)
+	assert.Equal(t, int64(1), rc.OrgID)
+	assert.Equal(t, int64(10), rc.OwnerID)
+	assert.Empty(t, rc.Visibility)
+}
+
+func TestVisibleResource_NilOwner(t *testing.T) {
+	rc := VisibleResource(1, nil, "private")
+	assert.Equal(t, int64(1), rc.OrgID)
+	assert.Equal(t, int64(0), rc.OwnerID)
+	assert.Equal(t, "private", rc.Visibility)
+}
+
+func TestVisibleResource_NonNilOwner(t *testing.T) {
+	uid := int64(42)
+	rc := VisibleResource(1, &uid, "organization")
+	assert.Equal(t, int64(42), rc.OwnerID)
+	assert.Equal(t, "organization", rc.Visibility)
+}
+
+func TestWithGrants(t *testing.T) {
+	original := PodResource(1, 10)
+	granted := original.WithGrants([]int64{20, 30})
+	assert.Nil(t, original.GrantedUserIDs, "original unchanged")
+	assert.Equal(t, []int64{20, 30}, granted.GrantedUserIDs)
 }
 
 // --- AllowRead: ReadOwnerOnly (PodPolicy) ---
 
 func TestAllowRead_OwnerOnly(t *testing.T) {
 	p := PodPolicy
-	res := ResourceContext{OrgID: 1, OwnerID: 10}
+	res := PodResource(1, 10)
 
 	cases := []struct {
-		name    string
-		subject Subject
-		want    bool
+		name string
+		sub  Subject
+		want bool
 	}{
-		{"member reads own pod", subjectMember(1, 10), true},
-		{"member reads other pod", subjectMember(1, 99), false},
-		{"admin reads other pod", subjectAdmin(1, 99), true},
-		{"owner role reads other pod", subjectOwnerRole(1, 99), true},
-		{"apikey reads any pod", subjectAPIKey(1, 42), true},
-		{"wrong org", subjectAdmin(2, 10), false},
+		{"member own pod", member(1, 10), true},
+		{"member other pod", member(1, 99), false},
+		{"admin other pod", admin(1, 99), true},
+		{"owner role other pod", owner(1, 99), true},
+		{"apikey any pod", apikey(1, 42), true},
+		{"wrong org", admin(2, 10), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, p.AllowRead(tc.subject, res))
+			assert.Equal(t, tc.want, p.AllowRead(tc.sub, res))
 		})
 	}
 }
@@ -69,80 +81,91 @@ func TestAllowRead_OwnerOnly(t *testing.T) {
 
 func TestAllowRead_Visibility_Organization(t *testing.T) {
 	p := RunnerPolicy
-	res := ResourceContext{OrgID: 1, OwnerID: 10, Visibility: "organization"}
+	uid := int64(10)
+	res := VisibleResource(1, &uid, "organization")
 
 	cases := []struct {
-		name    string
-		subject Subject
-		want    bool
+		name string
+		sub  Subject
+		want bool
 	}{
-		{"member reads org runner", subjectMember(1, 42), true},
-		{"admin reads org runner", subjectAdmin(1, 99), true},
-		{"apikey reads org runner", subjectAPIKey(1, 55), true},
-		{"wrong org", subjectMember(2, 10), false},
+		{"member", member(1, 42), true},
+		{"admin", admin(1, 99), true},
+		{"apikey", apikey(1, 55), true},
+		{"wrong org", member(2, 10), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, p.AllowRead(tc.subject, res))
+			assert.Equal(t, tc.want, p.AllowRead(tc.sub, res))
 		})
 	}
 }
 
 func TestAllowRead_Visibility_Private(t *testing.T) {
 	p := RunnerPolicy
-	res := ResourceContext{OrgID: 1, OwnerID: 10, Visibility: "private"}
+	uid := int64(10)
+	res := VisibleResource(1, &uid, "private")
 
 	cases := []struct {
-		name    string
-		subject Subject
-		want    bool
+		name string
+		sub  Subject
+		want bool
 	}{
-		{"owner reads private runner", subjectMember(1, 10), true},
-		{"member reads private runner", subjectMember(1, 42), false},
-		// admin is also denied — ReadVisibility has no admin bypass (intentional)
-		{"admin reads private runner", subjectAdmin(1, 99), false},
-		{"apikey reads private runner", subjectAPIKey(1, 55), false},
-		{"wrong org", subjectAdmin(2, 10), false},
+		{"owner", member(1, 10), true},
+		{"other member", member(1, 42), false},
+		{"admin (no bypass)", admin(1, 99), false},
+		{"apikey (no bypass)", apikey(1, 55), false},
+		{"wrong org", admin(2, 10), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, p.AllowRead(tc.subject, res))
+			assert.Equal(t, tc.want, p.AllowRead(tc.sub, res))
 		})
 	}
 }
 
-// --- AllowRead: explicit GrantedUserIDs ---
+// --- AllowRead: grants within mode ---
 
-func TestAllowRead_ExplicitGrant(t *testing.T) {
+func TestAllowRead_Grant_OwnerOnly(t *testing.T) {
 	p := PodPolicy
-	// Pod owned by user 10; user 20 explicitly granted.
-	res := ResourceContext{OrgID: 1, OwnerID: 10, GrantedUserIDs: []int64{20}}
+	res := PodResource(1, 10).WithGrants([]int64{20})
 
-	assert.True(t, p.AllowRead(subjectMember(1, 10), res), "owner may read")
-	assert.True(t, p.AllowRead(subjectMember(1, 20), res), "granted user may read")
-	assert.False(t, p.AllowRead(subjectMember(1, 30), res), "non-granted member may not read")
+	assert.True(t, p.AllowRead(member(1, 10), res), "owner")
+	assert.True(t, p.AllowRead(member(1, 20), res), "granted user")
+	assert.False(t, p.AllowRead(member(1, 30), res), "non-granted member")
+}
+
+func TestAllowRead_Grant_Visibility_Private(t *testing.T) {
+	p := RunnerPolicy
+	uid := int64(10)
+	res := VisibleResource(1, &uid, "private").WithGrants([]int64{20})
+
+	assert.True(t, p.AllowRead(member(1, 10), res), "owner of private runner")
+	assert.True(t, p.AllowRead(member(1, 20), res), "granted user on private runner")
+	assert.False(t, p.AllowRead(member(1, 30), res), "non-granted member")
+	assert.False(t, p.AllowRead(admin(1, 99), res), "admin still blocked on private")
 }
 
 // --- AllowWrite: WriteCreatorAdmin (PodPolicy) ---
 
 func TestAllowWrite_CreatorAdmin(t *testing.T) {
 	p := PodPolicy
-	res := ResourceContext{OrgID: 1, OwnerID: 10}
+	res := PodResource(1, 10)
 
 	cases := []struct {
-		name    string
-		subject Subject
-		want    bool
+		name string
+		sub  Subject
+		want bool
 	}{
-		{"creator writes own pod", subjectMember(1, 10), true},
-		{"member writes other pod", subjectMember(1, 42), false},
-		{"admin writes other pod", subjectAdmin(1, 99), true},
-		{"owner role writes other pod", subjectOwnerRole(1, 99), true},
-		{"wrong org", subjectAdmin(2, 10), false},
+		{"creator", member(1, 10), true},
+		{"other member", member(1, 42), false},
+		{"admin", admin(1, 99), true},
+		{"owner role", owner(1, 99), true},
+		{"wrong org", admin(2, 10), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, p.AllowWrite(tc.subject, res))
+			assert.Equal(t, tc.want, p.AllowWrite(tc.sub, res))
 		})
 	}
 }
@@ -151,40 +174,66 @@ func TestAllowWrite_CreatorAdmin(t *testing.T) {
 
 func TestAllowWrite_AdminOnly(t *testing.T) {
 	p := RunnerPolicy
-	res := ResourceContext{OrgID: 1, OwnerID: 10}
+	uid := int64(10)
+	res := VisibleResource(1, &uid, "organization")
 
 	cases := []struct {
-		name    string
-		subject Subject
-		want    bool
+		name string
+		sub  Subject
+		want bool
 	}{
-		{"admin writes runner", subjectAdmin(1, 99), true},
-		{"owner role writes runner", subjectOwnerRole(1, 99), true},
-		// member is denied even if they are the registered owner
-		{"creator member writes runner", subjectMember(1, 10), false},
-		{"other member writes runner", subjectMember(1, 42), false},
-		{"wrong org", subjectAdmin(2, 10), false},
+		{"admin", admin(1, 99), true},
+		{"owner role", owner(1, 99), true},
+		{"creator member", member(1, 10), false},
+		{"other member", member(1, 42), false},
+		{"wrong org", admin(2, 10), false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, p.AllowWrite(tc.subject, res))
+			assert.Equal(t, tc.want, p.AllowWrite(tc.sub, res))
 		})
 	}
 }
 
-// --- FilterList ---
+// --- AllowAdmin ---
 
-func TestFilterList(t *testing.T) {
-	p := PodPolicy
-
-	assert.Equal(t, int64(7), p.FilterList(subjectMember(1, 7)), "member gets their own userID")
-	assert.Equal(t, int64(0), p.FilterList(subjectAdmin(1, 7)), "admin gets 0 (no filter)")
-	assert.Equal(t, int64(0), p.FilterList(subjectOwnerRole(1, 7)), "owner role gets 0 (no filter)")
-	assert.Equal(t, int64(0), p.FilterList(subjectAPIKey(1, 7)), "apikey gets 0 (no filter)")
+func TestAllowAdmin(t *testing.T) {
+	assert.True(t, AllowAdmin(admin(1, 7), 1))
+	assert.True(t, AllowAdmin(owner(1, 7), 1))
+	assert.False(t, AllowAdmin(member(1, 7), 1))
+	assert.False(t, AllowAdmin(apikey(1, 7), 1))
+	assert.False(t, AllowAdmin(admin(2, 7), 1), "wrong org")
 }
 
-func TestFilterList_OrgOpenPolicy(t *testing.T) {
+// --- ListFilter ---
+
+func TestListFilter_OwnerOnly(t *testing.T) {
+	p := PodPolicy
+	f := p.ListFilter(member(1, 7))
+	assert.Equal(t, int64(7), f.OwnerOnly)
+	assert.Equal(t, int64(0), f.VisibilityUserID)
+
+	f = p.ListFilter(admin(1, 7))
+	assert.Equal(t, int64(0), f.OwnerOnly, "admin: no owner filter")
+
+	f = p.ListFilter(apikey(1, 7))
+	assert.Equal(t, int64(0), f.OwnerOnly, "apikey: no owner filter")
+}
+
+func TestListFilter_Visibility(t *testing.T) {
+	p := RunnerPolicy
+	f := p.ListFilter(member(1, 7))
+	assert.Equal(t, int64(0), f.OwnerOnly)
+	assert.Equal(t, int64(7), f.VisibilityUserID)
+
+	// Admin also gets visibility filtering (no admin bypass for ReadVisibility)
+	f = p.ListFilter(admin(1, 7))
+	assert.Equal(t, int64(7), f.VisibilityUserID, "admin also filtered")
+}
+
+func TestListFilter_OrgOpen(t *testing.T) {
 	p := ResourcePolicy{Read: ReadOrgOpen, Write: WriteOrgOpen}
-	// ReadOrgOpen never filters by owner regardless of role
-	assert.Equal(t, int64(0), p.FilterList(subjectMember(1, 7)))
+	f := p.ListFilter(member(1, 7))
+	assert.Equal(t, int64(0), f.OwnerOnly)
+	assert.Equal(t, int64(0), f.VisibilityUserID)
 }

@@ -78,9 +78,10 @@ func (h *PodConnectHandler) GetPodConnection(c *gin.Context) {
 		apierr.Unauthorized(c, apierr.AUTH_REQUIRED, "Unauthorized")
 		return
 	}
-	if !policy.PodPolicy.AllowRead(policy.From(tenant), policy.ResourceContext{
-		OrgID: pod.OrganizationID, OwnerID: pod.CreatedByID,
-	}) {
+	if !policy.PodPolicy.AllowRead(
+		policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole),
+		policy.PodResource(pod.OrganizationID, pod.CreatedByID),
+	) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

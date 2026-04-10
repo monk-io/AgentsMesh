@@ -41,9 +41,9 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 	}
 
 	// Members can only list their own pods
-	subject := policy.From(tenant)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 	if req.CreatedByID == 0 {
-		req.CreatedByID = policy.PodPolicy.FilterList(subject)
+		req.CreatedByID = policy.PodPolicy.ListFilter(sub).OwnerOnly
 	}
 
 	pods, total, err := h.podService.ListPods(
@@ -79,9 +79,8 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
-	if !policy.PodPolicy.AllowRead(policy.From(tenant), policy.ResourceContext{
-		OrgID: pod.OrganizationID, OwnerID: pod.CreatedByID,
-	}) {
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	if !policy.PodPolicy.AllowRead(sub, policy.PodResource(pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -101,9 +100,8 @@ func (h *PodHandler) GetPodConnection(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
-	if !policy.PodPolicy.AllowRead(policy.From(tenant), policy.ResourceContext{
-		OrgID: pod.OrganizationID, OwnerID: pod.CreatedByID,
-	}) {
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	if !policy.PodPolicy.AllowRead(sub, policy.PodResource(pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

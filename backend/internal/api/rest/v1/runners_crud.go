@@ -17,7 +17,9 @@ import (
 func (h *RunnerHandler) ListRunners(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 
-	runners, err := h.runnerService.ListRunners(c.Request.Context(), tenant.OrganizationID, tenant.UserID)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	filter := policy.RunnerPolicy.ListFilter(sub)
+	runners, err := h.runnerService.ListRunners(c.Request.Context(), tenant.OrganizationID, filter.VisibilityUserID)
 	if err != nil {
 		apierr.InternalError(c, "Failed to list runners")
 		return
@@ -48,13 +50,10 @@ func (h *RunnerHandler) GetRunner(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
-	ownerID := int64(0)
-	if r.RegisteredByUserID != nil {
-		ownerID = *r.RegisteredByUserID
-	}
-	if !policy.RunnerPolicy.AllowRead(policy.From(tenant), policy.ResourceContext{
-		OrgID: r.OrganizationID, OwnerID: ownerID, Visibility: r.Visibility,
-	}) {
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
+	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
+		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -93,21 +92,22 @@ func (h *RunnerHandler) UpdateRunner(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Only admins may update runners
-	if !policy.RunnerPolicy.AllowWrite(policy.From(tenant), policy.ResourceContext{OrgID: tenant.OrganizationID}) {
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
 		apierr.ForbiddenAdmin(c)
 		return
 	}
 
-	// Verify runner belongs to organization
 	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
-	if r.OrganizationID != tenant.OrganizationID {
+	if !policy.RunnerPolicy.AllowWrite(sub, policy.VisibleResource(
+		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -137,9 +137,9 @@ func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 
-	// Only admins may delete runners
-	if !policy.RunnerPolicy.AllowWrite(policy.From(tenant), policy.ResourceContext{OrgID: tenant.OrganizationID}) {
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
 		apierr.ForbiddenAdmin(c)
 		return
 	}
@@ -150,7 +150,9 @@ func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 		return
 	}
 
-	if r.OrganizationID != tenant.OrganizationID {
+	if !policy.RunnerPolicy.AllowWrite(sub, policy.VisibleResource(
+		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

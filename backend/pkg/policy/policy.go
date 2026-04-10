@@ -1,17 +1,15 @@
 package policy
 
-import "github.com/anthropics/agentsmesh/backend/internal/middleware"
-
-// Subject is the acting user extracted from tenant context.
+// Subject is the acting user.
 type Subject struct {
 	OrgID  int64
 	UserID int64
 	Role   string // "owner", "admin", "member", "apikey"
 }
 
-// From constructs a Subject from a TenantContext.
-func From(t *middleware.TenantContext) Subject {
-	return Subject{OrgID: t.OrganizationID, UserID: t.UserID, Role: t.UserRole}
+// NewSubject constructs a Subject from raw tenant context fields.
+func NewSubject(orgID, userID int64, role string) Subject {
+	return Subject{OrgID: orgID, UserID: userID, Role: role}
 }
 
 func (s Subject) isAdmin() bool  { return s.Role == "owner" || s.Role == "admin" }
@@ -20,54 +18,79 @@ func (s Subject) isAPIKey() bool { return s.Role == "apikey" }
 // ResourceContext carries the access-relevant fields of a resource instance.
 type ResourceContext struct {
 	OrgID          int64
-	OwnerID        int64   // 0 = no owner concept (admin-only resources)
-	Visibility     string  // "" | "organization" | "private"
-	GrantedUserIDs []int64 // explicit per-instance grants (Phase 2; pass nil for now)
+	OwnerID        int64
+	Visibility     string
+	GrantedUserIDs []int64
 }
 
-// ReadAccess enumerates the read access modes a policy may declare.
+// PodResource builds a context for a ReadOwnerOnly resource (Pod).
+func PodResource(orgID, createdByID int64) ResourceContext {
+	return ResourceContext{OrgID: orgID, OwnerID: createdByID}
+}
+
+// VisibleResource builds a context for a ReadVisibility resource (Runner, Repository).
+// Handles the nullable *int64 owner field internally.
+func VisibleResource(orgID int64, ownerIDPtr *int64, visibility string) ResourceContext {
+	var ownerID int64
+	if ownerIDPtr != nil {
+		ownerID = *ownerIDPtr
+	}
+	return ResourceContext{OrgID: orgID, OwnerID: ownerID, Visibility: visibility}
+}
+
+// WithGrants returns a copy with explicit grants attached (Phase 2).
+func (rc ResourceContext) WithGrants(userIDs []int64) ResourceContext {
+	rc.GrantedUserIDs = userIDs
+	return rc
+}
+
+func (rc ResourceContext) isGranted(userID int64) bool {
+	for _, id := range rc.GrantedUserIDs {
+		if id == userID {
+			return true
+		}
+	}
+	return false
+}
+
+// ReadAccess enumerates read access modes.
 type ReadAccess int
 
 const (
-	ReadOrgOpen    ReadAccess = iota // any org member may read
+	ReadOrgOpen    ReadAccess = iota // any org member
 	ReadOwnerOnly                    // members see own; admins/apikeys see all
-	ReadVisibility                   // Visibility field controls access; no admin bypass
+	ReadVisibility                   // Visibility field controls; no admin bypass
 )
 
-// WriteAccess enumerates the write access modes a policy may declare.
+// WriteAccess enumerates write access modes.
 type WriteAccess int
 
 const (
-	WriteOrgOpen      WriteAccess = iota // any org member may write
-	WriteCreatorAdmin                    // creator or admin/owner may write
-	WriteAdminOnly                       // only admin/owner may write
+	WriteOrgOpen      WriteAccess = iota // any org member
+	WriteCreatorAdmin                    // creator or admin
+	WriteAdminOnly                       // admin only
 )
 
-// ResourcePolicy declares the access rules for one resource type.
+// ResourcePolicy declares access rules for a resource type.
 type ResourcePolicy struct {
 	Read  ReadAccess
 	Write WriteAccess
 }
 
 // AllowRead returns true if subject may read the resource.
+// Grants augment within each mode (not as a universal bypass).
 func (p ResourcePolicy) AllowRead(s Subject, res ResourceContext) bool {
 	if res.OrgID != s.OrgID {
 		return false
-	}
-	// Explicit grant check (Phase 2: populated from resource_grants table).
-	for _, id := range res.GrantedUserIDs {
-		if id == s.UserID {
-			return true
-		}
 	}
 	switch p.Read {
 	case ReadOrgOpen:
 		return true
 	case ReadOwnerOnly:
-		return s.isAdmin() || s.isAPIKey() || res.OwnerID == s.UserID
+		return s.isAdmin() || s.isAPIKey() || res.OwnerID == s.UserID || res.isGranted(s.UserID)
 	case ReadVisibility:
 		if res.Visibility == "private" {
-			return res.OwnerID == s.UserID
+			return res.OwnerID == s.UserID || res.isGranted(s.UserID)
 		}
 		return true
 	}
@@ -90,11 +113,31 @@ func (p ResourcePolicy) AllowWrite(s Subject, res ResourceContext) bool {
 	return false
 }
 
-// FilterList returns a non-zero ownerID to narrow list queries, or 0 for no filter.
-// Pass the returned value as a createdByID/ownerID filter to the repository.
-func (p ResourcePolicy) FilterList(s Subject) int64 {
-	if p.Read == ReadOwnerOnly && !s.isAdmin() && !s.isAPIKey() {
-		return s.UserID
+// AllowAdmin returns true if the subject is an admin in the given org.
+// Use for pre-fetch admin-gate checks (Create operations, or as optimization
+// before fetching a resource for WriteAdminOnly policies).
+func AllowAdmin(s Subject, orgID int64) bool {
+	return s.OrgID == orgID && s.isAdmin()
+}
+
+// ListFilter describes how to narrow a list query for the subject.
+type ListFilter struct {
+	// OwnerOnly: non-zero restricts results to this owner (ReadOwnerOnly, non-admin).
+	OwnerOnly int64
+	// VisibilityUserID: non-zero means apply visibility filtering for this user.
+	// ReadVisibility always sets this (no admin bypass for truly private resources).
+	VisibilityUserID int64
+}
+
+// ListFilter returns filter parameters for list queries under this policy.
+func (p ResourcePolicy) ListFilter(s Subject) ListFilter {
+	switch p.Read {
+	case ReadOwnerOnly:
+		if !s.isAdmin() && !s.isAPIKey() {
+			return ListFilter{OwnerOnly: s.UserID}
+		}
+	case ReadVisibility:
+		return ListFilter{VisibilityUserID: s.UserID}
 	}
-	return 0
+	return ListFilter{}
 }
