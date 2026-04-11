@@ -23,15 +23,18 @@ type PodRepository interface {
 	GetOrgAndCreator(ctx context.Context, podKey string) (orgID, creatorID int64, err error)
 	// GetTicketByID returns a ticket's slug and title by ID (cross-domain read for pod creation).
 	GetTicketByID(ctx context.Context, ticketID int64) (slug, title string, err error)
-	// ListByOrg returns pods for an organization with optional status and creator filter and pagination.
-	ListByOrg(ctx context.Context, orgID int64, statuses []string, createdByID int64, limit, offset int) ([]*Pod, int64, error)
+	// ListByOrg returns pods for an organization with optional status, creator, and grant filters.
+	// When createdByID > 0, restricts to that creator. When grantedUserID > 0, also includes
+	// pods explicitly granted to that user via resource_grants.
+	ListByOrg(ctx context.Context, orgID int64, statuses []string, createdByID int64, grantedUserID int64, limit, offset int) ([]*Pod, int64, error)
 	// ListByTicket returns pods for a ticket with associations preloaded.
 	ListByTicket(ctx context.Context, ticketID int64) ([]*Pod, error)
 	// ListByRunner returns pods for a runner with optional status filter.
 	ListByRunner(ctx context.Context, runnerID int64, status string) ([]*Pod, error)
 	// ListByRunnerPaginated returns pods for a runner with pagination and optional owner filter.
-	// Pass createdByID > 0 to restrict to a specific owner; 0 means no filter (all pods).
-	ListByRunnerPaginated(ctx context.Context, runnerID int64, status string, createdByID int64, limit, offset int) ([]*Pod, int64, error)
+	// Pass createdByID > 0 to restrict to a specific owner; 0 means no filter.
+	// Pass grantedUserID > 0 to also include pods granted to that user.
+	ListByRunnerPaginated(ctx context.Context, runnerID int64, status string, createdByID int64, grantedUserID int64, limit, offset int) ([]*Pod, int64, error)
 	// ListActive returns active pods for a runner (initializing, running, paused, disconnected).
 	ListActive(ctx context.Context, runnerID int64) ([]*Pod, error)
 	// GetActivePodBySourcePodKey returns an active pod resumed from the given source pod key.

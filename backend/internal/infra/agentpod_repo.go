@@ -66,7 +66,7 @@ func (r *podRepo) GetTicketByID(ctx context.Context, ticketID int64) (string, st
 	return t.Slug, t.Title, nil
 }
 
-func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, statuses []string, createdByID int64, limit, offset int) ([]*agentpod.Pod, int64, error) {
+func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, statuses []string, createdByID int64, grantedUserID int64, limit, offset int) ([]*agentpod.Pod, int64, error) {
 	query := r.db.WithContext(ctx).Model(&agentpod.Pod{}).Where("organization_id = ?", orgID)
 	switch len(statuses) {
 	case 0:
@@ -75,7 +75,10 @@ func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, statuses []string,
 	default:
 		query = query.Where("status IN ?", statuses)
 	}
-	if createdByID > 0 {
+	if createdByID > 0 && grantedUserID > 0 {
+		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'pod' AND user_id = ? AND organization_id = ?))",
+			createdByID, grantedUserID, orgID)
+	} else if createdByID > 0 {
 		query = query.Where("created_by_id = ?", createdByID)
 	}
 
@@ -113,12 +116,15 @@ func (r *podRepo) ListByRunner(ctx context.Context, runnerID int64, status strin
 	return pods, err
 }
 
-func (r *podRepo) ListByRunnerPaginated(ctx context.Context, runnerID int64, status string, createdByID int64, limit, offset int) ([]*agentpod.Pod, int64, error) {
+func (r *podRepo) ListByRunnerPaginated(ctx context.Context, runnerID int64, status string, createdByID int64, grantedUserID int64, limit, offset int) ([]*agentpod.Pod, int64, error) {
 	query := r.db.WithContext(ctx).Model(&agentpod.Pod{}).Where("runner_id = ?", runnerID)
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
-	if createdByID > 0 {
+	if createdByID > 0 && grantedUserID > 0 {
+		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'pod' AND user_id = ?))",
+			createdByID, grantedUserID)
+	} else if createdByID > 0 {
 		query = query.Where("created_by_id = ?", createdByID)
 	}
 

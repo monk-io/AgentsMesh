@@ -93,7 +93,8 @@ func (r *gitProviderRepo) ListByOrganizationForUser(ctx context.Context, orgID i
 	var repos []*gitprovider.Repository
 	err := r.db.WithContext(ctx).
 		Where("organization_id = ? AND is_active = ? AND deleted_at IS NULL", orgID, true).
-		Where("(visibility = 'organization' OR (visibility = 'private' AND imported_by_user_id = ?))", userID).
+		Where("(visibility = 'organization' OR (visibility = 'private' AND imported_by_user_id = ?) OR id::text IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'repository' AND user_id = ? AND organization_id = ?))",
+			userID, userID, orgID).
 		Order("created_at DESC").
 		Find(&repos).Error
 	return repos, err

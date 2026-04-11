@@ -23,7 +23,7 @@ func TestListPods(t *testing.T) {
 	}
 
 	t.Run("list all", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, nil, 0, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, nil, 0, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -36,7 +36,7 @@ func TestListPods(t *testing.T) {
 	})
 
 	t.Run("list with pagination", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, nil, 0, 2, 0)
+		pods, total, err := svc.ListPods(ctx, 1, nil, 0, 0, 2, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -49,7 +49,7 @@ func TestListPods(t *testing.T) {
 	})
 
 	t.Run("list with single status filter", func(t *testing.T) {
-		pods, _, err := svc.ListPods(ctx, 1, []string{agentpod.StatusInitializing}, 0, 10, 0)
+		pods, _, err := svc.ListPods(ctx, 1, []string{agentpod.StatusInitializing}, 0, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -59,14 +59,14 @@ func TestListPods(t *testing.T) {
 	})
 
 	// Update some pods to different statuses for multi-status test
-	allPods, _, _ := svc.ListPods(ctx, 1, nil, 0, 10, 0)
+	allPods, _, _ := svc.ListPods(ctx, 1, nil, 0, 0, 10, 0)
 	if len(allPods) >= 3 {
 		svc.UpdatePodStatus(ctx, allPods[0].PodKey, agentpod.StatusRunning)
 		svc.UpdatePodStatus(ctx, allPods[1].PodKey, agentpod.StatusTerminated)
 	}
 
 	t.Run("list with multiple status filter", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusRunning, agentpod.StatusInitializing}, 0, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusRunning, agentpod.StatusInitializing}, 0, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -80,7 +80,7 @@ func TestListPods(t *testing.T) {
 	})
 
 	t.Run("list with non-matching status filter", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusPaused}, 0, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusPaused}, 0, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -94,7 +94,7 @@ func TestListPods(t *testing.T) {
 
 	t.Run("list filtered by creator", func(t *testing.T) {
 		// CreatedByID 1 should match exactly 1 pod
-		pods, total, err := svc.ListPods(ctx, 1, nil, 1, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, nil, 1, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -108,7 +108,7 @@ func TestListPods(t *testing.T) {
 
 	t.Run("list filtered by creator with status", func(t *testing.T) {
 		// CreatedByID 1 pod was updated to running status above
-		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusRunning}, 1, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusRunning}, 1, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -122,7 +122,7 @@ func TestListPods(t *testing.T) {
 
 	t.Run("list filtered by creator with non-matching status", func(t *testing.T) {
 		// CreatedByID 1 pod is running, not initializing
-		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusInitializing}, 1, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, []string{agentpod.StatusInitializing}, 1, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}
@@ -135,7 +135,7 @@ func TestListPods(t *testing.T) {
 	})
 
 	t.Run("list filtered by non-existent creator", func(t *testing.T) {
-		pods, total, err := svc.ListPods(ctx, 1, nil, 999, 10, 0)
+		pods, total, err := svc.ListPods(ctx, 1, nil, 999, 0, 10, 0)
 		if err != nil {
 			t.Fatalf("ListPods failed: %v", err)
 		}

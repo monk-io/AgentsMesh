@@ -123,8 +123,8 @@ func (h *RepositoryHandler) GetRepository(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.RepositoryPolicy.AllowRead(sub, policy.VisibleResource(
-		repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
+	if !policy.RepositoryPolicy.AllowRead(sub, h.repoResourceWithGrants(
+		c.Request.Context(), repoID, repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return

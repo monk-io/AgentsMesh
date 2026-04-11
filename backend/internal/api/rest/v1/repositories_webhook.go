@@ -120,8 +120,8 @@ func (h *RepositoryHandler) GetRepositoryWebhookStatus(c *gin.Context) {
 		return
 	}
 
-	if !policy.RepositoryPolicy.AllowRead(sub, policy.VisibleResource(
-		repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
+	if !policy.RepositoryPolicy.AllowRead(sub, h.repoResourceWithGrants(
+		c.Request.Context(), repoID, repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return

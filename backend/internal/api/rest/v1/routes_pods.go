@@ -41,7 +41,7 @@ func registerPodRoutes(rg *gin.RouterGroup, svc *Services) {
 		if svc.PodCoordinator != nil {
 			commandSender = svc.PodCoordinator.GetCommandSender()
 		}
-		RegisterPodConnectRoutes(rg, svc.Pod, svc.RelayManager, svc.RelayTokenGenerator, commandSender, svc.GeoResolver)
+		RegisterPodConnectRoutes(rg, svc.Pod, svc.RelayManager, svc.RelayTokenGenerator, commandSender, svc.GeoResolver, svc.Grant)
 	}
 
 	// AutopilotControllers

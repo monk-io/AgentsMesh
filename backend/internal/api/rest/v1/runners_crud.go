@@ -51,8 +51,8 @@ func (h *RunnerHandler) GetRunner(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
-		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	if !policy.RunnerPolicy.AllowRead(sub, h.runnerResourceWithGrants(
+		c.Request.Context(), runnerID, r.OrganizationID, r.RegisteredByUserID, r.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return

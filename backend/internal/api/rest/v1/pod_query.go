@@ -53,6 +53,7 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 		tenant.OrganizationID,
 		statuses,
 		req.CreatedByID,
+		filter.GrantUserID,
 		limit,
 		req.Offset,
 	)
@@ -82,7 +83,7 @@ func (h *PodHandler) GetPod(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.PodPolicy.AllowRead(sub, policy.PodResource(pod.OrganizationID, pod.CreatedByID)) {
+	if !policy.PodPolicy.AllowRead(sub, h.podResourceWithGrants(c.Request.Context(), podKey, pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}
@@ -103,7 +104,7 @@ func (h *PodHandler) GetPodConnection(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.PodPolicy.AllowRead(sub, policy.PodResource(pod.OrganizationID, pod.CreatedByID)) {
+	if !policy.PodPolicy.AllowRead(sub, h.podResourceWithGrants(c.Request.Context(), podKey, pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

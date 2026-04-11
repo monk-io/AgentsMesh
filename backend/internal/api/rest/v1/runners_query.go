@@ -55,8 +55,8 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 		return
 	}
 
-	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
-		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	if !policy.RunnerPolicy.AllowRead(sub, h.runnerResourceWithGrants(
+		c.Request.Context(), runnerID, r.OrganizationID, r.RegisteredByUserID, r.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return
@@ -69,7 +69,7 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 	}
 
 	podFilter := policy.PodPolicy.ListFilter(sub)
-	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, req.Status, podFilter.OwnerOnly, limit, req.Offset)
+	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, req.Status, podFilter.OwnerOnly, podFilter.GrantUserID, limit, req.Offset)
 	if err != nil {
 		apierr.InternalError(c, "Failed to list pods")
 		return
@@ -112,8 +112,8 @@ func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
 		return
 	}
 
-	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
-		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	if !policy.RunnerPolicy.AllowRead(sub, h.runnerResourceWithGrants(
+		c.Request.Context(), runnerID, r.OrganizationID, r.RegisteredByUserID, r.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return

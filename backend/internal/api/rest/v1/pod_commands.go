@@ -23,7 +23,7 @@ func (h *PodHandler) SendPodPrompt(c *gin.Context) {
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.PodPolicy.AllowWrite(sub, policy.PodResource(pod.OrganizationID, pod.CreatedByID)) {
+	if !policy.PodPolicy.AllowWrite(sub, h.podResourceWithGrants(c.Request.Context(), podKey, pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
 		return
 	}

@@ -36,8 +36,8 @@ func (h *RunnerHandler) RequestLogUpload(c *gin.Context) {
 		return
 	}
 
-	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
-		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	if !policy.RunnerPolicy.AllowRead(sub, h.runnerResourceWithGrants(
+		c.Request.Context(), runnerID, r.OrganizationID, r.RegisteredByUserID, r.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return
@@ -102,8 +102,8 @@ func (h *RunnerHandler) ListRunnerLogs(c *gin.Context) {
 		return
 	}
 
-	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
-		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
+	if !policy.RunnerPolicy.AllowRead(sub, h.runnerResourceWithGrants(
+		c.Request.Context(), runnerID, r.OrganizationID, r.RegisteredByUserID, r.Visibility,
 	)) {
 		apierr.ForbiddenAccess(c)
 		return
