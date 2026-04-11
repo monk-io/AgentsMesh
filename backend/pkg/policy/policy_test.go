@@ -32,17 +32,17 @@ func TestPodResource(t *testing.T) {
 }
 
 func TestVisibleResource_NilOwner(t *testing.T) {
-	rc := VisibleResource(1, nil, "private")
+	rc := VisibleResource(1, nil, VisibilityPrivate)
 	assert.Equal(t, int64(1), rc.OrgID)
 	assert.Equal(t, int64(0), rc.OwnerID)
-	assert.Equal(t, "private", rc.Visibility)
+	assert.Equal(t, VisibilityPrivate, rc.Visibility)
 }
 
 func TestVisibleResource_NonNilOwner(t *testing.T) {
 	uid := int64(42)
-	rc := VisibleResource(1, &uid, "organization")
+	rc := VisibleResource(1, &uid, VisibilityOrganization)
 	assert.Equal(t, int64(42), rc.OwnerID)
-	assert.Equal(t, "organization", rc.Visibility)
+	assert.Equal(t, VisibilityOrganization, rc.Visibility)
 }
 
 func TestWithGrants(t *testing.T) {

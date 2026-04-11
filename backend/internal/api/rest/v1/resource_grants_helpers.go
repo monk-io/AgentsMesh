@@ -2,7 +2,6 @@ package v1
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
 	"github.com/anthropics/agentsmesh/backend/pkg/policy"
@@ -26,8 +25,7 @@ func (h *RunnerHandler) runnerResourceWithGrants(ctx context.Context, runnerID i
 	if h.grantService == nil {
 		return rc
 	}
-	rid := idToString(runnerID)
-	if ids, err := h.grantService.GetGrantedUserIDs(ctx, grant.TypeRunner, rid); err == nil && len(ids) > 0 {
+	if ids, err := h.grantService.GetGrantedUserIDs(ctx, grant.TypeRunner, grant.IntResourceID(runnerID)); err == nil && len(ids) > 0 {
 		return rc.WithGrants(ids)
 	}
 	return rc
@@ -39,13 +37,8 @@ func (h *RepositoryHandler) repoResourceWithGrants(ctx context.Context, repoID i
 	if h.grantService == nil {
 		return rc
 	}
-	rid := idToString(repoID)
-	if ids, err := h.grantService.GetGrantedUserIDs(ctx, grant.TypeRepository, rid); err == nil && len(ids) > 0 {
+	if ids, err := h.grantService.GetGrantedUserIDs(ctx, grant.TypeRepository, grant.IntResourceID(repoID)); err == nil && len(ids) > 0 {
 		return rc.WithGrants(ids)
 	}
 	return rc
-}
-
-func idToString(id int64) string {
-	return strconv.FormatInt(id, 10)
 }

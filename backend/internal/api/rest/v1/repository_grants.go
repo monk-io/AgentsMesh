@@ -33,7 +33,7 @@ func (h *RepositoryHandler) ListRepositoryGrants(c *gin.Context) {
 		return
 	}
 
-	grants, err := h.grantService.ListGrants(c.Request.Context(), grant.TypeRepository, strconv.FormatInt(repoID, 10))
+	grants, err := h.grantService.ListGrants(c.Request.Context(), grant.TypeRepository, grant.IntResourceID(repoID))
 	if err != nil {
 		apierr.InternalError(c, "Failed to list grants")
 		return
@@ -74,7 +74,7 @@ func (h *RepositoryHandler) GrantRepositoryAccess(c *gin.Context) {
 	}
 
 	g, err := h.grantService.GrantAccess(c.Request.Context(),
-		tenant.OrganizationID, grant.TypeRepository, strconv.FormatInt(repoID, 10), req.UserID, tenant.UserID)
+		tenant.OrganizationID, grant.TypeRepository, grant.IntResourceID(repoID), req.UserID, tenant.UserID)
 	if err != nil {
 		handleGrantError(c, err)
 		return

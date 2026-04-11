@@ -33,7 +33,7 @@ func (h *RunnerHandler) ListRunnerGrants(c *gin.Context) {
 		return
 	}
 
-	grants, err := h.grantService.ListGrants(c.Request.Context(), grant.TypeRunner, strconv.FormatInt(runnerID, 10))
+	grants, err := h.grantService.ListGrants(c.Request.Context(), grant.TypeRunner, grant.IntResourceID(runnerID))
 	if err != nil {
 		apierr.InternalError(c, "Failed to list grants")
 		return
@@ -74,7 +74,7 @@ func (h *RunnerHandler) GrantRunnerAccess(c *gin.Context) {
 	}
 
 	g, err := h.grantService.GrantAccess(c.Request.Context(),
-		tenant.OrganizationID, grant.TypeRunner, strconv.FormatInt(runnerID, 10), req.UserID, tenant.UserID)
+		tenant.OrganizationID, grant.TypeRunner, grant.IntResourceID(runnerID), req.UserID, tenant.UserID)
 	if err != nil {
 		handleGrantError(c, err)
 		return

@@ -235,7 +235,7 @@ func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
 	}
 
 	if h.grantService != nil {
-		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypeRepository, strconv.FormatInt(repoID, 10))
+		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypeRepository, grant.IntResourceID(repoID))
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Repository deleted"})

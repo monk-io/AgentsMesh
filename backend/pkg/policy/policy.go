@@ -53,7 +53,11 @@ func (rc ResourceContext) isGranted(userID int64) bool {
 	return false
 }
 
-// ReadAccess enumerates read access modes.
+// Visibility constants for ReadVisibility policy mode.
+const (
+	VisibilityOrganization = "organization"
+	VisibilityPrivate      = "private"
+)
 type ReadAccess int
 
 const (
@@ -89,7 +93,7 @@ func (p ResourcePolicy) AllowRead(s Subject, res ResourceContext) bool {
 	case ReadOwnerOnly:
 		return s.isAdmin() || s.isAPIKey() || res.OwnerID == s.UserID || res.isGranted(s.UserID)
 	case ReadVisibility:
-		if res.Visibility == "private" {
+		if res.Visibility == VisibilityPrivate {
 			return res.OwnerID == s.UserID || res.isGranted(s.UserID)
 		}
 		return true

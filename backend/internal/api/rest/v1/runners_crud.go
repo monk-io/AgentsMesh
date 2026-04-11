@@ -168,7 +168,7 @@ func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 	}
 
 	if h.grantService != nil {
-		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypeRunner, strconv.FormatInt(runnerID, 10))
+		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypeRunner, grant.IntResourceID(runnerID))
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Runner deleted"})
