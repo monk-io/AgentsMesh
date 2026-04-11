@@ -106,7 +106,7 @@ func (p ResourcePolicy) AllowWrite(s Subject, res ResourceContext) bool {
 	case WriteOrgOpen:
 		return true
 	case WriteCreatorAdmin:
-		return s.isAdmin() || res.OwnerID == s.UserID
+		return s.isAdmin() || res.OwnerID == s.UserID || res.isGranted(s.UserID)
 	case WriteAdminOnly:
 		return s.isAdmin()
 	}
@@ -127,6 +127,9 @@ type ListFilter struct {
 	// VisibilityUserID: non-zero means apply visibility filtering for this user.
 	// ReadVisibility always sets this (no admin bypass for truly private resources).
 	VisibilityUserID int64
+	// GrantUserID: non-zero means also include resources explicitly granted to this user.
+	// Always set to the subject's UserID so repos can include grant-based access.
+	GrantUserID int64
 }
 
 // ListFilter returns filter parameters for list queries under this policy.
@@ -134,10 +137,11 @@ func (p ResourcePolicy) ListFilter(s Subject) ListFilter {
 	switch p.Read {
 	case ReadOwnerOnly:
 		if !s.isAdmin() && !s.isAPIKey() {
-			return ListFilter{OwnerOnly: s.UserID}
+			return ListFilter{OwnerOnly: s.UserID, GrantUserID: s.UserID}
 		}
+		return ListFilter{}
 	case ReadVisibility:
-		return ListFilter{VisibilityUserID: s.UserID}
+		return ListFilter{VisibilityUserID: s.UserID, GrantUserID: s.UserID}
 	}
 	return ListFilter{}
 }

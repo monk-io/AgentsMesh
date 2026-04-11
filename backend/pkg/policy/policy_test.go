@@ -170,6 +170,15 @@ func TestAllowWrite_CreatorAdmin(t *testing.T) {
 	}
 }
 
+func TestAllowWrite_CreatorAdmin_WithGrants(t *testing.T) {
+	p := PodPolicy
+	res := PodResource(1, 10).WithGrants([]int64{20})
+
+	assert.True(t, p.AllowWrite(member(1, 10), res), "creator")
+	assert.True(t, p.AllowWrite(member(1, 20), res), "granted user can write")
+	assert.False(t, p.AllowWrite(member(1, 30), res), "non-granted member cannot write")
+}
+
 // --- AllowWrite: WriteAdminOnly (RunnerPolicy) ---
 
 func TestAllowWrite_AdminOnly(t *testing.T) {
@@ -211,10 +220,12 @@ func TestListFilter_OwnerOnly(t *testing.T) {
 	p := PodPolicy
 	f := p.ListFilter(member(1, 7))
 	assert.Equal(t, int64(7), f.OwnerOnly)
+	assert.Equal(t, int64(7), f.GrantUserID, "member gets grant filter")
 	assert.Equal(t, int64(0), f.VisibilityUserID)
 
 	f = p.ListFilter(admin(1, 7))
 	assert.Equal(t, int64(0), f.OwnerOnly, "admin: no owner filter")
+	assert.Equal(t, int64(0), f.GrantUserID, "admin: no grant filter needed")
 
 	f = p.ListFilter(apikey(1, 7))
 	assert.Equal(t, int64(0), f.OwnerOnly, "apikey: no owner filter")
@@ -225,10 +236,12 @@ func TestListFilter_Visibility(t *testing.T) {
 	f := p.ListFilter(member(1, 7))
 	assert.Equal(t, int64(0), f.OwnerOnly)
 	assert.Equal(t, int64(7), f.VisibilityUserID)
+	assert.Equal(t, int64(7), f.GrantUserID, "member gets grant filter")
 
 	// Admin also gets visibility filtering (no admin bypass for ReadVisibility)
 	f = p.ListFilter(admin(1, 7))
 	assert.Equal(t, int64(7), f.VisibilityUserID, "admin also filtered")
+	assert.Equal(t, int64(7), f.GrantUserID, "admin also gets grant filter for list")
 }
 
 func TestListFilter_OrgOpen(t *testing.T) {
