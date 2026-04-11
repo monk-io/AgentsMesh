@@ -28,7 +28,7 @@ type mockPodService struct {
 	updatePerpetualFn func(ctx context.Context, podKey string, perpetual bool) error
 }
 
-func (m *mockPodService) ListPods(context.Context, int64, []string, int64, int64, int, int) ([]*agentpod.Pod, int64, error) {
+func (m *mockPodService) ListPods(context.Context, int64, agentpod.PodListQuery) ([]*agentpod.Pod, int64, error) {
 	return nil, 0, nil
 }
 

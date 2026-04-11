@@ -4,11 +4,19 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/anthropics/agentsmesh/backend/pkg/policy"
 	"github.com/gin-gonic/gin"
 )
+
+func statusSlice(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return []string{s}
+}
 
 // ListAvailableRunners lists available runners for pods
 // GET /api/v1/organizations/:slug/runners/available
@@ -69,7 +77,13 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 	}
 
 	podFilter := policy.PodPolicy.ListFilter(sub)
-	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, req.Status, podFilter.OwnerOnly, podFilter.GrantUserID, limit, req.Offset)
+	pods, total, err := h.podService.ListPodsByRunner(c.Request.Context(), runnerID, agentpod.PodListQuery{
+		Statuses:      statusSlice(req.Status),
+		CreatedByID:   podFilter.OwnerOnly,
+		GrantedUserID: podFilter.GrantUserID,
+		Limit:         limit,
+		Offset:        req.Offset,
+	})
 	if err != nil {
 		apierr.InternalError(c, "Failed to list pods")
 		return

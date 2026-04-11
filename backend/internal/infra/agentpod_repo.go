@@ -66,20 +66,20 @@ func (r *podRepo) GetTicketByID(ctx context.Context, ticketID int64) (string, st
 	return t.Slug, t.Title, nil
 }
 
-func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, statuses []string, createdByID int64, grantedUserID int64, limit, offset int) ([]*agentpod.Pod, int64, error) {
+func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, q agentpod.PodListQuery) ([]*agentpod.Pod, int64, error) {
 	query := r.db.WithContext(ctx).Model(&agentpod.Pod{}).Where("organization_id = ?", orgID)
-	switch len(statuses) {
+	switch len(q.Statuses) {
 	case 0:
 	case 1:
-		query = query.Where("status = ?", statuses[0])
+		query = query.Where("status = ?", q.Statuses[0])
 	default:
-		query = query.Where("status IN ?", statuses)
+		query = query.Where("status IN ?", q.Statuses)
 	}
-	if createdByID > 0 && grantedUserID > 0 {
+	if q.CreatedByID > 0 && q.GrantedUserID > 0 {
 		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'pod' AND user_id = ? AND organization_id = ?))",
-			createdByID, grantedUserID, orgID)
-	} else if createdByID > 0 {
-		query = query.Where("created_by_id = ?", createdByID)
+			q.CreatedByID, q.GrantedUserID, orgID)
+	} else if q.CreatedByID > 0 {
+		query = query.Where("created_by_id = ?", q.CreatedByID)
 	}
 
 	var total int64
@@ -90,7 +90,7 @@ func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, statuses []string,
 	var pods []*agentpod.Pod
 	err := query.
 		Preload("Runner").Preload("Agent").Preload("Ticket").Preload("CreatedBy").Preload("Repository").
-		Order("created_at DESC").Limit(limit).Offset(offset).Find(&pods).Error
+		Order("created_at DESC").Limit(q.Limit).Offset(q.Offset).Find(&pods).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -116,16 +116,16 @@ func (r *podRepo) ListByRunner(ctx context.Context, runnerID int64, status strin
 	return pods, err
 }
 
-func (r *podRepo) ListByRunnerPaginated(ctx context.Context, runnerID int64, status string, createdByID int64, grantedUserID int64, limit, offset int) ([]*agentpod.Pod, int64, error) {
+func (r *podRepo) ListByRunnerPaginated(ctx context.Context, runnerID int64, q agentpod.PodListQuery) ([]*agentpod.Pod, int64, error) {
 	query := r.db.WithContext(ctx).Model(&agentpod.Pod{}).Where("runner_id = ?", runnerID)
-	if status != "" {
-		query = query.Where("status = ?", status)
+	if len(q.Statuses) == 1 {
+		query = query.Where("status = ?", q.Statuses[0])
 	}
-	if createdByID > 0 && grantedUserID > 0 {
+	if q.CreatedByID > 0 && q.GrantedUserID > 0 {
 		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'pod' AND user_id = ?))",
-			createdByID, grantedUserID)
-	} else if createdByID > 0 {
-		query = query.Where("created_by_id = ?", createdByID)
+			q.CreatedByID, q.GrantedUserID)
+	} else if q.CreatedByID > 0 {
+		query = query.Where("created_by_id = ?", q.CreatedByID)
 	}
 
 	var total int64
@@ -136,7 +136,7 @@ func (r *podRepo) ListByRunnerPaginated(ctx context.Context, runnerID int64, sta
 	var pods []*agentpod.Pod
 	err := query.
 		Preload("Agent").Preload("Ticket").Preload("CreatedBy").Preload("Repository").
-		Order("created_at DESC").Limit(limit).Offset(offset).Find(&pods).Error
+		Order("created_at DESC").Limit(q.Limit).Offset(q.Offset).Find(&pods).Error
 	if err != nil {
 		return nil, 0, err
 	}

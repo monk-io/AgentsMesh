@@ -51,11 +51,13 @@ func (h *PodHandler) ListPods(c *gin.Context) {
 	pods, total, err := h.podService.ListPods(
 		c.Request.Context(),
 		tenant.OrganizationID,
-		statuses,
-		req.CreatedByID,
-		filter.GrantUserID,
-		limit,
-		req.Offset,
+		agentpod.PodListQuery{
+			Statuses:      statuses,
+			CreatedByID:   req.CreatedByID,
+			GrantedUserID: filter.GrantUserID,
+			Limit:         limit,
+			Offset:        req.Offset,
+		},
 	)
 	if err != nil {
 		apierr.InternalError(c, "Failed to list pods")
