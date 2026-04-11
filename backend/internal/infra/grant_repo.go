@@ -18,7 +18,7 @@ func NewGrantRepository(db *gorm.DB) grant.Repository {
 
 func (r *grantRepo) Create(ctx context.Context, g *grant.ResourceGrant) error {
 	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "resource_type"}, {Name: "resource_id"}, {Name: "user_id"}},
+		Columns:   []clause.Column{{Name: "organization_id"}, {Name: "resource_type"}, {Name: "resource_id"}, {Name: "user_id"}},
 		DoNothing: true,
 	}).Create(g).Error
 }

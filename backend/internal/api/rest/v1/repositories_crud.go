@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
@@ -231,6 +232,10 @@ func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
 	if err := h.repositoryService.Delete(c.Request.Context(), repoID); err != nil {
 		apierr.InternalError(c, "Failed to delete repository")
 		return
+	}
+
+	if h.grantService != nil {
+		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypeRepository, strconv.FormatInt(repoID, 10))
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Repository deleted"})

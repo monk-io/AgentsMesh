@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
@@ -35,6 +36,10 @@ func (h *PodHandler) TerminatePod(c *gin.Context) {
 		}
 		apierr.InternalError(c, "Failed to terminate pod")
 		return
+	}
+
+	if h.grantService != nil {
+		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypePod, podKey)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Pod terminated"})

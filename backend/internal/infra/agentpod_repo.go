@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"gorm.io/gorm"
 )
@@ -76,8 +77,8 @@ func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, q agentpod.PodList
 		query = query.Where("status IN ?", q.Statuses)
 	}
 	if q.CreatedByID > 0 && q.GrantedUserID > 0 {
-		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'pod' AND user_id = ? AND organization_id = ?))",
-			q.CreatedByID, q.GrantedUserID, orgID)
+		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = ? AND user_id = ? AND organization_id = ?))",
+			q.CreatedByID, grant.TypePod, q.GrantedUserID, orgID)
 	} else if q.CreatedByID > 0 {
 		query = query.Where("created_by_id = ?", q.CreatedByID)
 	}
@@ -122,8 +123,8 @@ func (r *podRepo) ListByRunnerPaginated(ctx context.Context, runnerID int64, q a
 		query = query.Where("status = ?", q.Statuses[0])
 	}
 	if q.CreatedByID > 0 && q.GrantedUserID > 0 {
-		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = 'pod' AND user_id = ?))",
-			q.CreatedByID, q.GrantedUserID)
+		query = query.Where("(created_by_id = ? OR pod_key IN (SELECT resource_id FROM resource_grants WHERE resource_type = ? AND user_id = ?))",
+			q.CreatedByID, grant.TypePod, q.GrantedUserID)
 	} else if q.CreatedByID > 0 {
 		query = query.Where("created_by_id = ?", q.CreatedByID)
 	}

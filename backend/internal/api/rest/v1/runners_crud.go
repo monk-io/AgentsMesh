@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	runner "github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
@@ -164,6 +165,10 @@ func (h *RunnerHandler) DeleteRunner(c *gin.Context) {
 		}
 		apierr.InternalError(c, "Failed to delete runner")
 		return
+	}
+
+	if h.grantService != nil {
+		_ = h.grantService.CleanupByResource(c.Request.Context(), grant.TypeRunner, strconv.FormatInt(runnerID, 10))
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Runner deleted"})
