@@ -18,18 +18,15 @@ func (h *RunnerHandler) ListRunnerGrants(c *gin.Context) {
 		return
 	}
 
-	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
-	if err != nil {
+	if _, err := h.runnerService.GetRunner(c.Request.Context(), runnerID); err != nil {
 		apierr.ResourceNotFound(c, "Runner not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.RunnerPolicy.AllowRead(sub, policy.VisibleResource(
-		r.OrganizationID, r.RegisteredByUserID, r.Visibility,
-	)) {
-		apierr.ForbiddenAccess(c)
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 

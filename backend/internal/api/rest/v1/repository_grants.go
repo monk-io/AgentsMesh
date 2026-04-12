@@ -18,18 +18,15 @@ func (h *RepositoryHandler) ListRepositoryGrants(c *gin.Context) {
 		return
 	}
 
-	repo, err := h.repositoryService.GetByID(c.Request.Context(), repoID)
-	if err != nil {
+	if _, err := h.repositoryService.GetByID(c.Request.Context(), repoID); err != nil {
 		apierr.ResourceNotFound(c, "Repository not found")
 		return
 	}
 
 	tenant := middleware.GetTenant(c)
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-	if !policy.RepositoryPolicy.AllowRead(sub, policy.VisibleResource(
-		repo.OrganizationID, repo.ImportedByUserID, repo.Visibility,
-	)) {
-		apierr.ForbiddenAccess(c)
+	if !policy.AllowAdmin(sub, tenant.OrganizationID) {
+		apierr.ForbiddenAdmin(c)
 		return
 	}
 
