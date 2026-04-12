@@ -91,7 +91,7 @@ func (r *runnerRepository) Delete(ctx context.Context, runnerID int64) error {
 
 // visibilityWithGrantsFilter is a SQL fragment for visibility + grant access.
 // Bind params: (userID, grantResourceType, userID, orgID).
-const visibilityWithGrantsFilter = "(visibility = 'organization' OR (visibility = 'private' AND registered_by_user_id = ?) OR id::text IN (SELECT resource_id FROM resource_grants WHERE resource_type = ? AND user_id = ? AND organization_id = ?))"
+const visibilityWithGrantsFilter = "(visibility = 'organization' OR (visibility = 'private' AND registered_by_user_id = ?) OR CAST(id AS TEXT) IN (SELECT resource_id FROM resource_grants WHERE resource_type = ? AND user_id = ? AND organization_id = ?))"
 
 func (r *runnerRepository) ListByOrg(ctx context.Context, orgID, userID int64) ([]*runner.Runner, error) {
 	var runners []*runner.Runner
