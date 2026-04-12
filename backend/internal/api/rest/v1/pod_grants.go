@@ -12,6 +12,10 @@ import (
 )
 
 func (h *PodHandler) ListPodGrants(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	podKey := c.Param("key")
 	pod, err := h.podService.GetPod(c.Request.Context(), podKey)
 	if err != nil {
@@ -35,6 +39,10 @@ func (h *PodHandler) ListPodGrants(c *gin.Context) {
 }
 
 func (h *PodHandler) GrantPodAccess(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	podKey := c.Param("key")
 	var req grantAccessRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,6 +73,10 @@ func (h *PodHandler) GrantPodAccess(c *gin.Context) {
 }
 
 func (h *PodHandler) RevokePodGrant(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	podKey := c.Param("key")
 	grantID, err := strconv.ParseInt(c.Param("grant_id"), 10, 64)
 	if err != nil {

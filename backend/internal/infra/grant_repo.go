@@ -46,6 +46,15 @@ func (r *grantRepo) GetGrantedUserIDs(ctx context.Context, resourceType, resourc
 	return userIDs, err
 }
 
+func (r *grantRepo) GetGrantedResourceIDs(ctx context.Context, resourceType string, userID int64) ([]string, error) {
+	var resourceIDs []string
+	err := r.db.WithContext(ctx).
+		Model(&grant.ResourceGrant{}).
+		Where("resource_type = ? AND user_id = ?", resourceType, userID).
+		Pluck("resource_id", &resourceIDs).Error
+	return resourceIDs, err
+}
+
 func (r *grantRepo) DeleteByResource(ctx context.Context, resourceType, resourceID string) error {
 	return r.db.WithContext(ctx).
 		Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).

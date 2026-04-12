@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/anthropics/agentsmesh/backend/pkg/policy"
@@ -143,9 +144,18 @@ func (h *PodHandler) ListPodsByTicket(c *gin.Context) {
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 	filter := policy.PodPolicy.ListFilter(sub)
 	if filter.OwnerOnly > 0 {
+		var grantedKeys map[string]bool
+		if h.grantService != nil && filter.GrantUserID > 0 {
+			if ids, err := h.grantService.GetGrantedResourceIDs(c.Request.Context(), grant.TypePod, filter.GrantUserID); err == nil && len(ids) > 0 {
+				grantedKeys = make(map[string]bool, len(ids))
+				for _, id := range ids {
+					grantedKeys[id] = true
+				}
+			}
+		}
 		filtered := make([]*agentpod.Pod, 0, len(pods))
 		for _, p := range pods {
-			if p.CreatedByID == filter.OwnerOnly {
+			if p.CreatedByID == filter.OwnerOnly || grantedKeys[p.PodKey] {
 				filtered = append(filtered, p)
 			}
 		}

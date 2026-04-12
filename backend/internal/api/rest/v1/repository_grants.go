@@ -12,6 +12,10 @@ import (
 )
 
 func (h *RepositoryHandler) ListRepositoryGrants(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		apierr.InvalidInput(c, "Invalid repository ID")
@@ -39,6 +43,10 @@ func (h *RepositoryHandler) ListRepositoryGrants(c *gin.Context) {
 }
 
 func (h *RepositoryHandler) GrantRepositoryAccess(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		apierr.InvalidInput(c, "Invalid repository ID")
@@ -80,6 +88,10 @@ func (h *RepositoryHandler) GrantRepositoryAccess(c *gin.Context) {
 }
 
 func (h *RepositoryHandler) RevokeRepositoryGrant(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	repoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		apierr.InvalidInput(c, "Invalid repository ID")

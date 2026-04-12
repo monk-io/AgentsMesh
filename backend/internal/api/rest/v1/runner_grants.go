@@ -12,6 +12,10 @@ import (
 )
 
 func (h *RunnerHandler) ListRunnerGrants(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		apierr.InvalidInput(c, "Invalid runner ID")
@@ -39,6 +43,10 @@ func (h *RunnerHandler) ListRunnerGrants(c *gin.Context) {
 }
 
 func (h *RunnerHandler) GrantRunnerAccess(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		apierr.InvalidInput(c, "Invalid runner ID")
@@ -80,6 +88,10 @@ func (h *RunnerHandler) GrantRunnerAccess(c *gin.Context) {
 }
 
 func (h *RunnerHandler) RevokeRunnerGrant(c *gin.Context) {
+	if h.grantService == nil {
+		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Grant service not configured")
+		return
+	}
 	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		apierr.InvalidInput(c, "Invalid runner ID")
