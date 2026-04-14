@@ -149,11 +149,18 @@ func (r *errorInjectingRepo) GetMessageByID(ctx context.Context, msgID int64) (*
 	return r.ChannelRepository.GetMessageByID(ctx, msgID)
 }
 
-func (r *errorInjectingRepo) UpdateMessageContent(ctx context.Context, msgID int64, content string) error {
-	if err := r.shouldFail("UpdateMessageContent"); err != nil {
+func (r *errorInjectingRepo) UpdateMessage(ctx context.Context, msgID int64, body string, content *channel.MessageContent, mentions channel.MessageMentions) error {
+	if err := r.shouldFail("UpdateMessage"); err != nil {
 		return err
 	}
-	return r.ChannelRepository.UpdateMessageContent(ctx, msgID, content)
+	return r.ChannelRepository.UpdateMessage(ctx, msgID, body, content, mentions)
+}
+
+func (r *errorInjectingRepo) UpdateMessageMentions(ctx context.Context, msgID int64, mentions channel.MessageMentions) error {
+	if err := r.shouldFail("UpdateMessageMentions"); err != nil {
+		return err
+	}
+	return r.ChannelRepository.UpdateMessageMentions(ctx, msgID, mentions)
 }
 
 func (r *errorInjectingRepo) SoftDeleteMessage(ctx context.Context, msgID int64) error {

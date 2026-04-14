@@ -50,9 +50,9 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
     }
   },
 
-  sendMessage: async (channelId, content, podKey, mentions) => {
+  sendMessage: async (channelId, content, podKey) => {
     try {
-      const response = await channelApi.sendMessage(channelId, content, podKey, undefined, mentions);
+      const response = await channelApi.sendMessage(channelId, content, podKey);
       const msg = response.message;
 
       // POST response may lack sender_user — backfill from auth store
@@ -110,7 +110,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         return updateCache(state, channelId, {
           messages: existing.messages.map((m) =>
             m.id === messageId
-              ? { ...m, content: response.message.content, edited_at: response.message.edited_at }
+              ? { ...m, body: response.message.body, content: response.message.content, mentions: response.message.mentions, edited_at: response.message.edited_at }
               : m
           ),
         });
@@ -139,7 +139,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
       const existing = getCache(state, channelId);
       return updateCache(state, channelId, {
         messages: existing.messages.map((m) =>
-          m.id === data.id ? { ...m, content: data.content, edited_at: data.edited_at } : m
+          m.id === data.id ? { ...m, body: data.body, content: data.content, mentions: data.mentions, edited_at: data.edited_at } : m
         ),
       });
     });

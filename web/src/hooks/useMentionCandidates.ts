@@ -3,7 +3,7 @@ import { useAuthStore } from "@/stores/auth";
 import { usePodStore } from "@/stores/pod";
 import { organizationApi } from "@/lib/api/organization";
 import { channelApi } from "@/lib/api/channel";
-import { getPodDisplayName, getShortPodKey } from "@/lib/pod-utils";
+import { getPodDisplayName, getMentionSafeName, getShortPodKey } from "@/lib/pod-display-name";
 
 export interface MentionItem {
   /** Unique identifier: "user:id" or "pod:pod_key" */
@@ -22,6 +22,7 @@ export interface MentionItem {
 
 interface ChannelPodRaw {
   pod_key: string;
+  alias?: string;
   status: string;
 }
 
@@ -98,7 +99,7 @@ export function useMentionCandidates({
         const running = (response.pods || []).filter(
           (p) => p.status === "running" || p.status === "initializing"
         );
-        setRawChannelPods(running.map((p) => ({ pod_key: p.pod_key, status: p.status })));
+        setRawChannelPods(running.map((p) => ({ pod_key: p.pod_key, alias: p.alias, status: p.status })));
       } catch (error) {
         console.error("Failed to fetch pods for mentions:", error);
       } finally {
@@ -120,11 +121,14 @@ export function useMentionCandidates({
         const storePod = allPods.find((sp) => sp.pod_key === p.pod_key);
         const displayName = storePod
           ? getPodDisplayName(storePod)
-          : getShortPodKey(p.pod_key);
+          : p.alias || getShortPodKey(p.pod_key);
+        const mentionText = storePod
+          ? getMentionSafeName(storePod)
+          : (p.alias?.replace(/\s+/g, "_") || getShortPodKey(p.pod_key));
         return {
           id: `pod:${p.pod_key}`,
           type: "pod" as const,
-          mentionText: getShortPodKey(p.pod_key),
+          mentionText,
           displayName,
           description: `Pod ${p.status}`,
         };

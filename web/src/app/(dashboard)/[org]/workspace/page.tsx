@@ -12,7 +12,7 @@ import { CenteredSpinner } from "@/components/ui/spinner";
 import { Terminal, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CreatePodModal } from "@/components/ide/CreatePodModal";
-import { getShortPodKey } from "@/lib/pod-utils";
+import { getShortPodKey } from "@/lib/pod-display-name";
 import type { PodData } from "@/lib/api";
 
 export default function WorkspacePage() {

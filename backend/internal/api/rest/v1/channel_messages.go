@@ -52,11 +52,11 @@ func (h *ChannelHandler) ListMessages(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"messages": messages, "has_more": hasMore})
 }
 
-// SendMessageRequest represents message send request
+// SendMessageRequest represents message send request with structured content
 type SendMessageRequest struct {
-	Content  string                        `json:"content" binding:"required"`
-	PodKey   string                        `json:"pod_key"`
-	Mentions []channelService.MentionInput `json:"mentions"`
+	Content channelDomain.MessageContent `json:"content" binding:"required"`
+	PodKey  string                       `json:"pod_key"`
+	ReplyTo *int64                       `json:"reply_to"`
 }
 
 // SendMessage sends a message to a channel
@@ -84,10 +84,14 @@ func (h *ChannelHandler) SendMessage(c *gin.Context) {
 		podKey = &req.PodKey
 	}
 
-	msg, err := h.channelService.SendMessage(c.Request.Context(), ch.ID, podKey, &tenant.UserID, "text", req.Content, nil, req.Mentions)
+	msg, err := h.channelService.SendMessage(c.Request.Context(), ch.ID, podKey, &tenant.UserID, req.Content, req.ReplyTo)
 	if err != nil {
 		if errors.Is(err, channelService.ErrNotMember) {
 			apierr.ForbiddenAccess(c)
+			return
+		}
+		if errors.Is(err, channelService.ErrEmptyContent) {
+			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Message content cannot be empty")
 			return
 		}
 		apierr.InternalError(c, "Failed to send message")
@@ -97,9 +101,9 @@ func (h *ChannelHandler) SendMessage(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": msg})
 }
 
-// EditMessageRequest represents message edit request
+// EditMessageRequest represents message edit request with structured content
 type EditMessageRequest struct {
-	Content string `json:"content" binding:"required"`
+	Content channelDomain.MessageContent `json:"content" binding:"required"`
 }
 
 // EditMessage edits a channel message

@@ -21,7 +21,7 @@ export type { PodData } from "./pod";
 
 // Channel
 export { channelApi } from "./channel";
-export type { ChannelData, ChannelMessage, MentionPayload } from "./channel";
+export type { ChannelData, ChannelMessage, MessageContent, MessageMentions } from "./channel";
 
 // Ticket
 export { ticketApi } from "./ticket";

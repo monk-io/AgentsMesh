@@ -1,7 +1,7 @@
 "use client";
 
 import { usePodStore } from "@/stores/pod";
-import { getPodDisplayName, getShortPodKey } from "@/lib/pod-utils";
+import { getPodDisplayName, getShortPodKey } from "@/lib/pod-display-name";
 
 /**
  * Derives a display title for a pod from the pod store.

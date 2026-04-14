@@ -15,6 +15,7 @@ var (
 	ErrDuplicateName    = errors.New("channel name already exists")
 	ErrMessageNotFound  = errors.New("message not found")
 	ErrNotMessageSender = errors.New("only the message sender can perform this action")
+	ErrEmptyContent     = errors.New("message content cannot be empty")
 )
 
 // Service handles channel operations

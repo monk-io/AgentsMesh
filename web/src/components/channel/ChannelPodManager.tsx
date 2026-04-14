@@ -7,7 +7,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { channelApi } from "@/lib/api/channel";
 import { usePodStore } from "@/stores/pod";
-import { getPodDisplayName, getShortPodKey } from "@/lib/pod-utils";
+import { getPodDisplayName, getShortPodKey } from "@/lib/pod-display-name";
 import { useTranslations } from "next-intl";
 
 interface ChannelPod {

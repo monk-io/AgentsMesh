@@ -1,10 +1,8 @@
 import { request, orgPath } from "./base";
+import type { MessageContent, MessageMentions } from "./channel-message-types";
 
-// Structured mention payload — caller declares who they are mentioning
-export interface MentionPayload {
-  type: "user" | "pod";
-  id: string;
-}
+export type { MessageContent, MessageMentions } from "./channel-message-types";
+export type { InlineElement, Block } from "./channel-message-types";
 
 // Channel types
 export interface ChannelData {
@@ -31,19 +29,21 @@ export interface ChannelMessage {
   channel_id: number;
   sender_pod?: string;
   sender_user_id?: number;
-  message_type: "text" | "system" | "code" | "command";
-  content: string;
-  metadata?: Record<string, unknown>;
+  message_type: string;
+  body: string;
+  content?: MessageContent;
+  mentions?: MessageMentions;
+  reply_to?: number;
   edited_at?: string;
   is_deleted?: boolean;
   created_at: string;
-  // Backend returns these field names (from GORM json tags)
   sender_pod_info?: {
     pod_key: string;
     alias?: string;
-    agent?: {
-      name: string;
-    };
+    agent?: { name: string };
+    ticket?: { slug?: string; title?: string };
+    loop?: { name?: string };
+    title?: string;
   };
   sender_user?: {
     id: number;
@@ -55,7 +55,6 @@ export interface ChannelMessage {
 
 // Channels API
 export const channelApi = {
-  // List channels with optional filters
   list: (filters?: {
     repository_id?: number;
     ticket_slug?: string;
@@ -69,11 +68,9 @@ export const channelApi = {
     return request<{ channels: ChannelData[]; total: number }>(`${orgPath("/channels")}${query}`);
   },
 
-  // Get a single channel
   get: (id: number) =>
     request<{ channel: ChannelData }>(`${orgPath("/channels")}/${id}`),
 
-  // Create a new channel
   create: (data: {
     name: string;
     description?: string;
@@ -88,26 +85,18 @@ export const channelApi = {
       body: data,
     }),
 
-  // Update a channel
   update: (id: number, data: { name?: string; description?: string; document?: string }) =>
     request<{ channel: ChannelData }>(`${orgPath("/channels")}/${id}`, {
       method: "PUT",
       body: data,
     }),
 
-  // Archive a channel
   archive: (id: number) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/archive`, {
-      method: "POST",
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/archive`, { method: "POST" }),
 
-  // Unarchive a channel
   unarchive: (id: number) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/unarchive`, {
-      method: "POST",
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/unarchive`, { method: "POST" }),
 
-  // Get messages in a channel (supports cursor-based pagination via before_id)
   getMessages: (id: number, limit?: number, beforeId?: number) => {
     const params = new URLSearchParams();
     if (limit) params.append("limit", String(limit));
@@ -116,101 +105,54 @@ export const channelApi = {
     return request<{ messages: ChannelMessage[]; has_more: boolean }>(`${orgPath("/channels")}/${id}/messages${query}`);
   },
 
-  // Send a message to a channel
-  sendMessage: (id: number, content: string, podKey?: string, messageType?: string, mentions?: MentionPayload[]) =>
+  sendMessage: (id: number, content: MessageContent, podKey?: string) =>
     request<{ message: ChannelMessage }>(`${orgPath("/channels")}/${id}/messages`, {
       method: "POST",
-      body: {
-        content,
-        pod_key: podKey,
-        message_type: messageType || "text",
-        ...(mentions && mentions.length > 0 ? { mentions } : {}),
-      },
+      body: { content, ...(podKey ? { pod_key: podKey } : {}) },
     }),
 
-  // Get pods joined to a channel
   getPods: (id: number) =>
     request<{
-      pods: Array<{
-        id: number;
-        pod_key: string;
-        alias?: string;
-        status: string;
-        agent_status: string;
-      }>;
+      pods: Array<{ id: number; pod_key: string; alias?: string; status: string; agent_status: string }>;
       total: number;
     }>(`${orgPath("/channels")}/${id}/pods`),
 
-  // Join a pod to a channel
   joinPod: (id: number, podKey: string) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/pods`, {
-      method: "POST",
-      body: { pod_key: podKey },
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/pods`, { method: "POST", body: { pod_key: podKey } }),
 
-  // Remove a pod from a channel
   leavePod: (id: number, podKey: string) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/pods/${podKey}`, {
-      method: "DELETE",
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/pods/${podKey}`, { method: "DELETE" }),
 
-  // Mark a channel as read up to a specific message
   markRead: (id: number, messageId: number) =>
-    request<{ status: string }>(`${orgPath("/channels")}/${id}/read`, {
-      method: "POST",
-      body: { message_id: messageId },
-    }),
+    request<{ status: string }>(`${orgPath("/channels")}/${id}/read`, { method: "POST", body: { message_id: messageId } }),
 
-  // Get unread message counts for all channels
   getUnreadCounts: () =>
     request<{ unread: Record<string, number> }>(orgPath("/channels/unread")),
 
-  // Mute/unmute a channel
   mute: (id: number, muted: boolean) =>
-    request<{ status: string }>(`${orgPath("/channels")}/${id}/mute`, {
-      method: "POST",
-      body: { muted },
-    }),
+    request<{ status: string }>(`${orgPath("/channels")}/${id}/mute`, { method: "POST", body: { muted } }),
 
-  // Edit a message
-  editMessage: (channelId: number, messageId: number, content: string) =>
+  editMessage: (channelId: number, messageId: number, content: MessageContent) =>
     request<{ message: ChannelMessage }>(`${orgPath("/channels")}/${channelId}/messages/${messageId}`, {
       method: "PUT",
       body: { content },
     }),
 
-  // Delete a message
   deleteMessage: (channelId: number, messageId: number) =>
-    request<{ status: string }>(`${orgPath("/channels")}/${channelId}/messages/${messageId}`, {
-      method: "DELETE",
-    }),
+    request<{ status: string }>(`${orgPath("/channels")}/${channelId}/messages/${messageId}`, { method: "DELETE" }),
 
-  // Join a public channel
   joinChannel: (id: number) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/join`, {
-      method: "POST",
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/join`, { method: "POST" }),
 
-  // Leave a channel
   leaveChannel: (id: number) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/leave`, {
-      method: "POST",
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/leave`, { method: "POST" }),
 
-  // Invite members to a channel
   inviteMembers: (id: number, userIds: number[]) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/members`, {
-      method: "POST",
-      body: { user_ids: userIds },
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/members`, { method: "POST", body: { user_ids: userIds } }),
 
-  // Remove a member from a channel
   removeMember: (id: number, userId: number) =>
-    request<{ message: string }>(`${orgPath("/channels")}/${id}/members/${userId}`, {
-      method: "DELETE",
-    }),
+    request<{ message: string }>(`${orgPath("/channels")}/${id}/members/${userId}`, { method: "DELETE" }),
 
-  // List members of a channel
   listMembers: (id: number) =>
     request<{ members: Array<{ channel_id: number; user_id: number; role: string; is_muted: boolean; joined_at: string }>; total: number }>(
       `${orgPath("/channels")}/${id}/members`
