@@ -10,7 +10,7 @@ import (
 )
 
 func TestSetReconnectHandler(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 
 	reconnectCalled := false
 	c.SetReconnectHandler(func() { reconnectCalled = true })
@@ -54,7 +54,7 @@ func TestReconnectOnDisconnect(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	c.SetReconnectHandler(func() {
 		close(reconnected)
@@ -96,7 +96,7 @@ func TestNoReconnectOnGracefulClose(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	var closeCalled, reconnectCalled atomic.Bool
 
@@ -152,7 +152,7 @@ func TestStopDuringReconnect(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	if err := c.Connect(); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -214,7 +214,7 @@ func TestConcurrentStopAndReconnect(t *testing.T) {
 			defer srv.Close()
 
 			url := "ws" + strings.TrimPrefix(srv.URL, "http")
-			c := NewClient(url, "pod-1", "test-token", nil)
+			c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 			if err := c.Connect(); err != nil {
 				t.Fatalf("Connect: %v", err)
@@ -258,7 +258,7 @@ func TestStartAfterStop(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	if err := c.Connect(); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -291,7 +291,7 @@ func TestAuthFailureCircuitBreaker(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 	c.SetCloseHandler(func() { closeCalled.Store(true) })
 
 	// Token refresh always fails (returns empty)
@@ -359,7 +359,7 @@ func TestAuthFailureResetsOnTransientError(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 	c.SetTokenExpiredHandler(func() string { return "" })
 
 	reconnected := make(chan struct{})
@@ -397,7 +397,7 @@ func TestAuthFailure_TokenRefreshSuccessThenFailAgain(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 	c.SetCloseHandler(func() { closeCalled.Store(true) })
 
 	// Token refresh succeeds (returns a new token), but the new token also fails
@@ -448,7 +448,7 @@ func TestStopIdempotent(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	if err := c.Connect(); err != nil {
 		t.Fatalf("Connect: %v", err)

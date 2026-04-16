@@ -18,7 +18,7 @@ var testUpgrader = websocket.Upgrader{
 }
 
 func TestNewClient(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 	if c == nil {
 		t.Fatal("NewClient returned nil")
 		return
@@ -36,14 +36,14 @@ func TestNewClient(t *testing.T) {
 
 func TestNewClientWithLogger(t *testing.T) {
 	logger := slog.Default()
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", logger)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", logger)
 	if c == nil || c.logger == nil {
 		t.Fatal("NewClient with logger failed")
 	}
 }
 
 func TestSetHandlers(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 
 	inputCalled := false
 	c.SetMessageHandler(MsgTypeInput, func(payload []byte) { inputCalled = true })
@@ -77,14 +77,14 @@ func TestSetHandlers(t *testing.T) {
 }
 
 func TestConnectInvalidURL(t *testing.T) {
-	c := NewClient("://invalid", "pod-1", "test-token", nil)
+	c := NewClient(nil, "://invalid", "pod-1", "test-token", nil)
 	if err := c.Connect(); err == nil {
 		t.Error("expected error for invalid URL")
 	}
 }
 
 func TestConnectUnsupportedScheme(t *testing.T) {
-	c := NewClient("ftp://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ftp://localhost:8080", "pod-1", "test-token", nil)
 	if err := c.Connect(); err == nil {
 		t.Error("expected error for unsupported scheme")
 	}
@@ -103,7 +103,7 @@ func TestConnectSchemeConversion(t *testing.T) {
 		{"wss://localhost", "wss"},
 	}
 	for _, tt := range tests {
-		c := NewClient(tt.input, "pod-1", "test-token", nil)
+		c := NewClient(nil, tt.input, "pod-1", "test-token", nil)
 		// Connect will fail, but scheme should be converted
 		err := c.Connect()
 		if err == nil {
@@ -113,7 +113,7 @@ func TestConnectSchemeConversion(t *testing.T) {
 }
 
 func TestSendNotConnected(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 	if err := c.Send(MsgTypeOutput, []byte("test")); err == nil {
 		t.Error("expected error when not connected")
 	}
@@ -123,7 +123,7 @@ func TestSendNotConnected(t *testing.T) {
 }
 
 func TestSendBufferFull(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 	// Mark as connected so send() doesn't short-circuit on "not connected".
 	c.connected.Store(true)
 
@@ -159,7 +159,7 @@ func TestConnectAndStop(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	if err := c.Connect(); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -179,7 +179,7 @@ func TestConnectAndStop(t *testing.T) {
 }
 
 func TestHandleMessage(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 
 	var receivedInput []byte
 	c.SetMessageHandler(MsgTypeInput, func(payload []byte) { receivedInput = payload })
@@ -244,7 +244,7 @@ func TestSendSnapshot(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	if err := c.Connect(); err != nil {
 		t.Fatalf("Connect: %v", err)
@@ -268,7 +268,7 @@ func TestSendSnapshot(t *testing.T) {
 }
 
 func TestGetConnectedAtBeforeConnect(t *testing.T) {
-	c := NewClient("ws://localhost:8080", "pod-1", "test-token", nil)
+	c := NewClient(nil, "ws://localhost:8080", "pod-1", "test-token", nil)
 
 	// Before connection, ConnectedAt should be 0
 	if c.GetConnectedAt() != 0 {
@@ -292,7 +292,7 @@ func TestGetConnectedAtAfterConnect(t *testing.T) {
 	defer srv.Close()
 
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	c := NewClient(url, "pod-1", "test-token", nil)
+	c := NewClient(nil, url, "pod-1", "test-token", nil)
 
 	// Before connection
 	if c.GetConnectedAt() != 0 {
@@ -320,7 +320,7 @@ func TestGetConnectedAtAfterConnect(t *testing.T) {
 }
 
 func TestGetRelayURL(t *testing.T) {
-	c := NewClient("wss://relay.example.com", "pod-1", "test-token", nil)
+	c := NewClient(nil, "wss://relay.example.com", "pod-1", "test-token", nil)
 
 	if c.GetRelayURL() != "wss://relay.example.com" {
 		t.Errorf("GetRelayURL: expected wss://relay.example.com, got %s", c.GetRelayURL())

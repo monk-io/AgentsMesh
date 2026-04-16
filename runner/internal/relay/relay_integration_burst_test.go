@@ -58,7 +58,7 @@ func TestRelay_MultiMessageBurst_Integration(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(wsURL(srv), "pod-1", "tok", nil)
+	c := NewClient(nil, wsURL(srv), "pod-1", "tok", nil)
 	var clientMu sync.Mutex
 	clientReceived := make([]string, 0, burstSize)
 	clientDone := make(chan struct{})
@@ -125,7 +125,7 @@ func TestRelay_SnapshotAfterReconnect_Integration(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient(wsURL(srv), "pod-1", "tok", nil)
+	c := NewClient(nil, wsURL(srv), "pod-1", "tok", nil)
 	snapshotSent := make(chan struct{}, 1)
 	c.SetReconnectHandler(func() {
 		c.Send(MsgTypeSnapshot, []byte("full-state"))
