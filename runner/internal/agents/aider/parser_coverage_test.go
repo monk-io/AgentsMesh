@@ -3,6 +3,7 @@ package aider
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -64,6 +65,9 @@ func TestParseAiderHistoryFile_NotExist(t *testing.T) {
 }
 
 func TestParseAiderHistoryFile_PermissionDenied(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("chmod 0000 does not deny read access on Windows")
+	}
 	dir := t.TempDir()
 	file := filepath.Join(dir, ".aider.chat.history.md")
 	require.NoError(t, os.WriteFile(file, []byte("data"), 0o644))
