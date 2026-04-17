@@ -2,6 +2,7 @@ package codex
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
@@ -28,7 +29,7 @@ func TestHandshake_ErrorResponse(t *testing.T) {
 		writeResponse(f.PW, id, nil, &acp.JSONRPCError{Code: -1, Message: "fail"})
 	}()
 
-	_, err := f.transport.Handshake(nil)
+	_, err := f.transport.Handshake(context.Background())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "initialize error")
 }
