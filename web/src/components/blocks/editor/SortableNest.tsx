@@ -1,0 +1,94 @@
+"use client";
+
+import React, { createContext, useContext } from "react";
+import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { useBlockstoreStore } from "@/stores/blockstore";
+import { keyBetween } from "@/lib/blockstore/fractionalIndex";
+import { updateRefOp } from "@/lib/blockstore/opBuilder";
+import { dispatchOps } from "@/stores/blockstoreDispatch";
+
+/**
+ * SortableNest wraps NestChildren's render area with a DndContext and a
+ * SortableContext. The drag listeners are published via DragHandleContext so
+ * only the BlockChrome grip activates the drag — avoiding conflicts with
+ * contentEditable inside each block.
+ */
+type DragListeners = Record<string, (e: unknown) => void> | undefined;
+const DragHandleContext = createContext<DragListeners>(undefined);
+export function useDragHandle(): DragListeners {
+  return useContext(DragHandleContext);
+}
+
+export interface SortableNestProps {
+  workspaceID: string;
+  parentID: string;
+  childRefIDs: number[];
+  renderItem: (refID: number) => React.ReactNode;
+}
+
+export function SortableNest({ workspaceID, parentID, childRefIDs, renderItem }: SortableNestProps) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const itemIDs = childRefIDs.map(String);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    await reorderNest(workspaceID, parentID, Number(active.id), Number(over.id));
+  };
+
+  return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <SortableContext items={itemIDs} strategy={verticalListSortingStrategy}>
+        {childRefIDs.map((id) => (
+          <SortableItem key={id} id={id}>
+            {renderItem(id)}
+          </SortableItem>
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SortableItem({ id, children }: { id: number; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(id) });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <DragHandleContext.Provider value={listeners as DragListeners}>
+        {children}
+      </DragHandleContext.Provider>
+    </div>
+  );
+}
+
+async function reorderNest(
+  workspaceID: string,
+  parentID: string,
+  movedRefID: number,
+  targetRefID: number,
+) {
+  const state = useBlockstoreStore.getState();
+  const refIDs = state.nestChildren[parentID] ?? [];
+  const fromIdx = refIDs.indexOf(movedRefID);
+  const toIdx = refIDs.indexOf(targetRefID);
+  if (fromIdx < 0 || toIdx < 0) return;
+
+  // Compute the new neighbours as if the moved item were removed first.
+  const without = refIDs.filter((id) => id !== movedRefID);
+  const insertAt = without.indexOf(targetRefID) + (fromIdx < toIdx ? 1 : 0);
+  const beforeKey = insertAt > 0 ? state.refs[without[insertAt - 1]]?.order_key ?? null : null;
+  const afterKey = insertAt < without.length ? state.refs[without[insertAt]]?.order_key ?? null : null;
+  const newKey = keyBetween(beforeKey, afterKey);
+
+  await dispatchOps(workspaceID, [
+    updateRefOp({ ref_id: movedRefID, order_key: newKey }),
+  ]);
+}

@@ -27,6 +27,11 @@ type TenantContext struct {
 	OrganizationSlug string
 	UserID           int64
 	UserRole         string // 'owner', 'admin', 'member'
+	// PodID is populated only when the request arrived through the gRPC
+	// Runner MCP path (authenticatePod). REST handlers leave it nil. Consumers
+	// use its presence to distinguish agent-originated writes from human-
+	// originated writes so block_ops can record ActorType="agent".
+	PodID *int64
 }
 
 type tenantContextKey struct{}

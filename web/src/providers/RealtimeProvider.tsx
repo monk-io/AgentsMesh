@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { reconnectRegistry } from "@/lib/realtime";
 import {
   handlePodEvent, handleChannelEvent, handleInfraEvent,
-  handleAutopilotEvent, handleLoopEvent,
+  handleAutopilotEvent, handleLoopEvent, handleBlockstoreEvent,
   type DebounceRef,
 } from "./realtimeEventHandlers";
 import type { ConnectionState, RealtimeEvent } from "@/lib/realtime";
@@ -54,6 +54,7 @@ export function RealtimeProvider({ children, onEvent }: RealtimeProviderProps) {
         handleInfraEvent(event, ticketDebounceRef);
         return;
       }
+      if (event.type.startsWith("blockstore:")) { handleBlockstoreEvent(event); return; }
       onEvent?.(event);
     },
     [onEvent, t]

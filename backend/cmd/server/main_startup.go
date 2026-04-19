@@ -18,6 +18,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/geo"
 	loop "github.com/anthropics/agentsmesh/backend/internal/service/loop"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
+	"github.com/redis/go-redis/v9"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	runnerlogservice "github.com/anthropics/agentsmesh/backend/internal/service/runnerlog"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
@@ -69,6 +70,7 @@ func initPKIAndGRPCWiring(
 		LoopService:       services.loop,
 		LoopRunService:    services.loopRun,
 		LoopOrchestrator:  loopOrchestrator,
+		BlockstoreService: services.blockstore,
 	}
 	grpcServer, grpcRunnerHandler := initializePKIAndGRPC(cfg, services.runner, services.org, services.agentSvc, runnerConnMgr, appLogger, mcpDeps)
 
@@ -156,6 +158,7 @@ func buildServicesContainer(
 	versionChecker *runner.VersionChecker,
 	loopOrchestrator *loop.LoopOrchestrator,
 	loopScheduler *loop.LoopScheduler,
+	redisClient *redis.Client,
 ) *v1.Services {
 	return &v1.Services{
 		Auth:               services.auth,
@@ -210,6 +213,8 @@ func buildServicesContainer(
 		SupportTicket:       services.supportTicket,
 		NotificationPrefStore: services.notifPrefStore,
 		TokenUsage:            services.tokenUsage,
+		Blockstore:            services.blockstore,
+		Redis:                 redisClient,
 	}
 }
 

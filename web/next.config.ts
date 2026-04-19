@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+// Turbopack auto-infers the workspace root by walking upward looking for
+// `next/package.json`. In this monorepo it can land on `web/src/app` (where
+// a nested tsconfig sits) and fail. Pin the root to this config file's
+// directory so Turbopack resolves node_modules from `web/` every time.
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -15,9 +23,12 @@ const nextConfig: NextConfig = {
     "/blog": ["./src/content/blog/**/*.md"],
   },
 
-  // Required for next-intl plugin to resolve config in Turbopack dev mode
-  // See: https://github.com/amannn/next-intl/issues/1779
-  turbopack: {},
+  // Required for next-intl plugin to resolve config in Turbopack dev mode.
+  // `root` pins the workspace root so Turbopack stops auto-walking upward
+  // and finds node_modules under web/ reliably.
+  turbopack: {
+    root: here,
+  },
 
   // =============================================================================
   // Unified Domain Configuration

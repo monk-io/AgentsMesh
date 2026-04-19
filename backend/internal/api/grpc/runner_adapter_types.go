@@ -11,6 +11,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
+	blockstoreservice "github.com/anthropics/agentsmesh/backend/internal/service/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	loopService "github.com/anthropics/agentsmesh/backend/internal/service/loop"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
@@ -66,6 +67,7 @@ type GRPCRunnerAdapter struct {
 	loopService          *loopService.LoopService
 	loopRunService       *loopService.LoopRunService
 	loopOrchestrator     *loopService.LoopOrchestrator
+	blockstoreService    *blockstoreservice.Service
 }
 
 // MCPDependencies holds optional MCP service dependencies for the gRPC adapter.
@@ -83,6 +85,7 @@ type MCPDependencies struct {
 	LoopService       *loopService.LoopService
 	LoopRunService    *loopService.LoopRunService
 	LoopOrchestrator  *loopService.LoopOrchestrator
+	BlockstoreService *blockstoreservice.Service
 }
 
 // NewGRPCRunnerAdapter creates a new gRPC Runner adapter.
@@ -122,6 +125,7 @@ func NewGRPCRunnerAdapter(
 		adapter.loopService = mcpDeps.LoopService
 		adapter.loopRunService = mcpDeps.LoopRunService
 		adapter.loopOrchestrator = mcpDeps.LoopOrchestrator
+		adapter.blockstoreService = mcpDeps.BlockstoreService
 	}
 
 	return adapter

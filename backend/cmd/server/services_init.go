@@ -9,6 +9,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/extension"
 	runnerDomain "github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/infra"
+	blockstoreinfra "github.com/anthropics/agentsmesh/backend/internal/infra/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
@@ -16,6 +17,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
+	blockstoreservice "github.com/anthropics/agentsmesh/backend/internal/service/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
@@ -77,6 +79,7 @@ type serviceContainer struct {
 	sso               *ssoservice.Service
 	supportTicket     *supportticketservice.Service
 	tokenUsage        *tokenusagesvc.Service
+	blockstore        *blockstoreservice.Service
 
 	notifDispatcher *notifService.Dispatcher
 	notifPrefStore  *notifService.PreferenceStore
@@ -84,6 +87,18 @@ type serviceContainer struct {
 	podRepo       agentpodDomain.PodRepository
 	runnerRepo    runnerDomain.RunnerRepository
 	autopilotRepo agentpodDomain.AutopilotRepository
+}
+
+// Close releases background workers owned by services that spawn them.
+// Called by waitForShutdown so the process exits cleanly without dropping
+// in-flight async work (currently: BlockstoreService's embedding worker).
+func (s *serviceContainer) Close() {
+	if s == nil {
+		return
+	}
+	if s.blockstore != nil {
+		s.blockstore.Close()
+	}
 }
 
 // initializeServices creates all business services.
@@ -175,6 +190,12 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	tokenUsageRepo := infra.NewTokenUsageRepository(db)
 	tokenUsageSvc := tokenusagesvc.NewService(tokenUsageRepo, slog.Default())
 
+	blockstoreRepo := blockstoreinfra.NewRepository(db)
+	blockstoreSvc := blockstoreservice.NewService(blockstoreRepo, slog.Default())
+	if embedder := selectEmbedder(); embedder != nil {
+		blockstoreSvc.SetEmbedder(embedder)
+	}
+
 	return &serviceContainer{
 		auth:               authSvc,
 		user:               userSvc,
@@ -212,6 +233,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		supportTicket:      supportTicketSvc,
 		notifPrefStore:     notifPrefStore,
 		tokenUsage:         tokenUsageSvc,
+		blockstore:         blockstoreSvc,
 		podRepo:            podRepo,
 		runnerRepo:         runnerRepo,
 		autopilotRepo:      autopilotRepo,

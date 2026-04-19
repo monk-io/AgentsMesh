@@ -36,5 +36,6 @@ func (a *GRPCRunnerAdapter) authenticatePod(ctx context.Context, podKey, orgSlug
 		OrganizationSlug: org.Slug,
 		UserID:           pod.CreatedByID,
 		UserRole:         "pod",
+		PodID:            &pod.ID,
 	}, nil
 }

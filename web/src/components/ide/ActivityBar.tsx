@@ -24,6 +24,7 @@ import {
   Server,
   Settings,
   Repeat,
+  Blocks,
   LifeBuoy,
   CircleHelp,
   type LucideIcon,
@@ -36,6 +37,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   network: Network,
   "message-square": MessageSquare,
   repeat: Repeat,
+  blocks: Blocks,
   repository: FolderGit2,
   server: Server,
   settings: Settings,
@@ -68,6 +70,8 @@ export function ActivityBar({ className }: ActivityBarProps) {
         return `/${orgSlug}/mesh`;
       case "loops":
         return `/${orgSlug}/loops`;
+      case "blocks":
+        return `/${orgSlug}/blocks`;
       case "repositories":
         return `/${orgSlug}/repositories`;
       case "runners":
@@ -91,6 +95,8 @@ export function ActivityBar({ className }: ActivityBarProps) {
       setActiveActivity("mesh");
     } else if (pathname.includes("/loops")) {
       setActiveActivity("loops");
+    } else if (pathname.includes("/blocks")) {
+      setActiveActivity("blocks");
     } else if (pathname.includes("/repositories")) {
       setActiveActivity("repositories");
     } else if (pathname.includes("/runners")) {

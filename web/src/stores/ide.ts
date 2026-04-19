@@ -10,6 +10,7 @@ export type ActivityType =
   | "channels"
   | "mesh"
   | "loops"
+  | "blocks"
   | "repositories"
   | "runners"
   | "settings";
@@ -154,6 +155,12 @@ export const ACTIVITIES: ActivityConfig[] = [
     id: "loops",
     label: "Loops",
     icon: "repeat",
+    mobileVisible: false,
+  },
+  {
+    id: "blocks",
+    label: "Blocks",
+    icon: "blocks",
     mobileVisible: false,
   },
   {

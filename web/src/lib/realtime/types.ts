@@ -43,6 +43,8 @@ export type EventType =
   | "loop_run:completed"
   | "loop_run:failed"
   | "loop_run:warning"
+  // Block Store events (broadcast per-organization; client filters by workspace)
+  | "blockstore:op"
   // Notification events (targeted to specific users)
   | "notification"
   // System events

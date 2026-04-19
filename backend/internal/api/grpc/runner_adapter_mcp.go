@@ -126,6 +126,32 @@ func (a *GRPCRunnerAdapter) dispatchMcpMethod(ctx context.Context, tc *middlewar
 	case "trigger_loop":
 		return a.mcpTriggerLoop(ctx, tc, req.Payload)
 
+	// Block Store methods — the agent-facing MCP surface for the structured
+	// collaboration substrate (notes, tasks, views, indicators, triggers).
+	// Frontends and server-to-server scripts go through the REST routes
+	// under /api/v1/orgs/:slug/blocks/*; these gRPC cases are exclusively
+	// for agents in pods.
+	case "block.create":
+		return a.mcpBlockCreate(ctx, tc, req.Payload)
+	case "block.update":
+		return a.mcpBlockUpdate(ctx, tc, req.Payload)
+	case "block.delete":
+		return a.mcpBlockDelete(ctx, tc, req.Payload)
+	case "block.add_ref":
+		return a.mcpBlockAddRef(ctx, tc, req.Payload)
+	case "block.remove_ref":
+		return a.mcpBlockRemoveRef(ctx, tc, req.Payload)
+	case "block.update_ref":
+		return a.mcpBlockUpdateRef(ctx, tc, req.Payload)
+	case "indicator.define":
+		return a.mcpIndicatorDefine(ctx, tc, req.Payload)
+	case "trigger.define":
+		return a.mcpTriggerDefine(ctx, tc, req.Payload)
+	case "memory.retrieve":
+		return a.mcpMemoryRetrieve(ctx, tc, req.Payload)
+	case "block.list_types":
+		return a.mcpBlockListTypes(ctx, tc, req.Payload)
+
 	default:
 		return nil, newMcpErrorf(400, "unknown MCP method: %s", req.Method)
 	}

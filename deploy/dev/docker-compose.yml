@@ -16,7 +16,7 @@
 services:
   # PostgreSQL database
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: agentsmesh
@@ -126,6 +126,12 @@ services:
       # =============================================================================
       - PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-localhost:10000}
       - USE_HTTPS=${USE_HTTPS:-false}
+      # =============================================================================
+      # Block Store — dev allows host.docker.internal in trigger webhook URLs
+      # so E2E tests on the host can receive payloads from the container.
+      # Production leaves this empty so all private/loopback hosts are blocked.
+      # =============================================================================
+      - BLOCKSTORE_WEBHOOK_ALLOW_HOSTS=host.docker.internal,host.lan
       # =============================================================================
       # Database
       # =============================================================================
@@ -388,6 +394,8 @@ services:
       - OTEL_SERVICE_NAME=agentsmesh-relay
       - OTEL_TRACES_SAMPLER_ARG=1.0
     volumes:
+      # Mount source code for hot reload (air -c .air.toml)
+      - ../../relay:/app
       # Mount proto module (if needed)
       - ../../proto:/proto
       # Persist Go modules cache

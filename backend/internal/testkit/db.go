@@ -24,6 +24,12 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("testkit: failed to open database: %v", err)
 	}
+	// SQLite `:memory:` is per-connection — every new pool connection opens a
+	// fresh (empty) DB. Pin the pool to one connection so every caller, including
+	// background goroutines started by services under test, sees the same tables.
+	if sqlDB, err := db.DB(); err == nil {
+		sqlDB.SetMaxOpenConns(1)
+	}
 
 	for _, ddl := range allTableDDLs() {
 		if err := db.Exec(ddl).Error; err != nil {
@@ -45,5 +51,6 @@ func allTableDDLs() []string {
 	ddls = append(ddls, loopTableDDLs()...)
 	ddls = append(ddls, billingTableDDLs()...)
 	ddls = append(ddls, supportTableDDLs()...)
+	ddls = append(ddls, blockstoreTableDDLs()...)
 	return ddls
 }
