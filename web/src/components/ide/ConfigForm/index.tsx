@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo, useCallback } from "react";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField } from "@/lib/api";
 import { FieldRenderer } from "./field-renderers";
 
 interface ConfigFormProps {

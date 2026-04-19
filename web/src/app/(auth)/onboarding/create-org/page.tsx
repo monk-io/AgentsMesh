@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
-import { organizationApi } from "@/lib/api/organization";
+import { getOrgApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/common";
 
@@ -50,6 +51,7 @@ export default function CreateOrgPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await initWasmCore();
 
     if (!name.trim()) {
       setError(t("auth.onboarding.createOrg.enterWorkspaceName"));
@@ -70,13 +72,13 @@ export default function CreateOrgPage() {
     setError("");
 
     try {
-      await organizationApi.create({ name: name.trim(), slug: slug.trim() });
+      await getOrgApiService().create(JSON.stringify({ name: name.trim(), slug: slug.trim() }));
 
       // Refresh organizations
-      const { organizations } = await organizationApi.list();
+      const { organizations } = JSON.parse(await getOrgApiService().list());
       setOrganizations(organizations);
 
-      const newOrg = organizations.find((o) => o.slug === slug);
+      const newOrg = organizations.find((o: { slug: string }) => o.slug === slug);
       if (newOrg) {
         setCurrentOrg(newOrg);
       }

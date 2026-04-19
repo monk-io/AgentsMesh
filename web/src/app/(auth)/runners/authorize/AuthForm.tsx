@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { OrganizationData } from "@/lib/api/organization";
+import type { OrganizationData } from "@/lib/api/organizationTypes";
 
 interface AuthFormProps {
-  authToken: string | null;
+  authUser: unknown;
   userEmail?: string;
   authKey: string;
   organizations: OrganizationData[] | null;
@@ -19,7 +19,7 @@ interface AuthFormProps {
 }
 
 export function AuthForm({
-  authToken, userEmail, authKey, organizations, selectedOrg,
+  authUser, userEmail, authKey, organizations, selectedOrg,
   onSelectOrg, nodeIdInput, onNodeIdChange, authorizing, onAuthorize,
   error, t, tCommon,
 }: AuthFormProps) {
@@ -44,7 +44,7 @@ export function AuthForm({
         <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">{error}</div>
       )}
 
-      {!authToken || !userEmail ? (
+      {!authUser || !userEmail ? (
         <UnauthenticatedPrompt authKey={authKey} t={t} />
       ) : (
         <AuthenticatedForm

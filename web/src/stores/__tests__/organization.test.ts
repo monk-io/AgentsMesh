@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useOrganizationStore, Organization, OrganizationMember } from '../organization'
+import { getOrgState, parseWasmAny } from '@/lib/wasm-core'
+
+const orgs = () => JSON.parse(getOrgState().organizations_json()) as Organization[]
+const curOrg = () => parseWasmAny<Organization>(getOrgState().current_org_json())
+const members = () => JSON.parse(getOrgState().members_json()) as OrganizationMember[]
 
 describe('useOrganizationStore', () => {
   const mockOrg: Organization = {
@@ -25,29 +30,23 @@ describe('useOrganizationStore', () => {
   }
 
   beforeEach(() => {
-    useOrganizationStore.setState({
-      organizations: [],
-      currentOrganization: null,
-      members: [],
-      isLoading: false,
-      error: null,
-    })
+    getOrgState().set_organizations('[]')
+    getOrgState().set_current_org('')
+    getOrgState().set_members('[]')
+    useOrganizationStore.setState({ _tick: 0, isLoading: false, error: null })
   })
 
   describe('initial state', () => {
     it('should have empty organizations', () => {
-      const state = useOrganizationStore.getState()
-      expect(state.organizations).toEqual([])
+      expect(orgs()).toEqual([])
     })
 
     it('should have null currentOrganization', () => {
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization).toBeNull()
+      expect(curOrg()).toBeNull()
     })
 
     it('should have empty members', () => {
-      const state = useOrganizationStore.getState()
-      expect(state.members).toEqual([])
+      expect(members()).toEqual([])
     })
   })
 
@@ -55,9 +54,8 @@ describe('useOrganizationStore', () => {
     it('should set organizations', () => {
       useOrganizationStore.getState().setOrganizations([mockOrg])
 
-      const state = useOrganizationStore.getState()
-      expect(state.organizations).toHaveLength(1)
-      expect(state.organizations[0]).toEqual(mockOrg)
+      expect(orgs()).toHaveLength(1)
+      expect(orgs()[0]).toEqual(mockOrg)
     })
   })
 
@@ -65,16 +63,14 @@ describe('useOrganizationStore', () => {
     it('should set current organization', () => {
       useOrganizationStore.getState().setCurrentOrganization(mockOrg)
 
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization).toEqual(mockOrg)
+      expect(curOrg()).toEqual(mockOrg)
     })
 
     it('should set current organization to null', () => {
-      useOrganizationStore.setState({ currentOrganization: mockOrg })
+      useOrganizationStore.getState().setCurrentOrganization(mockOrg)
       useOrganizationStore.getState().setCurrentOrganization(null)
 
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization).toBeNull()
+      expect(curOrg()).toBeNull()
     })
   })
 
@@ -82,90 +78,74 @@ describe('useOrganizationStore', () => {
     it('should add organization', () => {
       useOrganizationStore.getState().addOrganization(mockOrg)
 
-      const state = useOrganizationStore.getState()
-      expect(state.organizations).toHaveLength(1)
+      expect(orgs()).toHaveLength(1)
     })
 
     it('should append to existing organizations', () => {
       const org2: Organization = { ...mockOrg, id: 2, slug: 'org-2' }
-      useOrganizationStore.setState({ organizations: [mockOrg] })
+      useOrganizationStore.getState().setOrganizations([mockOrg])
 
       useOrganizationStore.getState().addOrganization(org2)
 
-      const state = useOrganizationStore.getState()
-      expect(state.organizations).toHaveLength(2)
+      expect(orgs()).toHaveLength(2)
     })
   })
 
   describe('updateOrganization', () => {
     it('should update organization in list', () => {
-      useOrganizationStore.setState({ organizations: [mockOrg] })
+      useOrganizationStore.getState().setOrganizations([mockOrg])
 
       useOrganizationStore.getState().updateOrganization(1, { name: 'Updated Name' })
 
-      const state = useOrganizationStore.getState()
-      expect(state.organizations[0].name).toBe('Updated Name')
+      expect(orgs()[0].name).toBe('Updated Name')
     })
 
     it('should update currentOrganization if same id', () => {
-      useOrganizationStore.setState({
-        organizations: [mockOrg],
-        currentOrganization: mockOrg,
-      })
+      useOrganizationStore.getState().setOrganizations([mockOrg])
+      useOrganizationStore.getState().setCurrentOrganization(mockOrg)
 
       useOrganizationStore.getState().updateOrganization(1, { name: 'Updated Name' })
 
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization?.name).toBe('Updated Name')
+      expect(curOrg()?.name).toBe('Updated Name')
     })
 
     it('should not update currentOrganization if different id', () => {
       const org2: Organization = { ...mockOrg, id: 2 }
-      useOrganizationStore.setState({
-        organizations: [mockOrg, org2],
-        currentOrganization: mockOrg,
-      })
+      useOrganizationStore.getState().setOrganizations([mockOrg, org2])
+      useOrganizationStore.getState().setCurrentOrganization(mockOrg)
 
       useOrganizationStore.getState().updateOrganization(2, { name: 'Updated Name' })
 
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization?.name).toBe('Test Org')
+      expect(curOrg()?.name).toBe('Test Org')
     })
   })
 
   describe('removeOrganization', () => {
     it('should remove organization from list', () => {
-      useOrganizationStore.setState({ organizations: [mockOrg] })
+      useOrganizationStore.getState().setOrganizations([mockOrg])
 
       useOrganizationStore.getState().removeOrganization(1)
 
-      const state = useOrganizationStore.getState()
-      expect(state.organizations).toHaveLength(0)
+      expect(orgs()).toHaveLength(0)
     })
 
     it('should clear currentOrganization if removed', () => {
-      useOrganizationStore.setState({
-        organizations: [mockOrg],
-        currentOrganization: mockOrg,
-      })
+      useOrganizationStore.getState().setOrganizations([mockOrg])
+      useOrganizationStore.getState().setCurrentOrganization(mockOrg)
 
       useOrganizationStore.getState().removeOrganization(1)
 
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization).toBeNull()
+      expect(curOrg()).toBeNull()
     })
 
     it('should not clear currentOrganization if different id', () => {
       const org2: Organization = { ...mockOrg, id: 2 }
-      useOrganizationStore.setState({
-        organizations: [mockOrg, org2],
-        currentOrganization: mockOrg,
-      })
+      useOrganizationStore.getState().setOrganizations([mockOrg, org2])
+      useOrganizationStore.getState().setCurrentOrganization(mockOrg)
 
       useOrganizationStore.getState().removeOrganization(2)
 
-      const state = useOrganizationStore.getState()
-      expect(state.currentOrganization).toEqual(mockOrg)
+      expect(curOrg()).toEqual(mockOrg)
     })
   })
 
@@ -174,9 +154,8 @@ describe('useOrganizationStore', () => {
       it('should set members', () => {
         useOrganizationStore.getState().setMembers([mockMember])
 
-        const state = useOrganizationStore.getState()
-        expect(state.members).toHaveLength(1)
-        expect(state.members[0]).toEqual(mockMember)
+        expect(members()).toHaveLength(1)
+        expect(members()[0]).toEqual(mockMember)
       })
     })
 
@@ -184,39 +163,35 @@ describe('useOrganizationStore', () => {
       it('should add member', () => {
         useOrganizationStore.getState().addMember(mockMember)
 
-        const state = useOrganizationStore.getState()
-        expect(state.members).toHaveLength(1)
+        expect(members()).toHaveLength(1)
       })
     })
 
     describe('updateMember', () => {
       it('should update member by user_id', () => {
-        useOrganizationStore.setState({ members: [mockMember] })
+        useOrganizationStore.getState().setMembers([mockMember])
 
         useOrganizationStore.getState().updateMember(1, { role: 'admin' })
 
-        const state = useOrganizationStore.getState()
-        expect(state.members[0].role).toBe('admin')
+        expect(members()[0].role).toBe('admin')
       })
 
       it('should not update non-matching member', () => {
-        useOrganizationStore.setState({ members: [mockMember] })
+        useOrganizationStore.getState().setMembers([mockMember])
 
         useOrganizationStore.getState().updateMember(999, { role: 'admin' })
 
-        const state = useOrganizationStore.getState()
-        expect(state.members[0].role).toBe('owner')
+        expect(members()[0].role).toBe('owner')
       })
     })
 
     describe('removeMember', () => {
       it('should remove member by user_id', () => {
-        useOrganizationStore.setState({ members: [mockMember] })
+        useOrganizationStore.getState().setMembers([mockMember])
 
         useOrganizationStore.getState().removeMember(1)
 
-        const state = useOrganizationStore.getState()
-        expect(state.members).toHaveLength(0)
+        expect(members()).toHaveLength(0)
       })
     })
   })
@@ -241,22 +216,18 @@ describe('useOrganizationStore', () => {
 
   describe('reset', () => {
     it('should reset to initial state', () => {
-      useOrganizationStore.setState({
-        organizations: [mockOrg],
-        currentOrganization: mockOrg,
-        members: [mockMember],
-        isLoading: true,
-        error: 'Some error',
-      })
+      useOrganizationStore.getState().setOrganizations([mockOrg])
+      useOrganizationStore.getState().setCurrentOrganization(mockOrg)
+      useOrganizationStore.getState().setMembers([mockMember])
+      useOrganizationStore.setState({ isLoading: true, error: 'Some error' })
 
       useOrganizationStore.getState().reset()
 
-      const state = useOrganizationStore.getState()
-      expect(state.organizations).toEqual([])
-      expect(state.currentOrganization).toBeNull()
-      expect(state.members).toEqual([])
-      expect(state.isLoading).toBe(false)
-      expect(state.error).toBeNull()
+      expect(orgs()).toEqual([])
+      expect(curOrg()).toBeNull()
+      expect(members()).toEqual([])
+      expect(useOrganizationStore.getState().isLoading).toBe(false)
+      expect(useOrganizationStore.getState().error).toBeNull()
     })
   })
 })

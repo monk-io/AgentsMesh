@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
-import { authApi, organizationApi } from "@/lib/api";
-import { ApiError } from "@/lib/api/base";
-import { ssoApi } from "@/lib/api/sso";
-import type { SSOConfig } from "@/lib/api/sso";
+import { ApiError } from "@/lib/api/api-types";
+import type { SSOConfig } from "@/lib/api/ssoTypes";
+import { getAuthManager, getSSOService } from "@/lib/wasm-getters";
+import { initWasmCore, getOrgApiService } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { OAuthButtons } from "./OAuthButtons";
@@ -41,7 +41,10 @@ export default function LoginPage() {
     }
     const requestId = ++discoverRequestRef.current;
     try {
-      const response = await ssoApi.discover(emailValue);
+      await initWasmCore();
+      const raw = await getSSOService().discover(emailValue);
+      if (!raw || raw === "undefined") { setSsoConfigs([]); return; }
+      const response = JSON.parse(raw);
       if (requestId === discoverRequestRef.current) {
         setSsoConfigs(response.configs || []);
       }
@@ -61,10 +64,13 @@ export default function LoginPage() {
 
   const navigateAfterLogin = async () => {
     try {
-      const orgsResponse = await organizationApi.list();
-      if (orgsResponse.organizations && orgsResponse.organizations.length > 0) {
-        setOrganizations(orgsResponse.organizations);
-        router.push(getDefaultRoute(orgsResponse.organizations[0].slug));
+      // Fetch orgs via OrgApiService (reliable), then persist via AuthManager
+      const orgsResponse = JSON.parse(await getOrgApiService().list());
+      const orgs = orgsResponse.organizations || [];
+      if (orgs.length > 0) {
+        setOrganizations(orgs);
+        try { await getAuthManager().fetch_organizations(); } catch { /* best effort */ }
+        router.push(getDefaultRoute(orgs[0].slug));
       } else {
         router.push("/onboarding");
       }
@@ -80,7 +86,7 @@ export default function LoginPage() {
     setLdapLoading(true);
     setError("");
     try {
-      const response = await ssoApi.ldapAuth(ldapConfig.domain, username, pwd);
+      const response = JSON.parse(await getSSOService().ldap_auth(ldapConfig.domain, JSON.stringify({username, password: pwd})));
       setAuth(response.token, response.user, response.refresh_token);
       await navigateAfterLogin();
     } catch (err) {
@@ -95,7 +101,8 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await authApi.login(email, password);
+      await initWasmCore();
+      const response = JSON.parse(await getAuthManager().login(email, password));
       setAuth(response.token, response.user, response.refresh_token);
       await navigateAfterLogin();
     } catch (err) {

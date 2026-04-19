@@ -6,11 +6,13 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/auth";
-import { useTicketStore, TicketStatus } from "@/stores/ticket";
+import { useTicketStore, useCurrentTicket, TicketStatus } from "@/stores/ticket";
 import { useTicketExtraData } from "./hooks";
 import { LabelsList, CommentsList, SubTicketsList, RelationsList, CommitsList } from "./shared";
 import { TicketDetailSidebar } from "./TicketDetailSidebar";
 import { InlineEditableText } from "./InlineEditableText";
+import { SpawnPodButton } from "./SpawnPodButton";
+import { StatusSelect } from "./StatusSelect";
 
 const BlockEditor = lazy(() => import("@/components/ui/block-editor"));
 
@@ -25,7 +27,7 @@ export function TicketDetail({ slug }: TicketDetailProps) {
 
   // Use individual selectors to prevent re-renders from unrelated store changes
   // (e.g., fetchTickets() triggered by WebSocket events sets shared `loading`)
-  const currentTicket = useTicketStore(state => state.currentTicket);
+  const currentTicket = useCurrentTicket();
   const fetchTicket = useTicketStore(state => state.fetchTicket);
   const updateTicket = useTicketStore(state => state.updateTicket);
   const updateTicketStatus = useTicketStore(state => state.updateTicketStatus);
@@ -142,26 +144,104 @@ export function TicketDetail({ slug }: TicketDetailProps) {
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-6">
-        {/* Header */}
-        <div className="space-y-4">
-          {/* Title */}
-          <InlineEditableText
-            value={currentTicket.title}
-            onSave={handleTitleSave}
-            placeholder={t("tickets.createDialog.titlePlaceholder")}
-            className="text-xl sm:text-2xl font-bold tracking-tight leading-snug"
-            inputClassName="text-xl sm:text-2xl font-bold tracking-tight"
-          />
+        {/* Header — matches the design's prominent header with meta row + big CTA */}
+        <div className="border-b border-border pb-6">
+          <div className="flex items-start justify-between gap-6">
+            {/* Left: slug + status, title, meta row, labels */}
+            <div className="flex-1 min-w-0 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <span className="font-mono text-[13px] text-muted-foreground">{slug}</span>
+                <StatusSelect value={currentTicket.status} onChange={handleStatusChange} showLabel size="sm" />
+              </div>
+              <InlineEditableText
+                value={currentTicket.title}
+                onSave={handleTitleSave}
+                placeholder={t("tickets.createDialog.titlePlaceholder")}
+                className="text-[22px] font-semibold leading-7 text-foreground"
+                inputClassName="text-[22px] font-semibold"
+              />
 
-          {/* Labels */}
-          {currentTicket.labels && currentTicket.labels.length > 0 && (
-            <LabelsList labels={currentTicket.labels} compact />
-          )}
+              {/* Meta row: Repo / Priority / Due / Opened */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+                {currentTicket.repository && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">{t("tickets.detail.repository")}</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {currentTicket.repository.name}
+                    </span>
+                  </div>
+                )}
+                {currentTicket.priority && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">{t("tickets.detail.priority")}</span>
+                    <span className="font-medium text-foreground">
+                      {t(`tickets.priority.${currentTicket.priority}`)}
+                    </span>
+                  </div>
+                )}
+                {currentTicket.due_date && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">{t("tickets.detail.dueDate")}</span>
+                    <span className="font-medium text-foreground">
+                      {new Date(currentTicket.due_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {currentTicket.created_at && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">{t("tickets.detail.opened")}</span>
+                    <span className="text-foreground">
+                      {new Date(currentTicket.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {currentTicket.labels && currentTicket.labels.length > 0 && (
+                <LabelsList labels={currentTicket.labels} compact />
+              )}
+            </div>
+
+            {/* Right: big Spawn Pod CTA + helper text + secondary actions */}
+            <div className="flex shrink-0 flex-col items-end gap-2 w-[260px]">
+              <SpawnPodButton
+                ticket={currentTicket}
+                ticketSlug={slug}
+                size="lg"
+                className="h-11 w-full gap-2 text-sm font-semibold shadow-sm"
+              />
+              <p className="text-right text-[11px] text-muted-foreground">
+                {currentTicket.repository?.name ?? "—"} · {t("tickets.detail.lastUsedAgent")}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 px-3 text-xs">
+                  {t("common.edit")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  onClick={() => handleStatusChange("done" as TicketStatus)}
+                >
+                  {t("tickets.detail.markDone")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleDelete}
+                  aria-label={t("common.more")}
+                >
+                  ⋯
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Content */}
-        <div className="rounded-xl border border-border/60 overflow-hidden bg-card shadow-sm min-h-[200px] max-h-[65vh] overflow-y-auto">
-          <Suspense fallback={<div className="h-[200px] animate-pulse bg-muted/30 rounded-xl" />}>
+        <div className="rounded-md border border-border overflow-hidden bg-card shadow-xs min-h-[200px] max-h-[65vh] overflow-y-auto">
+          <Suspense fallback={<div className="h-[200px] animate-pulse bg-muted/30 rounded-md" />}>
             <BlockEditor
               key={slug}
               initialContent={currentTicket.content || ""}
@@ -171,16 +251,8 @@ export function TicketDetail({ slug }: TicketDetailProps) {
           </Suspense>
         </div>
 
-        {/* Linked items */}
-        <SubTicketsList
-          subTickets={subTickets}
-          onTicketClick={(ticketSlug) => router.push(`/${currentOrg?.slug}/tickets/${ticketSlug}`)}
-        />
-        <RelationsList
-          relations={relations}
-          onTicketClick={(ticketSlug) => router.push(`/${currentOrg?.slug}/tickets/${ticketSlug}`)}
-        />
-        <CommitsList commits={commits} />
+        {/* Linked items moved into the right rail per design. Leave hook in place
+            so the data is still fetched — render only the comments thread here. */}
 
         {/* Comments (large screens only — on small screens shown above delete in sidebar) */}
         <div className="hidden lg:block">
@@ -194,13 +266,13 @@ export function TicketDetail({ slug }: TicketDetailProps) {
 
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar — 4-section rail per design */}
       <TicketDetailSidebar
         ticket={currentTicket}
-        onDelete={handleDelete}
-        onStatusChange={handleStatusChange}
-        onRepositoryChange={handleRepositoryChange}
         ticketSlug={slug}
+        subTickets={subTickets}
+        relations={relations}
+        commits={commits}
         t={t}
         commentsSlot={
           <div className="lg:hidden">

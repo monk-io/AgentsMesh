@@ -33,8 +33,8 @@ export function AuthButtons({
   onClick,
   className,
 }: AuthButtonsProps) {
-  const { token, currentOrg, _hasHydrated } = useAuthStore();
-  const isLoggedIn = _hasHydrated && !!token;
+  const { user, currentOrg, _hasHydrated } = useAuthStore();
+  const isLoggedIn = _hasHydrated && !!user;
   const consoleHref = currentOrg?.slug
     ? `/${currentOrg.slug}/workspace`
     : "/login";

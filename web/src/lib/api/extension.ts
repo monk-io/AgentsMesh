@@ -1,158 +1,82 @@
-import { request, orgPath } from "./base";
-import {
-  uploadRequest,
-} from "./extensionTypes";
-import type {
-  SkillRegistryAuthType,
-  SkillRegistry,
-  SkillRegistryOverride,
-  SkillMarketItem,
-  McpMarketItem,
-  InstalledSkill,
-  InstalledMcpServer,
-} from "./extensionTypes";
-
-// Re-export types for consumers
-export type { SkillRegistryAuthType } from "./extensionTypes";
+import { getExtensionService } from "@/lib/wasm-core";
 export type {
-  SkillRegistry,
-  SkillMarketItem,
-  McpMarketItem,
-  McpHeaderSchemaEntry,
-  EnvVarSchemaEntry,
-  SkillRegistryOverride,
-  InstalledSkill,
-  InstalledMcpServer,
+  SkillRegistryAuthType, SkillRegistry, SkillRegistryOverride,
+  SkillMarketItem, McpMarketItem, McpHeaderSchemaEntry, EnvVarSchemaEntry,
+  InstalledSkill, InstalledMcpServer,
 } from "./extensionTypes";
 
 export const extensionApi = {
-  // Skill Registries (org admin)
-  listSkillRegistries: () =>
-    request<{ skill_registries: SkillRegistry[] }>(orgPath("/skill-registries")),
-
-  createSkillRegistry: (data: {
-    repository_url: string;
-    branch?: string;
-    source_type?: string;
-    compatible_agents?: string[];
-    auth_type?: SkillRegistryAuthType;
-    auth_credential?: string;
-  }) =>
-    request<{ registry: SkillRegistry }>(orgPath("/skill-registries"), { method: "POST", body: data }),
-
-  syncSkillRegistry: (id: number) =>
-    request<{ registry: SkillRegistry }>(orgPath(`/skill-registries/${id}/sync`), { method: "POST" }),
-
-  deleteSkillRegistry: (id: number) =>
-    request(orgPath(`/skill-registries/${id}`), { method: "DELETE" }),
-
-  // Skill Registry Overrides
-  togglePlatformRegistry: (registryId: number, disabled: boolean) =>
-    request<{ overrides: SkillRegistryOverride[] }>(orgPath(`/skill-registries/${registryId}/toggle`), {
-      method: "PUT",
-      body: { disabled },
-    }),
-
-  listSkillRegistryOverrides: () =>
-    request<{ overrides: SkillRegistryOverride[] }>(orgPath("/skill-registry-overrides")),
-
-  // Marketplace
-  listMarketSkills: (query?: string, category?: string) => {
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (category) params.set("category", category);
-    const qs = params.toString();
-    return request<{ skills: SkillMarketItem[] }>(orgPath(`/market/skills${qs ? `?${qs}` : ""}`));
+  listRepoSkills: async (repoId: number, scope?: string) => {
+    const json = await getExtensionService().list_repo_skills(BigInt(repoId), scope ?? null);
+    return JSON.parse(json);
   },
-
-  listMarketMcpServers: (query?: string, category?: string, limit?: number, offset?: number) => {
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (category) params.set("category", category);
-    if (limit !== undefined) params.set("limit", String(limit));
-    if (offset !== undefined) params.set("offset", String(offset));
-    const qs = params.toString();
-    return request<{ mcp_servers: McpMarketItem[]; total: number; limit: number; offset: number }>(orgPath(`/market/mcp-servers${qs ? `?${qs}` : ""}`));
+  listRepoMcpServers: async (repoId: number, scope?: string) => {
+    const json = await getExtensionService().list_repo_mcp_servers(BigInt(repoId), scope ?? null);
+    return JSON.parse(json);
   },
-
-  // Repo Skills
-  listRepoSkills: (repoId: number, scope?: string) => {
-    const qs = scope ? `?scope=${scope}` : "";
-    return request<{ skills: InstalledSkill[] }>(orgPath(`/repositories/${repoId}/skills${qs}`));
+  updateSkill: async (repoId: number, installId: number, data: Record<string, unknown>) => {
+    const json = await getExtensionService().update_skill(BigInt(repoId), BigInt(installId), JSON.stringify(data));
+    return JSON.parse(json);
   },
-
-  installSkillFromMarket: (repoId: number, data: { market_item_id: number; scope: string }) =>
-    request<{ skill: InstalledSkill }>(orgPath(`/repositories/${repoId}/skills/install-from-market`), {
-      method: "POST",
-      body: data,
-    }),
-
-  installSkillFromGitHub: (repoId: number, data: { url: string; branch?: string; path?: string; scope: string }) =>
-    request<{ skill: InstalledSkill }>(orgPath(`/repositories/${repoId}/skills/install-from-github`), {
-      method: "POST",
-      body: data,
-    }),
-
-  installSkillFromUpload: (repoId: number, file: File, scope: string) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("scope", scope);
-    return uploadRequest<{ skill: InstalledSkill }>(orgPath(`/repositories/${repoId}/skills/install-from-upload`), formData);
+  uninstallSkill: async (repoId: number, installId: number) => {
+    await getExtensionService().uninstall_skill(BigInt(repoId), BigInt(installId));
   },
-
-  updateSkill: (repoId: number, installId: number, data: { is_enabled?: boolean; pinned_version?: number | null }) =>
-    request<{ skill: InstalledSkill }>(orgPath(`/repositories/${repoId}/skills/${installId}`), {
-      method: "PUT",
-      body: data,
-    }),
-
-  uninstallSkill: (repoId: number, installId: number) =>
-    request(orgPath(`/repositories/${repoId}/skills/${installId}`), { method: "DELETE" }),
-
-  // Repo MCP Servers
-  listRepoMcpServers: (repoId: number, scope?: string) => {
-    const qs = scope ? `?scope=${scope}` : "";
-    return request<{ mcp_servers: InstalledMcpServer[] }>(orgPath(`/repositories/${repoId}/mcp-servers${qs}`));
+  updateMcpServer: async (repoId: number, installId: number, data: Record<string, unknown>) => {
+    const json = await getExtensionService().update_mcp_server(BigInt(repoId), BigInt(installId), JSON.stringify(data));
+    return JSON.parse(json);
   },
-
-  installMcpFromMarket: (
-    repoId: number,
-    data: { market_item_id: number; env_vars?: Record<string, string>; scope: string }
-  ) =>
-    request<{ mcp_server: InstalledMcpServer }>(orgPath(`/repositories/${repoId}/mcp-servers/install-from-market`), {
-      method: "POST",
-      body: data,
-    }),
-
-  installCustomMcpServer: (
-    repoId: number,
-    data: {
-      name: string;
-      slug: string;
-      transport_type: string;
-      command?: string;
-      args?: string[];
-      http_url?: string;
-      http_headers?: Record<string, string>;
-      env_vars?: Record<string, string>;
-      scope: string;
-    }
-  ) =>
-    request<{ mcp_server: InstalledMcpServer }>(orgPath(`/repositories/${repoId}/mcp-servers/install-custom`), {
-      method: "POST",
-      body: data,
-    }),
-
-  updateMcpServer: (
-    repoId: number,
-    installId: number,
-    data: { is_enabled?: boolean; env_vars?: Record<string, string> }
-  ) =>
-    request<{ mcp_server: InstalledMcpServer }>(orgPath(`/repositories/${repoId}/mcp-servers/${installId}`), {
-      method: "PUT",
-      body: data,
-    }),
-
-  uninstallMcpServer: (repoId: number, installId: number) =>
-    request(orgPath(`/repositories/${repoId}/mcp-servers/${installId}`), { method: "DELETE" }),
+  uninstallMcpServer: async (repoId: number, installId: number) => {
+    await getExtensionService().uninstall_mcp_server(BigInt(repoId), BigInt(installId));
+  },
+  listMarketSkills: async (query?: string, category?: string) => {
+    const json = await getExtensionService().list_market_skills(query ?? null, category ?? null);
+    return JSON.parse(json);
+  },
+  installSkillFromMarket: async (repoId: number, data: Record<string, unknown>) => {
+    const json = await getExtensionService().install_skill_from_market(BigInt(repoId), JSON.stringify(data));
+    return JSON.parse(json);
+  },
+  installSkillFromGitHub: async (repoId: number, data: Record<string, unknown>) => {
+    const json = await getExtensionService().install_skill_from_github(BigInt(repoId), JSON.stringify(data));
+    return JSON.parse(json);
+  },
+  installSkillFromUpload: async (repoId: number, file: File, scope?: string) => {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const json = await getExtensionService().install_skill_from_upload(BigInt(repoId), buf, file.name, scope ?? null);
+    return JSON.parse(json);
+  },
+  listMarketMcpServers: async (query?: string, _category?: string, limit?: number, offset?: number) => {
+    const json = await getExtensionService().list_market_mcp_servers(query ?? null, limit ?? null, offset ?? null);
+    return JSON.parse(json);
+  },
+  installMcpFromMarket: async (repoId: number, data: Record<string, unknown>) => {
+    const json = await getExtensionService().install_mcp_from_market(BigInt(repoId), JSON.stringify(data));
+    return JSON.parse(json);
+  },
+  installCustomMcpServer: async (repoId: number, data: Record<string, unknown>) => {
+    const json = await getExtensionService().install_custom_mcp_server(BigInt(repoId), JSON.stringify(data));
+    return JSON.parse(json);
+  },
+  listSkillRegistries: async () => {
+    const json = await getExtensionService().list_skill_registries();
+    return JSON.parse(json);
+  },
+  listSkillRegistryOverrides: async () => {
+    const json = await getExtensionService().list_skill_registry_overrides();
+    return JSON.parse(json);
+  },
+  togglePlatformRegistry: async (registryId: number, disabled: boolean) => {
+    const json = await getExtensionService().toggle_skill_registry(BigInt(registryId), JSON.stringify({ disabled }));
+    return JSON.parse(json);
+  },
+  syncSkillRegistry: async (id: number) => {
+    await getExtensionService().sync_skill_registry(BigInt(id));
+  },
+  deleteSkillRegistry: async (id: number) => {
+    await getExtensionService().delete_skill_registry(BigInt(id));
+  },
+  createSkillRegistry: async (data: Record<string, unknown>) => {
+    const json = await getExtensionService().create_skill_registry(JSON.stringify(data));
+    return JSON.parse(json);
+  },
 };

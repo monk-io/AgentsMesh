@@ -1,162 +1,250 @@
+import { useMemo } from "react";
 import { create } from "zustand";
-import { TicketData, TicketStatus, TicketPriority, BoardColumn } from "@/lib/api";
+import type { TicketData, TicketStatus, TicketPriority, BoardColumn } from "@/lib/api";
 import { reconnectRegistry } from "@/lib/realtime";
-import { createTicketActions } from "./ticket-actions";
+import { getErrorMessage } from "@/lib/utils";
+import { getTicketService, parseWasmAny } from "@/lib/wasm-core";
 
-// Re-export types from API for component convenience
 export type { TicketStatus, TicketPriority };
-// Re-export selectors and helpers
-export { useFilteredTickets, getStatusInfo, getPriorityInfo } from "./ticket-selectors";
-
-export interface Label {
-  id: number;
-  name: string;
-  color: string;
-}
-
-export interface ColumnPagination {
-  offset: number;
-  hasMore: boolean;
-  loading: boolean;
-}
-
-export interface Ticket extends TicketData {
-  child_tickets?: Ticket[];
-}
-
-export interface TicketFilters {
-  status?: TicketStatus;
-  priority?: TicketPriority;
-  assigneeId?: number;
-  repositoryId?: number;
-  search?: string;
-}
-
-/** Shared dependency types for store action creators (get/set). */
-export interface TicketStoreDeps {
-  get: () => {
-    tickets: Ticket[];
-    currentTicket: Ticket | null;
-    filters: TicketFilters;
-    totalCount: number;
-    boardColumns: BoardColumn[];
-    priorityCounts: Record<string, number>;
-    columnPagination: Record<string, ColumnPagination>;
-  };
-  set: (updater: object | ((state: ReturnType<TicketStoreDeps["get"]>) => object)) => void;
-}
-
-interface TicketUIFilters {
-  selectedStatuses: TicketStatus[];
-  selectedPriorities: TicketPriority[];
-  selectedRepositoryIds: number[];
-}
-
+export interface Label { id: number; name: string; color: string }
+export interface ColumnPagination { offset: number; hasMore: boolean; loading: boolean }
+export interface Ticket extends TicketData { child_tickets?: Ticket[] }
 export type TicketViewMode = "list" | "board";
+export interface TicketFilters {
+  status?: TicketStatus; priority?: TicketPriority;
+  assigneeId?: number; repositoryId?: number; search?: string;
+}
+interface TicketUIFilters {
+  selectedStatuses: TicketStatus[]; selectedPriorities: TicketPriority[]; selectedRepositoryIds: number[];
+}
+const EMPTY_UI: TicketUIFilters = { selectedStatuses: [], selectedPriorities: [], selectedRepositoryIds: [] };
+const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+const initPag = (cols: BoardColumn[]) => Object.fromEntries(
+  cols.map((c) => [c.status, { offset: c.tickets.length, hasMore: c.tickets.length < c.count, loading: false }]),
+) as Record<string, ColumnPagination>;
+
+const svc = () => getTicketService();
+const bump = () => useTicketStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 interface TicketState {
-  /**
-   * Flat ticket array consumed by useFilteredTickets and list view.
-   * - List mode: source of truth, populated by fetchTickets.
-   * - Board mode: **derived** from boardColumns via flattenColumns().
-   *   All mutations (loadMore, drag-drop) update boardColumns first,
-   *   then re-derive this array. Do NOT mutate directly in board mode.
-   */
-  tickets: Ticket[];
-  currentTicket: Ticket | null;
-  selectedTicketSlug: string | null;
-  labels: Label[];
-  filters: TicketFilters;
-  uiFilters: TicketUIFilters;
-  viewMode: TicketViewMode;
-  loading: boolean;
-  error: string | null;
-  totalCount: number;
-  /** Board mode source of truth: per-column tickets + DB total count. */
-  boardColumns: BoardColumn[];
+  _tick: number; selectedTicketSlug: string | null;
+  filters: TicketFilters; uiFilters: TicketUIFilters;
+  viewMode: TicketViewMode; loading: boolean; error: string | null; totalCount: number;
   priorityCounts: Record<string, number>;
-  columnPagination: Record<string, ColumnPagination>;
-  doneCollapsed: boolean;
-
-  fetchTickets: (filters?: TicketFilters) => Promise<void>;
-  fetchBoard: (filters?: TicketFilters) => Promise<void>;
-  loadMoreColumn: (status: string) => Promise<void>;
-  fetchTicket: (slug: string) => Promise<void>;
-  setSelectedTicketSlug: (slug: string | null) => void;
-  createTicket: (data: {
-    repositoryId: number; title: string; content?: string;
-    priority?: TicketPriority; assigneeIds?: number[]; labels?: string[]; parentId?: number;
-  }) => Promise<Ticket>;
-  updateTicket: (slug: string, data: Partial<{
-    title: string; content: string; status: TicketStatus; priority: TicketPriority;
-    repositoryId: number | null; assigneeIds: number[]; labels: string[];
-  }>) => Promise<Ticket>;
-  deleteTicket: (slug: string) => Promise<void>;
-  updateTicketStatus: (slug: string, status: TicketStatus) => Promise<void>;
-  fetchLabels: (repositoryId?: number) => Promise<void>;
-  createLabel: (name: string, color: string, repositoryId?: number) => Promise<Label>;
-  deleteLabel: (id: number) => Promise<void>;
+  columnPagination: Record<string, ColumnPagination>; doneCollapsed: boolean;
+  fetchTickets: (f?: TicketFilters) => Promise<void>; fetchBoard: (f?: TicketFilters) => Promise<void>;
+  loadMoreColumn: (status: string) => Promise<void>; fetchTicket: (slug: string) => Promise<void>;
+  createTicket: (d: { repositoryId: number; title: string; content?: string; priority?: TicketPriority; assigneeIds?: number[]; labels?: string[]; parentId?: number }) => Promise<Ticket>;
+  updateTicket: (slug: string, d: Partial<{ title: string; content: string; status: TicketStatus; priority: TicketPriority; repositoryId: number | null; assigneeIds: number[]; labels: string[] }>) => Promise<Ticket>;
+  deleteTicket: (slug: string) => Promise<void>; updateTicketStatus: (slug: string, s: TicketStatus) => Promise<void>;
+  fetchLabels: (r?: number) => Promise<void>; createLabel: (n: string, c: string, r?: number) => Promise<Label>; deleteLabel: (id: number) => Promise<void>;
   updateTicketStatusFromEvent: (slug: string, status: string, previousStatus?: string) => void;
   removeTicketFromEvent: (slug: string) => void;
-  setFilters: (filters: TicketFilters) => void;
-  setUIFilters: (uiFilters: Partial<TicketUIFilters>) => void;
-  toggleStatus: (status: TicketStatus) => void;
-  togglePriority: (priority: TicketPriority) => void;
-  toggleRepository: (id: number) => void;
-  clearUIFilters: () => void;
-  setViewMode: (mode: TicketViewMode) => void;
-  setCurrentTicket: (ticket: Ticket | null) => void;
-  setDoneCollapsed: (collapsed: boolean) => void;
-  clearError: () => void;
+  setFilters: (f: TicketFilters) => void; setUIFilters: (p: Partial<TicketUIFilters>) => void;
+  toggleStatus: (s: TicketStatus) => void; togglePriority: (p: TicketPriority) => void; toggleRepository: (id: number) => void;
+  clearUIFilters: () => void; setViewMode: (m: TicketViewMode) => void; setCurrentTicket: (t: Ticket | null) => void;
+  setSelectedTicketSlug: (s: string | null) => void; setDoneCollapsed: (c: boolean) => void; clearError: () => void;
 }
 
-export const useTicketStore = create<TicketState>((set, get) => ({
-  tickets: [],
-  currentTicket: null,
-  selectedTicketSlug: null,
-  labels: [],
-  filters: {},
-  uiFilters: { selectedStatuses: [], selectedPriorities: [], selectedRepositoryIds: [] },
-  viewMode: "board",
-  loading: false,
-  error: null,
-  totalCount: 0,
-  boardColumns: [],
-  priorityCounts: {},
-  columnPagination: {},
-  doneCollapsed: true,
+export function useTickets(): Ticket[] {
+  const tick = useTicketStore((s) => s._tick);
+  return useMemo(() => JSON.parse(svc().tickets_json()) as Ticket[], [tick]);
+}
 
-  // Spread API actions from extracted module
-  ...createTicketActions(
-    set as Parameters<typeof createTicketActions>[0],
-    get as Parameters<typeof createTicketActions>[1]
-  ),
+export function useCurrentTicket(): Ticket | null {
+  const tick = useTicketStore((s) => s._tick);
+  return useMemo(() => parseWasmAny<Ticket>(svc().current_ticket_json()), [tick]);
+}
 
-  setFilters: (filters) => set({ filters }),
-  setUIFilters: (partial) => set((state) => ({ uiFilters: { ...state.uiFilters, ...partial } })),
+export function useBoardColumns(): BoardColumn[] {
+  const tick = useTicketStore((s) => s._tick);
+  return useMemo(() => { const raw = svc().board_columns_json(); return raw ? JSON.parse(raw) : []; }, [tick]);
+}
 
-  toggleStatus: (status) => set((state) => {
-    const prev = state.uiFilters.selectedStatuses;
-    return { uiFilters: { ...state.uiFilters, selectedStatuses: prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status] } };
-  }),
+export function useLabels(): Label[] {
+  const tick = useTicketStore((s) => s._tick);
+  return useMemo(() => JSON.parse(svc().labels_json()) as Label[], [tick]);
+}
 
-  togglePriority: (priority) => set((state) => {
-    const prev = state.uiFilters.selectedPriorities;
-    return { uiFilters: { ...state.uiFilters, selectedPriorities: prev.includes(priority) ? prev.filter((p) => p !== priority) : [...prev, priority] } };
-  }),
+export const useTicketStore = create<TicketState>((set, get) => {
+  const refresh = () => {
+    const cols = JSON.parse(svc().board_columns_json() || "[]") as BoardColumn[];
+    if (cols.length > 0) get().fetchBoard(get().filters); else get().fetchTickets(get().filters);
+  };
+  return {
+    _tick: 0, selectedTicketSlug: null,
+    filters: {}, uiFilters: EMPTY_UI, viewMode: "board", loading: false,
+    error: null, totalCount: 0, priorityCounts: {},
+    columnPagination: {} as Record<string, ColumnPagination>, doneCollapsed: true,
 
-  toggleRepository: (id) => set((state) => {
-    const prev = state.uiFilters.selectedRepositoryIds;
-    return { uiFilters: { ...state.uiFilters, selectedRepositoryIds: prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id] } };
-  }),
+    fetchTickets: async (filters) => {
+      const m = { ...get().filters, ...filters }; set({ error: null, filters: m });
+      try {
+        const json = await svc().fetch_tickets(m.status, 500, undefined);
+        const r = JSON.parse(json);
+        set({ totalCount: r.total || 0, priorityCounts: {}, columnPagination: {}, _tick: get()._tick + 1 });
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch tickets") }); }
+    },
 
-  clearUIFilters: () => set({ uiFilters: { selectedStatuses: [], selectedPriorities: [], selectedRepositoryIds: [] } }),
-  setViewMode: (mode) => set({ viewMode: mode }),
-  setCurrentTicket: (ticket) => set({ currentTicket: ticket }),
-  setSelectedTicketSlug: (slug) => set({ selectedTicketSlug: slug }),
-  setDoneCollapsed: (collapsed) => set({ doneCollapsed: collapsed }),
-  clearError: () => set({ error: null }),
-}));
+    fetchBoard: async (filters) => {
+      const m = { ...get().filters, ...filters }; set({ error: null, filters: m });
+      try {
+        const json = await svc().fetch_board(m.repositoryId != null ? BigInt(m.repositoryId) : undefined);
+        const { columns } = JSON.parse(json);
+        set({
+          totalCount: columns.reduce((s: number, c: BoardColumn) => s + c.count, 0),
+          priorityCounts: {},
+          columnPagination: initPag(columns),
+          _tick: get()._tick + 1,
+        });
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch board") }); }
+    },
+
+    loadMoreColumn: async (status) => {
+      const { columnPagination: cp } = get();
+      const pag = cp[status]; if (!pag?.hasMore || pag.loading) return;
+      set({ columnPagination: { ...cp, [status]: { ...pag, loading: true } } });
+      try {
+        const json = await svc().load_more_column(status, pag.offset, 20);
+        const res = JSON.parse(json);
+        const added = (res.tickets || []) as Ticket[];
+        const off = pag.offset + added.length;
+        set({
+          columnPagination: { ...get().columnPagination, [status]: { offset: off, hasMore: off < (res.total || 0), loading: false } },
+          _tick: get()._tick + 1,
+        });
+      } catch (e: unknown) { set({ columnPagination: { ...get().columnPagination, [status]: { ...pag, loading: false } }, error: getErrorMessage(e, "Failed to load more") }); }
+    },
+
+    fetchTicket: async (slug) => {
+      try {
+        await svc().fetch_ticket(slug);
+        bump();
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch ticket") }); }
+    },
+
+    createTicket: async (data) => {
+      set({ error: null });
+      try {
+        const json = await svc().create_ticket(JSON.stringify(data));
+        const t = JSON.parse(json) as Ticket;
+        refresh();
+        return t;
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create ticket") }); throw e; }
+    },
+
+    updateTicket: async (slug, data) => {
+      try {
+        const json = await svc().update_ticket(slug, JSON.stringify(data));
+        const t = JSON.parse(json) as Ticket;
+        bump();
+        refresh();
+        return t;
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update ticket") }); throw e; }
+    },
+
+    deleteTicket: async (slug) => {
+      try {
+        await svc().delete_ticket(slug);
+        bump();
+        refresh();
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete ticket") }); throw e; }
+    },
+
+    updateTicketStatus: async (slug, status) => {
+      try {
+        await svc().update_ticket_status(slug, status);
+        bump();
+        refresh();
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update status") }); throw e; }
+    },
+
+    fetchLabels: async (repositoryId) => {
+      try {
+        await svc().fetch_labels(repositoryId != null ? BigInt(repositoryId) : undefined);
+        bump();
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch labels") }); }
+    },
+
+    createLabel: async (name, color, repositoryId) => {
+      try {
+        const json = await svc().create_label(name, color, repositoryId != null ? BigInt(repositoryId) : undefined);
+        const l = JSON.parse(json) as Label;
+        bump();
+        return l;
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create label") }); throw e; }
+    },
+
+    deleteLabel: async (id) => {
+      try {
+        await svc().delete_label(id);
+        bump();
+      } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete label") }); throw e; }
+    },
+
+    setFilters: (filters) => set({ filters }),
+    setUIFilters: (p) => set((s) => ({ uiFilters: { ...s.uiFilters, ...p } })),
+    toggleStatus: (st) => set((s) => ({ uiFilters: { ...s.uiFilters, selectedStatuses: toggle(s.uiFilters.selectedStatuses, st) } })),
+    togglePriority: (pr) => set((s) => ({ uiFilters: { ...s.uiFilters, selectedPriorities: toggle(s.uiFilters.selectedPriorities, pr) } })),
+    toggleRepository: (id) => set((s) => ({ uiFilters: { ...s.uiFilters, selectedRepositoryIds: toggle(s.uiFilters.selectedRepositoryIds, id) } })),
+    clearUIFilters: () => set({ uiFilters: EMPTY_UI }), setViewMode: (mode) => set({ viewMode: mode }),
+    setCurrentTicket: (ticket) => {
+      svc().set_current_ticket(ticket ? JSON.stringify(ticket) : "");
+      bump();
+    },
+    setSelectedTicketSlug: (slug) => set({ selectedTicketSlug: slug }),
+    setDoneCollapsed: (collapsed) => set({ doneCollapsed: collapsed }), clearError: () => set({ error: null }),
+
+    updateTicketStatusFromEvent: (slug, status) => {
+      svc().update_ticket_status_local(slug, status);
+      bump();
+    },
+
+    removeTicketFromEvent: (slug) => {
+      svc().remove_ticket(slug);
+      bump();
+    },
+  };
+});
+
+export function useFilteredTickets(): Ticket[] {
+  const tick = useTicketStore((s) => s._tick);
+  const search = useTicketStore((s) => s.filters.search);
+  const { selectedStatuses, selectedPriorities, selectedRepositoryIds } = useTicketStore((s) => s.uiFilters);
+  return useMemo(() => {
+    if (search || selectedStatuses.length || selectedPriorities.length || selectedRepositoryIds.length) {
+      return JSON.parse(getTicketService().filter_tickets_json(
+        search || "",
+        JSON.stringify(selectedStatuses),
+        JSON.stringify(selectedPriorities),
+        JSON.stringify(selectedRepositoryIds),
+      )) as Ticket[];
+    }
+    return JSON.parse(svc().tickets_json()) as Ticket[];
+  }, [tick, search, selectedStatuses, selectedPriorities, selectedRepositoryIds]);
+}
+
+export const getStatusInfo = (status: TicketStatus) => {
+  const m: Record<TicketStatus, { label: string; color: string; bgColor: string }> = {
+    backlog: { label: "Backlog", color: "text-gray-600 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800" },
+    todo: { label: "To Do", color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
+    in_progress: { label: "In Progress", color: "text-yellow-600 dark:text-yellow-400", bgColor: "bg-yellow-100 dark:bg-yellow-900/30" },
+    in_review: { label: "In Review", color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
+    done: { label: "Done", color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900/30" },
+  };
+  return m[status] || { label: status || "Unknown", color: "text-gray-500 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800" };
+};
+
+export const getPriorityInfo = (priority: TicketPriority) => {
+  const m: Record<TicketPriority, { label: string; color: string; icon: string }> = {
+    none: { label: "None", color: "text-gray-400 dark:text-gray-500", icon: "minus" },
+    low: { label: "Low", color: "text-blue-500 dark:text-blue-400", icon: "arrow-down" },
+    medium: { label: "Medium", color: "text-yellow-500 dark:text-yellow-400", icon: "arrow-right" },
+    high: { label: "High", color: "text-orange-500 dark:text-orange-400", icon: "arrow-up" },
+    urgent: { label: "Urgent", color: "text-red-500 dark:text-red-400", icon: "alert-triangle" },
+  };
+  return m[priority] || { label: priority || "None", color: "text-gray-400 dark:text-gray-500", icon: "minus" };
+};
 
 reconnectRegistry.register({
   name: "ticket:list",

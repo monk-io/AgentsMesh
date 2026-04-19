@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
-import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
+import { useChannelStore, useChannels, useChannelMessageStore } from "@/stores/channel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,7 +26,7 @@ export function ChannelsSidebarContent({ className }: ChannelsSidebarContentProp
   const t = useTranslations();
   const currentOrg = useAuthStore((s) => s.currentOrg);
 
-  const channels = useChannelStore((s) => s.channels);
+  const channels = useChannels();
   const loading = useChannelStore((s) => s.loading);
   const selectedChannelId = useChannelStore((s) => s.selectedChannelId);
   const searchQuery = useChannelStore((s) => s.searchQuery);

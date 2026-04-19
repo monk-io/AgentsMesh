@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { repositoryApi, RepositoryData } from "@/lib/api";
+import { RepositoryData } from "@/lib/api";
+import { getRepositoryService } from "@/lib/wasm-core";
 
 export interface RepositorySelectProps {
   value: number | null;
@@ -29,10 +30,10 @@ export function RepositorySelect({
     setLoading(true);
     setError(null);
     try {
-      const res = await repositoryApi.list();
-      let repos = res.repositories || [];
+      const res = JSON.parse(await getRepositoryService().list());
+      let repos: RepositoryData[] = res.repositories || [];
       if (activeOnly) {
-        repos = repos.filter((r) => r.is_active);
+        repos = repos.filter((r: RepositoryData) => r.is_active);
       }
       setRepositories(repos);
     } catch (err) {

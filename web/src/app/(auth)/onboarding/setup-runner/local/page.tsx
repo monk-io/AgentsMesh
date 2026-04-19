@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { runnerApi, RunnerData } from "@/lib/api/runner";
+import type { RunnerData, RunnerListResponse } from "@/lib/api/runnerTypes";
 import { isApiErrorCode } from "@/lib/api/errors";
+import { getRunnerService } from "@/lib/wasm-core";
 import { useServerUrl } from "@/hooks/useServerUrl";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/common";
@@ -31,8 +32,8 @@ export default function LocalRunnerSetupPage() {
     const generateToken = async () => {
       try {
         setLoading(true);
-        const { token: newToken } = await runnerApi.createToken();
-        setToken(newToken);
+        const resp = JSON.parse(await getRunnerService().create_token(JSON.stringify({})));
+        setToken(resp.token);
       } catch (err) {
         if (isApiErrorCode(err, "ADMIN_REQUIRED") || isApiErrorCode(err, "INSUFFICIENT_PERMISSIONS")) {
           setError(t("apiErrors.INSUFFICIENT_PERMISSIONS"));
@@ -47,8 +48,8 @@ export default function LocalRunnerSetupPage() {
 
   const checkRunnerConnection = useCallback(async () => {
     try {
-      const { runners } = await runnerApi.list();
-      const onlineRunner = runners.find((r) => r.status === "online");
+      const resp: RunnerListResponse = JSON.parse(await getRunnerService().fetch_runners(null));
+      const onlineRunner = resp.runners.find((r) => r.status === "online");
       if (onlineRunner) {
         setConnectionStatus("connected");
         setConnectedRunner(onlineRunner);

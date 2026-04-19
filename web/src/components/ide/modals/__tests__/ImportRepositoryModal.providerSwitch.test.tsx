@@ -1,19 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { userRepositoryProviderApi } from "@/lib/api";
-import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
-} from "./ImportRepositoryModal.utils";
+import { setupProviderMocks } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Provider Type Switching", () => {
   const mockOnClose = vi.fn();
@@ -21,12 +9,7 @@ describe("ImportRepositoryModal - Provider Type Switching", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should change base URL when provider type is changed to gitlab", async () => {
@@ -45,7 +28,6 @@ describe("ImportRepositoryModal - Provider Type Switching", () => {
       expect(baseUrlInput.value).toBe("https://github.com");
     });
 
-    // Find and change the provider type select
     const providerSelect = document.querySelector("select") as HTMLSelectElement;
     fireEvent.change(providerSelect, { target: { value: "gitlab" } });
 

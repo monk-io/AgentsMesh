@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
 import RepositoryDetailPage from "../page";
+import { getRepositoryService, getApiClient } from "@/lib/wasm-core";
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -16,22 +17,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-// Mock the API modules
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    get: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    registerWebhook: vi.fn(),
-    getWebhookStatus: vi.fn(),
-    getWebhookSecret: vi.fn(),
-    deleteWebhook: vi.fn(),
-    markWebhookConfigured: vi.fn(),
-  },
-}));
+// No longer mocking @/lib/api/repository — WebhookSettingsCard now uses WASM services
 
-import { repositoryApi } from "@/lib/api";
-const mockRepositoryApi = vi.mocked(repositoryApi);
+const mockRepoService = vi.mocked(getRepositoryService);
+const mockApiClient = vi.mocked(getApiClient);
 
 describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
   const mockRepository = {
@@ -51,26 +40,42 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
     updated_at: "2024-01-01T00:00:00Z",
   };
 
+  let mockGet: ReturnType<typeof vi.fn>;
+  let mockDelete: ReturnType<typeof vi.fn>;
+  let mockUpdate: ReturnType<typeof vi.fn>;
+  let mockGetWebhookStatus: ReturnType<typeof vi.fn>;
+  let mockRegisterWebhook: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRepositoryApi.get.mockResolvedValue({ repository: mockRepository });
-    mockRepositoryApi.registerWebhook.mockResolvedValue({
-      result: {
-        repo_id: 123,
-        registered: true,
-        webhook_id: "wh_123",
-        needs_manual_setup: false,
-      },
-    });
-    mockRepositoryApi.getWebhookStatus.mockResolvedValue({
-      webhook_status: {
-        registered: false,
-        is_active: false,
-        needs_manual_setup: false,
-      },
-    });
-    mockRepositoryApi.delete.mockResolvedValue({ message: "Deleted" });
-    mockRepositoryApi.update.mockResolvedValue({ repository: mockRepository });
+
+    mockGet = vi.fn().mockResolvedValue(JSON.stringify({ repository: mockRepository }));
+    mockDelete = vi.fn().mockResolvedValue(undefined);
+    mockUpdate = vi.fn().mockResolvedValue(JSON.stringify({ repository: mockRepository }));
+    mockGetWebhookStatus = vi.fn().mockResolvedValue(JSON.stringify({
+      webhook_status: { registered: false, is_active: false, needs_manual_setup: false },
+    }));
+    mockRegisterWebhook = vi.fn().mockResolvedValue(undefined);
+
+    mockRepoService.mockReturnValue({
+      ...getRepositoryService(),
+      get: mockGet,
+      delete: mockDelete,
+      update: mockUpdate,
+      get_webhook_status: mockGetWebhookStatus,
+      get_webhook_secret: vi.fn().mockResolvedValue(JSON.stringify({
+        webhook_url: "https://example.com/webhook", webhook_secret: "secret", events: [],
+      })),
+      delete_webhook: vi.fn().mockResolvedValue(undefined),
+      register_webhook: mockRegisterWebhook,
+      mark_webhook_configured: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof getRepositoryService>);
+
+    mockApiClient.mockReturnValue({
+      ...getApiClient(),
+      post: vi.fn().mockResolvedValue('{}'),
+      org_path: (p: string) => `/api/v1/orgs/test-org${p}`,
+    } as unknown as ReturnType<typeof getApiClient>);
   });
 
   afterEach(() => {
@@ -88,27 +93,27 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
       fireEvent.click(screen.getByText("Register Webhook"));
 
       await waitFor(() => {
-        expect(mockRepositoryApi.registerWebhook).toHaveBeenCalledWith(1);
+        expect(mockRegisterWebhook).toHaveBeenCalled();
       });
     });
 
     it("should refresh webhook status after successful registration", async () => {
-      mockRepositoryApi.getWebhookStatus.mockResolvedValueOnce({
+      mockGetWebhookStatus.mockResolvedValueOnce(JSON.stringify({
         webhook_status: {
           registered: false,
           is_active: false,
           needs_manual_setup: false,
         },
-      });
+      }));
 
-      mockRepositoryApi.getWebhookStatus.mockResolvedValueOnce({
+      mockGetWebhookStatus.mockResolvedValueOnce(JSON.stringify({
         webhook_status: {
           registered: true,
           is_active: true,
           needs_manual_setup: false,
           webhook_id: "wh_123",
         },
-      });
+      }));
 
       render(<RepositoryDetailPage />);
 
@@ -119,7 +124,7 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
       fireEvent.click(screen.getByText("Register Webhook"));
 
       await waitFor(() => {
-        expect(mockRepositoryApi.getWebhookStatus).toHaveBeenCalledTimes(2);
+        expect(mockGetWebhookStatus).toHaveBeenCalledTimes(2);
       });
     });
   });
@@ -167,18 +172,19 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
       fireEvent.click(screen.getByText("Save Changes"));
 
       await waitFor(() => {
-        expect(mockRepositoryApi.update).toHaveBeenCalledWith(1, expect.objectContaining({
-          name: "updated-repo",
-        }));
+        expect(mockUpdate).toHaveBeenCalledWith(
+          BigInt(1),
+          expect.stringContaining('"name":"updated-repo"'),
+        );
       });
     });
   });
 
   describe("inactive repository", () => {
     it("should show Inactive badge for inactive repository", async () => {
-      mockRepositoryApi.get.mockResolvedValue({
-        repository: { ...mockRepository, is_active: false },
-      });
+      mockGet.mockResolvedValue(
+        JSON.stringify({ repository: { ...mockRepository, is_active: false } }),
+      );
 
       render(<RepositoryDetailPage />);
 
@@ -190,9 +196,9 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
 
   describe("private visibility repository", () => {
     it("should show Private badge for private visibility repository", async () => {
-      mockRepositoryApi.get.mockResolvedValue({
-        repository: { ...mockRepository, visibility: "private" },
-      });
+      mockGet.mockResolvedValue(
+        JSON.stringify({ repository: { ...mockRepository, visibility: "private" } }),
+      );
 
       render(<RepositoryDetailPage />);
 
@@ -204,13 +210,15 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
 
   describe("different providers", () => {
     it("should show GitLab provider type", async () => {
-      mockRepositoryApi.get.mockResolvedValue({
-        repository: {
-          ...mockRepository,
-          provider_type: "gitlab",
-          provider_base_url: "https://gitlab.com",
-        },
-      });
+      mockGet.mockResolvedValue(
+        JSON.stringify({
+          repository: {
+            ...mockRepository,
+            provider_type: "gitlab",
+            provider_base_url: "https://gitlab.com",
+          },
+        }),
+      );
 
       render(<RepositoryDetailPage />);
 
@@ -221,13 +229,15 @@ describe("RepositoryDetailPage - Webhook, Edit & Variants", () => {
     });
 
     it("should show Gitee provider type", async () => {
-      mockRepositoryApi.get.mockResolvedValue({
-        repository: {
-          ...mockRepository,
-          provider_type: "gitee",
-          provider_base_url: "https://gitee.com",
-        },
-      });
+      mockGet.mockResolvedValue(
+        JSON.stringify({
+          repository: {
+            ...mockRepository,
+            provider_type: "gitee",
+            provider_base_url: "https://gitee.com",
+          },
+        }),
+      );
 
       render(<RepositoryDetailPage />);
 

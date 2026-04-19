@@ -5,7 +5,12 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
 import { useEffect, useRef, useMemo, useCallback, useSyncExternalStore } from "react";
 import { PartialBlock } from "@blocknote/core";
-import { uploadImage } from "@/lib/api/file";
+import { getFileService } from "@/lib/wasm-core";
+
+async function uploadImageViaWasm(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return getFileService().upload_file(bytes, file.name, file.type || "application/octet-stream");
+}
 
 interface BlockEditorProps {
   initialContent?: string; // JSON string
@@ -58,7 +63,7 @@ function useThemeDetect(): "light" | "dark" {
 
 // Upload file to backend using organization-scoped API
 async function uploadFile(file: File): Promise<string> {
-  return uploadImage(file);
+  return uploadImageViaWasm(file);
 }
 
 // Parse initial content safely

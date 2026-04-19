@@ -1,4 +1,5 @@
 import { usePodStore } from "@/stores/pod";
+import { getPodService } from "@/lib/wasm-core";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useMeshStore } from "@/stores/mesh";
 import type { DebounceRef } from "./realtimeEventHandlers";
@@ -34,10 +35,10 @@ export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: Deboun
     case "pod:status_changed": {
       const data = event.data as PodStatusChangedData;
       const podState = usePodStore.getState();
-      const existingPod = podState.pods.find(p => p.pod_key === data.pod_key);
-      if (!existingPod) {
+      const existingPodJson = getPodService().get_pod_json(data.pod_key);
+      if (!existingPodJson) {
         podState.fetchPod?.(data.pod_key);
-      } else if (podState.updatePodStatus) {
+      } else {
         podState.updatePodStatus(data.pod_key, data.status as "running" | "initializing" | "failed" | "paused" | "terminated" | "error", data.agent_status, data.error_code, data.error_message);
       }
       if (data.status === "terminated" || data.status === "failed" || data.status === "error") {

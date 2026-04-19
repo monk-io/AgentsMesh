@@ -3,7 +3,7 @@
  * Converts domain data (agents, repos, credentials, config) into CodeMirror completions.
  */
 import type { Completion } from "@codemirror/autocomplete";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField, ConfigFieldOption } from "@/lib/api";
 import type { AgentfileCompletionContext } from "./autocomplete";
 
 // ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ export function buildFieldCompletions(fields: ConfigField[]): Completion[] {
 
 export function buildValueCompletions(field: ConfigField): Completion[] {
   if (field.options && field.options.length > 0) {
-    return field.options.map((opt) => ({
+    return field.options.map((opt: ConfigFieldOption) => ({
       label: `"${opt.value}"`,
       type: "constant",
       detail: field.name,

@@ -1,5 +1,35 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act } from "@testing-library/react";
+
+const mockFetchTopology = vi.fn();
+const mockSelectNode = vi.fn();
+const mockSelectedNode = vi.fn();
+const mockGetNodeJson = vi.fn();
+const mockGetEdgesForNodeJson = vi.fn();
+const mockGetChannelsForNodeJson = vi.fn();
+const mockGetActiveNodesJson = vi.fn();
+const mockGetNodesByRunnerJson = vi.fn();
+const mockGetRunnerInfoJson = vi.fn();
+
+const noopSvc = new Proxy({}, {
+  get: () => () => "[]",
+});
+
+vi.mock("@/lib/wasm-core", () => ({
+  getMeshService: () => ({
+    fetch_topology: mockFetchTopology,
+    select_node: mockSelectNode,
+    selected_node: mockSelectedNode,
+    get_node_json: mockGetNodeJson,
+    get_edges_for_node_json: mockGetEdgesForNodeJson,
+    get_channels_for_node_json: mockGetChannelsForNodeJson,
+    get_active_nodes_json: mockGetActiveNodesJson,
+    get_nodes_by_runner_json: mockGetNodesByRunnerJson,
+    get_runner_info_json: mockGetRunnerInfoJson,
+  }),
+  getChannelService: () => noopSvc,
+}));
+
 import {
   useMeshStore,
   MeshTopology,
@@ -8,79 +38,54 @@ import {
   ChannelInfo,
 } from "../mesh";
 
-// Mock the mesh API
-vi.mock("@/lib/api", () => ({
-  meshApi: {
-    getTopology: vi.fn(),
-  },
-}));
-
-import { meshApi } from "@/lib/api";
-
 const mockNode1: MeshNode = {
   pod_key: "pod-abc",
   status: "running",
   agent_status: "executing",
-  model: "claude-code",
-  created_by_id: 1,
+  agent_slug: "claude-code",
   runner_id: 1,
-  runner_node_id: "runner-alpha",
-  runner_status: "online",
-  started_at: "2024-01-01T00:00:00Z",
 };
 
 const mockNode2: MeshNode = {
   pod_key: "pod-def",
   status: "running",
   agent_status: "waiting",
-  model: "gpt-engineer",
-  created_by_id: 1,
+  agent_slug: "gpt-engineer",
   runner_id: 2,
-  runner_node_id: "runner-beta",
-  runner_status: "online",
-  started_at: "2024-01-02T00:00:00Z",
 };
 
 const mockNode3: MeshNode = {
   pod_key: "pod-ghi",
   status: "terminated",
   agent_status: "idle",
-  model: "claude-code",
-  created_by_id: 1,
+  agent_slug: "claude-code",
   runner_id: 3,
-  runner_node_id: "runner-gamma",
-  runner_status: "offline",
-  started_at: "2024-01-03T00:00:00Z",
 };
 
 const mockEdge: MeshEdge = {
-  id: 1,
   source: "pod-abc",
   target: "pod-def",
-  granted_scopes: ["read", "write"],
-  status: "active",
+  binding_status: "active",
 };
 
 const mockChannel: ChannelInfo = {
   id: 1,
   name: "general",
   pod_keys: ["pod-abc", "pod-def"],
-  message_count: 10,
-  is_archived: false,
 };
 
 const mockTopology: MeshTopology = {
   nodes: [mockNode1, mockNode2, mockNode3],
   edges: [mockEdge],
   channels: [mockChannel],
+  runners: [],
 };
 
 describe("Mesh Store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset store to initial state
     useMeshStore.setState({
-      topology: null,
+      _tick: 0,
       selectedNode: null,
       selectedChannel: null,
       loading: false,
@@ -93,7 +98,6 @@ describe("Mesh Store", () => {
     it("should have default values", () => {
       const state = useMeshStore.getState();
 
-      expect(state.topology).toBeNull();
       expect(state.selectedNode).toBeNull();
       expect(state.selectedChannel).toBeNull();
       expect(state.loading).toBe(false);
@@ -112,28 +116,23 @@ describe("Mesh Store", () => {
     });
 
     it("should fetch topology successfully", async () => {
-      vi.mocked(meshApi.getTopology).mockResolvedValue({
-        topology: mockTopology,
-      });
+      mockFetchTopology.mockResolvedValue(undefined);
 
       act(() => {
         useMeshStore.getState().fetchTopology();
       });
-      // Advance past the 500ms debounce window and flush the async work
       await act(async () => {
         vi.advanceTimersByTime(500);
       });
 
       const state = useMeshStore.getState();
-      expect(state.topology).toEqual(mockTopology);
+      expect(mockFetchTopology).toHaveBeenCalled();
       expect(state.loading).toBe(false);
       expect(state.error).toBeNull();
     });
 
     it("should handle fetch error", async () => {
-      vi.mocked(meshApi.getTopology).mockRejectedValue(
-        new Error("Network error")
-      );
+      mockFetchTopology.mockRejectedValue(new Error("Network error"));
 
       act(() => {
         useMeshStore.getState().fetchTopology();
@@ -148,7 +147,7 @@ describe("Mesh Store", () => {
     });
 
     it("should handle non-Error rejection", async () => {
-      vi.mocked(meshApi.getTopology).mockRejectedValue("Unknown error");
+      mockFetchTopology.mockRejectedValue("Unknown error");
 
       act(() => {
         useMeshStore.getState().fetchTopology();
@@ -164,16 +163,20 @@ describe("Mesh Store", () => {
 
   describe("selectNode", () => {
     it("should select a node", () => {
+      mockSelectedNode.mockReturnValue("pod-abc");
+
       act(() => {
         useMeshStore.getState().selectNode("pod-abc");
       });
 
+      expect(mockSelectNode).toHaveBeenCalledWith("pod-abc");
       const state = useMeshStore.getState();
       expect(state.selectedNode).toBe("pod-abc");
     });
 
     it("should clear selectedChannel when selecting node", () => {
       useMeshStore.setState({ selectedChannel: 1 });
+      mockSelectedNode.mockReturnValue("pod-abc");
 
       act(() => {
         useMeshStore.getState().selectNode("pod-abc");
@@ -186,11 +189,13 @@ describe("Mesh Store", () => {
 
     it("should set to null", () => {
       useMeshStore.setState({ selectedNode: "pod-abc" });
+      mockSelectedNode.mockReturnValue(null);
 
       act(() => {
         useMeshStore.getState().selectNode(null);
       });
 
+      expect(mockSelectNode).toHaveBeenCalledWith(undefined);
       const state = useMeshStore.getState();
       expect(state.selectedNode).toBeNull();
     });
@@ -229,8 +234,6 @@ describe("Mesh Store", () => {
       expect(state.selectedChannel).toBeNull();
     });
   });
-
-  // Note: Polling has been removed - realtime events handle updates now
 
   describe("updateNodePosition", () => {
     it("should save position for a node", () => {
@@ -282,4 +285,56 @@ describe("Mesh Store", () => {
     });
   });
 
+  describe("WASM state reader helpers", () => {
+    it("getNodeByKey returns parsed node", () => {
+      mockGetNodeJson.mockReturnValue(JSON.stringify(mockNode1));
+      const result = useMeshStore.getState().getNodeByKey("pod-abc");
+      expect(result).toEqual(mockNode1);
+    });
+
+    it("getNodeByKey returns undefined for missing node", () => {
+      mockGetNodeJson.mockReturnValue(null);
+      const result = useMeshStore.getState().getNodeByKey("missing");
+      expect(result).toBeUndefined();
+    });
+
+    it("getEdgesForNode returns parsed edges", () => {
+      mockGetEdgesForNodeJson.mockReturnValue(JSON.stringify([mockEdge]));
+      const result = useMeshStore.getState().getEdgesForNode("pod-abc");
+      expect(result).toEqual([mockEdge]);
+    });
+
+    it("getChannelsForNode returns parsed channels", () => {
+      mockGetChannelsForNodeJson.mockReturnValue(JSON.stringify([mockChannel]));
+      const result = useMeshStore.getState().getChannelsForNode("pod-abc");
+      expect(result).toEqual([mockChannel]);
+    });
+
+    it("getActiveNodes returns parsed active nodes", () => {
+      mockGetActiveNodesJson.mockReturnValue(JSON.stringify([mockNode1, mockNode2]));
+      const result = useMeshStore.getState().getActiveNodes();
+      expect(result).toEqual([mockNode1, mockNode2]);
+    });
+
+    it("getNodesByRunner returns parsed nodes", () => {
+      mockGetNodesByRunnerJson.mockReturnValue(JSON.stringify([mockNode1]));
+      const result = useMeshStore.getState().getNodesByRunner(1);
+      expect(mockGetNodesByRunnerJson).toHaveBeenCalledWith(BigInt(1));
+      expect(result).toEqual([mockNode1]);
+    });
+
+    it("getRunnerInfo returns parsed runner info", () => {
+      const runner = { id: 1, name: "r1", status: "online", pod_keys: ["pod-abc"] };
+      mockGetRunnerInfoJson.mockReturnValue(JSON.stringify(runner));
+      const result = useMeshStore.getState().getRunnerInfo(1);
+      expect(mockGetRunnerInfoJson).toHaveBeenCalledWith(BigInt(1));
+      expect(result).toEqual(runner);
+    });
+
+    it("getRunnerInfo returns undefined for missing runner", () => {
+      mockGetRunnerInfoJson.mockReturnValue(null);
+      const result = useMeshStore.getState().getRunnerInfo(999);
+      expect(result).toBeUndefined();
+    });
+  });
 });

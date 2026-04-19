@@ -2,12 +2,11 @@
 
 import { useState, useCallback } from "react";
 import {
-  repositoryApi,
-  userRepositoryProviderApi,
   RepositoryProviderData,
-  UserRemoteRepositoryData,
   RepositoryData,
 } from "@/lib/api";
+import type { ProviderRepositoryData } from "@/lib/api/userRepositoryProviderTypes";
+import { getRepositoryService, getUserCredentialService } from "@/lib/wasm-core";
 import type { ImportWizardState, ImportWizardActions, ImportWizardStep } from "./types";
 
 /**
@@ -74,9 +73,9 @@ export function useImportWizard({
   const loadProviders = useCallback(async () => {
     try {
       setState(s => ({ ...s, loadingProviders: true }));
-      const response = await userRepositoryProviderApi.list();
+      const response: { providers: RepositoryProviderData[] } = JSON.parse(await getUserCredentialService().list_repo_providers());
       const activeProviders = (response.providers || []).filter(
-        (p) => p.is_active && (p.has_identity || p.has_bot_token)
+        (p: RepositoryProviderData) => p.is_active && (p.has_identity || p.has_bot_token)
       );
       setState(s => ({ ...s, providers: activeProviders, loadingProviders: false }));
     } catch (err) {
@@ -94,11 +93,14 @@ export function useImportWizard({
     if (!state.selectedProvider) return;
     try {
       setState(s => ({ ...s, loadingRepos: true, error: null }));
-      const response = await userRepositoryProviderApi.listRepositories(state.selectedProvider.id, {
-        page: state.page,
-        perPage: 20,
-        search: state.search || undefined,
-      });
+      const response: { repositories: ProviderRepositoryData[] } = JSON.parse(
+        await getUserCredentialService().list_provider_repositories(
+          BigInt(state.selectedProvider.id),
+          state.page,
+          20,
+          state.search || undefined,
+        )
+      );
       setState(s => ({
         ...s,
         repositories: response.repositories || [],
@@ -119,14 +121,13 @@ export function useImportWizard({
     setState(s => ({ ...s, selectedProvider: provider, step: "browse", loadingRepos: true }));
 
     // Directly trigger repository loading (not via useEffect)
-    userRepositoryProviderApi.listRepositories(provider.id, {
-      page: 1,
-      perPage: 20,
-      search: undefined,
-    }).then(response => {
+    getUserCredentialService().list_provider_repositories(
+      BigInt(provider.id), 1, 20, undefined,
+    ).then((response: string) => {
+      const parsed: { repositories: ProviderRepositoryData[] } = JSON.parse(response);
       setState(s => ({
         ...s,
-        repositories: response.repositories || [],
+        repositories: parsed.repositories || [],
         loadingRepos: false,
       }));
     }).catch(err => {
@@ -159,7 +160,7 @@ export function useImportWizard({
       }));
     },
 
-    selectRepo: (repo: UserRemoteRepositoryData, existingRepos: RepositoryData[]) => {
+    selectRepo: (repo: ProviderRepositoryData, existingRepos: RepositoryData[]) => {
       const existingRepo = existingRepos.find(
         (r) => r.http_clone_url === repo.http_clone_url || r.slug === repo.slug
       );
@@ -222,7 +223,7 @@ export function useImportWizard({
         const httpCloneUrl = state.selectedRepo?.http_clone_url || state.manualCloneURL || undefined;
         const sshCloneUrl = state.selectedRepo?.ssh_clone_url || undefined;
 
-        await repositoryApi.create({
+        await getRepositoryService().create(JSON.stringify({
           provider_type: state.manualProviderType,
           provider_base_url: state.manualBaseURL,
           http_clone_url: httpCloneUrl,
@@ -233,7 +234,7 @@ export function useImportWizard({
           default_branch: state.manualDefaultBranch || "main",
           ticket_prefix: state.ticketPrefix || undefined,
           visibility: state.visibility,
-        });
+        }));
         onImported?.();
         onClose();
       } catch (err) {

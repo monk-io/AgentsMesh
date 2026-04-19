@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { promoCodeApi, ValidatePromoCodeResponse, RedeemPromoCodeResponse } from "@/lib/api/promocode";
+import { getPromoCodeService } from "@/lib/wasm-core";
+import type { ValidatePromoCodeResponse, RedeemPromoCodeResponse } from "@/lib/api";
 import { CheckCircle, XCircle, Loader2, Gift } from "lucide-react";
 
 // Translation function type
@@ -38,7 +39,9 @@ export function PromoCodeInput({
     setValidated(null);
 
     try {
-      const response = await promoCodeApi.validate(code);
+      const response: ValidatePromoCodeResponse = JSON.parse(
+        await getPromoCodeService().validate(JSON.stringify({ code }))
+      );
       if (!response.valid) {
         setError(t(`errors.${response.message_code}`) || t("invalid"));
         return;
@@ -62,12 +65,8 @@ export function PromoCodeInput({
     setError(null);
 
     try {
-      const response = await promoCodeApi.redeem(code);
-      if (!response.success) {
-        setError(t(`errors.${response.message_code}`) || t("redeemError"));
-        return;
-      }
-      onRedeemSuccess?.(response);
+      await getPromoCodeService().redeem(JSON.stringify({ code }));
+      onRedeemSuccess?.({ success: true } as RedeemPromoCodeResponse);
       // Reset state
       setCode("");
       setValidated(null);

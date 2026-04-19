@@ -1,7 +1,3 @@
-import { ApiError } from "./base";
-import { useAuthStore } from "@/stores/auth";
-import { getApiBaseUrl } from "@/lib/env";
-
 // Auth type constants for skill registries
 export type SkillRegistryAuthType = "none" | "github_pat" | "gitlab_pat" | "ssh_key";
 
@@ -115,37 +111,4 @@ export interface InstalledMcpServer {
   env_vars: Record<string, string>;
   is_enabled: boolean;
   market_item?: McpMarketItem;
-}
-
-/**
- * Upload a file via multipart/form-data.
- * The generic `request` helper always JSON-encodes the body, so we use
- * a dedicated fetch wrapper here instead.
- */
-export async function uploadRequest<T>(endpoint: string, formData: FormData): Promise<T> {
-  const API_BASE_URL = getApiBaseUrl();
-  const { token } = useAuthStore.getState();
-
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  // Do NOT set Content-Type – the browser will set it with the boundary.
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: "POST",
-    headers,
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null);
-    throw new ApiError(response.status, response.statusText, data);
-  }
-
-  const text = await response.text();
-  if (!text) {
-    return {} as T;
-  }
-  return JSON.parse(text);
 }

@@ -124,10 +124,12 @@ export function MessageList({
       >
         <div className="flex-shrink-0 pt-0.5">
           {message.user?.avatarUrl ? (
+            /* User message: circular avatar per design */
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={message.user.avatarUrl} alt={message.user.username} className="w-8 h-8 rounded-full" />
           ) : isAgent ? (
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+            /* Pod / agent message: square-ish avatar per design (6px radius) */
+            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
               <Bot className="w-4 h-4 text-primary-foreground" />
             </div>
           ) : (
@@ -138,9 +140,11 @@ export function MessageList({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
-            <span className="font-medium text-sm">{getSenderName(message)}</span>
+            <span className={`font-medium text-sm ${isAgent ? "font-mono" : ""}`}>{getSenderName(message)}</span>
             {isAgent && message.pod && (
-              <span className="text-xs text-muted-foreground">{getShortPodKey(message.pod.podKey)}</span>
+              <span className="inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+                {getShortPodKey(message.pod.podKey)}
+              </span>
             )}
             <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
           </div>

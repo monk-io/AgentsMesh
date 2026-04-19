@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { userApi, organizationApi } from "@/lib/api";
+import { getUserApiService, getOrgApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { getDefaultRoute } from "@/lib/default-route";
 import { Logo } from "@/components/common";
 
@@ -22,6 +23,7 @@ function OAuthCallbackContent() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      await initWasmCore();
       // Check for OAuth error
       if (error) {
         setStatus("error");
@@ -44,7 +46,7 @@ function OAuthCallbackContent() {
         setAuth(token, { id: 0, email: "", username: "" }, refreshToken || undefined);
 
         // Get user info
-        const userResponse = await userApi.getMe();
+        const userResponse = JSON.parse(await getUserApiService().get_me());
         const user = userResponse.user;
 
         // Update auth with actual user info
@@ -52,7 +54,7 @@ function OAuthCallbackContent() {
 
         // Get organizations
         try {
-          const orgsResponse = await organizationApi.list();
+          const orgsResponse = JSON.parse(await getOrgApiService().list());
           if (orgsResponse.organizations && orgsResponse.organizations.length > 0) {
             setOrganizations(orgsResponse.organizations);
             setStatus("success");

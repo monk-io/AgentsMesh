@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { ticketApi } from "@/lib/api";
+import { getTicketService, getTicketRelationsService } from "@/lib/wasm-core";
 
 // Cache for prefetched ticket data
 const prefetchCache = new Map<string, { data: unknown; timestamp: number }>();
@@ -64,7 +64,7 @@ export function useTicketPrefetch() {
 
       try {
         // Prefetch main ticket data
-        const ticketData = await ticketApi.get(slug);
+        const ticketData = JSON.parse(await getTicketService().fetch_ticket(slug));
         prefetchCache.set(slug, {
           data: ticketData,
           timestamp: Date.now(),
@@ -72,9 +72,9 @@ export function useTicketPrefetch() {
 
         // Also prefetch related data in parallel
         const [subTickets, relations, commits] = await Promise.allSettled([
-          ticketApi.getSubTickets(slug),
-          ticketApi.listRelations(slug),
-          ticketApi.listCommits(slug),
+          getTicketService().get_sub_tickets(slug).then((j: string) => JSON.parse(j)),
+          getTicketRelationsService().list_relations(slug).then((j: string) => JSON.parse(j)),
+          getTicketRelationsService().list_commits(slug).then((j: string) => JSON.parse(j)),
         ]);
 
         // Cache related data

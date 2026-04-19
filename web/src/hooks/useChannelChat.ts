@@ -8,19 +8,19 @@
 
 import { useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuthStore } from "@/stores/auth";
-import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
+import { useChannelStore, useCurrentChannel, useChannelMessageStore } from "@/stores/channel";
 import { EMPTY_CACHE, LOAD_MORE_MESSAGE_LIMIT } from "@/stores/channelMessageStore";
-import { useMeshStore } from "@/stores/mesh";
+import { useMeshStore, useTopology, type ChannelInfo } from "@/stores/mesh";
 import { transformMessage } from "@/components/channel/transformMessage";
 import type { TransformedMessage } from "@/components/channel/types";
-import type { MentionPayload } from "@/lib/api/channel";
+import type { MentionPayload } from "@/lib/api/channelTypes";
 
 interface UseChannelChatOptions {
   channelId: number;
 }
 
 interface UseChannelChatReturn {
-  currentChannel: ReturnType<typeof useChannelStore.getState>["currentChannel"];
+  currentChannel: import("@/stores/channelStore").Channel | null;
   channelLoading: boolean;
   messagesLoading: boolean;
   loadingMore: boolean;
@@ -41,7 +41,7 @@ interface UseChannelChatReturn {
 export function useChannelChat({ channelId }: UseChannelChatOptions): UseChannelChatReturn {
   const currentUserId = useAuthStore((s) => s.user?.id);
 
-  const currentChannel = useChannelStore((s) => s.currentChannel);
+  const currentChannel = useCurrentChannel();
   const channelLoading = useChannelStore((s) => s.channelLoading);
   const fetchChannel = useChannelStore((s) => s.fetchChannel);
   const setCurrentChannel = useChannelStore((s) => s.setCurrentChannel);
@@ -58,7 +58,7 @@ export function useChannelChat({ channelId }: UseChannelChatOptions): UseChannel
   const deleteMessage = useChannelMessageStore((s) => s.deleteMessage);
   const markRead = useChannelMessageStore((s) => s.markRead);
 
-  const topology = useMeshStore((s) => s.topology);
+  const topology = useTopology();
   const fetchTopology = useMeshStore((s) => s.fetchTopology);
 
   // Load channel and messages when channelId changes
@@ -106,7 +106,7 @@ export function useChannelChat({ channelId }: UseChannelChatOptions): UseChannel
   }, [channelId]);
 
   // Derive pod count and channel name from topology + currentChannel
-  const channelInfo = topology?.channels.find((c) => c.id === channelId);
+  const channelInfo: ChannelInfo | undefined = topology?.channels.find((c: ChannelInfo) => c.id === channelId);
   const podCount = channelInfo?.pod_keys.length || currentChannel?.pods?.length || 0;
   const channelName = currentChannel?.name || channelInfo?.name || "Channel";
 

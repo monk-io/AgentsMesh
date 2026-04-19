@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
 import { getDefaultRoute } from "@/lib/default-route";
-import { organizationApi } from "@/lib/api/organization";
+import { getOrgApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -25,8 +26,9 @@ export default function OnboardingPage() {
   // Check if user already has organizations
   useEffect(() => {
     const checkOrgs = async () => {
+      await initWasmCore();
       try {
-        const { organizations } = await organizationApi.list();
+        const { organizations } = JSON.parse(await getOrgApiService().list());
         if (organizations && organizations.length > 0) {
           setOrganizations(organizations);
           setCurrentOrg(organizations[0]);
@@ -40,6 +42,7 @@ export default function OnboardingPage() {
   }, [router, setOrganizations, setCurrentOrg]);
 
   const handleQuickStart = async () => {
+    await initWasmCore();
     if (!user) return;
 
     setLoading(true);
@@ -50,13 +53,13 @@ export default function OnboardingPage() {
       const slug = `${user.username}-workspace`;
       const name = `${user.name || user.username}'s Workspace`;
 
-      await organizationApi.create({ name, slug });
+      await getOrgApiService().create(JSON.stringify({ name, slug }));
 
       // Refresh organizations
-      const { organizations } = await organizationApi.list();
+      const { organizations } = JSON.parse(await getOrgApiService().list());
       setOrganizations(organizations);
 
-      const newOrg = organizations.find((o) => o.slug === slug);
+      const newOrg = organizations.find((o: { slug: string }) => o.slug === slug);
       if (newOrg) {
         setCurrentOrg(newOrg);
       }

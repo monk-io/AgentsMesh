@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { userRepositoryProviderApi, RepositoryProviderData } from "@/lib/api";
+import type { RepositoryProviderData } from "@/lib/api";
+import { getUserCredentialService } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 
 interface EditProviderDialogProps {
@@ -30,12 +31,15 @@ export function EditProviderDialog({ provider, onClose, onSuccess }: EditProvide
     setError(null);
 
     try {
-      await userRepositoryProviderApi.update(provider.id, {
-        name: name || undefined,
-        base_url: baseUrl || undefined,
-        bot_token: botToken || undefined,
-        is_active: isActive,
-      });
+      await getUserCredentialService().update_repo_provider(
+        BigInt(provider.id),
+        JSON.stringify({
+          name: name || undefined,
+          base_url: baseUrl || undefined,
+          bot_token: botToken || undefined,
+          is_active: isActive,
+        })
+      );
       onSuccess();
     } catch (err) {
       console.error("Failed to update provider:", err);

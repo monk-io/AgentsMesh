@@ -1,18 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { userRepositoryProviderApi } from "@/lib/api";
 import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
+  setupProviderMocks,
+  stableCredSvc,
 } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Provider Selection and Browse", () => {
@@ -21,12 +12,7 @@ describe("ImportRepositoryModal - Provider Selection and Browse", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should navigate to browse step when provider is selected", async () => {
@@ -41,7 +27,9 @@ describe("ImportRepositoryModal - Provider Selection and Browse", () => {
     fireEvent.click(screen.getByText("My GitHub"));
 
     await waitFor(() => {
-      expect(userRepositoryProviderApi.listRepositories).toHaveBeenCalledWith(1, expect.any(Object));
+      expect(stableCredSvc.list_provider_repositories).toHaveBeenCalledWith(
+        BigInt(1), 1, 20, undefined,
+      );
     });
   });
 
@@ -76,7 +64,6 @@ describe("ImportRepositoryModal - Provider Selection and Browse", () => {
       expect(screen.getByText("org/my-project")).toBeInTheDocument();
     });
 
-    // Click back button - find it by looking for the SVG with back arrow path
     const backButtons = document.querySelectorAll("button");
     const backButton = Array.from(backButtons).find(
       (btn) => btn.querySelector('svg path[d*="M15 19l-7-7 7-7"]')
@@ -128,9 +115,8 @@ describe("ImportRepositoryModal - Provider Selection and Browse", () => {
     fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(userRepositoryProviderApi.listRepositories).toHaveBeenCalledWith(
-        1,
-        expect.objectContaining({ search: "test-search" })
+      expect(stableCredSvc.list_provider_repositories).toHaveBeenCalledWith(
+        BigInt(1), 1, 20, "test-search",
       );
     });
   });

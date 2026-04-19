@@ -12,7 +12,7 @@ import {
   ResponsiveDialogBody,
   ResponsiveDialogFooter,
 } from "@/components/ui/responsive-dialog";
-import { billingApi } from "@/lib/api/billing";
+import { getBillingService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 interface CancelSubscriptionDialogProps {
@@ -41,7 +41,9 @@ export function CancelSubscriptionDialog({
     setError(null);
 
     try {
-      await billingApi.requestCancelSubscription(cancelType === "immediate");
+      await getBillingService().request_cancel(
+        JSON.stringify({ immediate: cancelType === "immediate" })
+      );
       onCancelled?.();
       onOpenChange(false);
     } catch (err) {

@@ -7,25 +7,23 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikey";
+import type { APIKeyData } from "@/lib/api/apikeyTypes";
+import { getApiKeyService } from "@/lib/wasm-core";
 
-// Mock the apiKeyApi module
 const mockList = vi.fn();
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockRevoke = vi.fn();
 
-vi.mock("@/lib/api/apikey", () => ({
-  apiKeyApi: {
-    list: (...args: unknown[]) => mockList(...args),
-    create: (...args: unknown[]) => mockCreate(...args),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    delete: vi.fn(),
-    revoke: (...args: unknown[]) => mockRevoke(...args),
-  },
-}));
+vi.mocked(getApiKeyService).mockReturnValue({
+  list: mockList,
+  get: vi.fn().mockResolvedValue('{}'),
+  create: mockCreate,
+  update: mockUpdate,
+  delete: vi.fn().mockResolvedValue(undefined),
+  revoke: mockRevoke,
+} as unknown as ReturnType<typeof getApiKeyService>);
 
-// Mock the confirm dialog hook to auto-resolve
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
   ConfirmDialog: () => null,
@@ -41,8 +39,6 @@ vi.mock("@/components/ui/confirm-dialog", () => ({
   }),
 }));
 
-// Mock sub-dialog components to simplify testing the parent.
-// These mocks honor the `open` prop to control visibility, matching real behavior.
 vi.mock("../apikeys", () => ({
   APIKeyCard: ({
     apiKey,
@@ -132,7 +128,7 @@ vi.mock("../apikeys", () => ({
     apiKey: APIKeyData;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (id: number, data: UpdateAPIKeyRequest) => Promise<void>;
+    onSave: (id: number, data: { name?: string }) => Promise<void>;
     t: unknown;
   }) => {
     if (!open) return null;
@@ -160,7 +156,6 @@ const mockT = vi.fn(
   (key: string) => key
 );
 
-// Helper to render the component and wait for initial load (useEffect + fetch)
 async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   let result: ReturnType<typeof render>;
   await act(async () => {
@@ -198,7 +193,15 @@ describe("APIKeysSettings", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ api_keys: sampleKeys, total: 2 });
+    vi.mocked(getApiKeyService).mockReturnValue({
+      list: mockList,
+      get: vi.fn().mockResolvedValue('{}'),
+      create: mockCreate,
+      update: mockUpdate,
+      delete: vi.fn().mockResolvedValue(undefined),
+      revoke: mockRevoke,
+    } as unknown as ReturnType<typeof getApiKeyService>);
+    mockList.mockResolvedValue(JSON.stringify({ api_keys: sampleKeys, total: 2 }));
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -218,7 +221,7 @@ describe("APIKeysSettings", () => {
 
   describe("empty state", () => {
     it("should show empty state when no keys exist", async () => {
-      mockList.mockResolvedValue({ api_keys: [], total: 0 });
+      mockList.mockResolvedValue(JSON.stringify({ api_keys: [], total: 0 }));
       await renderAndWaitForLoad();
       expect(
         screen.getByText("settings.apiKeys.noKeys")
@@ -226,7 +229,7 @@ describe("APIKeysSettings", () => {
     });
 
     it("should show empty state when api_keys is null/undefined", async () => {
-      mockList.mockResolvedValue({ api_keys: null, total: 0 });
+      mockList.mockResolvedValue(JSON.stringify({ api_keys: null, total: 0 }));
       await renderAndWaitForLoad();
       expect(
         screen.getByText("settings.apiKeys.noKeys")
@@ -318,7 +321,7 @@ describe("APIKeysSettings", () => {
     });
 
     it("should call t with correct key for empty state", async () => {
-      mockList.mockResolvedValue({ api_keys: [], total: 0 });
+      mockList.mockResolvedValue(JSON.stringify({ api_keys: [], total: 0 }));
       await renderAndWaitForLoad();
       expect(mockT).toHaveBeenCalledWith("settings.apiKeys.noKeys");
     });

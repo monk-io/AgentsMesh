@@ -1,6 +1,6 @@
 "use client";
 
-import { type RunnerData } from "@/lib/api";
+import type { RunnerData } from "@/lib/api/runnerTypes";
 import type { useTranslations } from "next-intl";
 import { isVersionOutdated } from "@/lib/utils/version";
 import { Button } from "@/components/ui/button";

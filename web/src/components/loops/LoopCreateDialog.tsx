@@ -36,8 +36,9 @@ import { PromptInput } from "@/components/pod/CreatePodForm/PromptInput";
 import { AdvancedOptions } from "@/components/pod/CreatePodForm/AdvancedOptions";
 import { ConfigForm } from "@/components/ide/ConfigForm";
 import { Spinner } from "@/components/ui/spinner";
-import { userAgentCredentialApi, CredentialProfileData } from "@/lib/api";
-import type { LoopData } from "@/lib/api/loop";
+import { getUserCredentialService } from "@/lib/wasm-core";
+import type { CredentialProfileData } from "@/lib/api";
+import type { LoopData } from "@/lib/api/loopTypes";
 
 // Special value for RunnerHost credential
 const RUNNER_HOST_PROFILE_ID = 0;
@@ -178,7 +179,9 @@ export function LoopCreateDialog({
     const loadCredentials = async () => {
       setLoadingCredentials(true);
       try {
-        const res = await userAgentCredentialApi.listForAgent(selectedAgentSlug);
+        const res = JSON.parse(
+          await getUserCredentialService().list_agent_credentials_for_agent(selectedAgentSlug)
+        );
         const profiles = res.profiles || [];
         setCredentialProfiles(profiles);
 
@@ -187,7 +190,7 @@ export function LoopCreateDialog({
           setSelectedCredentialProfileId(editLoop.credential_profile_id);
           setCredentialInitialized(true);
         } else {
-          const defaultProfile = profiles.find((p) => p.is_default);
+          const defaultProfile = profiles.find((p: CredentialProfileData) => p.is_default);
           if (defaultProfile) {
             setSelectedCredentialProfileId(defaultProfile.id);
           } else {

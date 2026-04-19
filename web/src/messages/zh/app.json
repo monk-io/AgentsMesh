@@ -42,6 +42,10 @@
       "activePods": "{count} 个活跃 Pod",
       "channelsCount": "{count} 个频道",
       "bindingsCount": "{count} 个绑定",
+      "runnersOnline": "{online} / {total} Runner 在线",
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "fit": "适应",
       "refresh": "刷新",
       "dismiss": "关闭",
       "updating": "更新中..."
@@ -100,6 +104,14 @@
     "title": "任务管理",
     "newTicket": "新建 Ticket",
     "board": "看板",
+    "views": {
+      "board": "看板",
+      "list": "列表"
+    },
+    "actions": {
+      "newTicket": "新建",
+      "export": "导出"
+    },
     "list": {
       "ticket": "Ticket",
       "assignees": "负责人",
@@ -183,8 +195,10 @@
       "commits": "提交记录",
       "actions": "操作",
       "details": "详情",
-      "dueDate": "截止日期",
+      "dueDate": "截止",
       "repository": "仓库",
+      "priority": "优先级",
+      "opened": "创建于",
       "noRepository": "无仓库",
       "assignees": "负责人",
       "noAssignees": "暂无负责人",
@@ -195,6 +209,9 @@
       "deleteConfirmation": "确定要删除 Ticket {slug} 吗？此操作无法撤销。",
       "labels": "标签",
       "timeline": "时间线",
+      "spawnPod": "Spawn Pod",
+      "markDone": "标记完成",
+      "lastUsedAgent": "claude-code (上次使用)",
       "started": "开始时间",
       "completed": "完成时间",
       "viewFullDetails": "查看完整详情",
@@ -245,7 +262,37 @@
     "newPod": "新建 Pod",
     "noTerminalsOpen": "暂无打开的终端",
     "noTerminalsDescription": "点击侧边栏中的 Pod 打开其终端，或创建新的 Pod 开始使用。",
-    "createNewPod": "创建新 Pod",
+    "createNewPod": "新建 Pod",
+    "browseAgents": "浏览 Agent",
+    "emptyHeroTitle": "启动你的第一个 Pod",
+    "emptyHeroDescription": "Pod 是一个隔离的终端，AI 代理在其中处理你的代码。你可以观察、介入，或让它自动运行。",
+    "recipesHeading": "或从这些模板开始",
+    "recipes": {
+      "explain": {
+        "title": "解释这个代码库",
+        "description": "Claude Code 遍历仓库并总结架构。",
+        "duration": "2 分钟"
+      },
+      "tests": {
+        "title": "运行你的测试",
+        "description": "Claude Code 执行测试套件并报告失败项。",
+        "duration": "3 分钟"
+      },
+      "bug": {
+        "title": "修复一个待处理 Bug",
+        "description": "选一个 ticket，启动一个 Pod。代理读取上下文并提出修复方案。",
+        "duration": "8 分钟"
+      }
+    },
+    "banner": {
+      "newUser": "新手使用 AgentsMesh？",
+      "watchIntro": "观看 2 分钟介绍 →"
+    },
+    "hints": {
+      "search": "搜索",
+      "createPod": "新建 Pod",
+      "cli": "偏好命令行？agentsmesh pod new →"
+    },
     "podCreated": "Pod 已创建！等待启动中...",
     "podOpened": "Pod 已打开",
     "filters": {

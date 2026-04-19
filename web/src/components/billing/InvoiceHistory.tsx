@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { billingApi, Invoice } from "@/lib/api/billing";
+import type { Invoice } from "@/lib/api/billing-types";
+import { getBillingService } from "@/lib/wasm-core";
 
 interface InvoiceHistoryProps {
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -25,7 +26,7 @@ export function InvoiceHistory({ t }: InvoiceHistoryProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await billingApi.listInvoices(pageSize, pageNum * pageSize);
+      const response = JSON.parse(await getBillingService().list_invoices(pageSize, pageNum * pageSize));
       if (pageNum === 0) {
         setInvoices(response.invoices);
       } else {

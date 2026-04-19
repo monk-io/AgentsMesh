@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  userAgentCredentialApi,
-  agentApi,
   type CredentialField,
   type CredentialProfileData,
   type CredentialProfilesByAgent,
   type AgentData,
 } from "@/lib/api";
+import { getAgentService, getUserCredentialService } from "@/lib/wasm-core";
 import type { AgentCredentialsState, AgentCredentialsActions, CredentialFormData } from "./types";
 
 /**
@@ -36,18 +35,20 @@ export function useAgentCredentials(
       setError(null);
 
       const [profilesRes, agentsRes] = await Promise.all([
-        userAgentCredentialApi.list(),
-        agentApi.list(),
+        getUserCredentialService().list_agent_credentials().then((j: string) => JSON.parse(j)),
+        getAgentService().list_agents().then((j: string) => JSON.parse(j)),
       ]);
 
       setProfilesByAgent(profilesRes.items || []);
-      const agentList = agentsRes.agents || [];
+      const agentList = [...(agentsRes.builtin_agents || []), ...(agentsRes.custom_agents || []), ...(agentsRes.agents || [])];
       setAgents(agentList);
 
       // Fetch credential fields for all agents in parallel
       const fieldsMap = new Map<string, CredentialField[]>();
       const schemaResults = await Promise.allSettled(
-        agentList.map((a: AgentData) => agentApi.getConfigSchema(a.slug))
+        agentList.map((a: AgentData) =>
+          getAgentService().get_config_schema(a.slug).then((j: string) => JSON.parse(j))
+        )
       );
       agentList.forEach((a: AgentData, i: number) => {
         const result = schemaResults[i];
@@ -59,10 +60,10 @@ export function useAgentCredentials(
 
       // Determine which agents have RunnerHost as default
       const runnerHostDefaultSet = new Set<string>();
-      const agentSlugs = new Set(agentList.map((a: AgentData) => a.slug));
+      const agentSlugs = agentList.map((a: AgentData) => a.slug);
       agentSlugs.forEach((slug: string) => runnerHostDefaultSet.add(slug));
-      profilesRes.items?.forEach((item) => {
-        if (item.profiles.some((p) => p.is_default)) {
+      (profilesRes.items || []).forEach((item: CredentialProfilesByAgent) => {
+        if (item.profiles.some((p: CredentialProfileData) => p.is_default)) {
           runnerHostDefaultSet.delete(item.agent_slug);
         }
       });
@@ -73,7 +74,7 @@ export function useAgentCredentials(
       if (agentList.length > 0) {
         expandedIds.add(agentList[0].slug);
       }
-      profilesRes.items?.forEach((item) => {
+      (profilesRes.items || []).forEach((item: CredentialProfilesByAgent) => {
         if (item.profiles.length > 0) expandedIds.add(item.agent_slug);
       });
       setExpandedAgents(expandedIds);
@@ -104,7 +105,7 @@ export function useAgentCredentials(
       const group = profilesByAgent.find((g) => g.agent_slug === agentSlug);
       const currentDefault = group?.profiles.find((p) => p.is_default);
       if (currentDefault) {
-        await userAgentCredentialApi.update(currentDefault.id, { is_default: false });
+        await getUserCredentialService().update_agent_credential(BigInt(currentDefault.id), JSON.stringify({ is_default: false }));
       }
       setSuccess(t("settings.agentCredentials.defaultSet"));
       await loadData();
@@ -118,7 +119,7 @@ export function useAgentCredentials(
   const handleSetDefault = useCallback(async (profileId: number) => {
     try {
       setError(null);
-      await userAgentCredentialApi.setDefault(profileId);
+      await getUserCredentialService().set_default_agent_credential(BigInt(profileId));
       setSuccess(t("settings.agentCredentials.defaultSet"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
@@ -131,7 +132,7 @@ export function useAgentCredentials(
   const handleDelete = useCallback(async (profileId: number) => {
     try {
       setError(null);
-      await userAgentCredentialApi.delete(profileId);
+      await getUserCredentialService().delete_agent_credential(BigInt(profileId));
       setSuccess(t("settings.agentCredentials.profileDeleted"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
@@ -151,20 +152,20 @@ export function useAgentCredentials(
 
     try {
       if (editingProfile) {
-        await userAgentCredentialApi.update(editingProfile.id, {
+        await getUserCredentialService().update_agent_credential(BigInt(editingProfile.id), JSON.stringify({
           name: data.name,
           description: data.description || undefined,
           is_runner_host: false,
           credentials,
-        });
+        }));
         setSuccess(t("settings.agentCredentials.profileUpdated"));
       } else {
-        await userAgentCredentialApi.create(agentSlug, {
+        await getUserCredentialService().create_agent_credential(agentSlug, JSON.stringify({
           name: data.name,
           description: data.description || undefined,
           is_runner_host: false,
           credentials: data.credentials,
-        });
+        }));
         setSuccess(t("settings.agentCredentials.profileCreated"));
       }
 

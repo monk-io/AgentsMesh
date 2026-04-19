@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { extensionApi } from "@/lib/api";
-import type { SkillRegistryAuthType } from "@/lib/api/extension";
+import { getExtensionService } from "@/lib/wasm-core";
+import type { SkillRegistryAuthType } from "@/lib/api/extensionTypes";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
@@ -47,14 +47,14 @@ export function AddRegistryDialog({ t, open, onOpenChange, onAdded }: AddRegistr
     if (!addUrl.trim()) return;
     setAdding(true);
     try {
-      await extensionApi.createSkillRegistry({
+      await getExtensionService().create_skill_registry(JSON.stringify({
         repository_url: addUrl.trim(),
         branch: addBranch.trim() || undefined,
         source_type: addType.trim() || undefined,
         compatible_agents: addCompatibleAgents.length > 0 ? addCompatibleAgents : undefined,
         auth_type: addAuthType !== "none" ? addAuthType : undefined,
         auth_credential: addAuthCredential.trim() || undefined,
-      });
+      }));
       toast.success(t("extensions.sourceAdded"));
       onOpenChange(false);
       resetForm();

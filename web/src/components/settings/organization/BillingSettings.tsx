@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { CheckoutFlow, CancelSubscriptionDialog, SeatManagement, BillingCycleSwitch } from "@/components/billing";
-import type { BillingCycle } from "@/lib/api/billing";
+import type { BillingCycle } from "@/lib/api/billing-types";
 import type { TranslationFn } from "./GeneralSettings";
 import {
   BillingLoadingSkeleton,

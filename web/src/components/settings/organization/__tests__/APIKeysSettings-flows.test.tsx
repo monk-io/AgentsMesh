@@ -8,25 +8,9 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikey";
+import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
+import { getApiKeyService } from "@/lib/wasm-core";
 
-// Mock the apiKeyApi module
-const mockList = vi.fn();
-const mockCreate = vi.fn();
-const mockUpdate = vi.fn();
-const mockRevoke = vi.fn();
-
-vi.mock("@/lib/api/apikey", () => ({
-  apiKeyApi: {
-    list: (...args: unknown[]) => mockList(...args),
-    create: (...args: unknown[]) => mockCreate(...args),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    delete: vi.fn(),
-    revoke: (...args: unknown[]) => mockRevoke(...args),
-  },
-}));
-
-// Mock the confirm dialog hook to auto-resolve
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
   ConfirmDialog: () => null,
@@ -155,9 +139,21 @@ vi.mock("../apikeys", () => ({
   },
 }));
 
-const mockT = vi.fn(
-  (key: string) => key
-);
+const mockT = vi.fn((key: string) => key);
+
+const mockList = vi.fn();
+const mockCreate = vi.fn();
+
+function setupServiceMock() {
+  vi.mocked(getApiKeyService).mockReturnValue({
+    list: mockList,
+    get: vi.fn(),
+    create: mockCreate,
+    update: vi.fn(),
+    delete: vi.fn(),
+    revoke: vi.fn(),
+  } as unknown as ReturnType<typeof getApiKeyService>);
+}
 
 async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   let result: ReturnType<typeof render>;
@@ -196,7 +192,10 @@ describe("APIKeysSettings - flows", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ api_keys: sampleKeys, total: 2 });
+    setupServiceMock();
+    mockList.mockResolvedValue(
+      JSON.stringify({ api_keys: sampleKeys, total: 2 })
+    );
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -234,10 +233,12 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should show secret dialog after successful creation", async () => {
-      mockCreate.mockResolvedValue({
-        api_key: { id: 3, name: "New Key" },
-        raw_key: "am_new_secret123",
-      });
+      vi.mocked(mockCreate).mockResolvedValue(
+        JSON.stringify({
+          api_key: { id: 3, name: "New Key" },
+          raw_key: "am_new_secret123",
+        })
+      );
 
       await renderAndWaitForLoad();
 
@@ -258,10 +259,12 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should close secret dialog when done is clicked", async () => {
-      mockCreate.mockResolvedValue({
-        api_key: { id: 3, name: "New Key" },
-        raw_key: "am_new_secret123",
-      });
+      vi.mocked(mockCreate).mockResolvedValue(
+        JSON.stringify({
+          api_key: { id: 3, name: "New Key" },
+          raw_key: "am_new_secret123",
+        })
+      );
 
       await renderAndWaitForLoad();
 
@@ -287,10 +290,12 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should refresh key list after creation", async () => {
-      mockCreate.mockResolvedValue({
-        api_key: { id: 3, name: "New Key" },
-        raw_key: "am_new_secret123",
-      });
+      vi.mocked(mockCreate).mockResolvedValue(
+        JSON.stringify({
+          api_key: { id: 3, name: "New Key" },
+          raw_key: "am_new_secret123",
+        })
+      );
 
       await renderAndWaitForLoad();
 
@@ -309,5 +314,4 @@ describe("APIKeysSettings - flows", () => {
       });
     });
   });
-
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { PodData } from "@/lib/api";
+import type { PodData } from "@/lib/api/pod";
 import { useTranslations } from "next-intl";
 import { useFocusTrap } from "@/components/pod/hooks";
 import { CreatePodForm, CreatePodFormConfig, TicketContext } from "@/components/pod/CreatePodForm";

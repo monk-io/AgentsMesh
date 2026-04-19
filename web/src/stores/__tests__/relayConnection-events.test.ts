@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-// Mock WebSocket
+vi.mock("@/lib/wasm-core", () => import("@/test/__mocks__/wasm-core"));
+
+let lastCreatedWs: MockWebSocket | null = null;
+const allCreatedWs: MockWebSocket[] = [];
+
 class MockWebSocket {
   static CONNECTING = 0;
   static OPEN = 1;
@@ -11,37 +15,29 @@ class MockWebSocket {
   readyState: number = MockWebSocket.CONNECTING;
   binaryType: string = "blob";
   onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((e: { code: number; reason: string }) => void) | null = null;
   onerror: ((e: unknown) => void) | null = null;
   onmessage: ((e: { data: unknown }) => void) | null = null;
 
   constructor(url: string) {
     this.url = url;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+    lastCreatedWs = self;
+    allCreatedWs.push(self);
     setTimeout(() => {
-      this.readyState = MockWebSocket.OPEN;
-      this.onopen?.();
+      self.readyState = MockWebSocket.OPEN;
+      self.onopen?.();
     }, 0);
   }
 
   send = vi.fn();
   close = vi.fn(() => {
     this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.();
   });
 }
 
 global.WebSocket = MockWebSocket as unknown as typeof WebSocket;
-
-// Mock pod API
-vi.mock("@/lib/api/pod", () => ({
-  podApi: {
-    getPodConnection: vi.fn().mockResolvedValue({
-      relay_url: "wss://relay.example.com",
-      token: "test-token",
-      pod_key: "pod-1",
-    }),
-  },
-}));
 
 describe("relayConnection - events", () => {
   let pool: typeof import("@/stores/relayConnection").relayPool;
@@ -50,6 +46,8 @@ describe("relayConnection - events", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.resetModules();
+    lastCreatedWs = null;
+    allCreatedWs.length = 0;
     const importedModule = await import("@/stores/relayConnection");
     pool = importedModule.relayPool;
   });
@@ -66,16 +64,14 @@ describe("relayConnection - events", () => {
       await pool.subscribe("pod-1", "sub-1", onMessage);
       await vi.runAllTimersAsync();
 
-      const conn = pool.getConnection("pod-1");
-      expect(conn).toBeDefined();
+      expect(lastCreatedWs).not.toBeNull();
 
-      // Create a mock output message (type 0x02 = Output)
       const payload = new TextEncoder().encode("Hello, World!");
       const message = new Uint8Array(1 + payload.length);
       message[0] = 0x02; // MsgType.Output
       message.set(payload, 1);
 
-      conn!.ws.onmessage?.({ data: message.buffer } as MessageEvent);
+      lastCreatedWs!.onmessage?.({ data: message.buffer } as MessageEvent);
 
       expect(onMessage).toHaveBeenCalledTimes(1);
 
@@ -155,10 +151,8 @@ describe("relayConnection - events", () => {
       pool.onStatusChange("pod-1", listener);
       listener.mockClear();
 
-      const conn = pool.getConnection("pod-1");
-      expect(conn).toBeDefined();
       const message = new Uint8Array([0x08]); // MsgType.RunnerDisconnected
-      conn!.ws.onmessage?.({ data: message.buffer } as MessageEvent);
+      lastCreatedWs!.onmessage?.({ data: message.buffer } as MessageEvent);
 
       expect(listener).toHaveBeenCalledWith({
         status: "connected",
@@ -171,11 +165,8 @@ describe("relayConnection - events", () => {
       await pool.subscribe("pod-1", "sub-1", onMessage);
       await vi.runAllTimersAsync();
 
-      const conn = pool.getConnection("pod-1");
-      expect(conn).toBeDefined();
-
       const disconnectMsg = new Uint8Array([0x08]);
-      conn!.ws.onmessage?.({ data: disconnectMsg.buffer } as MessageEvent);
+      lastCreatedWs!.onmessage?.({ data: disconnectMsg.buffer } as MessageEvent);
 
       const listener = vi.fn();
       pool.onStatusChange("pod-1", listener);
@@ -187,7 +178,7 @@ describe("relayConnection - events", () => {
       listener.mockClear();
 
       const reconnectMsg = new Uint8Array([0x09]); // MsgType.RunnerReconnected
-      conn!.ws.onmessage?.({ data: reconnectMsg.buffer } as MessageEvent);
+      lastCreatedWs!.onmessage?.({ data: reconnectMsg.buffer } as MessageEvent);
 
       expect(listener).toHaveBeenCalledWith({
         status: "connected",
@@ -223,7 +214,6 @@ describe("relayConnection - events", () => {
       listener.mockClear();
 
       unsubscribe();
-
       pool.disconnect("pod-1");
 
       expect(listener).not.toHaveBeenCalled();
@@ -232,7 +222,6 @@ describe("relayConnection - events", () => {
     it("should clean up listener set when last listener unsubscribes", () => {
       const listener = vi.fn();
       const unsubscribe = pool.onStatusChange("pod-1", listener);
-
       unsubscribe();
 
       const listener2 = vi.fn();
@@ -249,8 +238,7 @@ describe("relayConnection - events", () => {
       pool.onStatusChange("pod-1", listener);
       listener.mockClear();
 
-      const conn = pool.getConnection("pod-1");
-      conn!.ws.onerror?.(new Event("error"));
+      lastCreatedWs!.onerror?.(new Event("error"));
 
       expect(listener).toHaveBeenCalledWith({
         status: "error",

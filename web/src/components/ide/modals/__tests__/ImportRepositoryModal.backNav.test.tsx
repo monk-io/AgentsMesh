@@ -1,19 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { userRepositoryProviderApi } from "@/lib/api";
-import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
-} from "./ImportRepositoryModal.utils";
+import { setupProviderMocks } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Back Navigation", () => {
   const mockOnClose = vi.fn();
@@ -21,12 +9,7 @@ describe("ImportRepositoryModal - Back Navigation", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should go back from confirm step to browse step", async () => {
@@ -50,7 +33,6 @@ describe("ImportRepositoryModal - Back Navigation", () => {
       expect(screen.getByText("Confirm Import")).toBeInTheDocument();
     });
 
-    // Click back button
     const backButtons = document.querySelectorAll("button");
     const backButton = Array.from(backButtons).find(
       (btn) => btn.querySelector('svg path[d*="M15 19l-7-7 7-7"]')
@@ -79,7 +61,6 @@ describe("ImportRepositoryModal - Back Navigation", () => {
       expect(screen.getByPlaceholderText("https://github.com/org/repo.git")).toBeInTheDocument();
     });
 
-    // Fill in required fields
     fireEvent.change(screen.getByPlaceholderText("https://github.com/org/repo.git"), {
       target: { value: "https://github.com/test/repo.git" },
     });
@@ -96,7 +77,6 @@ describe("ImportRepositoryModal - Back Navigation", () => {
       expect(screen.getByText("Confirm Import")).toBeInTheDocument();
     });
 
-    // Click back button
     const backButtons = document.querySelectorAll("button");
     const backButton = Array.from(backButtons).find(
       (btn) => btn.querySelector('svg path[d*="M15 19l-7-7 7-7"]')
@@ -125,7 +105,6 @@ describe("ImportRepositoryModal - Back Navigation", () => {
       expect(screen.getByText("Manual Entry")).toBeInTheDocument();
     });
 
-    // Click back button
     const backButtons = document.querySelectorAll("button");
     const backButton = Array.from(backButtons).find(
       (btn) => btn.querySelector('svg path[d*="M15 19l-7-7 7-7"]')

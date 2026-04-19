@@ -2,20 +2,19 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { RepositoryData } from "@/lib/api";
+import type { RepositoryData } from "@/lib/api/repositoryTypes";
 import {
   FolderGit2,
   GitBranch,
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Github,
   Globe,
 } from "lucide-react";
 
 // Provider icons
 const providerIcons: Record<string, React.ReactNode> = {
-  github: <Github className="w-3.5 h-3.5" />,
+  github: <FolderGit2 className="w-3.5 h-3.5" />,
   gitlab: <FolderGit2 className="w-3.5 h-3.5" />,
   gitee: <FolderGit2 className="w-3.5 h-3.5" />,
   generic: <Globe className="w-3.5 h-3.5" />,

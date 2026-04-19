@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
-import { extensionApi, InstalledMcpServer } from "@/lib/api";
+import { InstalledMcpServer } from "@/lib/api";
+import { getExtensionService } from "@/lib/wasm-core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,7 @@ export function EditMcpEnvVarsDialog({ repositoryId, mcpServer, open, onOpenChan
           envRecord[key.trim()] = value.trim();
         }
       });
-      await extensionApi.updateMcpServer(repositoryId, mcpServer.id, { env_vars: envRecord });
+      await getExtensionService().update_mcp_server(BigInt(repositoryId), BigInt(mcpServer.id), JSON.stringify({ env_vars: envRecord }));
       toast.success(t("extensions.envVarsUpdated"));
       onUpdated();
       onOpenChange(false);

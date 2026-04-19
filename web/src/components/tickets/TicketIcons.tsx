@@ -14,7 +14,7 @@ import {
   ChevronUp,
   AlertTriangle,
 } from "lucide-react";
-import { TicketStatus, TicketPriority } from "@/lib/api";
+import type { TicketStatus, TicketPriority } from "@/lib/api/ticketTypes";
 import { cn } from "@/lib/utils";
 
 // Icon size presets

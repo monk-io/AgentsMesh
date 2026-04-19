@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Cpu, HardDrive, Terminal, ArrowUpCircle } from "lucide-react";
-import type { RunnerData, RelayConnectionInfo } from "@/lib/api";
-import { runnerApi } from "@/lib/api";
+import type { RunnerData, RelayConnectionInfo } from "@/lib/api/runnerTypes";
+import { getRunnerService } from "@/lib/wasm-core";
 import { isVersionOutdated } from "@/lib/utils/version";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -40,7 +40,7 @@ export function RunnerOverviewTab({ runner, relayConnections, latestRunnerVersio
 
     setUpgrading(true);
     try {
-      await runnerApi.upgrade(runner.id);
+      await getRunnerService().upgrade_runner(BigInt(runner.id), JSON.stringify({}));
       toast.success(t("runners.detail.upgradeSent"));
     } catch {
       toast.error(t("runners.detail.upgradeFailed"));
@@ -120,7 +120,7 @@ export function RunnerOverviewTab({ runner, relayConnections, latestRunnerVersio
               {t("runners.detail.createdAt")}
             </dt>
             <dd className="text-sm text-foreground">
-              {format(new Date(runner.created_at), "PPpp")}
+              {format(new Date(runner.created_at ?? ''), "PPpp")}
             </dd>
           </div>
         </dl>

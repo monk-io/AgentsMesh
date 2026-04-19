@@ -8,7 +8,7 @@
  * 4. Keyword-specific data completions (AGENT → slug, REPO → URL, etc.)
  */
 import type { CompletionContext, CompletionResult, Completion } from "@codemirror/autocomplete";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField } from "@/lib/api";
 import {
   MODE_VALUES, GIT_CREDENTIAL_VALUES, PROMPT_POSITION_VALUES,
   buildFieldCompletions, buildValueCompletions,

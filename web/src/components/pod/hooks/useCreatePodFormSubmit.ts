@@ -1,4 +1,5 @@
-import { podApi, PodData } from "@/lib/api";
+import type { PodData } from "@/lib/api";
+import { getPodService } from "@/lib/wasm-core";
 
 /**
  * Builds the API request payload and submits the pod creation request.
@@ -16,7 +17,7 @@ export async function submitCreatePod(params: {
 }): Promise<PodData | null> {
   const { selectedAgent, alias, perpetual, selectedRunnerId, agentfileLayer, options } = params;
 
-  const response = await podApi.create({
+  const response = JSON.parse(await getPodService().create_pod(JSON.stringify({
     agent_slug: selectedAgent,
     runner_id: selectedRunnerId || undefined,
     alias: alias.trim() || undefined,
@@ -25,7 +26,7 @@ export async function submitCreatePod(params: {
     rows: options?.rows,
     agentfile_layer: agentfileLayer || undefined,
     perpetual: perpetual || undefined,
-  });
+  })));
 
   return response.pod || null;
 }

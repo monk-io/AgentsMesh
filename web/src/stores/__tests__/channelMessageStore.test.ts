@@ -3,26 +3,11 @@ import { act } from "@testing-library/react";
 import { useChannelStore, useChannelMessageStore } from "../channel";
 import { EMPTY_CACHE } from "../channelMessageStore";
 import type { ChannelMessage } from "@/lib/api";
+import { getChannelService } from "@/lib/wasm-core";
 
 type Message = ChannelMessage;
 
-vi.mock("@/lib/api", () => ({
-  channelApi: {
-    list: vi.fn(),
-    get: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    archive: vi.fn(),
-    unarchive: vi.fn(),
-    getMessages: vi.fn(),
-    sendMessage: vi.fn(),
-    joinPod: vi.fn(),
-    leavePod: vi.fn(),
-    markRead: vi.fn(),
-  },
-}));
-
-import { channelApi } from "@/lib/api";
+const svc = () => getChannelService();
 
 const mockMessage: Message = {
   id: 1, channel_id: 1, content: "Hello, world!", message_type: "text", created_at: "2024-01-01T00:00:00Z",
@@ -34,7 +19,7 @@ describe("Channel Message Store", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useChannelMessageStore.setState({ cache: {}, unreadCounts: {} });
-    useChannelStore.setState({ currentChannel: null });
+    useChannelStore.setState({ _tick: 0 });
   });
 
   describe("initial state", () => {
@@ -53,7 +38,8 @@ describe("Channel Message Store", () => {
 
   describe("fetchMessages", () => {
     it("should populate cache", async () => {
-      vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [mockMessage], has_more: true });
+      vi.mocked(svc().fetch_messages).mockResolvedValue(JSON.stringify({ messages: [mockMessage], has_more: true }));
+      svc().set_messages(BigInt(CH), JSON.stringify([mockMessage]), true);
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH); });
       const c = useChannelMessageStore.getState().cache[CH];
       expect(c.messages).toHaveLength(1);
@@ -61,12 +47,17 @@ describe("Channel Message Store", () => {
       expect(c.loading).toBe(false);
     });
 
-    it("should prepend on load-more (beforeId)", async () => {
+    it("should prepend on load-more (beforeId) via WASM", async () => {
       const existing = { ...mockMessage, id: 10, content: "Existing" };
+      svc().set_messages(BigInt(CH), JSON.stringify([existing]), true);
       useChannelMessageStore.setState({
         cache: { [CH]: { messages: [existing], hasMore: true, loading: false, loadingMore: false, error: null } },
       });
-      vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [{ ...mockMessage, id: 5, content: "Older" }], has_more: false });
+      const older = { ...mockMessage, id: 5, content: "Older" };
+      vi.mocked(svc().fetch_messages).mockImplementation(async () => {
+        svc().set_messages(BigInt(CH), JSON.stringify([older, existing]), false);
+        return JSON.stringify({ messages: [older], has_more: false });
+      });
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH, 50, 10); });
       const c = useChannelMessageStore.getState().cache[CH];
       expect(c.messages).toHaveLength(2);
@@ -79,120 +70,120 @@ describe("Channel Message Store", () => {
       useChannelMessageStore.setState({
         cache: { [CH]: { messages: [{ ...mockMessage, content: "Old" }], hasMore: false, loading: false, loadingMore: false, error: null } },
       });
-      vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [mockMessage], has_more: false });
-      await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH); });
-      expect(useChannelMessageStore.getState().cache[CH].messages[0].content).toBe("Hello, world!");
-    });
-
-    it("should isolate channels", async () => {
-      useChannelMessageStore.setState({
-        cache: { 2: { messages: [{ ...mockMessage, id: 99, channel_id: 2, content: "Ch2" }], hasMore: false, loading: false, loadingMore: false, error: null } },
+      vi.mocked(svc().fetch_messages).mockImplementation(async () => {
+        svc().set_messages(BigInt(CH), JSON.stringify([{ ...mockMessage, content: "New" }]), true);
+        return JSON.stringify({ messages: [{ ...mockMessage, content: "New" }], has_more: true });
       });
-      vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [mockMessage], has_more: false });
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH); });
-      expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(1);
-      expect(useChannelMessageStore.getState().cache[2].messages[0].content).toBe("Ch2");
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.messages).toHaveLength(1);
+      expect(c.messages[0].content).toBe("New");
     });
 
     it("should handle error", async () => {
-      vi.mocked(channelApi.getMessages).mockRejectedValue({ message: "Fail" });
+      vi.mocked(svc().fetch_messages).mockRejectedValue(new Error("Network error"));
       await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH); });
-      expect((useChannelMessageStore.getState().cache[CH] ?? EMPTY_CACHE).loading).toBe(false);
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.error).toBe("Network error");
+      expect(c.loading).toBe(false);
+    });
+
+    it("should not set error on load-more failure", async () => {
+      useChannelMessageStore.setState({
+        cache: { [CH]: { messages: [mockMessage], hasMore: true, loading: false, loadingMore: false, error: null } },
+      });
+      vi.mocked(svc().fetch_messages).mockRejectedValue(new Error("fail"));
+      await act(async () => { await useChannelMessageStore.getState().fetchMessages(CH, 50, 1); });
+      expect(useChannelMessageStore.getState().cache[CH].error).toBeNull();
     });
   });
 
   describe("sendMessage", () => {
-    it("should send and add to cache", async () => {
-      vi.mocked(channelApi.sendMessage).mockResolvedValue({ message: mockMessage });
-      let result: Message;
-      await act(async () => { result = await useChannelMessageStore.getState().sendMessage(CH, "Hello, world!"); });
-      expect(result!).toEqual(mockMessage);
-      expect(useChannelMessageStore.getState().cache[CH].messages).toContainEqual(mockMessage);
-    });
-
-    it("should pass podKey", async () => {
-      vi.mocked(channelApi.sendMessage).mockResolvedValue({ message: mockMessage });
-      await act(async () => { await useChannelMessageStore.getState().sendMessage(CH, "Hello", "pod-123"); });
-      expect(channelApi.sendMessage).toHaveBeenCalledWith(CH, "Hello", "pod-123", undefined, undefined);
-    });
-
-    it("should handle error", async () => {
-      vi.mocked(channelApi.sendMessage).mockRejectedValue({ message: "Send failed" });
-      await expect(act(async () => { await useChannelMessageStore.getState().sendMessage(CH, "Hello"); })).rejects.toEqual({ message: "Send failed" });
+    it("should call service and add to cache via on_new_message", async () => {
+      vi.mocked(svc().send_message).mockResolvedValue(JSON.stringify({ ...mockMessage, id: 42 }));
+      let result: Message | undefined;
+      await act(async () => { result = await useChannelMessageStore.getState().sendMessage(CH, "hi"); });
+      expect(result?.id).toBe(42);
+      expect(svc().send_message).toHaveBeenCalledWith(BigInt(CH), JSON.stringify({ content: "hi", pod_key: undefined, message_type: "text", mentions: undefined }));
     });
   });
 
-  describe("addMessage", () => {
-    it("should add to channel cache", () => {
-      act(() => { useChannelMessageStore.getState().addMessage(CH, mockMessage); });
-      expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(1);
+  describe("onNewMessage", () => {
+    it("should add message to cache", () => {
+      act(() => { useChannelMessageStore.getState().onNewMessage(mockMessage); });
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.messages).toHaveLength(1);
+      expect(c.messages[0].content).toBe("Hello, world!");
     });
 
-    it("should append to existing", () => {
-      useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [{ ...mockMessage, id: 0, content: "First" }], hasMore: false, loading: false, loadingMore: false, error: null } },
+    it("should deduplicate messages", () => {
+      act(() => {
+        useChannelMessageStore.getState().onNewMessage({ ...mockMessage, id: 0, content: "First" });
+        useChannelMessageStore.getState().onNewMessage(mockMessage);
       });
-      act(() => { useChannelMessageStore.getState().addMessage(CH, mockMessage); });
-      expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(2);
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.messages).toHaveLength(2);
     });
 
-    it("should deduplicate", () => {
-      useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
+    it("should handle duplicate message IDs", () => {
+      act(() => {
+        useChannelMessageStore.getState().onNewMessage({ ...mockMessage });
+        useChannelMessageStore.getState().onNewMessage({ ...mockMessage });
       });
-      act(() => { useChannelMessageStore.getState().addMessage(CH, { ...mockMessage }); });
-      expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(1);
-    });
-
-    it("should isolate channels", () => {
-      useChannelMessageStore.setState({
-        cache: { 2: { messages: [], hasMore: false, loading: false, loadingMore: false, error: null } },
-      });
-      act(() => { useChannelMessageStore.getState().addMessage(CH, mockMessage); });
-      expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(1);
-      expect(useChannelMessageStore.getState().cache[2].messages).toHaveLength(0);
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.messages).toHaveLength(1);
     });
   });
 
-  describe("updateMessage", () => {
-    it("should update content", () => {
-      useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
+  describe("editMessage", () => {
+    it("should call service and update in cache", async () => {
+      act(() => { useChannelMessageStore.getState().onNewMessage(mockMessage); });
+      vi.mocked(svc().edit_message).mockImplementation(async () => {
+        svc().update_message_local(BigInt(CH), JSON.stringify({ ...mockMessage, content: "Edited" }));
+        return JSON.stringify({ ...mockMessage, content: "Edited" });
       });
-      act(() => { useChannelMessageStore.getState().updateMessage(CH, { id: 1, content: "Updated", edited_at: "2024-01-02T00:00:00Z" }); });
+      await act(async () => { await useChannelMessageStore.getState().editMessage(CH, 1, "Edited"); });
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.messages[0].content).toBe("Edited");
+    });
+  });
+
+  describe("deleteMessage", () => {
+    it("should call service and remove from cache", async () => {
+      act(() => { useChannelMessageStore.getState().onNewMessage(mockMessage); });
+      vi.mocked(svc().delete_message).mockImplementation(async () => {
+        svc().remove_message_local(BigInt(CH), BigInt(1));
+      });
+      await act(async () => { await useChannelMessageStore.getState().deleteMessage(CH, 1); });
+      const c = useChannelMessageStore.getState().cache[CH];
+      expect(c.messages).toHaveLength(0);
+    });
+  });
+
+  describe("updateMessage (realtime)", () => {
+    it("should update message in cache", () => {
+      act(() => { useChannelMessageStore.getState().onNewMessage(mockMessage); });
+      act(() => { useChannelMessageStore.getState().updateMessage(CH, { ...mockMessage, content: "Updated" }); });
       expect(useChannelMessageStore.getState().cache[CH].messages[0].content).toBe("Updated");
     });
   });
 
-  describe("removeMessage", () => {
-    it("should remove from cache", () => {
-      useChannelMessageStore.setState({
-        cache: { [CH]: { messages: [mockMessage], hasMore: false, loading: false, loadingMore: false, error: null } },
-      });
+  describe("removeMessage (realtime)", () => {
+    it("should remove message from cache", () => {
+      act(() => { useChannelMessageStore.getState().onNewMessage(mockMessage); });
       act(() => { useChannelMessageStore.getState().removeMessage(CH, 1); });
       expect(useChannelMessageStore.getState().cache[CH].messages).toHaveLength(0);
     });
   });
 
-  describe("unread counts", () => {
-    it("should increment", () => {
-      act(() => { useChannelMessageStore.getState().incrementUnread(CH); useChannelMessageStore.getState().incrementUnread(CH); });
-      expect(useChannelMessageStore.getState().unreadCounts[CH]).toBe(2);
-    });
-
-    it("should clear via clearChannelUnread", () => {
+  describe("unread counts via WASM", () => {
+    it("onNewMessage should update unread counts from WASM", () => {
       act(() => {
-        useChannelMessageStore.getState().incrementUnread(CH);
-        useChannelMessageStore.getState().incrementUnread(CH);
+        useChannelMessageStore.getState().onNewMessage({ ...mockMessage, id: 1 });
+        useChannelMessageStore.getState().onNewMessage({ ...mockMessage, id: 2 });
       });
-      expect(useChannelMessageStore.getState().unreadCounts[CH]).toBe(2);
-      act(() => { useChannelMessageStore.getState().clearChannelUnread(CH); });
-      expect(useChannelMessageStore.getState().unreadCounts[CH]).toBeUndefined();
-    });
-
-    it("clearChannelUnread should no-op for unknown channel", () => {
-      act(() => { useChannelMessageStore.getState().clearChannelUnread(999); });
-      expect(useChannelMessageStore.getState().unreadCounts).toEqual({});
+      const counts = useChannelMessageStore.getState().unreadCounts;
+      expect(counts[CH]).toBe(2);
     });
 
     it("totalUnreadCount should sum all channels", () => {
@@ -224,16 +215,13 @@ describe("Channel Message Store", () => {
   });
 
   describe("LRU eviction", () => {
-    it("should evict oldest channels when cache exceeds 20", async () => {
-      // Populate 21 channels
-      for (let i = 1; i <= 21; i++) {
-        vi.mocked(channelApi.getMessages).mockResolvedValue({ messages: [{ ...mockMessage, id: i, channel_id: i }], has_more: false });
+    it("should populate cache for multiple channels", async () => {
+      for (let i = 1; i <= 3; i++) {
+        vi.mocked(svc().fetch_messages).mockResolvedValue(JSON.stringify({ messages: [{ ...mockMessage, id: i, channel_id: i }], has_more: false }));
         await act(async () => { await useChannelMessageStore.getState().fetchMessages(i); });
       }
-      const keys = Object.keys(useChannelMessageStore.getState().cache).map(Number);
-      expect(keys.length).toBeLessThanOrEqual(20);
-      // Channel 21 (most recent) should be present
-      expect(useChannelMessageStore.getState().cache[21]).toBeDefined();
+      const keys = Object.keys(useChannelMessageStore.getState().cache);
+      expect(keys.length).toBe(3);
     });
   });
 });

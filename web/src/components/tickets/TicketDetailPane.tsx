@@ -81,7 +81,7 @@ export function TicketDetailPane({ slug, onClose, className }: TicketDetailPaneP
             <RepositorySelect value={ticket.repository_id ?? null} onChange={handleRepositoryChange} placeholder={t("tickets.detail.noRepository")} className="text-sm" />
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60">
-            <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{formatDate(ticket.created_at)}</span>
+            <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />{formatDate(ticket.created_at ?? '')}</span>
             {ticket.due_date && <span className={cn("flex items-center gap-1 font-medium", new Date(ticket.due_date) < new Date() ? "text-destructive" : "text-muted-foreground/70")}>Due {formatDate(ticket.due_date)}</span>}
           </div>
           {(subTickets.length > 0 || relations.length > 0 || commits.length > 0) && <div className="border-t border-border/30 pt-1" />}

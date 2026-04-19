@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ticketApi } from "@/lib/api";
-import { useTicketStore, Ticket, TicketStatus } from "@/stores/ticket";
+import { getTicketService } from "@/lib/wasm-core";
+import { useTicketStore, useTickets, Ticket, TicketStatus } from "@/stores/ticket";
 
 export function useTicketPaneData(slug: string) {
   const updateTicket = useTicketStore((s) => s.updateTicket);
   const updateTicketStatus = useTicketStore((s) => s.updateTicketStatus);
-  const tickets = useTicketStore((s) => s.tickets);
+  const tickets = useTickets();
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ export function useTicketPaneData(slug: string) {
 
   useEffect(() => {
     if (!slug) return;
-    const cachedTicket = tickets.find(t => t.slug === slug);
+    const cachedTicket = tickets.find((t: Ticket) => t.slug === slug);
     if (cachedTicket) setTicket(cachedTicket);
     else setTicket(null);
 
@@ -25,7 +25,7 @@ export function useTicketPaneData(slug: string) {
       setLoading(true);
       setError(null);
       try {
-        const data = await ticketApi.get(slug);
+        const data = JSON.parse(await getTicketService().fetch_ticket(slug));
         setTicket(data);
       } catch (err: unknown) {
         console.error("Failed to load ticket:", err);

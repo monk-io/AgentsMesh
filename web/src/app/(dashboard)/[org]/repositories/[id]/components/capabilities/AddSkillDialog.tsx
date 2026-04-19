@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
-import { extensionApi, SkillMarketItem } from "@/lib/api";
+import { SkillMarketItem } from "@/lib/api";
+import { getExtensionService } from "@/lib/wasm-core";
+import type { InstalledSkill } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -41,7 +43,7 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
   const loadMarketSkills = useCallback(async (query?: string) => {
     setLoadingMarket(true);
     try {
-      const res = await extensionApi.listMarketSkills(query);
+      const res = JSON.parse(await getExtensionService().list_market_skills(query));
       setMarketSkills(res.skills || []);
     } catch (error) {
       console.error("Failed to load market skills:", error);
@@ -64,10 +66,10 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
     async (item: SkillMarketItem) => {
       setInstalling(true);
       try {
-        await extensionApi.installSkillFromMarket(repositoryId, {
+        await getExtensionService().install_skill_from_market(BigInt(repositoryId), JSON.stringify({
           market_item_id: item.id,
           scope,
-        });
+        }));
         toast.success(t("extensions.installed"));
         onInstalled();
       } catch (error) {
@@ -83,12 +85,12 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
     if (!githubUrl.trim()) return;
     setInstalling(true);
     try {
-      await extensionApi.installSkillFromGitHub(repositoryId, {
+      await getExtensionService().install_skill_from_github(BigInt(repositoryId), JSON.stringify({
         url: githubUrl.trim(),
         branch: githubBranch.trim() || undefined,
         path: githubPath.trim() || undefined,
         scope,
-      });
+      }));
       toast.success(t("extensions.installed"));
       onInstalled();
     } catch (error) {
@@ -104,7 +106,10 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
       if (!file) return;
       setInstalling(true);
       try {
-        await extensionApi.installSkillFromUpload(repositoryId, file, scope);
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        await getExtensionService().install_skill_from_upload(
+          BigInt(repositoryId), bytes, file.name, scope,
+        );
         toast.success(t("extensions.installed"));
         onInstalled();
       } catch (error) {

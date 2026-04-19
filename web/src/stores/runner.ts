@@ -1,29 +1,20 @@
 import { create } from "zustand";
-import { runnerApi, RunnerData, GRPCRegistrationToken } from "@/lib/api";
+import { useMemo } from "react";
+import type { RunnerData, GRPCRegistrationToken } from "@/lib/api";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
+import { getRunnerService } from "@/lib/wasm-core";
 
 export type RunnerStatus = "online" | "offline" | "maintenance" | "busy";
-
-// Re-export RunnerData as Runner for cleaner component API
 export type Runner = RunnerData;
 
 interface RunnerState {
-  // State
-  runners: Runner[];
-  availableRunners: Runner[];
-  currentRunner: Runner | null;
-  tokens: GRPCRegistrationToken[];
-  loading: boolean;
-  error: string | null;
-
-  // Actions
+  _tick: number; tokens: GRPCRegistrationToken[]; loading: boolean; error: string | null;
   fetchRunners: (status?: RunnerStatus) => Promise<void>;
   fetchAvailableRunners: () => Promise<void>;
   fetchRunner: (id: number) => Promise<void>;
   updateRunner: (id: number, data: { description?: string; max_concurrent_pods?: number; is_enabled?: boolean; tags?: string[] }) => Promise<Runner>;
   deleteRunner: (id: number) => Promise<void>;
-  // Token management (gRPC registration tokens)
   createToken: (data?: { name?: string; labels?: string[]; max_uses?: number; expires_in_days?: number }) => Promise<string>;
   fetchTokens: () => Promise<void>;
   deleteToken: (id: number) => Promise<void>;
@@ -32,149 +23,124 @@ interface RunnerState {
   clearError: () => void;
 }
 
-export const useRunnerStore = create<RunnerState>((set) => ({
-  runners: [],
-  availableRunners: [],
-  currentRunner: null,
-  tokens: [],
-  loading: false,
-  error: null,
+const svc = () => getRunnerService();
+const bump = () => useRunnerStore.setState((s) => ({ _tick: s._tick + 1 }));
+
+export function useRunners(): Runner[] {
+  const tick = useRunnerStore((s) => s._tick);
+  return useMemo(() => JSON.parse(svc().runners_json()), [tick]);
+}
+
+export function useAvailableRunners(): Runner[] {
+  const tick = useRunnerStore((s) => s._tick);
+  return useMemo(() => JSON.parse(svc().available_runners_json()), [tick]);
+}
+
+export function useCurrentRunner(): Runner | null {
+  const tick = useRunnerStore((s) => s._tick);
+  return useMemo(() => {
+    const raw = svc().current_runner_json();
+    return raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null;
+  }, [tick]);
+}
+
+export const useRunnerStore = create<RunnerState>((set, get) => ({
+  _tick: 0, tokens: [], loading: false, error: null,
 
   fetchRunners: async (status) => {
     set({ loading: true, error: null });
     try {
-      const response = await runnerApi.list(status);
-      set({ runners: response.runners || [], loading: false });
-    } catch (error: unknown) {
-      set({
-        error: getErrorMessage(error, "Failed to fetch runners"),
-        loading: false,
-      });
-    }
+      await svc().fetch_runners(status ?? null);
+      set({ loading: false, _tick: get()._tick + 1 });
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch runners"), loading: false }); }
   },
 
   fetchAvailableRunners: async () => {
     try {
-      const response = await runnerApi.listAvailable();
-      set({ availableRunners: response.runners || [] });
-    } catch (error: unknown) {
-      set({
-        error: getErrorMessage(error, "Failed to fetch available runners"),
-      });
-    }
+      await svc().fetch_available_runners();
+      bump();
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch available runners") }); }
   },
 
   fetchRunner: async (id) => {
     try {
-      const response = await runnerApi.get(id);
-      set({ currentRunner: response.runner });
-    } catch (error: unknown) {
-      set({
-        error: getErrorMessage(error, "Failed to fetch runner"),
-      });
-    }
+      await svc().fetch_runner(BigInt(id));
+      bump();
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch runner") }); }
   },
 
   updateRunner: async (id, data) => {
     try {
-      const response = await runnerApi.update(id, data);
-      set((state) => ({
-        runners: state.runners.map((r) => (r.id === id ? response.runner : r)),
-        availableRunners: state.availableRunners.map((r) => (r.id === id ? response.runner : r)),
-        currentRunner: state.currentRunner?.id === id ? response.runner : state.currentRunner,
-      }));
-      return response.runner;
-    } catch (error: unknown) {
-      const message = getErrorMessage(error, "Failed to update runner");
-      set({ error: message });
-      throw error;
-    }
+      const json = await svc().update_runner(BigInt(id), JSON.stringify(data));
+      const runner: Runner = JSON.parse(json);
+      bump();
+      return runner;
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update runner") }); throw e; }
   },
 
   deleteRunner: async (id) => {
     try {
-      await runnerApi.delete(id);
-      set((state) => ({
-        runners: state.runners.filter((r) => r.id !== id),
-        availableRunners: state.availableRunners.filter((r) => r.id !== id),
-        currentRunner:
-          state.currentRunner?.id === id ? null : state.currentRunner,
-      }));
-    } catch (error: unknown) {
-      const message = getErrorMessage(error, "Failed to delete runner");
-      set({ error: message });
-      throw error;
-    }
+      await svc().delete_runner(BigInt(id));
+      bump();
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete runner") }); throw e; }
   },
 
   createToken: async (data) => {
     try {
-      const response = await runnerApi.createToken(data);
-      return response.token;
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to create token") });
-      throw error;
-    }
+      const json = await svc().create_token(JSON.stringify(data || {}));
+      const resp: { token: string } = JSON.parse(json);
+      return resp.token;
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create token") }); throw e; }
   },
 
   fetchTokens: async () => {
     try {
-      const response = await runnerApi.listTokens();
-      set({ tokens: response.tokens || [] });
-    } catch (error: unknown) {
-      const message = getErrorMessage(error, "Failed to fetch tokens");
-      set({ error: message });
-    }
+      const json = await svc().fetch_tokens();
+      const resp: { tokens: GRPCRegistrationToken[] } = JSON.parse(json);
+      set({ tokens: resp.tokens || [] });
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch tokens") }); }
   },
 
   deleteToken: async (id) => {
-    try {
-      await runnerApi.deleteToken(id);
-      set((state) => ({
-        tokens: state.tokens.filter((t) => t.id !== id),
-      }));
-    } catch (error: unknown) {
-      const message = getErrorMessage(error, "Failed to delete token");
-      set({ error: message });
-      throw error;
-    }
+    try { await svc().delete_token(BigInt(id)); set((s) => ({ tokens: s.tokens.filter((t) => t.id !== id) })); }
+    catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete token") }); throw e; }
   },
 
   setCurrentRunner: (runner) => {
-    set({ currentRunner: runner });
+    svc().set_current_runner(runner ? JSON.stringify(runner) : "");
+    bump();
   },
 
   updateRunnerStatus: (runnerId, status) => {
-    set((state) => {
-      const updatedRunner = state.runners.find((r) => r.id === runnerId);
-      const runnerWithStatus = updatedRunner ? { ...updatedRunner, status } : undefined;
-
-      let availableRunners: Runner[];
-      if (status === "online" && runnerWithStatus) {
-        const alreadyAvailable = state.availableRunners.some((r) => r.id === runnerId);
-        availableRunners = alreadyAvailable
-          ? state.availableRunners.map((r) => (r.id === runnerId ? runnerWithStatus : r))
-          : [...state.availableRunners, runnerWithStatus];
-      } else {
-        availableRunners = state.availableRunners.filter((r) => r.id !== runnerId);
-      }
-
-      return {
-        runners: state.runners.map((r) => (r.id === runnerId ? { ...r, status } : r)),
-        availableRunners,
-        currentRunner: state.currentRunner?.id === runnerId
-          ? { ...state.currentRunner, status }
-          : state.currentRunner,
-      };
-    });
+    svc().update_runner_status(BigInt(runnerId), status);
+    bump();
   },
 
-  clearError: () => {
-    set({ error: null });
-  },
+  clearError: () => set({ error: null }),
 }));
 
-export { getRunnerStatusInfo, canAcceptPods, formatHostInfo } from "./runner-display-info";
+export const getRunnerStatusInfo = (status: RunnerStatus) => {
+  const m: Record<RunnerStatus, { label: string; color: string; dotColor: string }> = {
+    online: { label: "Online", color: "text-green-600 dark:text-green-400", dotColor: "bg-green-500" },
+    offline: { label: "Offline", color: "text-gray-500 dark:text-gray-400", dotColor: "bg-gray-400" },
+    maintenance: { label: "Maintenance", color: "text-yellow-600 dark:text-yellow-400", dotColor: "bg-yellow-500" },
+    busy: { label: "Busy", color: "text-orange-600 dark:text-orange-400", dotColor: "bg-orange-500" },
+  };
+  return m[status];
+};
+
+export const canAcceptPods = (runner: Runner): boolean =>
+  runner.status === "online" && runner.current_pods < runner.max_concurrent_pods;
+
+export const formatHostInfo = (hostInfo?: Runner["host_info"]) => {
+  if (!hostInfo) return "Unknown";
+  const parts: string[] = [];
+  if (hostInfo.os) parts.push(hostInfo.os);
+  if (hostInfo.arch) parts.push(hostInfo.arch);
+  if (hostInfo.cpu_cores) parts.push(`${hostInfo.cpu_cores} cores`);
+  if (hostInfo.memory) parts.push(`${(hostInfo.memory / 1024 / 1024 / 1024).toFixed(1)}GB RAM`);
+  return parts.length > 0 ? parts.join(" / ") : "Unknown";
+};
 
 reconnectRegistry.register({
   name: "runner:list",

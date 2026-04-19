@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
-import { extensionApi, McpMarketItem } from "@/lib/api";
+import { McpMarketItem } from "@/lib/api";
+import { getExtensionService } from "@/lib/wasm-core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ export function AddMcpServerDialog({ repositoryId, scope, open, onOpenChange, on
   const loadMarketServers = useCallback(async (query?: string) => {
     setLoadingMarket(true);
     try {
-      const res = await extensionApi.listMarketMcpServers(query, undefined, 100, 0);
+      const res = JSON.parse(await getExtensionService().list_market_mcp_servers(query, 100, 0));
       setMarketServers(res.mcp_servers || []);
     } catch (error) { console.error("Failed to load market MCP servers:", error); }
     finally { setLoadingMarket(false); }
@@ -77,11 +78,11 @@ export function AddMcpServerDialog({ repositoryId, scope, open, onOpenChange, on
     try {
       const filteredEnvVars: Record<string, string> = {};
       Object.entries(envVars).forEach(([key, value]) => { if (value.trim()) filteredEnvVars[key] = value.trim(); });
-      await extensionApi.installMcpFromMarket(repositoryId, {
+      await getExtensionService().install_mcp_from_market(BigInt(repositoryId), JSON.stringify({
         market_item_id: selectedTemplate.id,
         env_vars: Object.keys(filteredEnvVars).length > 0 ? filteredEnvVars : undefined,
         scope,
-      });
+      }));
       toast.success(t("extensions.installed"));
       onInstalled();
     } catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToInstall"))); }
@@ -95,14 +96,14 @@ export function AddMcpServerDialog({ repositoryId, scope, open, onOpenChange, on
       const filteredEnvVars: Record<string, string> = Object.fromEntries(
         customEnvVars.filter((e) => e.key.trim()).map((e) => [e.key.trim(), e.value.trim()])
       );
-      await extensionApi.installCustomMcpServer(repositoryId, {
+      await getExtensionService().install_custom_mcp_server(BigInt(repositoryId), JSON.stringify({
         name: customName.trim(), slug: customSlug.trim(), transport_type: customTransport,
         command: customTransport === "stdio" ? customCommand.trim() || undefined : undefined,
         args: customTransport === "stdio" && customArgs.trim() ? customArgs.split(/\s+/).filter(Boolean) : undefined,
         http_url: customTransport !== "stdio" ? customHttpUrl.trim() || undefined : undefined,
         env_vars: Object.keys(filteredEnvVars).length > 0 ? filteredEnvVars : undefined,
         scope,
-      });
+      }));
       toast.success(t("extensions.installed"));
       onInstalled();
     } catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToInstall"))); }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { TokenUsageByModel } from "@/lib/api/token-usage";
+import type { TokenUsageByModel } from "@/lib/api";
 import type { TranslationFn } from "../GeneralSettings";
 import { formatTokenCount, formatNumber } from "./format";
 

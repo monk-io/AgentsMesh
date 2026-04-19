@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
-import { authApi } from "@/lib/api";
+import { getAuthApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { OAuthButtons } from "../login/OAuthButtons";
@@ -32,6 +33,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await initWasmCore();
     setLoading(true);
     setError("");
 
@@ -47,12 +49,12 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await authApi.register({
+      const response = JSON.parse(await getAuthApiService().register(JSON.stringify({
         email: formData.email,
         username: formData.username,
         password: formData.password,
         name: formData.name,
-      });
+      })));
       setAuth(response.token, response.user, response.refresh_token);
       router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err: unknown) {

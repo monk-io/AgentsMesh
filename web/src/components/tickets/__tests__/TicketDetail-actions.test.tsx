@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@/test/test-utils'
 import { TicketDetail } from '../TicketDetail'
-import { ticketApi } from '@/lib/api'
+import { getTicketRelationsService, getApiClient, getOrgApiService } from '@/lib/wasm-core'
 
 // Mock next/navigation
 const mockRouterBack = vi.fn()
@@ -25,6 +25,10 @@ vi.mock('@/stores/ticket', () => ({
   useTicketStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
     selector ? selector(mockTicketStoreState) : mockTicketStoreState
   ),
+  useCurrentTicket: vi.fn(() => mockTicketStoreState.currentTicket ?? null),
+  useTickets: vi.fn(() => []),
+  useBoardColumns: vi.fn(() => []),
+  useLabels: vi.fn(() => []),
   getStatusInfo: (status: string) => ({
     label: status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
     color: 'text-gray-700',
@@ -37,18 +41,12 @@ vi.mock('@/stores/ticket', () => ({
   }),
 }))
 
-vi.mock('@/lib/api', () => ({
-  ticketApi: {
-    getSubTickets: vi.fn(),
-    listRelations: vi.fn(),
-    listCommits: vi.fn(),
-    listComments: vi.fn(),
-    getPods: vi.fn(),
-  },
-  organizationApi: {
-    listMembers: vi.fn().mockResolvedValue({ members: [] }),
-  },
-}))
+vi.mock('@/lib/api', () => ({}))
+
+vi.mock('@/lib/wasm-getters', async () => {
+  const wasmCore = await vi.importMock<typeof import('@/lib/wasm-core')>('@/lib/wasm-core')
+  return { ...wasmCore }
+})
 
 vi.mock('@/components/common/RepositorySelect', () => ({
   RepositorySelect: ({ value, onChange, placeholder }: { value: number | null; onChange: (v: number | null) => void; placeholder?: string }) => (
@@ -122,11 +120,13 @@ describe('TicketDetail - Editing, Status & Delete', () => {
       error: null,
     })
 
-    ;(ticketApi.getSubTickets as ReturnType<typeof vi.fn>).mockResolvedValue({ sub_tickets: [] })
-    ;(ticketApi.listRelations as ReturnType<typeof vi.fn>).mockResolvedValue({ relations: [] })
-    ;(ticketApi.listCommits as ReturnType<typeof vi.fn>).mockResolvedValue({ commits: [] })
-    ;(ticketApi.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({ comments: [], total: 0 })
-    ;(ticketApi.getPods as ReturnType<typeof vi.fn>).mockResolvedValue({ pods: [] })
+    const client = getApiClient()
+    vi.mocked(client.get).mockResolvedValue(JSON.stringify({ sub_tickets: [], pods: [] }))
+    vi.mocked(getTicketRelationsService().list_relations).mockResolvedValue(JSON.stringify({ relations: [] }))
+    vi.mocked(getTicketRelationsService().list_commits).mockResolvedValue(JSON.stringify({ commits: [] }))
+    vi.mocked(getTicketRelationsService().list_comments).mockResolvedValue(JSON.stringify({ comments: [], total: 0 }))
+
+    vi.mocked(getOrgApiService().list_members).mockResolvedValue(JSON.stringify({ members: [] }))
   })
 
   describe('pod panel', () => {

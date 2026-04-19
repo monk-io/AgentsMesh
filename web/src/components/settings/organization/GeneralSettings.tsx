@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { organizationApi } from "@/lib/api";
+import { getOrgApiService } from "@/lib/wasm-getters";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
   const [name, setName] = useState(org?.name || "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  useEffect(() => { if (org?.name && !name) setName(org.name); }, [org?.name]);
   const router = useRouter();
   const currentOrg = useAuthStore((s) => s.currentOrg);
   const organizations = useAuthStore((s) => s.organizations);
@@ -38,7 +39,7 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await organizationApi.update(org!.slug, { name });
+      await getOrgApiService().update(org!.slug, JSON.stringify({ name }));
 
       // Sync Zustand store cache
       if (currentOrg && currentOrg.slug === org!.slug) {
@@ -65,7 +66,7 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
 
     setDeleting(true);
     try {
-      await organizationApi.delete(org!.slug);
+      await getOrgApiService().delete(org!.slug);
 
       // Remove from store and redirect
       const remaining = organizations.filter((o) => o.slug !== org!.slug);

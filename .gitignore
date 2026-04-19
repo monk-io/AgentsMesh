@@ -116,6 +116,18 @@ runner/agentsmesh-runner
 agentsmesh-onpremise-v1.0.0.tar.gz
 
 # =========================
+# Rust / WASM (core/)
+# =========================
+core/target/
+core/**/target/
+# wasm-pack intermediate outputs (stale builds in wrong locations)
+core/crates/*/pkg/
+core/crates/*/*/pkg/
+core/crates/*/*/*/pkg/
+core/core/pkg/
+# Keep core/pkg/ — it's the canonical wasm-pack output referenced by web/package.json
+
+# =========================
 # Claude Code
 # =========================
 .claude/worktrees/

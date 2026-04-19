@@ -7,10 +7,17 @@
       "mesh": "Mesh",
       "loops": "Loops",
       "blocks": "Blocks",
+      "infra": "Infra",
       "repositories": "Repositories",
       "runners": "Runners",
       "settings": "Settings",
       "help": "Help & Feedback"
+    },
+    "orgSwitcher": {
+      "title": "Current organization",
+      "empty": "No organizations",
+      "create": "Create organization",
+      "manage": "Organization settings"
     },
     "bottomPanel": {
       "output": "Output",
@@ -98,6 +105,7 @@
       "modeAcp": "Conversational (ACP)"
     },
     "sidebar": {
+      "collapse": "Collapse sidebar",
       "settings": {
         "title": "Settings",
         "description": "Manage your organization",
@@ -128,13 +136,22 @@
         }
       },
       "mesh": {
-        "searchPlaceholder": "Search mesh...",
+        "searchPlaceholder": "Find pod / runner",
+        "resetFilters": "Reset filters",
+        "matchCount": "{count} matching",
         "viewTopology": "View Topology",
         "showTerminatedPods": "Show terminated pods",
         "networkStats": "Network Stats",
         "active": "Active",
         "channels": "Channels",
         "bindings": "Bindings",
+        "runnerFilter": "Runner",
+        "statusFilter": "Status",
+        "runnerPrefix": "Runner",
+        "statusRunning": "Running",
+        "statusInit": "Initializing",
+        "statusTerminated": "Terminated",
+        "statusFailed": "Failed",
         "channelsSection": "Channels",
         "podsSection": "Pods",
         "noChannels": "No channels",

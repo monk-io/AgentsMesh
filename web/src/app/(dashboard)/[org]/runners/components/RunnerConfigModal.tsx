@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Share2 } from "lucide-react";
 import { ShareDialog } from "@/components/shared/ShareDialog";
-import { runnerApi, type RunnerData } from "@/lib/api";
+import type { RunnerData } from "@/lib/api/runnerTypes";
+import { getRunnerService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { getShortPodKey } from "@/lib/pod-utils";
 
@@ -34,12 +35,12 @@ export function RunnerConfigModal({ t, runner, onClose, onUpdated }: RunnerConfi
     setLoading(true);
     setError(null);
     try {
-      await runnerApi.update(runner.id, {
+      await getRunnerService().update_runner(BigInt(runner.id), JSON.stringify({
         description: description || undefined,
         max_concurrent_pods: maxPods,
         visibility,
         tags,
-      });
+      }));
       onUpdated();
     } catch (err) {
       console.error("Failed to update runner:", err);

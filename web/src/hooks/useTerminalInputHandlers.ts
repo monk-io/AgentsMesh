@@ -1,7 +1,7 @@
 import { Terminal as XTerm, IDisposable } from "@xterm/xterm";
 import { MutableRefObject } from "react";
 import { isTouchPrimaryInput } from "@/lib/platform";
-import { uploadImage } from "@/lib/api/file";
+import { getFileService } from "@/lib/wasm-core";
 import { toast } from "sonner";
 import type { TerminalConnection } from "./useTerminalConnection";
 
@@ -115,7 +115,10 @@ export function setupImagePaste(
         }
 
         const toastId = toast.loading('Uploading image...');
-        uploadImage(blob)
+        (async () => {
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          return getFileService().upload_file(bytes, blob.name || 'pasted-image.png', blob.type || 'application/octet-stream');
+        })()
           .then((url) => {
             // Re-check connection — it may have dropped during upload
             if (!connectionRef.current) {

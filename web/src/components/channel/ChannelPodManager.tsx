@@ -5,8 +5,8 @@ import { Bot, Plus, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { channelApi } from "@/lib/api/channel";
-import { usePodStore } from "@/stores/pod";
+import { getChannelService } from "@/lib/wasm-core";
+import { usePods, usePodStore } from "@/stores/pod";
 import { getPodDisplayName, getShortPodKey } from "@/lib/pod-utils";
 import { useTranslations } from "next-intl";
 
@@ -38,13 +38,20 @@ export function ChannelPodManager({
   onPodsChanged,
 }: ChannelPodManagerProps) {
   const t = useTranslations();
-  const allPods = usePodStore((s) => s.pods);
+  const allPods = usePods();
   const fetchPods = usePodStore((s) => s.fetchPods);
 
   const [open, setOpen] = useState(false);
   const [channelPods, setChannelPods] = useState<ChannelPod[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    const fetchChannelPods = async () => {
+      const res: { pods: ChannelPod[] } = JSON.parse(
+        await getChannelService().get_channel_pods(BigInt(channelId))
+      );
+      return res;
+    };
 
   // Fetch channel pods and active pods when popover opens
   useEffect(() => {
@@ -54,7 +61,7 @@ export function ChannelPodManager({
       setLoading(true);
       try {
         const [channelPodsRes] = await Promise.all([
-          channelApi.getPods(channelId),
+          fetchChannelPods(),
           fetchPods({ status: "running" }),
         ]);
         setChannelPods(channelPodsRes.pods || []);
@@ -81,9 +88,8 @@ export function ChannelPodManager({
     async (podKey: string) => {
       setActionLoading(podKey);
       try {
-        await channelApi.joinPod(channelId, podKey);
-        // Refresh channel pods
-        const res = await channelApi.getPods(channelId);
+        await getChannelService().join_channel(BigInt(channelId), podKey);
+        const res = await fetchChannelPods();
         setChannelPods(res.pods || []);
         onPodsChanged?.();
       } catch (error) {
@@ -100,9 +106,8 @@ export function ChannelPodManager({
     async (podKey: string) => {
       setActionLoading(podKey);
       try {
-        await channelApi.leavePod(channelId, podKey);
-        // Refresh channel pods
-        const res = await channelApi.getPods(channelId);
+        await getChannelService().leave_channel(BigInt(channelId), podKey);
+        const res = await fetchChannelPods();
         setChannelPods(res.pods || []);
         onPodsChanged?.();
       } catch (error) {

@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { MentionDropdown } from "./MentionDropdown";
 import { useMentionCandidates, type MentionItem } from "@/hooks/useMentionCandidates";
 import { getMentionQuery } from "./mention";
-import type { MentionPayload } from "@/lib/api/channel";
+import type { MentionPayload } from "@/lib/api/channelTypes";
 
 interface MessageInputProps {
   onSend: (content: string, mentions?: MentionPayload[]) => void;

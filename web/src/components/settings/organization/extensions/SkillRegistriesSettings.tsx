@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { extensionApi, SkillRegistry, SkillRegistryOverride } from "@/lib/api";
+import { SkillRegistry, SkillRegistryOverride } from "@/lib/api";
+import { getExtensionService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import type { TranslationFn } from "../GeneralSettings";
@@ -24,8 +25,8 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
   const loadRegistries = useCallback(async (signal?: AbortSignal) => {
     try {
       const [registriesRes, overridesRes] = await Promise.all([
-        extensionApi.listSkillRegistries(),
-        extensionApi.listSkillRegistryOverrides(),
+        getExtensionService().list_skill_registries().then((j: string) => JSON.parse(j)),
+        getExtensionService().list_skill_registry_overrides().then((j: string) => JSON.parse(j)),
       ]);
       if (signal?.aborted) return;
       setRegistries(registriesRes.skill_registries || []);
@@ -70,7 +71,7 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
     async (registryId: number, currentlyDisabled: boolean) => {
       setTogglingId(registryId);
       try {
-        const res = await extensionApi.togglePlatformRegistry(registryId, !currentlyDisabled);
+        const res = JSON.parse(await getExtensionService().toggle_skill_registry(BigInt(registryId), JSON.stringify({ is_disabled: !currentlyDisabled })));
         setOverrides(res.overrides || []);
         toast.success(t("extensions.skillRegistries.toggleSuccess"));
       } catch (error) {
@@ -85,7 +86,7 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
   const handleSync = useCallback(async (id: number) => {
     setSyncingId(id);
     try {
-      await extensionApi.syncSkillRegistry(id);
+      await getExtensionService().sync_skill_registry(BigInt(id));
       toast.success(t("extensions.syncStarted"));
       loadRegistries();
     } catch (error) {
@@ -98,7 +99,7 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
   const handleDelete = useCallback(async (id: number) => {
     if (!window.confirm(t("extensions.confirmDeleteSource"))) return;
     try {
-      await extensionApi.deleteSkillRegistry(id);
+      await getExtensionService().delete_skill_registry(BigInt(id));
       toast.success(t("extensions.sourceDeleted"));
       loadRegistries();
     } catch (error) {

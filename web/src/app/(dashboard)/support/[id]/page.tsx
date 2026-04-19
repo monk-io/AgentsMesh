@@ -13,10 +13,10 @@ import {
 } from "@/components/support/ticket-status-badge";
 import { MessageList } from "@/components/support/message-list";
 import {
-  getSupportTicketDetail,
   addSupportTicketMessage,
-  SupportTicketDetail,
 } from "@/lib/api/support-ticket";
+import type { SupportTicketDetail } from "@/lib/api/supportTicketTypes";
+import { getSupportTicketService } from "@/lib/wasm-core";
 
 export default function SupportTicketDetailPage() {
   const params = useParams();
@@ -37,7 +37,9 @@ export default function SupportTicketDetailPage() {
 
   const fetchDetail = useCallback(async () => {
     try {
-      const result = await getSupportTicketDetail(ticketId);
+      const result: SupportTicketDetail = JSON.parse(
+        await getSupportTicketService().get_detail(BigInt(ticketId))
+      );
       setData(result);
       setError(null);
     } catch {

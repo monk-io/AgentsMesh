@@ -3,8 +3,8 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useAuthStore } from "@/stores/auth";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { usePodStore, Pod, SIDEBAR_STATUS_MAP } from "@/stores/pod";
-import { useRunnerStore } from "@/stores/runner";
+import { usePodStore, usePods, Pod, SIDEBAR_STATUS_MAP } from "@/stores/pod";
+import { useRunnerStore, useRunners } from "@/stores/runner";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { FilterType } from "./WorkspaceFilters";
 
@@ -15,7 +15,7 @@ export function useWorkspaceSidebar(
   const currentOrg = useAuthStore((s) => s.currentOrg);
   const user = useAuthStore((s) => s.user);
   const isAdmin = currentOrg?.role === "owner" || currentOrg?.role === "admin";
-  const pods = usePodStore((s) => s.pods);
+  const pods = usePods();
   const loading = usePodStore((s) => s.loading);
   const fetchSidebarPods = usePodStore((s) => s.fetchSidebarPods);
   const loadMorePods = usePodStore((s) => s.loadMorePods);
@@ -24,7 +24,7 @@ export function useWorkspaceSidebar(
   const updatePodPerpetual = usePodStore((s) => s.updatePodPerpetual);
   const podHasMore = usePodStore((s) => s.podHasMore);
   const loadingMore = usePodStore((s) => s.loadingMore);
-  const runners = useRunnerStore((s) => s.runners);
+  const runners = useRunners();
   const runnersLoading = useRunnerStore((s) => s.loading);
   const fetchRunners = useRunnerStore((s) => s.fetchRunners);
   const addPane = useWorkspaceStore((s) => s.addPane);
@@ -72,7 +72,7 @@ export function useWorkspaceSidebar(
     return [...filteredPods].sort((a, b) => {
       const diff = (priority[a.status] ?? 4) - (priority[b.status] ?? 4);
       if (diff !== 0) return diff;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.created_at ?? '').getTime() - new Date(a.created_at ?? '').getTime();
     });
   }, [filteredPods]);
 

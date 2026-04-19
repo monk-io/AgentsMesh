@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { billingApi, BillingOverview, SubscriptionPlan, DeploymentInfo } from "@/lib/api";
+import type { BillingOverview, SubscriptionPlan, DeploymentInfo } from "@/lib/api/billing-types";
+import { getBillingService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import type { TranslationFn } from "../GeneralSettings";
 
@@ -65,14 +66,19 @@ export function useBillingSettings(t: TranslationFn): BillingState & BillingActi
     setLoading(true);
     setError(null);
     try {
-      const [overviewRes, plansRes, deploymentRes] = await Promise.all([
-        billingApi.getOverview().catch(() => null),
-        billingApi.listPlans().catch(() => ({ plans: [] })),
-        billingApi.getDeploymentInfo().catch(() => null),
+      const svc = getBillingService();
+      const [overviewJson, plansJson, deploymentJson] = await Promise.all([
+        svc.get_overview().catch(() => null),
+        svc.list_plans().catch(() => '{"plans":[]}'),
+        svc.get_deployment_info().catch(() => null),
       ]);
-      if (overviewRes?.overview) setOverview(overviewRes.overview);
+      if (overviewJson) {
+        const overviewRes = JSON.parse(overviewJson);
+        if (overviewRes?.overview) setOverview(overviewRes.overview);
+      }
+      const plansRes = JSON.parse(plansJson as string);
       setPlans(plansRes.plans || []);
-      if (deploymentRes) setDeploymentInfo(deploymentRes);
+      if (deploymentJson) setDeploymentInfo(JSON.parse(deploymentJson));
     } catch (err) {
       setError(getLocalizedErrorMessage(err, t, t("settings.billingPage.loadFailed") || "Failed to load billing data"));
     } finally {
@@ -86,8 +92,9 @@ export function useBillingSettings(t: TranslationFn): BillingState & BillingActi
     setUpgrading(true);
     setError(null);
     try {
-      if (overview) await billingApi.updateSubscription(planName);
-      else await billingApi.createSubscription(planName);
+      const svc = getBillingService();
+      if (overview) await svc.update_subscription(JSON.stringify({ plan_name: planName }));
+      else await svc.create_subscription(JSON.stringify({ plan_name: planName, billing_cycle: "monthly" }));
       await loadBillingData();
     } catch (err: unknown) {
       setError(getLocalizedErrorMessage(err, t, t("settings.billingPage.selectPlanFailed") || "Failed to select plan"));
@@ -110,7 +117,7 @@ export function useBillingSettings(t: TranslationFn): BillingState & BillingActi
         setUpgrading(true);
         setError(null);
         try {
-          await billingApi.upgradeSubscription(planName);
+          await getBillingService().upgrade(JSON.stringify({ plan_name: planName }));
           setPaymentMessage({ type: "success", text: t("settings.billingPage.upgradeSuccess") || "Plan upgraded successfully" });
           await loadBillingData();
         } catch (err) {
@@ -131,7 +138,7 @@ export function useBillingSettings(t: TranslationFn): BillingState & BillingActi
   const handleReactivateSubscription = async () => {
     setReactivating(true);
     try {
-      await billingApi.reactivateSubscription();
+      await getBillingService().reactivate();
       await loadBillingData();
       setPaymentMessage({ type: "success", text: t("settings.billingPage.reactivateSuccess") });
     } catch (err) {

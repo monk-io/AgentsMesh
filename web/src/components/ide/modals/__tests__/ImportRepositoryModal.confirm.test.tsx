@@ -1,19 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
 import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
-  createRepositoryResponse,
+  setupProviderMocks,
+  mockRepositoryCreate,
+  stableRepoSvc,
 } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Confirmation Step", () => {
@@ -22,12 +13,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should navigate to confirm step after selecting repository", async () => {
@@ -100,7 +86,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
   });
 
   it("should allow setting ticket prefix", async () => {
-    vi.mocked(repositoryApi.create).mockResolvedValue(createRepositoryResponse());
+    mockRepositoryCreate();
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />
@@ -129,10 +115,8 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(repositoryApi.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ticket_prefix: "TEST",
-        })
+      expect(stableRepoSvc.create).toHaveBeenCalledWith(
+        expect.stringContaining('"ticket_prefix":"TEST"'),
       );
     });
   });

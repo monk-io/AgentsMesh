@@ -11,6 +11,9 @@ vi.mock("@/stores/pod", () => ({
     const state = { pods: mockPods };
     return selector ? selector(state) : state;
   },
+  usePods: vi.fn(() => mockPods),
+  usePod: vi.fn((key: string) => mockPods.find((p: { pod_key: string }) => p.pod_key === key)),
+  useCurrentPod: vi.fn(() => null),
 }));
 
 const mockT = (key: string, params?: Record<string, string | number>) => {

@@ -13,6 +13,17 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   output: "standalone",
+
+  webpack: (config, { isServer }) => {
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+    };
+    config.output.webassemblyModuleFilename = isServer
+      ? "./../static/wasm/[modulehash].wasm"
+      : "static/wasm/[modulehash].wasm";
+    return config;
+  },
   allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS
     ? process.env.ALLOWED_DEV_ORIGINS.split(",")
     : [],

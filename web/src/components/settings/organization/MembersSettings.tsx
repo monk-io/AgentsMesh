@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/auth";
-import { organizationApi } from "@/lib/api";
-import { ApiError } from "@/lib/api/base";
+import { ApiError } from "@/lib/api/api-types";
 import { isApiErrorCode } from "@/lib/api/errors";
-import { invitationApi, type Invitation } from "@/lib/api/invitation";
+import type { Invitation } from "@/lib/api/invitationTypes";
+import { getOrgApiService, getInvitationService } from "@/lib/wasm-getters";
 import type { TranslationFn } from "./GeneralSettings";
 import { MembersList, type Member } from "./MembersList";
 import { PendingInvitations } from "./PendingInvitations";
@@ -52,7 +52,7 @@ export function MembersSettings({ t }: MembersSettingsProps) {
     if (!currentOrg) return;
     try {
       setLoading(true);
-      const response = await organizationApi.listMembers(currentOrg.slug);
+      const response = JSON.parse(await getOrgApiService().list_members(currentOrg.slug));
       setMembers(response.members || []);
     } catch (err) {
       console.error("Failed to load members:", err);
@@ -66,7 +66,7 @@ export function MembersSettings({ t }: MembersSettingsProps) {
     if (!currentOrg) return;
     try {
       setLoadingInvitations(true);
-      const response = await invitationApi.list();
+      const response = JSON.parse(await getInvitationService().list());
       setPendingInvitations(response.invitations || []);
     } catch (err) {
       console.error("Failed to load invitations:", err);
@@ -88,7 +88,7 @@ export function MembersSettings({ t }: MembersSettingsProps) {
     setInviting(true);
     setError(null);
     try {
-      await invitationApi.create(inviteEmail, inviteRole);
+      await getInvitationService().create(JSON.stringify({email: inviteEmail, role: inviteRole}));
       setShowInviteDialog(false);
       setInviteEmail("");
       setInviteRole("member");
@@ -113,13 +113,13 @@ export function MembersSettings({ t }: MembersSettingsProps) {
   const handleRevoke = async (invitationId: number) => {
     const confirmed = await revokeInvitationDialog.confirm();
     if (!confirmed) return;
-    try { await invitationApi.revoke(invitationId); setSuccessMessage(t("settings.members.invitationRevoked")); await loadInvitations(); }
+    try { await getInvitationService().revoke(BigInt(invitationId)); setSuccessMessage(t("settings.members.invitationRevoked")); await loadInvitations(); }
     catch (err) { console.error("Failed to revoke invitation:", err); setError(t("settings.members.failedToRevoke")); }
   };
 
   const handleResend = async (invitationId: number) => {
     setResendingId(invitationId);
-    try { await invitationApi.resend(invitationId); setSuccessMessage(t("settings.members.invitationResent")); }
+    try { await getInvitationService().resend(BigInt(invitationId)); setSuccessMessage(t("settings.members.invitationResent")); }
     catch (err) { console.error("Failed to resend invitation:", err); setError(t("settings.members.failedToResend")); }
     finally { setResendingId(null); }
   };
@@ -128,13 +128,13 @@ export function MembersSettings({ t }: MembersSettingsProps) {
     if (!currentOrg) return;
     const confirmed = await removeMemberDialog.confirm();
     if (!confirmed) return;
-    try { await organizationApi.removeMember(currentOrg.slug, userId); await loadMembers(); }
+    try { await getOrgApiService().remove_member(currentOrg.slug, BigInt(userId)); await loadMembers(); }
     catch (err) { console.error("Failed to remove member:", err); setError(t("settings.members.failedToRemove")); }
   };
 
   const handleRoleChange = async (userId: number, newRole: string) => {
     if (!currentOrg) return;
-    try { await organizationApi.updateMemberRole(currentOrg.slug, userId, newRole); await loadMembers(); }
+    try { await getOrgApiService().update_member_role(currentOrg.slug, BigInt(userId), JSON.stringify({role: newRole})); await loadMembers(); }
     catch (err) { console.error("Failed to update role:", err); setError(t("settings.members.failedToUpdate")); }
   };
 

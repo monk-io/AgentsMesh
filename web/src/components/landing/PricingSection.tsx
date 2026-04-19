@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
-import { publicBillingApi, type PublicPricingResponse, type Currency } from "@/lib/api/billing";
+import type { PublicPricingResponse, Currency } from "@/lib/api/billing-types";
+import { getBillingService } from "@/lib/wasm-core";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -53,8 +54,11 @@ export function PricingSection() {
       setLoading(false);
     };
     const timer = setTimeout(() => finish(FALLBACK_PRICING), 2500);
-    publicBillingApi.getPricing()
-      .then((data) => finish(data?.plans?.length ? data : FALLBACK_PRICING))
+    getBillingService().get_public_pricing()
+      .then((json: string) => {
+        const data = JSON.parse(json) as PublicPricingResponse;
+        finish(data?.plans?.length ? data : FALLBACK_PRICING);
+      })
       .catch(() => finish(FALLBACK_PRICING));
     return () => clearTimeout(timer);
   }, []);

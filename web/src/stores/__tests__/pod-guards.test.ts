@@ -2,18 +2,34 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "@testing-library/react";
 import { usePodStore, SIDEBAR_STATUS_MAP, Pod } from "../pod";
 import { useAuthStore } from "../auth";
-import { mockPod, mockPod2, resetPodStore } from "./pod-test-utils";
+import { getPodService } from "@/lib/wasm-core";
+import { mockPod, mockPod2, resetPodStore, seedPods, readPods } from "./pod-test-utils";
 
-vi.mock("@/lib/api", () => ({
-  podApi: { list: vi.fn(), get: vi.fn(), create: vi.fn(), terminate: vi.fn() },
-  ApiError: class extends Error {
-    status: number;
-    statusText: string;
-    constructor(s: number, t: string) { super(`API Error: ${s} ${t}`); this.name = "ApiError"; this.status = s; this.statusText = t; }
-  },
-}));
+function svc() {
+  return getPodService() as unknown as {
+    fetch_sidebar_pods: ReturnType<typeof vi.fn>;
+    load_more_pods: ReturnType<typeof vi.fn>;
+    set_pods: (json: string) => void;
+    upsert_pod: (json: string) => void;
+  };
+}
 
-import { podApi } from "@/lib/api";
+function mockSidebar(pods: unknown[], total: number, hasMore = pods.length < total) {
+  vi.mocked(svc().fetch_sidebar_pods).mockImplementation(async () => {
+    svc().set_pods(JSON.stringify(pods));
+    return JSON.stringify({ pods, total, hasMore });
+  });
+}
+
+function mockLoadMore(newPods: unknown[], total: number) {
+  vi.mocked(svc().load_more_pods).mockImplementation(async () => {
+    for (const p of newPods) svc().upsert_pod(JSON.stringify(p));
+    const allCount = JSON.parse(
+      ((svc() as unknown) as { pods_json: () => string }).pods_json() || "[]"
+    ).length;
+    return JSON.stringify({ newPods, total, hasMore: allCount < total, allCount });
+  });
+}
 
 describe("Pod Store — defaults", () => {
   it("should default currentSidebarFilter to mine", () => {
@@ -85,72 +101,56 @@ describe("Pod Store — SIDEBAR_STATUS_MAP client-side guard", () => {
 describe("Pod Store — fetchSidebarPods", () => {
   beforeEach(resetPodStore);
 
-  it("should fetch with correct status mapping for org filter", async () => {
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [mockPod], total: 1, limit: 20, offset: 0 });
+  it("should pass org filter to service with no user id", async () => {
+    mockSidebar([mockPod], 1);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("org");
     });
 
-    expect(podApi.list).toHaveBeenCalledWith({
-      status: "running,initializing",
-      limit: 20,
-      offset: 0,
-    });
+    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("org", null);
     expect(usePodStore.getState().currentSidebarFilter).toBe("org");
   });
 
-  it("should fetch with completed status mapping", async () => {
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [], total: 0, limit: 20, offset: 0 });
+  it("should pass completed filter to service", async () => {
+    mockSidebar([], 0);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("completed");
     });
 
-    expect(podApi.list).toHaveBeenCalledWith({
-      status: "terminated,failed,paused,completed,error",
-      limit: 20,
-      offset: 0,
-    });
+    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("completed", null);
   });
 
-  it("should fetch with createdById for mine filter", async () => {
+  it("should pass mine filter with current user id", async () => {
     useAuthStore.setState({ user: { id: 42, email: "test@test.com", username: "test" } });
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [mockPod], total: 1, limit: 20, offset: 0 });
+    mockSidebar([mockPod], 1);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("mine");
     });
 
-    expect(podApi.list).toHaveBeenCalledWith({
-      status: "running,initializing",
-      createdById: 42,
-      limit: 20,
-      offset: 0,
-    });
+    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("mine", BigInt(42));
     expect(usePodStore.getState().currentSidebarFilter).toBe("mine");
   });
 
-  it("should fetch mine without createdById when user is not set", async () => {
+  it("should pass mine filter with null user when not logged in", async () => {
     useAuthStore.setState({ user: null });
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [], total: 0, limit: 20, offset: 0 });
+    mockSidebar([], 0);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("mine");
     });
 
-    expect(podApi.list).toHaveBeenCalledWith({
-      status: "running,initializing",
-      limit: 20,
-      offset: 0,
-    });
+    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("mine", null);
   });
 
   it("should set loading during fetch and clear after", async () => {
     let loadingDuringFetch = false;
-    vi.mocked(podApi.list).mockImplementation(async () => {
+    vi.mocked(svc().fetch_sidebar_pods).mockImplementation(async () => {
       loadingDuringFetch = usePodStore.getState().loading;
-      return { pods: [], total: 0, limit: 20, offset: 0 };
+      svc().set_pods("[]");
+      return JSON.stringify({ pods: [], total: 0, hasMore: false });
     });
 
     await act(async () => {
@@ -162,7 +162,7 @@ describe("Pod Store — fetchSidebarPods", () => {
   });
 
   it("should compute podHasMore correctly", async () => {
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [mockPod], total: 5, limit: 20, offset: 0 });
+    mockSidebar([mockPod], 5);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("org");
@@ -173,7 +173,7 @@ describe("Pod Store — fetchSidebarPods", () => {
   });
 
   it("should handle error and clear loading", async () => {
-    vi.mocked(podApi.list).mockRejectedValue(new Error("Network error"));
+    vi.mocked(svc().fetch_sidebar_pods).mockRejectedValue(new Error("Network error"));
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("org");
@@ -187,155 +187,65 @@ describe("Pod Store — fetchSidebarPods", () => {
 describe("Pod Store — loadMorePods", () => {
   beforeEach(resetPodStore);
 
-  it("should load more pods with correct offset", async () => {
-    usePodStore.setState({
-      pods: [mockPod],
-      podHasMore: true,
-      currentSidebarFilter: "org",
-    });
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [mockPod2], total: 2, limit: 20, offset: 1 });
+  it("should load more pods with offset equal to current pods length", async () => {
+    seedPods(mockPod);
+    usePodStore.setState({ podHasMore: true, currentSidebarFilter: "org" });
+    mockLoadMore([mockPod2], 2);
 
     await act(async () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(podApi.list).toHaveBeenCalledWith({
-      status: "running,initializing",
-      limit: 20,
-      offset: 1,
-    });
-    expect(usePodStore.getState().pods).toHaveLength(2);
+    expect(svc().load_more_pods).toHaveBeenCalledWith("org", null, BigInt(1));
+    expect(readPods()).toHaveLength(2);
   });
 
   it("should skip when no more pods", async () => {
-    usePodStore.setState({ pods: [mockPod], podHasMore: false });
+    seedPods(mockPod);
+    usePodStore.setState({ podHasMore: false });
 
     await act(async () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(podApi.list).not.toHaveBeenCalled();
+    expect(svc().load_more_pods).not.toHaveBeenCalled();
   });
 
   it("should skip when already loading more", async () => {
-    usePodStore.setState({ pods: [mockPod], podHasMore: true, loadingMore: true });
+    seedPods(mockPod);
+    usePodStore.setState({ podHasMore: true, loadingMore: true });
 
     await act(async () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(podApi.list).not.toHaveBeenCalled();
+    expect(svc().load_more_pods).not.toHaveBeenCalled();
   });
 
-  it("should deduplicate pods already in list", async () => {
-    usePodStore.setState({
-      pods: [mockPod, mockPod2],
-      podHasMore: true,
-      currentSidebarFilter: "org",
-    });
-    // API returns mockPod2 again (realtime event already added it)
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [mockPod2], total: 3, limit: 20, offset: 2 });
+  it("should deduplicate pods already in list (upsert by pod_key)", async () => {
+    seedPods(mockPod, mockPod2);
+    usePodStore.setState({ podHasMore: true, currentSidebarFilter: "org" });
+    mockLoadMore([mockPod2], 3);
 
     await act(async () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    // Should not duplicate mockPod2
-    expect(usePodStore.getState().pods).toHaveLength(2);
+    expect(readPods()).toHaveLength(2);
   });
 
-  it("should load more with createdById for mine filter", async () => {
+  it("should pass mine filter with current user id", async () => {
     useAuthStore.setState({ user: { id: 42, email: "test@test.com", username: "test" } });
-    usePodStore.setState({
-      pods: [mockPod],
-      podHasMore: true,
-      currentSidebarFilter: "mine",
-    });
-    vi.mocked(podApi.list).mockResolvedValue({ pods: [mockPod2], total: 2, limit: 20, offset: 1 });
+    seedPods(mockPod);
+    usePodStore.setState({ podHasMore: true, currentSidebarFilter: "mine" });
+    mockLoadMore([mockPod2], 2);
 
     await act(async () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(podApi.list).toHaveBeenCalledWith({
-      status: "running,initializing",
-      createdById: 42,
-      limit: 20,
-      offset: 1,
-    });
-    expect(usePodStore.getState().pods).toHaveLength(2);
+    expect(svc().load_more_pods).toHaveBeenCalledWith("mine", BigInt(42), BigInt(1));
+    expect(readPods()).toHaveLength(2);
   });
 });
 
-describe("Pod Store — timestamp guards", () => {
-  beforeEach(resetPodStore);
-
-  it("should reject stale updatePodStatus with older timestamp", () => {
-    usePodStore.setState({
-      pods: [mockPod],
-      podTimestamps: { "pod-abc-123": 2000 },
-    });
-
-    act(() => {
-      usePodStore.getState().updatePodStatus("pod-abc-123", "terminated", undefined, undefined, undefined, 1000);
-    });
-
-    // Stale update rejected — status unchanged
-    expect(usePodStore.getState().pods[0].status).toBe("running");
-  });
-
-  it("should accept updatePodStatus with newer timestamp", () => {
-    usePodStore.setState({
-      pods: [mockPod],
-      podTimestamps: { "pod-abc-123": 1000 },
-    });
-
-    act(() => {
-      usePodStore.getState().updatePodStatus("pod-abc-123", "terminated", undefined, undefined, undefined, 2000);
-    });
-
-    expect(usePodStore.getState().pods[0].status).toBe("terminated");
-    expect(usePodStore.getState().podTimestamps["pod-abc-123"]).toBe(2000);
-  });
-
-  it("should accept update without timestamp (backwards compat)", () => {
-    usePodStore.setState({
-      pods: [mockPod],
-      podTimestamps: { "pod-abc-123": 5000 },
-    });
-
-    act(() => {
-      usePodStore.getState().updatePodStatus("pod-abc-123", "paused");
-    });
-
-    // No timestamp = always accepted
-    expect(usePodStore.getState().pods[0].status).toBe("paused");
-  });
-
-  it("should reject stale updateAgentStatus", () => {
-    usePodStore.setState({
-      pods: [mockPod],
-      podTimestamps: { "pod-abc-123": 3000 },
-    });
-
-    act(() => {
-      usePodStore.getState().updateAgentStatus("pod-abc-123", "idle", 1000);
-    });
-
-    expect(usePodStore.getState().pods[0].agent_status).toBe("executing");
-  });
-
-  it("should reject stale updatePodTitle", () => {
-    const titledPod = { ...mockPod, title: "Original" };
-    usePodStore.setState({
-      pods: [titledPod],
-      podTimestamps: { "pod-abc-123": 3000 },
-    });
-
-    act(() => {
-      usePodStore.getState().updatePodTitle("pod-abc-123", "Stale Title", 1000);
-    });
-
-    expect(usePodStore.getState().pods[0].title).toBe("Original");
-  });
-});

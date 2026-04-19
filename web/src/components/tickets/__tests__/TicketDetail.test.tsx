@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@/test/test-utils'
 import { TicketDetail } from '../TicketDetail'
-import { ticketApi } from '@/lib/api'
+import { getTicketRelationsService, getApiClient, getOrgApiService } from '@/lib/wasm-core'
 
 // Mock next/navigation
 const mockRouterBack = vi.fn()
@@ -13,7 +13,6 @@ vi.mock('next/navigation', () => ({
   }),
 }))
 
-// Mock useAuthStore to provide currentOrg
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({
     currentOrg: { slug: 'test-org' },
@@ -21,12 +20,15 @@ vi.mock('@/stores/auth', () => ({
   }),
 }))
 
-// Mock ticket store — supports both selector and no-selector calls
 const mockTicketStoreState: Record<string, unknown> = {}
 vi.mock('@/stores/ticket', () => ({
   useTicketStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) =>
     selector ? selector(mockTicketStoreState) : mockTicketStoreState
   ),
+  useCurrentTicket: vi.fn(() => mockTicketStoreState.currentTicket ?? null),
+  useTickets: vi.fn(() => []),
+  useBoardColumns: vi.fn(() => []),
+  useLabels: vi.fn(() => []),
   getStatusInfo: (status: string) => ({
     label: status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
     color: 'text-gray-700',
@@ -35,25 +37,17 @@ vi.mock('@/stores/ticket', () => ({
   getPriorityInfo: (priority: string) => ({
     label: priority.charAt(0).toUpperCase() + priority.slice(1),
     color: 'text-gray-500',
-    icon: '→',
+    icon: '\u2192',
   }),
 }))
 
-// Mock ticket API
-vi.mock('@/lib/api', () => ({
-  ticketApi: {
-    getSubTickets: vi.fn(),
-    listRelations: vi.fn(),
-    listCommits: vi.fn(),
-    listComments: vi.fn(),
-    getPods: vi.fn(),
-  },
-  organizationApi: {
-    listMembers: vi.fn().mockResolvedValue({ members: [] }),
-  },
-}))
+vi.mock('@/lib/api', () => ({}))
 
-// Mock RepositorySelect
+vi.mock('@/lib/wasm-getters', async () => {
+  const wasmCore = await vi.importMock<typeof import('@/lib/wasm-core')>('@/lib/wasm-core')
+  return { ...wasmCore }
+})
+
 vi.mock('@/components/common/RepositorySelect', () => ({
   RepositorySelect: ({ value, onChange, placeholder }: { value: number | null; onChange: (v: number | null) => void; placeholder?: string }) => (
     <select data-testid="repository-select" value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}>
@@ -63,7 +57,6 @@ vi.mock('@/components/common/RepositorySelect', () => ({
   ),
 }))
 
-// Mock BlockEditor (lazy-loaded in TicketDetail, always editable)
 vi.mock('@/components/ui/block-editor', () => ({
   BlockViewer: ({ content }: { content: string }) => <div data-testid="block-viewer">{content}</div>,
   default: ({ initialContent, onChange }: { initialContent: string; onChange?: (v: string) => void; editable?: boolean }) => (
@@ -71,19 +64,16 @@ vi.mock('@/components/ui/block-editor', () => ({
   ),
 }))
 
-// Mock workspace store (used by sidebar pod section)
 vi.mock('@/stores/workspace', () => ({
   useWorkspaceStore: () => ({
     addPane: vi.fn(),
   }),
 }))
 
-// Mock CreatePodModal
 vi.mock('@/components/ide/CreatePodModal', () => ({
   CreatePodModal: () => null,
 }))
 
-// Mock pod utils and AgentStatusBadge
 vi.mock('@/lib/pod-utils', () => ({
   getPodDisplayName: (pod: { pod_key: string }) => pod.pod_key,
 }))
@@ -122,7 +112,6 @@ describe('TicketDetail Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Update mutable store state (shared with the mock)
     Object.assign(mockTicketStoreState, {
       currentTicket: mockTicket,
       fetchTicket: mockFetchTicket,
@@ -134,11 +123,13 @@ describe('TicketDetail Component', () => {
       error: null,
     })
 
-    ;(ticketApi.getSubTickets as ReturnType<typeof vi.fn>).mockResolvedValue({ sub_tickets: [] })
-    ;(ticketApi.listRelations as ReturnType<typeof vi.fn>).mockResolvedValue({ relations: [] })
-    ;(ticketApi.listCommits as ReturnType<typeof vi.fn>).mockResolvedValue({ commits: [] })
-    ;(ticketApi.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({ comments: [], total: 0 })
-    ;(ticketApi.getPods as ReturnType<typeof vi.fn>).mockResolvedValue({ pods: [] })
+    const client = getApiClient()
+    vi.mocked(client.get).mockResolvedValue(JSON.stringify({ sub_tickets: [], pods: [] }))
+    vi.mocked(getTicketRelationsService().list_relations).mockResolvedValue(JSON.stringify({ relations: [] }))
+    vi.mocked(getTicketRelationsService().list_commits).mockResolvedValue(JSON.stringify({ commits: [] }))
+    vi.mocked(getTicketRelationsService().list_comments).mockResolvedValue(JSON.stringify({ comments: [], total: 0 }))
+
+    vi.mocked(getOrgApiService().list_members).mockResolvedValue(JSON.stringify({ members: [] }))
   })
 
   describe('rendering', () => {
@@ -310,7 +301,6 @@ describe('TicketDetail Component', () => {
     it('should display timestamps', async () => {
       render(<TicketDetail slug="PROJ-42" />)
       await waitFor(() => {
-        // Timestamps are now in compact "Created Xd ago · Updated Xd ago" format
         const timestampEl = screen.getByText(/Created/)
         expect(timestampEl).toBeInTheDocument()
       })

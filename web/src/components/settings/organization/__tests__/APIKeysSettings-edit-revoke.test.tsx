@@ -8,22 +8,8 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikey";
-
-// Mock the apiKeyApi module
-const mockList = vi.fn();
-const mockUpdate = vi.fn();
-const mockRevoke = vi.fn();
-
-vi.mock("@/lib/api/apikey", () => ({
-  apiKeyApi: {
-    list: (...args: unknown[]) => mockList(...args),
-    create: vi.fn(),
-    update: (...args: unknown[]) => mockUpdate(...args),
-    delete: vi.fn(),
-    revoke: (...args: unknown[]) => mockRevoke(...args),
-  },
-}));
+import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
+import { getApiKeyService } from "@/lib/wasm-core";
 
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
@@ -101,6 +87,21 @@ vi.mock("../apikeys", () => ({
 
 const mockT = vi.fn((key: string) => key);
 
+const mockList = vi.fn();
+const mockUpdate = vi.fn();
+const mockRevoke = vi.fn();
+
+function setupServiceMock() {
+  vi.mocked(getApiKeyService).mockReturnValue({
+    list: mockList,
+    get: vi.fn(),
+    create: vi.fn(),
+    update: mockUpdate,
+    delete: vi.fn(),
+    revoke: mockRevoke,
+  } as unknown as ReturnType<typeof getApiKeyService>);
+}
+
 async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   let result: ReturnType<typeof render>;
   await act(async () => {
@@ -138,7 +139,10 @@ describe("APIKeysSettings - edit & revoke flows", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ api_keys: sampleKeys, total: 2 });
+    setupServiceMock();
+    mockList.mockResolvedValue(
+      JSON.stringify({ api_keys: sampleKeys, total: 2 })
+    );
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -179,9 +183,9 @@ describe("APIKeysSettings - edit & revoke flows", () => {
     });
 
     it("should refresh key list after saving edit", async () => {
-      mockUpdate.mockResolvedValue({
-        api_key: { id: 1, name: "Updated" },
-      });
+      vi.mocked(mockUpdate).mockResolvedValue(
+        JSON.stringify({ api_key: { id: 1, name: "Updated" } })
+      );
 
       await renderAndWaitForLoad();
 
@@ -222,7 +226,9 @@ describe("APIKeysSettings - edit & revoke flows", () => {
 
     it("should call revoke API when confirmed", async () => {
       mockConfirm.mockResolvedValue(true);
-      mockRevoke.mockResolvedValue({ message: "Revoked" });
+      vi.mocked(mockRevoke).mockResolvedValue(
+        JSON.stringify({ message: "Revoked" })
+      );
 
       await renderAndWaitForLoad();
 
@@ -231,7 +237,7 @@ describe("APIKeysSettings - edit & revoke flows", () => {
       });
 
       await waitFor(() => {
-        expect(mockRevoke).toHaveBeenCalledWith(1);
+        expect(mockRevoke).toHaveBeenCalledWith(BigInt(1));
       });
     });
 
@@ -249,7 +255,9 @@ describe("APIKeysSettings - edit & revoke flows", () => {
 
     it("should refresh key list after successful revoke", async () => {
       mockConfirm.mockResolvedValue(true);
-      mockRevoke.mockResolvedValue({ message: "Revoked" });
+      vi.mocked(mockRevoke).mockResolvedValue(
+        JSON.stringify({ message: "Revoked" })
+      );
 
       await renderAndWaitForLoad();
 
@@ -266,7 +274,7 @@ describe("APIKeysSettings - edit & revoke flows", () => {
 
     it("should handle revoke API failure gracefully", async () => {
       mockConfirm.mockResolvedValue(true);
-      mockRevoke.mockRejectedValue(new Error("Revoke failed"));
+      vi.mocked(mockRevoke).mockRejectedValue(new Error("Revoke failed"));
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});

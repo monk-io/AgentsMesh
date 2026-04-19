@@ -25,11 +25,12 @@ import {
   Settings,
   Repeat,
   Blocks,
+  Layers,
   LifeBuoy,
   CircleHelp,
   type LucideIcon,
 } from "lucide-react";
-import { Logo } from "@/components/common";
+import { OrgSwitcher } from "@/components/ide/OrgSwitcher";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   terminal: Terminal,
@@ -41,6 +42,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   repository: FolderGit2,
   server: Server,
   settings: Settings,
+  layers: Layers,
 };
 
 interface ActivityBarProps {
@@ -57,7 +59,6 @@ export function ActivityBar({ className }: ActivityBarProps) {
   const t = useTranslations();
   const totalChannelUnread = useChannelMessageStore((s) => s.totalUnreadCount());
 
-  // Map activity to route
   const getActivityRoute = (activity: ActivityType): string => {
     switch (activity) {
       case "workspace":
@@ -72,6 +73,8 @@ export function ActivityBar({ className }: ActivityBarProps) {
         return `/${orgSlug}/loops`;
       case "blocks":
         return `/${orgSlug}/blocks`;
+      case "infra":
+        return `/${orgSlug}/infra`;
       case "repositories":
         return `/${orgSlug}/repositories`;
       case "runners":
@@ -83,30 +86,19 @@ export function ActivityBar({ className }: ActivityBarProps) {
     }
   };
 
-  // Determine active activity from pathname
   React.useEffect(() => {
-    if (pathname.includes("/workspace")) {
-      setActiveActivity("workspace");
-    } else if (pathname.includes("/tickets")) {
-      setActiveActivity("tickets");
-    } else if (pathname.includes("/channels")) {
-      setActiveActivity("channels");
-    } else if (pathname.includes("/mesh")) {
-      setActiveActivity("mesh");
-    } else if (pathname.includes("/loops")) {
-      setActiveActivity("loops");
-    } else if (pathname.includes("/blocks")) {
-      setActiveActivity("blocks");
-    } else if (pathname.includes("/repositories")) {
-      setActiveActivity("repositories");
-    } else if (pathname.includes("/runners")) {
-      setActiveActivity("runners");
-    } else if (pathname.includes("/settings")) {
-      setActiveActivity("settings");
-    }
+    if (pathname.includes("/workspace")) setActiveActivity("workspace");
+    else if (pathname.includes("/tickets")) setActiveActivity("tickets");
+    else if (pathname.includes("/channels")) setActiveActivity("channels");
+    else if (pathname.includes("/mesh")) setActiveActivity("mesh");
+    else if (pathname.includes("/loops")) setActiveActivity("loops");
+    else if (pathname.includes("/blocks")) setActiveActivity("blocks");
+    else if (pathname.includes("/infra")) setActiveActivity("infra");
+    else if (pathname.includes("/repositories")) setActiveActivity("repositories");
+    else if (pathname.includes("/runners")) setActiveActivity("runners");
+    else if (pathname.includes("/settings")) setActiveActivity("settings");
   }, [pathname, setActiveActivity]);
 
-  // Split activities into main and bottom (settings)
   const mainActivities = ACTIVITIES.filter((a) => a.id !== "settings");
   const bottomActivities = ACTIVITIES.filter((a) => a.id === "settings");
 
@@ -118,63 +110,66 @@ export function ActivityBar({ className }: ActivityBarProps) {
           className
         )}
       >
-        {/* Logo */}
-        <div className="h-12 flex items-center justify-center border-b border-border">
-          <Link href={`/${orgSlug}/workspace`} className="flex items-center justify-center">
-            <div className="w-7 h-7 rounded-lg overflow-hidden">
-              <Logo />
-            </div>
-          </Link>
+        {/* Org switcher (replaces logo per design — design/pages/*.pastel activity_bar > org_switcher) */}
+        <div className="flex h-12 items-center justify-center border-b border-border">
+          <OrgSwitcher />
         </div>
 
-        {/* Main activities */}
         <nav className="flex-1 flex flex-col items-center py-2 gap-1">
-          {mainActivities.map((activity) => {
+          {mainActivities.map((activity, idx) => {
             const Icon = ICON_MAP[activity.icon] || Terminal;
             const isActive = activeActivity === activity.id;
             const showBadge = activity.id === "channels" && totalChannelUnread > 0;
 
+            // Divider between core (channels/workspace/blocks) and orchestration.
+            const prev = mainActivities[idx - 1];
+            const isOrchestration = ["tickets", "loops", "mesh", "infra"].includes(activity.id);
+            const prevIsCore = prev && ["channels", "workspace", "blocks"].includes(prev.id);
+            const showDivider = isOrchestration && prevIsCore;
+
             return (
-              <Tooltip key={activity.id}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={getActivityRoute(activity.id)}
-                    className={cn(
-                      "w-10 h-10 flex items-center justify-center rounded-md transition-colors relative",
-                      isActive
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    )}
-                    onClick={() => setActiveActivity(activity.id)}
-                  >
-                    {/* Active indicator */}
-                    {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
-                    )}
-                    <Icon className="w-5 h-5" />
-                    {showBadge && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-0.5 text-[9px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center leading-none">
-                        {totalChannelUnread > 99 ? "99+" : totalChannelUnread}
-                      </span>
-                    )}
-                  </Link>
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent
-                    side="right"
-                    className="z-50 bg-popover text-popover-foreground px-2 py-1 text-sm rounded shadow-md border border-border"
-                  >
-                    {t(`ide.activities.${activity.id}`)}
-                  </TooltipContent>
-                </TooltipPortal>
-              </Tooltip>
+              <React.Fragment key={activity.id}>
+                {showDivider && (
+                  <div className="my-1 h-px w-6 bg-border" aria-hidden="true" />
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={getActivityRoute(activity.id)}
+                      className={cn(
+                        "w-10 h-10 flex items-center justify-center rounded-md transition-colors relative",
+                        isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                      )}
+                      onClick={() => setActiveActivity(activity.id)}
+                    >
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
+                      )}
+                      <Icon className="w-5 h-5" />
+                      {showBadge && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-0.5 text-[9px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center leading-none">
+                          {totalChannelUnread > 99 ? "99+" : totalChannelUnread}
+                        </span>
+                      )}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      side="right"
+                      className="z-50 bg-popover text-popover-foreground px-2 py-1 text-sm rounded shadow-md border border-border"
+                    >
+                      {t(`ide.activities.${activity.id}`)}
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              </React.Fragment>
             );
           })}
         </nav>
 
-        {/* Bottom activities (Support + Help + Settings) */}
         <nav className="flex flex-col items-center py-2 gap-1 border-t border-border">
-          {/* Support link (user-level, no org context) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
@@ -202,7 +197,6 @@ export function ActivityBar({ className }: ActivityBarProps) {
             </TooltipPortal>
           </Tooltip>
 
-          {/* Help & Feedback */}
           <Tooltip>
             <TooltipTrigger asChild>
               <a

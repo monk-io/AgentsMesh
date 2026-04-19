@@ -1,18 +1,39 @@
 import { create } from "zustand";
-import { meshApi, MeshNodeData, MeshEdgeData, ChannelInfoData, MeshTopologyData, RunnerInfoData } from "@/lib/api";
+import { useMemo } from "react";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
+import { getMeshService } from "@/lib/wasm-core";
 import { useIDEStore } from "./ide";
 import { useChannelStore } from "./channel";
 
-// Re-export API types with cleaner names for component use
-export type MeshNode = MeshNodeData;
-export type MeshEdge = MeshEdgeData;
-export type ChannelInfo = ChannelInfoData;
-export type MeshTopology = MeshTopologyData;
-export type RunnerInfo = RunnerInfoData;
+export interface MeshNode {
+  pod_key: string; alias?: string; status: string;
+  agent_status?: string; agent_slug?: string; runner_id?: number;
+  model?: string; title?: string; ticket_id?: number; ticket_slug?: string;
+  ticket_title?: string; repository_id?: number; created_by_id?: number;
+  runner_node_id?: string; runner_status?: string; started_at?: string;
+}
+export interface MeshEdge {
+  id?: number; source: string; target: string;
+  binding_status?: string; status?: string;
+  granted_scopes?: string[]; pending_scopes?: string[];
+}
+export interface ChannelInfo {
+  id: number; name: string; description?: string;
+  pod_keys: string[]; message_count?: number; is_archived?: boolean;
+}
+export interface RunnerInfo {
+  id: number; name: string; status: string;
+  node_id?: string; max_concurrent_pods?: number; current_pods?: number;
+  pod_keys?: string[];
+}
+export interface MeshTopology {
+  nodes: MeshNode[]; edges: MeshEdge[];
+  channels: ChannelInfo[]; runners: RunnerInfo[];
+}
 
-// Request to create a pod for a ticket
+export { getPodStatusInfo, getAgentStatusInfo, getBindingStatusInfo } from "./meshHelpers";
+
 export interface CreatePodForTicketRequest {
   runner_id: number;
   prompt?: string;
@@ -20,16 +41,25 @@ export interface CreatePodForTicketRequest {
   permission_mode?: string;
 }
 
+const svc = getMeshService;
+const bump = () => useMeshStore.setState((s) => ({ _tick: s._tick + 1 }));
+
+export function useTopology(): MeshTopology | null {
+  const tick = useMeshStore((s) => s._tick);
+  return useMemo(() => {
+    const raw = svc().topology_json();
+    return raw ? (JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)) as MeshTopology) : null;
+  }, [tick]);
+}
+
 interface MeshState {
-  // State
-  topology: MeshTopology | null;
+  _tick: number;
   selectedNode: string | null;
   selectedChannel: number | null;
   loading: boolean;
   error: string | null;
   nodePositions: Record<string, { x: number; y: number }>;
 
-  // Actions
   fetchTopology: () => void;
   cancelPendingTopologyFetch: () => void;
   selectNode: (podKey: string | null) => void;
@@ -37,7 +67,6 @@ interface MeshState {
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   clearError: () => void;
 
-  // Node helpers
   getNodeByKey: (podKey: string) => MeshNode | undefined;
   getEdgesForNode: (podKey: string) => MeshEdge[];
   getChannelsForNode: (podKey: string) => ChannelInfo[];
@@ -50,7 +79,7 @@ interface MeshState {
 let topologyDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useMeshStore = create<MeshState>((set, get) => ({
-  topology: null,
+  _tick: 0,
   selectedNode: null,
   selectedChannel: null,
   loading: false,
@@ -63,8 +92,8 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       topologyDebounceTimer = null;
       set({ loading: true, error: null });
       try {
-        const response = await meshApi.getTopology();
-        set({ topology: response.topology, loading: false });
+        await svc().fetch_topology();
+        set({ loading: false, _tick: get()._tick + 1 });
       } catch (error: unknown) {
         set({ error: getErrorMessage(error, "Failed to fetch topology"), loading: false });
       }
@@ -79,12 +108,13 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   },
 
   selectNode: (podKey) => {
-    set({ selectedNode: podKey, selectedChannel: null });
+    svc().select_node(podKey ?? undefined);
+    const raw = svc().selected_node();
+    set({ selectedNode: raw ? String(raw) : null, selectedChannel: null });
   },
 
   selectChannel: (channelId) => {
     if (channelId !== null) {
-      // Navigate to Channels tab and select the channel
       useIDEStore.getState().setActiveActivity("channels");
       useChannelStore.getState().setSelectedChannelId(channelId);
     }
@@ -92,60 +122,24 @@ export const useMeshStore = create<MeshState>((set, get) => ({
   },
 
   updateNodePosition: (nodeId, position) => {
-    set((state) => ({
-      nodePositions: {
-        ...state.nodePositions,
-        [nodeId]: position,
-      },
-    }));
+    set((state) => ({ nodePositions: { ...state.nodePositions, [nodeId]: position } }));
   },
 
-  clearError: () => {
-    set({ error: null });
-  },
+  clearError: () => set({ error: null }),
 
   getNodeByKey: (podKey) => {
-    const { topology } = get();
-    return topology?.nodes.find((n) => n.pod_key === podKey);
+    const raw = svc().get_node_json(podKey);
+    return raw ? JSON.parse(String(raw)) : undefined;
   },
-
-  getEdgesForNode: (podKey) => {
-    const { topology } = get();
-    if (!topology) return [];
-    return topology.edges.filter(
-      (e) => e.source === podKey || e.target === podKey
-    );
-  },
-
-  getChannelsForNode: (podKey) => {
-    const { topology } = get();
-    if (!topology) return [];
-    return topology.channels.filter((c) =>
-      c.pod_keys.includes(podKey)
-    );
-  },
-
-  getActiveNodes: () => {
-    const { topology } = get();
-    if (!topology) return [];
-    return topology.nodes.filter(
-      (n) => n.status === "running" || n.status === "initializing"
-    );
-  },
-
-  getNodesByRunner: (runnerId) => {
-    const { topology } = get();
-    if (!topology) return [];
-    return topology.nodes.filter((n) => n.runner_id === runnerId);
-  },
-
+  getEdgesForNode: (podKey) => JSON.parse(svc().get_edges_for_node_json(podKey)),
+  getChannelsForNode: (podKey) => JSON.parse(svc().get_channels_for_node_json(podKey)),
+  getActiveNodes: () => JSON.parse(svc().get_active_nodes_json()),
+  getNodesByRunner: (runnerId) => JSON.parse(svc().get_nodes_by_runner_json(BigInt(runnerId))),
   getRunnerInfo: (runnerId) => {
-    const { topology } = get();
-    return topology?.runners?.find((r) => r.id === runnerId);
+    const raw = svc().get_runner_info_json(BigInt(runnerId));
+    return raw ? JSON.parse(String(raw)) : undefined;
   },
 }));
-
-export { getPodStatusInfo, getAgentStatusInfo, getBindingStatusInfo } from "./mesh-status-info";
 
 reconnectRegistry.register({
   name: "mesh:topology",

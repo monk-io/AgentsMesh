@@ -3,14 +3,20 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSSOAuthURL } from "@/lib/api/sso";
-import type { SSOConfig } from "@/lib/api/sso";
+import type { SSOConfig } from "@/lib/api/ssoTypes";
+import { getOAuthBaseUrl } from "@/lib/env";
 import { useTranslations } from "next-intl";
 
 interface SSOSectionProps {
   ssoConfigs: SSOConfig[];
   onLdapSubmit: (username: string, password: string) => void;
   ldapLoading: boolean;
+}
+
+function getSSOAuthURL(domain: string, protocol: string, redirect?: string): string {
+  const base = getOAuthBaseUrl();
+  const params = redirect ? `?redirect=${encodeURIComponent(redirect)}` : "";
+  return `${base}/api/v1/auth/sso/${encodeURIComponent(domain)}/${encodeURIComponent(protocol)}${params}`;
 }
 
 export function SSOSection({ ssoConfigs, onLdapSubmit, ldapLoading }: SSOSectionProps) {

@@ -1,3 +1,15 @@
+/**
+ * Relay WebSocket connection management.
+ *
+ * Architecture:
+ * - Browser connects to Relay (not Backend) for terminal + ACP data
+ * - Control flow: Browser -> Backend (REST) -> Runner (gRPC)
+ * - Data flow: Browser <-> Relay <-> Runner (WebSocket)
+ *
+ * Transport is abstracted via IRelayBackend (see relayBackend.ts).
+ * TODO(wasm): Swap TsRelayBackend → WasmRelayBackend when relay crate is WASM-ready.
+ */
+
 import { MsgType, encodeMessage, encodeJsonMessage } from "./relayProtocol";
 import { podApi } from "@/lib/api/pod";
 import type { RelayConnection, ConnectionHandle, StatusListener } from "./relayConnectionTypes";
@@ -6,14 +18,6 @@ import { createNewConnection, doSendResize, type PoolContext } from "./relayConn
 export { MsgType, encodeMessage } from "./relayProtocol";
 export type { ConnectionStatus, RelayConnection, ConnectionHandle, RelayStatusInfo } from "./relayConnectionTypes";
 
-/**
- * Relay connection pool for managing WebSocket connections.
- *
- * - Connections are keyed by podKey and shared across multiple subscribers
- * - Each subscriber has a unique subscriptionId for idempotent add/remove
- * - Connection stays open as long as at least one subscriber exists
- * - Uses delayed disconnect (30s) when last subscriber leaves
- */
 class RelayConnectionPool {
   private connections: Map<string, RelayConnection> = new Map();
   private pendingSubscriptions: Map<string, Promise<ConnectionHandle>> = new Map();
@@ -80,8 +84,8 @@ class RelayConnectionPool {
   async subscribe(podKey: string, subscriptionId: string, onMessage: (data: Uint8Array | string) => void): Promise<ConnectionHandle> {
     const conn = this.connections.get(podKey);
     if (conn) {
-      if (!this.isConnectionAlive(conn)) {
-        this.disconnect(podKey);
+      if (conn.transport.isClosed) {
+        this.connections.delete(podKey);
         return this.subscribe(podKey, subscriptionId, onMessage);
       }
       if (conn.subscribers.has(subscriptionId)) {
@@ -90,8 +94,8 @@ class RelayConnectionPool {
       }
       if (conn.disconnectTimer) { clearTimeout(conn.disconnectTimer); conn.disconnectTimer = null; }
       conn.subscribers.set(subscriptionId, onMessage);
-      if (conn.ws.readyState === WebSocket.OPEN) {
-        conn.ws.send(encodeMessage(MsgType.SnapshotRequest, new Uint8Array(0)));
+      if (conn.transport.isOpen) {
+        conn.transport.send(encodeMessage(MsgType.Resync, new Uint8Array(0)));
       }
       return this.createHandle(podKey, subscriptionId);
     }
@@ -109,14 +113,14 @@ class RelayConnectionPool {
 
   send(podKey: string, data: string): void {
     const conn = this.connections.get(podKey);
-    if (!conn || conn.ws.readyState !== WebSocket.OPEN) return;
+    if (!conn || !conn.transport.isOpen) return;
     const now = Date.now();
     if (data.length > 1) {
       const lastInput = this.lastInputs.get(podKey);
       if (lastInput && lastInput.data === data && (now - lastInput.time) < this.deduplicateWindow) return;
       this.lastInputs.set(podKey, { data, time: now });
     }
-    conn.ws.send(encodeMessage(MsgType.Input, data));
+    conn.transport.send(encodeMessage(MsgType.Input, data));
     conn.lastActivity = now;
   }
 
@@ -163,19 +167,18 @@ class RelayConnectionPool {
     this.lastInputs.delete(podKey);
     this.acpListeners.delete(podKey);
     this.notifyStatusChange(podKey);
-    conn.ws.onopen = null; conn.ws.onmessage = null; conn.ws.onerror = null; conn.ws.onclose = null;
-    if (conn.ws.readyState === WebSocket.OPEN || conn.ws.readyState === WebSocket.CONNECTING) conn.ws.close();
+    conn.transport.close();
   }
 
   disconnectAll(): void { for (const [podKey] of this.connections) this.disconnect(podKey); }
   getStatus(podKey: string): RelayConnection["status"] | "none" { return this.connections.get(podKey)?.status || "none"; }
-  isConnected(podKey: string): boolean { const c = this.connections.get(podKey); return c?.status === "connected" && c.ws.readyState === WebSocket.OPEN; }
+  isConnected(podKey: string): boolean { const c = this.connections.get(podKey); return c?.status === "connected" && c.transport.isOpen; }
   isRunnerDisconnected(podKey: string): boolean { return this.connections.get(podKey)?.runnerDisconnected ?? false; }
 
   sendAcpCommand(podKey: string, command: Record<string, unknown>): void {
     const conn = this.connections.get(podKey);
-    if (!conn || conn.ws.readyState !== WebSocket.OPEN) return;
-    conn.ws.send(encodeJsonMessage(MsgType.AcpCommand, command));
+    if (!conn || !conn.transport.isOpen) return;
+    conn.transport.send(encodeJsonMessage(MsgType.AcpCommand, command));
     conn.lastActivity = Date.now();
   }
 
@@ -197,7 +200,7 @@ class RelayConnectionPool {
   }
 }
 
-// Singleton instance
+// Singleton instance — survive HMR rebuilds without leaking old pool state.
 function getOrCreatePool(): RelayConnectionPool {
   const key = "__relayPool" as keyof typeof globalThis;
   const existing = globalThis[key] as RelayConnectionPool | undefined;

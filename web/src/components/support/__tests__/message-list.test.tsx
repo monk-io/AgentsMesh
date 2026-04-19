@@ -1,14 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { MessageList } from "../message-list";
-import type { SupportTicketMessage } from "@/lib/api/support-ticket";
+import type { SupportTicketMessage } from "@/lib/api/supportTicketTypes";
+import { getSupportTicketService } from "@/lib/wasm-core";
 
-// Mock getSupportTicketAttachmentUrl
-vi.mock("@/lib/api/support-ticket", () => ({
-  getSupportTicketAttachmentUrl: vi.fn().mockResolvedValue({
-    url: "https://example.com/download/file.png",
-  }),
-}));
+const mockGetAttachmentUrl = vi.fn();
 
 // Mock window.open
 const mockWindowOpen = vi.fn();
@@ -72,9 +68,6 @@ const messageWithAttachments: SupportTicketMessage = {
 describe("MessageList", () => {
   it("renders empty state when no messages", () => {
     render(<MessageList messages={[]} />);
-    // The component uses t("support.detail.noComments") which may resolve
-    // to "No comments yet" (from tickets.detail) or the key path itself.
-    // We check for text content presence in a flexible way.
     const emptyDiv = document.querySelector(".py-12.text-center");
     expect(emptyDiv).toBeInTheDocument();
     expect(emptyDiv?.textContent).toBeTruthy();
@@ -92,6 +85,16 @@ describe("MessageList", () => {
 });
 
 describe("MessageBubble (via MessageList)", () => {
+  beforeEach(() => {
+    vi.mocked(getSupportTicketService).mockReturnValue({
+      list: vi.fn().mockResolvedValue('{"tickets":[]}'),
+      get_detail: vi.fn().mockResolvedValue('{}'),
+      get_attachment_url: mockGetAttachmentUrl,
+    } as unknown as ReturnType<typeof getSupportTicketService>);
+    mockGetAttachmentUrl.mockResolvedValue(
+      JSON.stringify({ url: "https://example.com/download/file.png" })
+    );
+  });
   it("renders user message correctly", () => {
     render(<MessageList messages={[baseMessage]} />);
     expect(
@@ -112,7 +115,6 @@ describe("MessageBubble (via MessageList)", () => {
     render(<MessageList messages={[messageWithAttachments]} />);
     expect(screen.getByText("screenshot.png")).toBeInTheDocument();
     expect(screen.getByText("log.txt")).toBeInTheDocument();
-    // Verify file sizes are shown
     expect(screen.getByText("(200.0 KB)")).toBeInTheDocument();
     expect(screen.getByText("(512 B)")).toBeInTheDocument();
   });
@@ -123,11 +125,7 @@ describe("MessageBubble (via MessageList)", () => {
     expect(downloadBtn).toBeInTheDocument();
     fireEvent.click(downloadBtn!);
 
-    // getSupportTicketAttachmentUrl is mocked to resolve, then window.open is called
-    const { getSupportTicketAttachmentUrl } = await import(
-      "@/lib/api/support-ticket"
-    );
-    expect(getSupportTicketAttachmentUrl).toHaveBeenCalledWith(101);
+    expect(mockGetAttachmentUrl).toHaveBeenCalledWith(BigInt(101));
   });
 
   it("shows user name when available", () => {

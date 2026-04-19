@@ -95,6 +95,9 @@ vi.mock("@/stores/workspace", () => ({
 vi.mock("@/stores/pod", () => ({
   usePodStore: (selector: (s: Record<string, unknown>) => unknown) =>
     selector({ fetchPods: vi.fn() }),
+  usePods: vi.fn(() => []),
+  usePod: vi.fn(() => undefined),
+  useCurrentPod: vi.fn(() => null),
 }));
 
 // Mock sonner and pod-utils

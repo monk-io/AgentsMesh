@@ -1,9 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach, type Mock } from "vitest";
 
+vi.mock("@/lib/wasm-core", () => import("@/test/__mocks__/wasm-core"));
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type MockSend = Mock<(...args: any[]) => any>;
 
-// Mock WebSocket
+let lastCreatedWs: MockWebSocket | null = null;
+
 class MockWebSocket {
   static CONNECTING = 0;
   static OPEN = 1;
@@ -14,37 +17,28 @@ class MockWebSocket {
   readyState: number = MockWebSocket.CONNECTING;
   binaryType: string = "blob";
   onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((e: { code: number; reason: string }) => void) | null = null;
   onerror: ((e: unknown) => void) | null = null;
   onmessage: ((e: { data: unknown }) => void) | null = null;
 
   constructor(url: string) {
     this.url = url;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+    lastCreatedWs = self;
     setTimeout(() => {
-      this.readyState = MockWebSocket.OPEN;
-      this.onopen?.();
+      self.readyState = MockWebSocket.OPEN;
+      self.onopen?.();
     }, 0);
   }
 
   send = vi.fn();
   close = vi.fn(() => {
     this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.();
   });
 }
 
 global.WebSocket = MockWebSocket as unknown as typeof WebSocket;
-
-// Mock pod API
-vi.mock("@/lib/api/pod", () => ({
-  podApi: {
-    getPodConnection: vi.fn().mockResolvedValue({
-      relay_url: "wss://relay.example.com",
-      token: "test-token",
-      pod_key: "pod-1",
-    }),
-  },
-}));
 
 describe("relayConnection - resize", () => {
   let pool: typeof import("@/stores/relayConnection").relayPool;
@@ -53,6 +47,7 @@ describe("relayConnection - resize", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.resetModules();
+    lastCreatedWs = null;
     const importedModule = await import("@/stores/relayConnection");
     pool = importedModule.relayPool;
   });
@@ -61,6 +56,10 @@ describe("relayConnection - resize", () => {
     pool?.disconnectAll();
     vi.useRealTimers();
   });
+
+  function getWsSend(): MockSend {
+    return lastCreatedWs!.send as MockSend;
+  }
 
   describe("sendResize", () => {
     it("should not throw for invalid dimensions", async () => {
@@ -79,21 +78,19 @@ describe("relayConnection - resize", () => {
 
       const conn = pool.getConnection("pod-1");
       expect(conn).toBeDefined();
-      expect(conn!.ws.readyState).toBe(MockWebSocket.OPEN);
+      expect(conn!.transport.isOpen).toBe(true);
 
-      // sendResize is debounced, need to advance timer
       pool.sendResize("pod-1", 120, 40);
-      await vi.advanceTimersByTimeAsync(200); // debounce is 150ms
+      await vi.advanceTimersByTimeAsync(200);
 
-      // Verify resize message was sent
-      expect(conn!.ws.send).toHaveBeenCalled();
-      const lastCall = (conn!.ws.send as MockSend).mock.calls[(conn!.ws.send as MockSend).mock.calls.length - 1];
+      const send = getWsSend();
+      expect(send).toHaveBeenCalled();
+      const lastCall = send.mock.calls[send.mock.calls.length - 1];
       const sentData = lastCall[0] as Uint8Array;
 
-      // Message format: [MsgType.Resize(0x04), cols_hi, cols_lo, rows_hi, rows_lo]
       expect(sentData[0]).toBe(0x04); // MsgType.Resize
-      expect((sentData[1] << 8) | sentData[2]).toBe(120); // cols
-      expect((sentData[3] << 8) | sentData[4]).toBe(40);  // rows
+      expect((sentData[1] << 8) | sentData[2]).toBe(120);
+      expect((sentData[3] << 8) | sentData[4]).toBe(40);
     });
 
     it("should not send resize for non-existent connection", async () => {
@@ -112,17 +109,18 @@ describe("relayConnection - resize", () => {
 
       const conn = pool.getConnection("pod-1");
       expect(conn).toBeDefined();
-      const sendCallsBefore = (conn!.ws.send as MockSend).mock.calls.length;
+      const send = getWsSend();
+      const sendCallsBefore = send.mock.calls.length;
 
       pool.forceResize("pod-1", 100, 30);
 
-      expect((conn!.ws.send as MockSend).mock.calls.length).toBe(sendCallsBefore + 1);
-      const lastCall = (conn!.ws.send as MockSend).mock.calls[(conn!.ws.send as MockSend).mock.calls.length - 1];
+      expect(send.mock.calls.length).toBe(sendCallsBefore + 1);
+      const lastCall = send.mock.calls[send.mock.calls.length - 1];
       const sentData = lastCall[0] as Uint8Array;
 
-      expect(sentData[0]).toBe(0x04); // MsgType.Resize
-      expect((sentData[1] << 8) | sentData[2]).toBe(100); // cols
-      expect((sentData[3] << 8) | sentData[4]).toBe(30);  // rows
+      expect(sentData[0]).toBe(0x04);
+      expect((sentData[1] << 8) | sentData[2]).toBe(100);
+      expect((sentData[3] << 8) | sentData[4]).toBe(30);
     });
 
     it("should queue pendingResize when connection is connecting", async () => {
@@ -133,7 +131,8 @@ describe("relayConnection - resize", () => {
 
       const conn = pool.getConnection("pod-1");
       expect(conn).toBeDefined();
-      expect(conn!.ws.readyState).toBe(MockWebSocket.CONNECTING);
+      expect(conn!.transport.isOpen).toBe(false);
+      expect(conn!.transport.isClosed).toBe(false);
 
       pool.forceResize("pod-1", 80, 24);
 
@@ -144,10 +143,10 @@ describe("relayConnection - resize", () => {
 
       expect(conn!.pendingResize).toBeUndefined();
 
-      const sendCalls = (conn!.ws.send as MockSend).mock.calls;
-      const resizeCalls = sendCalls.filter((call: unknown[]) => {
+      const send = getWsSend();
+      const resizeCalls = send.mock.calls.filter((call: unknown[]) => {
         const data = call[0] as Uint8Array;
-        return data[0] === 0x04; // MsgType.Resize
+        return data[0] === 0x04;
       });
       expect(resizeCalls.length).toBeGreaterThan(0);
     });
@@ -161,15 +160,15 @@ describe("relayConnection - resize", () => {
       await pool.subscribe("pod-1", "sub-1", onMessage);
       await vi.runAllTimersAsync();
 
-      const conn = pool.getConnection("pod-1");
-      const sendCallsBefore = (conn!.ws.send as MockSend).mock.calls.length;
+      const send = getWsSend();
+      const sendCallsBefore = send.mock.calls.length;
 
       pool.forceResize("pod-1", 0, 24);
       pool.forceResize("pod-1", 80, 0);
       pool.forceResize("pod-1", -1, 24);
       pool.forceResize("pod-1", 80, -1);
 
-      expect((conn!.ws.send as MockSend).mock.calls.length).toBe(sendCallsBefore);
+      expect(send.mock.calls.length).toBe(sendCallsBefore);
     });
 
     it("should send resize after reconnection", async () => {
@@ -184,16 +183,17 @@ describe("relayConnection - resize", () => {
 
       const conn = pool.getConnection("pod-1");
       expect(conn).toBeDefined();
-      expect(conn!.ws.readyState).toBe(MockWebSocket.OPEN);
+      expect(conn!.transport.isOpen).toBe(true);
 
-      const sendCallsBefore = (conn!.ws.send as MockSend).mock.calls.length;
+      const send = getWsSend();
+      const sendCallsBefore = send.mock.calls.length;
 
       pool.forceResize("pod-1", 120, 40);
 
-      expect((conn!.ws.send as MockSend).mock.calls.length).toBe(sendCallsBefore + 1);
-      const lastCall = (conn!.ws.send as MockSend).mock.calls[(conn!.ws.send as MockSend).mock.calls.length - 1];
+      expect(send.mock.calls.length).toBe(sendCallsBefore + 1);
+      const lastCall = send.mock.calls[send.mock.calls.length - 1];
       const sentData = lastCall[0] as Uint8Array;
-      expect(sentData[0]).toBe(0x04); // MsgType.Resize
+      expect(sentData[0]).toBe(0x04);
     });
   });
 

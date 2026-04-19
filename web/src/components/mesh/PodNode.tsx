@@ -81,7 +81,7 @@ function PodNode({ data }: PodNodeProps) {
         </div>
 
         <AgentStatusBadge
-          agentStatus={node.agent_status}
+          agentStatus={node.agent_status ?? ""}
           podStatus={node.status}
           variant="badge"
         />

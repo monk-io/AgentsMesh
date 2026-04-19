@@ -196,7 +196,7 @@ export function TicketList({ tickets, loading, onTicketClick }: TicketListProps)
 
                 {/* Updated */}
                 <td className="py-3 text-muted-foreground">
-                  {formatDate(ticket.updated_at)}
+                  {formatDate(ticket.updated_at ?? '')}
                 </td>
               </tr>
             );

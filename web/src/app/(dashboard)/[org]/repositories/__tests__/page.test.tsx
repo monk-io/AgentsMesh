@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
 import RepositoriesPage from "../page";
+import { getRepositoryService, getUserCredentialService } from "@/lib/wasm-core";
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -15,22 +16,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-// Mock the API modules
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    list: vi.fn(),
-    delete: vi.fn(),
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
-const mockRepositoryApi = vi.mocked(repositoryApi);
-const mockUserRepositoryProviderApi = vi.mocked(userRepositoryProviderApi);
+const mockRepoService = vi.mocked(getRepositoryService);
+const mockCredentialService = vi.mocked(getUserCredentialService);
 
 describe("RepositoriesPage", () => {
   const mockRepositories = [
@@ -113,10 +100,23 @@ describe("RepositoriesPage", () => {
     },
   ];
 
+  let mockList: ReturnType<typeof vi.fn>;
+  let mockDelete: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockRepositoryApi.list.mockResolvedValue({ repositories: mockRepositories });
-    mockUserRepositoryProviderApi.list.mockResolvedValue({ providers: mockProviders });
+    mockList = vi.fn().mockResolvedValue(JSON.stringify({ repositories: mockRepositories }));
+    mockDelete = vi.fn().mockResolvedValue(undefined);
+
+    mockRepoService.mockReturnValue({
+      ...getRepositoryService(),
+      list: mockList,
+      delete: mockDelete,
+    } as unknown as ReturnType<typeof getRepositoryService>);
+
+    mockCredentialService.mockReturnValue({
+      ...getUserCredentialService(),
+      list_repo_providers: vi.fn().mockResolvedValue(JSON.stringify({ providers: mockProviders })),
+    } as unknown as ReturnType<typeof getUserCredentialService>);
   });
 
   afterEach(() => {
@@ -125,12 +125,10 @@ describe("RepositoriesPage", () => {
 
   describe("loading state", () => {
     it("should show loading spinner initially", () => {
-      // Keep promise pending
-      mockRepositoryApi.list.mockImplementation(() => new Promise(() => {}));
+      mockList.mockImplementation(() => new Promise(() => {}));
 
       const { container } = render(<RepositoriesPage />);
 
-      // Check for spinner via class
       expect(container.querySelector(".animate-spin")).toBeTruthy();
     });
   });
@@ -165,7 +163,6 @@ describe("RepositoriesPage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Total Repositories")).toBeInTheDocument();
-        // "Active" appears in stats card label and in status badges for repositories
         expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("Providers")).toBeInTheDocument();
       });
@@ -175,7 +172,6 @@ describe("RepositoriesPage", () => {
       render(<RepositoriesPage />);
 
       await waitFor(() => {
-        // Total: 3, Active: 2, Providers: 2
         const stats = screen.getAllByText("2");
         expect(stats.length).toBeGreaterThanOrEqual(2);
       });
@@ -214,7 +210,6 @@ describe("RepositoriesPage", () => {
       render(<RepositoriesPage />);
 
       await waitFor(() => {
-        // Check for active and inactive status badges
         const activeBadges = screen.getAllByText("Active");
         expect(activeBadges.length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("Inactive")).toBeInTheDocument();
@@ -225,7 +220,6 @@ describe("RepositoriesPage", () => {
       render(<RepositoriesPage />);
 
       await waitFor(() => {
-        // There can be multiple "main" branches from different repos
         expect(screen.getAllByText("main").length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("develop")).toBeInTheDocument();
       });
@@ -238,8 +232,6 @@ describe("RepositoriesPage", () => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
-      // Provider types are shown with capitalize CSS class but inner text is lowercase
-      // They also appear in the filter dropdown, so use getAllByText
       expect(screen.getAllByText("github").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("gitlab").length).toBeGreaterThanOrEqual(1);
     });
@@ -268,7 +260,6 @@ describe("RepositoriesPage", () => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
-      // Find the provider filter select
       const providerSelect = screen.getByRole("combobox");
       fireEvent.change(providerSelect, { target: { value: "gitlab" } });
 
@@ -295,50 +286,39 @@ describe("RepositoriesPage", () => {
 
   describe("delete functionality", () => {
     it("should show confirm dialog when delete button clicked", async () => {
-      mockRepositoryApi.delete.mockResolvedValue({ message: "Deleted" });
-
       render(<RepositoriesPage />);
 
       await waitFor(() => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
-      // Find and click the first delete button
       const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
       fireEvent.click(deleteButtons[0]);
 
-      // ConfirmDialog should be shown
       await waitFor(() => {
         expect(screen.getByText("Delete Repository")).toBeInTheDocument();
       });
     });
 
     it("should call delete API when confirmed in dialog", async () => {
-      mockRepositoryApi.delete.mockResolvedValue({ message: "Deleted" });
-
       render(<RepositoriesPage />);
 
       await waitFor(() => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
-      // Click delete button to open dialog
       const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
       fireEvent.click(deleteButtons[0]);
 
-      // Wait for dialog and click confirm
       await waitFor(() => {
         expect(screen.getByText("Delete Repository")).toBeInTheDocument();
       });
 
-      // Click the confirm button in the dialog (there should be a "Delete" button in dialog footer)
-      // Note: The first "Delete" button opens the dialog, then there are two "Delete" buttons visible
       const confirmButtons = screen.getAllByRole("button", { name: "Delete" });
-      // The last "Delete" button is the confirm button in the dialog
       fireEvent.click(confirmButtons[confirmButtons.length - 1]);
 
       await waitFor(() => {
-        expect(mockRepositoryApi.delete).toHaveBeenCalledWith(1);
+        expect(mockDelete).toHaveBeenCalledWith(BigInt(1));
       });
     });
 
@@ -349,24 +329,20 @@ describe("RepositoriesPage", () => {
         expect(screen.getByText("repo-one")).toBeInTheDocument();
       });
 
-      // Click delete button to open dialog
       const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
       fireEvent.click(deleteButtons[0]);
 
-      // Wait for dialog
       await waitFor(() => {
         expect(screen.getByText("Delete Repository")).toBeInTheDocument();
       });
 
-      // Click cancel button
       const cancelButton = screen.getByRole("button", { name: "Cancel" });
       fireEvent.click(cancelButton);
 
-      // Dialog should close and delete should not be called
       await waitFor(() => {
         expect(screen.queryByText("Delete Repository")).not.toBeInTheDocument();
       });
-      expect(mockRepositoryApi.delete).not.toHaveBeenCalled();
+      expect(mockDelete).not.toHaveBeenCalled();
     });
   });
 

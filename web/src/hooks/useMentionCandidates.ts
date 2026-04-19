@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/stores/auth";
-import { usePodStore } from "@/stores/pod";
-import { organizationApi } from "@/lib/api/organization";
-import { channelApi } from "@/lib/api/channel";
+import { usePods } from "@/stores/pod";
+import { getOrgApiService, getChannelService } from "@/lib/wasm-getters";
+import type { OrganizationMember } from "@/lib/api/organizationTypes";
 import { getPodDisplayName, getShortPodKey } from "@/lib/pod-utils";
 
 export interface MentionItem {
@@ -39,7 +39,7 @@ export function useMentionCandidates({
   enabled = true,
 }: UseMentionCandidatesOptions) {
   const { currentOrg, user } = useAuthStore();
-  const allPods = usePodStore((s) => s.pods);
+  const allPods = usePods();
   const [members, setMembers] = useState<MentionItem[]>([]);
   const [rawChannelPods, setRawChannelPods] = useState<ChannelPodRaw[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,7 +53,7 @@ export function useMentionCandidates({
 
     async function fetchMembers() {
       try {
-        const response = await organizationApi.listMembers(orgSlug!);
+        const response: { members: OrganizationMember[] } = JSON.parse(await getOrgApiService().list_members(orgSlug!));
         if (cancelled) return;
 
         const memberItems: MentionItem[] = (response.members || [])
@@ -92,7 +92,9 @@ export function useMentionCandidates({
     async function fetchPods() {
       try {
         setLoading(true);
-        const response = await channelApi.getPods(channelId!);
+        const response: { pods: ChannelPodRaw[]; total: number } = JSON.parse(
+          await getChannelService().get_channel_pods(BigInt(channelId!))
+        );
         if (cancelled) return;
 
         const running = (response.pods || []).filter(

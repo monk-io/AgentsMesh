@@ -1,8 +1,10 @@
 /**
- * Retry and reconnect logic for relay WebSocket connections.
+ * Retry and reconnect logic for relay connections.
  */
 
-import { ApiError } from "@/lib/api/base";
+import { ApiError } from "@/lib/api/api-types";
+import { MsgType, encodeMessage } from "./relayProtocol";
+import type { RelayConnection } from "./relayConnectionTypes";
 
 const NON_RETRYABLE_STATUSES = [400, 403, 404];
 
@@ -10,11 +12,26 @@ export function isNonRetryableError(error: unknown): boolean {
   return error instanceof ApiError && NON_RETRYABLE_STATUSES.includes(error.status);
 }
 
-/**
- * Schedule a reconnect with exponential backoff + jitter.
- */
+export function scheduleSnapshotRetry(
+  getConnection: (podKey: string) => RelayConnection | undefined,
+  podKey: string,
+  attempt = 0,
+): void {
+  const conn = getConnection(podKey);
+  if (!conn || attempt >= 3) return;
+
+  conn.snapshotTimer = setTimeout(() => {
+    const c = getConnection(podKey);
+    if (!c || c.snapshotReceived) return;
+    if (c.transport.isOpen) {
+      c.transport.send(encodeMessage(MsgType.Resync, new Uint8Array(0)));
+      scheduleSnapshotRetry(getConnection, podKey, attempt + 1);
+    }
+  }, 2000);
+}
+
 export function scheduleReconnect(
-  getConnection: (podKey: string) => import("./relayConnectionTypes").RelayConnection | undefined,
+  getConnection: (podKey: string) => RelayConnection | undefined,
   reconnectFn: (podKey: string) => void,
   podKey: string,
   maxAttempts: number,

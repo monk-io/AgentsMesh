@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import type { Invitation } from "@/lib/api/invitation";
+import type { Invitation } from "@/lib/api/invitationTypes";
 import type { TranslationFn } from "./GeneralSettings";
 
 interface PendingInvitationsProps {

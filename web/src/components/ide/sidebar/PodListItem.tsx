@@ -84,7 +84,7 @@ export function PodListItem({ pod, isOpen, onClick, onTerminate, onRename, onSha
               {getPodDisplayName(pod)}
             </span>
             <AgentStatusBadge
-              agentStatus={pod.agent_status}
+              agentStatus={pod.agent_status ?? ''}
               podStatus={pod.status}
               variant="dot"
             />

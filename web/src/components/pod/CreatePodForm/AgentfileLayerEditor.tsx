@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { AgentfileCodeEditor } from "./AgentfileCodeEditor";
 import type { AgentfileCompletionContext } from "@/lib/codemirror-agentfile";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField } from "@/lib/api";
 import type { RepositoryData, AgentData, CredentialProfileData } from "@/lib/api";
 
 interface AgentfileLayerEditorProps {

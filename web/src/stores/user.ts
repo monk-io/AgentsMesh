@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getUserState } from "@/lib/wasm-core";
 
 export interface UserIdentity {
   id: number;
@@ -30,12 +31,16 @@ export interface UserProfile extends User {
   }>;
 }
 
+function readProfile(): UserProfile | null {
+  const val = getUserState().profile_json();
+  if (!val) return null;
+  return typeof val === "string" ? JSON.parse(val) : val;
+}
+
 interface UserState {
   profile: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-
-  // Actions
   setProfile: (profile: UserProfile | null) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addIdentity: (identity: UserIdentity) => void;
@@ -45,47 +50,41 @@ interface UserState {
   reset: () => void;
 }
 
-const initialState = {
-  profile: null,
-  isLoading: false,
-  error: null,
-};
-
 export const useUserStore = create<UserState>((set) => ({
-  ...initialState,
+  profile: null, isLoading: false, error: null,
 
-  setProfile: (profile) => set({ profile }),
+  setProfile: (profile) => {
+    getUserState().set_profile(profile ? JSON.stringify(profile) : "");
+    set({ profile: readProfile() });
+  },
 
-  updateProfile: (updates) =>
-    set((state) => ({
-      profile: state.profile ? { ...state.profile, ...updates } : null,
-    })),
+  updateProfile: (updates) => {
+    const cur = readProfile();
+    if (!cur) return;
+    getUserState().set_profile(JSON.stringify({ ...cur, ...updates }));
+    set({ profile: readProfile() });
+  },
 
-  addIdentity: (identity) =>
-    set((state) => ({
-      profile: state.profile
-        ? {
-            ...state.profile,
-            identities: [...state.profile.identities, identity],
-          }
-        : null,
-    })),
+  addIdentity: (identity) => {
+    getUserState().add_identity(JSON.stringify(identity));
+    set({ profile: readProfile() });
+  },
 
-  removeIdentity: (provider) =>
-    set((state) => ({
-      profile: state.profile
-        ? {
-            ...state.profile,
-            identities: state.profile.identities.filter(
-              (i) => i.provider !== provider
-            ),
-          }
-        : null,
-    })),
+  removeIdentity: (provider) => {
+    const cur = readProfile();
+    if (!cur) return;
+    getUserState().set_profile(JSON.stringify({
+      ...cur,
+      identities: cur.identities.filter((i) => i.provider !== provider),
+    }));
+    set({ profile: readProfile() });
+  },
 
   setLoading: (isLoading) => set({ isLoading }),
-
   setError: (error) => set({ error }),
 
-  reset: () => set(initialState),
+  reset: () => {
+    getUserState().set_profile("");
+    set({ profile: null, isLoading: false, error: null });
+  },
 }));

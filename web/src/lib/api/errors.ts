@@ -1,4 +1,4 @@
-import { ApiError } from "./base";
+import { ApiError } from "./api-types";
 
 /**
  * Extract the error code from an API error

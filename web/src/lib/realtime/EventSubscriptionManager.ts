@@ -1,3 +1,4 @@
+import { getEventsBackend, type IEventsTransport } from "./eventsBackend";
 import type {
   EventType,
   EventHandler,
@@ -14,8 +15,18 @@ export interface EventSubscriptionManagerOptions {
   onConnectionStateChange?: (state: ConnectionState) => void;
 }
 
+/**
+ * EventSubscriptionManager manages realtime event subscriptions.
+ *
+ * Transport is abstracted via IEventsBackend (see eventsBackend.ts).
+ * The caller supplies a `urlProvider` function so the manager can reconnect
+ * with a fresh URL (e.g. after token refresh) without the manager knowing
+ * about auth or org stores directly.
+ *
+ * TODO(wasm): Swap TsEventsBackend -> WasmEventsBackend when events crate is WASM-ready.
+ */
 export class EventSubscriptionManager {
-  private ws: WebSocket | null = null;
+  private transport: IEventsTransport | null = null;
   private urlProvider: (() => string) | null = null;
   private connectionState: ConnectionState = "disconnected";
   private reconnectAttempts = 0;
@@ -47,33 +58,33 @@ export class EventSubscriptionManager {
   }
 
   private setConnectionState(state: ConnectionState): void {
-    if (this.connectionState !== state) {
-      this.connectionState = state;
-      this.connectionStateListeners.forEach((listener) => {
-        try { listener(state); }
-        catch (error) { console.error("[EventSubscriptionManager] Connection state listener error:", error); }
-      });
-    }
+    if (this.connectionState === state) return;
+    this.connectionState = state;
+    this.connectionStateListeners.forEach((listener) => {
+      try { listener(state); }
+      catch (error) { console.error("[EventSubscriptionManager] Connection state listener error:", error); }
+    });
   }
 
   connect(urlProvider?: (() => string) | string): void {
     if (typeof urlProvider === "function") this.urlProvider = urlProvider;
     else if (urlProvider) this.urlProvider = () => urlProvider;
-    if (this.ws && (this.connectionState === "connected" || this.connectionState === "connecting")) return;
+    if (this.transport && (this.connectionState === "connected" || this.connectionState === "connecting")) return;
     const url = this.urlProvider?.();
     if (!url) { console.warn("[EventSubscriptionManager] Cannot connect: no URL"); return; }
 
     this.setConnectionState("connecting");
-    this.ws = new WebSocket(url);
-    this.ws.onopen = () => { this.setConnectionState("connected"); this.reconnectAttempts = 0; this.startPingInterval(); };
-    this.ws.onmessage = (event) => { try { this.handleMessage(JSON.parse(event.data) as RealtimeEvent); } catch (error) { console.error("[EventSubscriptionManager] Failed to parse message:", error); } };
-    this.ws.onclose = (event) => { this.cleanup(); if (event.code === 1000) { this.setConnectionState("disconnected"); return; } this.scheduleReconnect(); };
-    this.ws.onerror = () => { console.warn("[EventSubscriptionManager] WebSocket error:", { readyState: this.ws?.readyState }); };
+    this.transport = getEventsBackend().connect(url, {
+      onOpen: () => { this.setConnectionState("connected"); this.reconnectAttempts = 0; this.startPingInterval(); },
+      onMessage: (data) => { try { this.handleMessage(JSON.parse(data) as RealtimeEvent); } catch (error) { console.error("[EventSubscriptionManager] Failed to parse message:", error); } },
+      onClose: (code) => { this.cleanup(); if (code === 1000) { this.setConnectionState("disconnected"); return; } this.scheduleReconnect(); },
+      onError: () => { console.warn("[EventSubscriptionManager] WebSocket error"); },
+    });
   }
 
   disconnect(): void {
     this.cleanup();
-    if (this.ws) { this.ws.close(1000, "Client disconnect"); this.ws = null; }
+    if (this.transport) { this.transport.close(1000, "Client disconnect"); this.transport = null; }
     this.setConnectionState("disconnected");
     this.reconnectAttempts = 0;
   }
@@ -117,8 +128,8 @@ export class EventSubscriptionManager {
   }
 
   private sendPing(): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: "ping", timestamp: Date.now() }));
+    if (this.transport?.isOpen) {
+      this.transport.send(JSON.stringify({ type: "ping", timestamp: Date.now() }));
       this.startPongTimeout();
     }
   }
@@ -127,7 +138,7 @@ export class EventSubscriptionManager {
     this.clearPongTimeout();
     this.pongTimer = setTimeout(() => {
       console.warn("[EventSubscriptionManager] Pong timeout, reconnecting...");
-      this.ws?.close(4000, "Pong timeout");
+      this.transport?.close(4000, "Pong timeout");
     }, this.pongTimeout);
   }
 

@@ -30,7 +30,7 @@ export function MembersList({ members, loading, currentUserId, t, onRoleChange, 
   return (
     <div className="space-y-3">
       {members.map((member) => (
-        <div key={member.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+        <div key={member.user_id || member.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
               {member.user?.name?.[0] || member.user?.username?.[0] || "?"}

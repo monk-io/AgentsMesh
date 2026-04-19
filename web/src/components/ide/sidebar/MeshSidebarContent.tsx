@@ -1,174 +1,146 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTranslations } from "next-intl";
-import { useMeshStore, MeshNode } from "@/stores/mesh";
-import { useWorkspaceStore } from "@/stores/workspace";
-import { Button } from "@/components/ui/button";
+import { useMeshStore, useTopology, type MeshNode } from "@/stores/mesh";
 import { Input } from "@/components/ui/input";
-import {
-  Search,
-  RefreshCw,
-  Activity,
-  Link2,
-  Radio,
-} from "lucide-react";
-import { MeshNodesList } from "./MeshNodesList";
-import { MeshSelectedDetails } from "./MeshSelectedDetails";
+import { Search } from "lucide-react";
+import { MeshFilterSection } from "./MeshFilterSection";
 
 interface MeshSidebarContentProps {
   className?: string;
 }
 
+const STATUS_META: Record<string, { labelKey: string; color: string }> = {
+  running: { labelKey: "ide.sidebar.mesh.statusRunning", color: "#3FB950" },
+  initializing: { labelKey: "ide.sidebar.mesh.statusInit", color: "#D29922" },
+  terminated: { labelKey: "ide.sidebar.mesh.statusTerminated", color: "#8B949E" },
+  failed: { labelKey: "ide.sidebar.mesh.statusFailed", color: "#F85149" },
+};
+
 export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
-  const router = useRouter();
   const t = useTranslations();
   const currentOrg = useAuthStore((s) => s.currentOrg);
-  const topology = useMeshStore((s) => s.topology);
-  const loading = useMeshStore((s) => s.loading);
-  const selectedNode = useMeshStore((s) => s.selectedNode);
+  const topology = useTopology();
   const fetchTopology = useMeshStore((s) => s.fetchTopology);
-  const selectNode = useMeshStore((s) => s.selectNode);
-  const addPane = useWorkspaceStore((s) => s.addPane);
 
-  // State
-  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [nodesExpanded, setNodesExpanded] = useState(true);
+  const [runnerFilter, setRunnerFilter] = useState<Set<string>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
 
-  // Load topology on mount
   useEffect(() => {
-    if (currentOrg) {
-      fetchTopology();
-    }
+    if (currentOrg) fetchTopology();
   }, [currentOrg, fetchTopology]);
 
-  // Refresh handler
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await fetchTopology();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [fetchTopology]);
-
-  // Filter nodes
-  const filteredNodes = useMemo(() => {
-    return (topology?.nodes || []).filter((node) => {
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesPodKey = node.pod_key.toLowerCase().includes(query);
-        const matchesModel = node.model?.toLowerCase().includes(query);
-        if (!matchesPodKey && !matchesModel) return false;
-      }
-      return true;
-    });
-  }, [topology?.nodes, searchQuery]);
-
-  // Stats
-  const activeNodes = useMemo(
-    () => topology?.nodes.filter(n => n.status === "running" || n.status === "initializing").length || 0,
-    [topology?.nodes]
-  );
-  const totalChannels = topology?.channels.length || 0;
-  const totalBindings = topology?.edges.length || 0;
-
-  const handleNodeClick = (node: MeshNode) => {
-    selectNode(node.pod_key);
-  };
-
-  const handleOpenTerminal = (podKey: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    addPane(podKey);
-    router.push(`/${currentOrg?.slug}/workspace`);
-  };
-
-  // Selected node details
-  const selectedNodeData = useMemo(
-    () => selectedNode ? topology?.nodes.find(n => n.pod_key === selectedNode) ?? null : null,
-    [selectedNode, topology?.nodes]
-  );
-  const selectedNodeChannels = useMemo(
-    () => {
-      if (!selectedNode || !topology) return [];
-      return topology.channels.filter(c => c.pod_keys.includes(selectedNode));
+  const toggleSet = useCallback(
+    (setter: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) => {
+      setter((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
     },
-    [selectedNode, topology]
+    [],
   );
+
+  const runnerOptions = useMemo(() => {
+    if (!topology?.nodes) return [];
+    const counts = new Map<string, number>();
+    for (const node of topology.nodes) {
+      const rid = String((node as unknown as { runner_id?: string | number }).runner_id ?? "unknown");
+      counts.set(rid, (counts.get(rid) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([id, count]) => ({
+      id,
+      label: `${t("ide.sidebar.mesh.runnerPrefix")} ${id.slice(0, 8)}`,
+      count,
+      dotColor: "#3FB950",
+    }));
+  }, [topology?.nodes, t]);
+
+  const statusOptions = useMemo(() => {
+    if (!topology?.nodes) return [];
+    const counts = new Map<string, number>();
+    for (const node of topology.nodes) counts.set(node.status, (counts.get(node.status) ?? 0) + 1);
+    return Array.from(counts.entries()).map(([id, count]) => ({
+      id,
+      label: t(STATUS_META[id]?.labelKey ?? "common.unknown"),
+      count,
+      dotColor: STATUS_META[id]?.color ?? "#6E7681",
+    }));
+  }, [topology?.nodes, t]);
+
+  const filteredCount = useMemo(() => {
+    return (topology?.nodes || []).filter((node: MeshNode) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!node.pod_key.toLowerCase().includes(q) && !node.model?.toLowerCase().includes(q)) return false;
+      }
+      if (runnerFilter.size > 0) {
+        const rid = String((node as unknown as { runner_id?: string | number }).runner_id ?? "unknown");
+        if (!runnerFilter.has(rid)) return false;
+      }
+      if (statusFilter.size > 0 && !statusFilter.has(node.status)) return false;
+      return true;
+    }).length;
+  }, [topology?.nodes, searchQuery, runnerFilter, statusFilter]);
+
+  const hasFilters = searchQuery !== "" || runnerFilter.size > 0 || statusFilter.size > 0;
+  const handleReset = useCallback(() => {
+    setSearchQuery("");
+    setRunnerFilter(new Set());
+    setStatusFilter(new Set());
+  }, []);
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      {/* Search */}
-      <div className="px-2 py-2">
+    <div className={cn("flex h-full flex-col", className)}>
+      <div className="px-3 py-3">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t("ide.sidebar.mesh.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 text-sm"
+            className="h-8 pl-8 text-[13px]"
           />
         </div>
       </div>
 
-      {/* Refresh button */}
-      <div className="flex items-center justify-end px-2 pb-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 w-8 p-0"
-          onClick={handleRefresh}
-          disabled={refreshing}
+      <MeshFilterSection
+        title={t("ide.sidebar.mesh.runnerFilter")}
+        options={runnerOptions}
+        selected={runnerFilter}
+        onToggle={(id) => toggleSet(setRunnerFilter, id)}
+      />
+
+      <MeshFilterSection
+        title={t("ide.sidebar.mesh.statusFilter")}
+        options={statusOptions}
+        selected={statusFilter}
+        onToggle={(id) => toggleSet(setStatusFilter, id)}
+      />
+
+      <div className="mt-auto border-t border-border p-3">
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={!hasFilters}
+          className={cn(
+            "flex h-7 w-full items-center justify-center rounded-md border border-border bg-background text-xs font-medium text-foreground transition-colors",
+            hasFilters ? "hover:bg-muted" : "cursor-not-allowed opacity-60",
+          )}
         >
-          <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-        </Button>
+          {t("ide.sidebar.mesh.resetFilters")}
+        </button>
+        {hasFilters && (
+          <div className="mt-2 text-center text-[11px] text-muted-foreground">
+            {t("ide.sidebar.mesh.matchCount", { count: filteredCount })}
+          </div>
+        )}
       </div>
-
-      {/* Network stats */}
-      <div className="px-3 py-2 border-t border-border space-y-2">
-        <div className="text-xs font-medium text-muted-foreground">{t("ide.sidebar.mesh.networkStats")}</div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="flex flex-col items-center text-xs">
-            <Activity className="w-3.5 h-3.5 text-green-500 dark:text-green-400 mb-0.5" />
-            <span className="font-medium">{activeNodes}</span>
-            <span className="text-muted-foreground">{t("ide.sidebar.mesh.active")}</span>
-          </div>
-          <div className="flex flex-col items-center text-xs">
-            <Radio className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 mb-0.5" />
-            <span className="font-medium">{totalChannels}</span>
-            <span className="text-muted-foreground">{t("ide.sidebar.mesh.channels")}</span>
-          </div>
-          <div className="flex flex-col items-center text-xs">
-            <Link2 className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400 mb-0.5" />
-            <span className="font-medium">{totalBindings}</span>
-            <span className="text-muted-foreground">{t("ide.sidebar.mesh.bindings")}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Nodes section */}
-      <MeshNodesList
-        nodes={filteredNodes}
-        loading={loading}
-        expanded={nodesExpanded}
-        onToggle={setNodesExpanded}
-        selectedNodeId={selectedNode}
-        onNodeClick={handleNodeClick}
-        onOpenTerminal={handleOpenTerminal}
-        t={t}
-      />
-
-      {/* Selected node details */}
-      <MeshSelectedDetails
-        selectedNode={selectedNodeData}
-        nodeChannels={selectedNodeChannels}
-        onOpenTerminal={handleOpenTerminal}
-        t={t}
-      />
     </div>
   );
 }

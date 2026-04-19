@@ -1,84 +1,72 @@
-/**
- * Relay binary protocol types and message encoding/decoding.
- *
- * The browser communicates with Relay using a binary protocol where each
- * message is prefixed with a 1-byte message type followed by a variable-length payload.
- *
- * Must match relay/internal/protocol/message.go
- */
+import {
+  relay_encode_input,
+  relay_decode_message as wasmDecodeMessage,
+  relay_encode_resize as wasmEncodeResize,
+  relay_encode_ping,
+  relay_encode_control,
+  relay_encode_resync,
+  relay_encode_acp_command,
+} from "@/lib/wasm-core";
 
-/**
- * Relay message types (binary protocol)
- */
 export const MsgType = {
-  Snapshot: 0x01,           // Complete terminal snapshot
-  Output: 0x02,             // Terminal output (raw pod data)
-  Input: 0x03,              // User input to terminal
-  Resize: 0x04,             // Terminal resize
-  Ping: 0x05,               // Ping for keepalive
-  Pong: 0x06,               // Pong response
-  Control: 0x07,            // Control messages (JSON)
-  RunnerDisconnected: 0x08, // Runner disconnected notification
-  RunnerReconnected: 0x09,  // Runner reconnected notification
-  SnapshotRequest: 0x0a,    // Browser → Runner: request current snapshot
-  AcpEvent: 0x0b,           // Runner → Browser, ACP event (JSON)
-  AcpCommand: 0x0c,         // Browser → Runner, ACP command (JSON)
-  AcpSnapshot: 0x0d,        // Runner → Browser, ACP session snapshot (JSON)
+  Snapshot: 0x01,
+  Output: 0x02,
+  Input: 0x03,
+  Resize: 0x04,
+  Ping: 0x05,
+  Pong: 0x06,
+  Control: 0x07,
+  RunnerDisconnected: 0x08,
+  RunnerReconnected: 0x09,
+  Resync: 0x0a,
+  AcpEvent: 0x0b,
+  AcpCommand: 0x0c,
+  AcpSnapshot: 0x0d,
 } as const;
 
-/**
- * Encode a message with type prefix (Relay binary protocol).
- *
- * Wire format: [msgType: 1 byte][payload: N bytes]
- */
+const encoder = new TextEncoder();
+
+function toBytes(payload: Uint8Array | string): Uint8Array {
+  return typeof payload === "string" ? encoder.encode(payload) : payload;
+}
+
 export function encodeMessage(msgType: number, payload: Uint8Array | string): Uint8Array {
-  const payloadBytes = typeof payload === "string"
-    ? new TextEncoder().encode(payload)
-    : payload;
-  const message = new Uint8Array(1 + payloadBytes.length);
-  message[0] = msgType;
-  message.set(payloadBytes, 1);
-  return message;
-}
-
-/**
- * Decode a message with type prefix (Relay binary protocol).
- *
- * @returns Object with `type` (1-byte message type) and `payload` (remaining bytes).
- */
-export function decodeMessage(data: Uint8Array): { type: number; payload: Uint8Array } {
-  if (data.length < 1) {
-    return { type: 0, payload: new Uint8Array(0) };
+  const data = toBytes(payload);
+  switch (msgType) {
+    case MsgType.Input:
+      return relay_encode_input(data);
+    case MsgType.Control:
+      return relay_encode_control(data);
+    case MsgType.AcpCommand:
+      return relay_encode_acp_command(data);
+    case MsgType.Ping:
+      return relay_encode_ping();
+    case MsgType.Resync:
+      return relay_encode_resync();
+    default: {
+      const msg = new Uint8Array(1 + data.length);
+      msg[0] = msgType;
+      msg.set(data, 1);
+      return msg;
+    }
   }
-  return {
-    type: data[0],
-    payload: data.slice(1),
-  };
 }
 
-/**
- * Encode a resize payload as 4 bytes: cols (uint16 BE) + rows (uint16 BE).
- */
+export function decodeMessage(data: Uint8Array): { type: number; payload: Uint8Array } {
+  const result = wasmDecodeMessage(data);
+  if (!result) return { type: 0, payload: new Uint8Array(0) };
+  return { type: result.type, payload: new Uint8Array(result.payload) };
+}
+
 export function encodeResize(cols: number, rows: number): Uint8Array {
-  const payload = new Uint8Array(4);
-  payload[0] = (cols >> 8) & 0xff;
-  payload[1] = cols & 0xff;
-  payload[2] = (rows >> 8) & 0xff;
-  payload[3] = rows & 0xff;
-  return payload;
+  const full = wasmEncodeResize(cols, rows);
+  return full.slice(1);
 }
 
-/**
- * Encode a JSON object as a typed relay message (e.g. AcpCommand).
- */
 export function encodeJsonMessage(msgType: number, obj: unknown): Uint8Array {
   return encodeMessage(msgType, JSON.stringify(obj));
 }
 
-/**
- * Decode a JSON payload from a relay message.
- * Returns null if the payload cannot be parsed.
- */
 export function decodeJsonPayload<T = unknown>(payload: Uint8Array): T | null {
   try {
     return JSON.parse(new TextDecoder().decode(payload)) as T;

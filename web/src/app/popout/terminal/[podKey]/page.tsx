@@ -11,14 +11,14 @@ import { getShortPodKey } from "@/lib/pod-utils";
 export default function PopoutTerminalPage() {
   const { podKey } = useParams<{ podKey: string }>();
   const router = useRouter();
-  const { token, _hasHydrated } = useAuthStore();
+  const { user, _hasHydrated } = useAuthStore();
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (_hasHydrated && !token) {
+    if (_hasHydrated && !user) {
       router.push("/login");
     }
-  }, [_hasHydrated, token, router]);
+  }, [_hasHydrated, user, router]);
 
   // Set window title to identify the pod
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function PopoutTerminalPage() {
     );
   }
 
-  if (!token || !podKey) return null;
+  if (!user || !podKey) return null;
 
   return (
     <RealtimeProvider>

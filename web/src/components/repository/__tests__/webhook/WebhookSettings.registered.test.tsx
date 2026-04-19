@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock must be at module level for Vitest hoisting
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
@@ -16,24 +15,11 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-// Import mock functions before mocking the module
 import {
   mockGetWebhookStatus,
-  mockGetWebhookSecret,
   mockRegisterWebhook,
   mockDeleteWebhook,
-  mockMarkWebhookConfigured,
 } from "./testSetup";
-
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    getWebhookStatus: (...args: unknown[]) => mockGetWebhookStatus(...args),
-    getWebhookSecret: (...args: unknown[]) => mockGetWebhookSecret(...args),
-    registerWebhook: (...args: unknown[]) => mockRegisterWebhook(...args),
-    deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
-    markWebhookConfigured: (...args: unknown[]) => mockMarkWebhookConfigured(...args),
-  },
-}));
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { WebhookSettings } from "../../webhook";
@@ -48,7 +34,7 @@ describe("WebhookSettings - Registered State", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockGetWebhookStatus.mockResolvedValue({ webhook_status: registeredStatus });
+    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
   });
 
   afterEach(() => {
@@ -81,12 +67,12 @@ describe("WebhookSettings - Registered State", () => {
       ...registeredStatus,
       webhook_id: "wh_456",
     };
-    mockRegisterWebhook.mockResolvedValue({
+    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
       result: { repo_id: 1, registered: true, webhook_id: "wh_456" },
-    });
+    }));
     mockGetWebhookStatus
-      .mockResolvedValueOnce({ webhook_status: registeredStatus })
-      .mockResolvedValue({ webhook_status: newStatus });
+      .mockResolvedValueOnce(JSON.stringify({ webhook_status: registeredStatus }))
+      .mockResolvedValue(JSON.stringify({ webhook_status: newStatus }));
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -104,7 +90,7 @@ describe("WebhookSettings - Registered State", () => {
   });
 
   it("should handle delete click", async () => {
-    mockDeleteWebhook.mockResolvedValue({ message: "Webhook deleted" });
+    mockDeleteWebhook.mockResolvedValue(JSON.stringify({ message: "Webhook deleted" }));
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

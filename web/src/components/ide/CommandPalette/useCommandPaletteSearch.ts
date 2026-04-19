@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { podApi, ticketApi, repositoryApi } from "@/lib/api";
+import { getPodService, getTicketService, getRepositoryService } from "@/lib/wasm-core";
 import type { SearchResults, PodSearchResult, TicketSearchResult, RepositorySearchResult } from "./types";
 
 /**
@@ -25,9 +25,9 @@ export function useCommandPaletteSearch(search: string): SearchResults {
       setLoading(true);
       try {
         const [podsRes, ticketsRes, reposRes] = await Promise.all([
-          podApi.list().catch(() => ({ pods: [] })),
-          ticketApi.list().catch(() => ({ tickets: [] })),
-          repositoryApi.list().catch(() => ({ repositories: [] })),
+          getPodService().fetch_pods(null, null, null, null, null).then(j => JSON.parse(j)).catch(() => ({ pods: [] })),
+          getTicketService().fetch_tickets(undefined, 500, undefined).then(j => JSON.parse(j)).catch(() => ({ tickets: [] })),
+          getRepositoryService().list().then((j: string) => JSON.parse(j)).catch(() => ({ repositories: [] })),
         ]);
 
         // Filter by search term

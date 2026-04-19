@@ -3,15 +3,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  tokenUsageApi,
-  type TokenUsageSummary,
-  type TokenUsageTimeSeriesPoint,
-  type TokenUsageByAgent,
-  type TokenUsageByUser,
-  type TokenUsageByModel,
-  type TokenUsageQueryParams,
-} from "@/lib/api/token-usage";
+import { getTokenUsageService } from "@/lib/wasm-core";
+import type {
+  TokenUsageSummary,
+  TokenUsageTimeSeriesPoint,
+  TokenUsageByAgent,
+  TokenUsageByUser,
+  TokenUsageByModel,
+  TokenUsageQueryParams,
+} from "@/lib/api";
 import type { TranslationFn } from "./GeneralSettings";
 import {
   UsageOverviewCards,
@@ -148,7 +148,15 @@ export function UsageSettings({ t }: UsageSettingsProps) {
     };
 
     try {
-      const data = await tokenUsageApi.getDashboard(params, controller.signal);
+      const raw = await getTokenUsageService().get_dashboard(
+        params.start_time ?? null,
+        params.end_time ?? null,
+        params.agent_slug ?? null,
+        params.user_id != null ? BigInt(params.user_id) : null,
+        params.model ?? null,
+        params.granularity ?? null,
+      );
+      const data = JSON.parse(raw);
 
       // Guard against stale responses: if abort() was called after the fetch
       // resolved but before we reach here, skip the state update.
@@ -164,7 +172,7 @@ export function UsageSettings({ t }: UsageSettingsProps) {
       // the circular dependency (filtered byAgent → fewer filter options).
       if (!agent && data.by_agent) {
         setAllAgents(
-          [...new Set(data.by_agent.map((a) => a.agent_slug))].filter(Boolean)
+          [...new Set(data.by_agent.map((a: TokenUsageByAgent) => a.agent_slug))].filter(Boolean) as string[]
         );
       }
     } catch (err: unknown) {

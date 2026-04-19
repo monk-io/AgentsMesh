@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-// Mock must be at module level for Vitest hoisting
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
@@ -11,24 +10,9 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-// Import mock functions before mocking the module
 import {
   mockGetWebhookStatus,
-  mockGetWebhookSecret,
-  mockRegisterWebhook,
-  mockDeleteWebhook,
-  mockMarkWebhookConfigured,
 } from "./testSetup";
-
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    getWebhookStatus: (...args: unknown[]) => mockGetWebhookStatus(...args),
-    getWebhookSecret: (...args: unknown[]) => mockGetWebhookSecret(...args),
-    registerWebhook: (...args: unknown[]) => mockRegisterWebhook(...args),
-    deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
-    markWebhookConfigured: (...args: unknown[]) => mockMarkWebhookConfigured(...args),
-  },
-}));
 
 import { render, screen } from "@testing-library/react";
 import { WebhookSettings } from "../../webhook";

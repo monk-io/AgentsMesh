@@ -17,7 +17,6 @@ const mockIterations: Record<string, unknown[]> = {};
 vi.mock("@/stores/autopilot", () => ({
   useAutopilotStore: (selector?: (s: Record<string, unknown>) => unknown) => {
     const state = {
-      autopilotControllers: mockAutopilotController ? [mockAutopilotController] : [],
       thinking: { "test-key-123": mockThinking } as Record<string, unknown>,
       pauseAutopilotController: mockPauseAutopilotController,
       resumeAutopilotController: mockResumeAutopilotController,
@@ -29,6 +28,8 @@ vi.mock("@/stores/autopilot", () => ({
     };
     return selector ? selector(state) : state;
   },
+  useAutopilotControllers: () => mockAutopilotController ? [mockAutopilotController] : [],
+  useCurrentAutopilotController: () => null,
 }));
 
 // Helper to create mock controller

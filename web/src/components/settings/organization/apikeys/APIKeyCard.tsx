@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Key, Pencil, Ban } from "lucide-react";
-import type { APIKeyData } from "@/lib/api/apikey";
+import type { APIKeyData } from "@/lib/api/apikeyTypes";
 import type { TranslationFn } from "../GeneralSettings";
 
 interface APIKeyCardProps {

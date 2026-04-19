@@ -11,6 +11,7 @@ export type ActivityType =
   | "mesh"
   | "loops"
   | "blocks"
+  | "infra"
   | "repositories"
   | "runners"
   | "settings";
@@ -123,6 +124,14 @@ export interface ActivityConfig {
 }
 
 export const ACTIVITIES: ActivityConfig[] = [
+  // ─── Core pillars ───
+  {
+    id: "channels",
+    label: "Channels",
+    icon: "message-square",
+    mobileVisible: true,
+    mobileOrder: 1,
+  },
   {
     id: "workspace",
     label: "Workspace",
@@ -130,6 +139,7 @@ export const ACTIVITIES: ActivityConfig[] = [
     mobileVisible: true,
     mobileOrder: 2,
   },
+  // ─── Orchestration / supporting infra ───
   {
     id: "tickets",
     label: "Tickets",
@@ -138,11 +148,10 @@ export const ACTIVITIES: ActivityConfig[] = [
     mobileOrder: 3,
   },
   {
-    id: "channels",
-    label: "Channels",
-    icon: "message-square",
-    mobileVisible: true,
-    mobileOrder: 1,
+    id: "loops",
+    label: "Loops",
+    icon: "repeat",
+    mobileVisible: false,
   },
   {
     id: "mesh",
@@ -152,34 +161,23 @@ export const ACTIVITIES: ActivityConfig[] = [
     mobileOrder: 4,
   },
   {
-    id: "loops",
-    label: "Loops",
-    icon: "repeat",
-    mobileVisible: false,
-  },
-  {
     id: "blocks",
     label: "Blocks",
     icon: "blocks",
     mobileVisible: false,
   },
   {
-    id: "repositories",
-    label: "Repositories",
-    icon: "repository",
-    mobileVisible: false, // In "More" menu on mobile
+    id: "infra",
+    label: "Infra",
+    icon: "layers",
+    mobileVisible: false,
   },
-  {
-    id: "runners",
-    label: "Runners",
-    icon: "server",
-    mobileVisible: false, // In "More" menu on mobile
-  },
+  // ─── Bottom ───
   {
     id: "settings",
     label: "Settings",
     icon: "settings",
-    mobileVisible: false, // In "More" menu on mobile
+    mobileVisible: false,
   },
 ];
 

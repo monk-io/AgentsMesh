@@ -4,10 +4,10 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
-import { repositoryApi } from "@/lib/api/repository";
+import { getRepositoryService } from "@/lib/wasm-core";
 import { useEventSubscription } from "@/hooks/useRealtimeEvents";
 import type { MREventData, PipelineEventData } from "@/lib/realtime";
-import type { PodData } from "@/lib/api/pod";
+import type { PodData } from "@/lib/api";
 import { GitPullRequest, RefreshCw, Loader2, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MergeRequestCard, MergeRequestInfo } from "./MergeRequestCard";
@@ -34,8 +34,12 @@ export function DeliveryTabContent({ selectedPodKey, pod, t }: DeliveryTabConten
     setLoading(true);
     setError(null);
     try {
-      const response = await repositoryApi.listMergeRequests(pod.repository.id, pod.branch_name);
-      setMergeRequests(response.merge_requests as MergeRequestInfo[]);
+      const resp = JSON.parse(
+        await getRepositoryService().list_merge_requests(
+          BigInt(pod.repository.id), pod.branch_name ?? null, null,
+        ),
+      );
+      setMergeRequests(resp.merge_requests as MergeRequestInfo[]);
     } catch (err) {
       const msg = getLocalizedErrorMessage(err, t, t("ide.bottomPanel.deliveryTab.loadError"));
       setError(msg);

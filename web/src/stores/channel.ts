@@ -1,7 +1,6 @@
-export { useChannelStore } from "./channelStore";
-export type { Channel } from "./channelStoreTypes";
+export { useChannelStore, useChannels, useCurrentChannel, type Channel } from "./channelStore";
 export { useChannelMessageStore, EMPTY_CACHE, type ChannelMessageCache } from "./channelMessageStore";
-export type { ChannelMessageState } from "./channelMessageTypes";
+export type { ChannelMessageState } from "./channelMessageStore";
 
 import { reconnectRegistry } from "@/lib/realtime";
 import { useChannelMessageStore } from "./channelMessageStore";

@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Ticket } from "@/stores/ticket";
-import { ticketApi, TicketRelation, TicketCommit, TicketComment } from "@/lib/api";
+import { TicketRelation, TicketCommit, TicketComment } from "@/lib/api";
+import { getTicketRelationsService, getTicketService } from "@/lib/wasm-core";
 
 /**
  * Extra data associated with a ticket (sub-tickets, relations, commits, comments)
@@ -33,10 +34,10 @@ export function useTicketExtraData(slug: string, enabled: boolean) {
     setLoading(true);
     try {
       const [subTicketsRes, relationsRes, commitsRes, commentsRes] = await Promise.all([
-        ticketApi.getSubTickets(slug).catch(() => ({ sub_tickets: [] })),
-        ticketApi.listRelations(slug).catch(() => ({ relations: [] })),
-        ticketApi.listCommits(slug).catch(() => ({ commits: [] })),
-        ticketApi.listComments(slug).catch(() => ({ comments: [], total: 0 })),
+        getTicketService().get_sub_tickets(slug).then((j: string) => JSON.parse(j)).catch(() => ({ sub_tickets: [] })),
+        getTicketRelationsService().list_relations(slug).then((j: string) => JSON.parse(j)).catch(() => ({ relations: [] })),
+        getTicketRelationsService().list_commits(slug).then((j: string) => JSON.parse(j)).catch(() => ({ commits: [] })),
+        getTicketRelationsService().list_comments(slug).then((j: string) => JSON.parse(j)).catch(() => ({ comments: [], total: 0 })),
       ]);
 
       setSubTickets(subTicketsRes.sub_tickets || []);
@@ -61,9 +62,8 @@ export function useTicketExtraData(slug: string, enabled: boolean) {
       parentId?: number,
       mentions?: Array<{ user_id: number; username: string }>
     ) => {
-      await ticketApi.createComment(slug, content, parentId, mentions);
-      // Refetch to get updated list with replies properly nested
-      const commentsRes = await ticketApi.listComments(slug).catch(() => ({ comments: [], total: 0 }));
+      await getTicketRelationsService().create_comment(slug, JSON.stringify({ content, parent_id: parentId, mentions }));
+      const commentsRes = JSON.parse(await getTicketRelationsService().list_comments(slug));
       setComments(commentsRes.comments || []);
     },
     [slug]
@@ -75,8 +75,8 @@ export function useTicketExtraData(slug: string, enabled: boolean) {
       content: string,
       mentions?: Array<{ user_id: number; username: string }>
     ) => {
-      await ticketApi.updateComment(slug, commentId, content, mentions);
-      const commentsRes = await ticketApi.listComments(slug).catch(() => ({ comments: [], total: 0 }));
+      await getTicketRelationsService().update_comment(slug, BigInt(commentId), JSON.stringify({ content, mentions }));
+      const commentsRes = JSON.parse(await getTicketRelationsService().list_comments(slug));
       setComments(commentsRes.comments || []);
     },
     [slug]
@@ -84,8 +84,8 @@ export function useTicketExtraData(slug: string, enabled: boolean) {
 
   const deleteComment = useCallback(
     async (commentId: number) => {
-      await ticketApi.deleteComment(slug, commentId);
-      const commentsRes = await ticketApi.listComments(slug).catch(() => ({ comments: [], total: 0 }));
+      await getTicketRelationsService().delete_comment(slug, BigInt(commentId));
+      const commentsRes = JSON.parse(await getTicketRelationsService().list_comments(slug));
       setComments(commentsRes.comments || []);
     },
     [slug]

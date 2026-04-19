@@ -1,0 +1,12 @@
+packages:
+  - web
+  - desktop
+  - packages/*
+  - core/crates/node-bridge
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - "@parcel/watcher"

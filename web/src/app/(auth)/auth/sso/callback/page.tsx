@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { userApi, organizationApi } from "@/lib/api";
+import { getUserApiService, getOrgApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { Logo } from "@/components/common";
 import { useTranslations } from "next-intl";
 
@@ -38,6 +39,7 @@ function SSOCallbackContent() {
     };
 
     const handleCallback = async () => {
+      await initWasmCore();
       if (error) {
         setStatus("error");
         // Only display known error codes to avoid leaking internal details
@@ -64,12 +66,12 @@ function SSOCallbackContent() {
         setAuth(token, { id: 0, email: "", username: "" }, refreshToken || undefined);
 
         // Get user info
-        const userResponse = await userApi.getMe();
+        const userResponse = JSON.parse(await getUserApiService().get_me());
         setAuth(token, userResponse.user, refreshToken || undefined);
 
         // Get organizations and redirect
         try {
-          const orgsResponse = await organizationApi.list();
+          const orgsResponse = JSON.parse(await getOrgApiService().list());
           const orgs = orgsResponse.organizations;
           if (orgs && orgs.length > 0) {
             setOrganizations(orgs);

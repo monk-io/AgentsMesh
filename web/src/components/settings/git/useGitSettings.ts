@@ -3,13 +3,12 @@
 import { useState, useCallback } from "react";
 import { useAsyncData } from "@/hooks";
 import {
-  userRepositoryProviderApi,
   RepositoryProviderData,
-  userGitCredentialApi,
   GitCredentialData,
   RunnerLocalCredentialData,
   CredentialType,
 } from "@/lib/api";
+import { getUserCredentialService } from "@/lib/wasm-core";
 
 export interface GitSettingsData {
   providers: RepositoryProviderData[];
@@ -50,8 +49,8 @@ export function useGitSettings(t: (key: string) => string): UseGitSettingsResult
   // Fetch data
   const fetcher = useCallback(async (): Promise<GitSettingsData> => {
     const [providersRes, credentialsRes] = await Promise.all([
-      userRepositoryProviderApi.list(),
-      userGitCredentialApi.list(),
+      getUserCredentialService().list_repo_providers().then((j: string) => JSON.parse(j)),
+      getUserCredentialService().list_git_credentials().then((j: string) => JSON.parse(j)),
     ]);
 
     const providers = providersRes.providers || [];
@@ -63,7 +62,7 @@ export function useGitSettings(t: (key: string) => string): UseGitSettingsResult
     if (runnerLocal.is_default) {
       defaultCredentialId = "runner_local";
     } else {
-      const defaultCred = credentials.find((c) => c.is_default);
+      const defaultCred = credentials.find((c: GitCredentialData) => c.is_default);
       defaultCredentialId = defaultCred?.id || "runner_local";
     }
 
@@ -92,7 +91,7 @@ export function useGitSettings(t: (key: string) => string): UseGitSettingsResult
     async (credentialId: number | null) => {
       try {
         setErrorMessage(null);
-        await userGitCredentialApi.setDefault({ credential_id: credentialId });
+        await getUserCredentialService().set_default_git_credential(JSON.stringify({ credential_id: credentialId }));
 
         // Update local state
         setData((prev) =>
@@ -118,7 +117,7 @@ export function useGitSettings(t: (key: string) => string): UseGitSettingsResult
   const handleDeleteProvider = useCallback(
     async (id: number): Promise<boolean> => {
       try {
-        await userRepositoryProviderApi.delete(id);
+        await getUserCredentialService().delete_repo_provider(BigInt(id));
         await refetch();
         return true;
       } catch (err) {
@@ -134,7 +133,7 @@ export function useGitSettings(t: (key: string) => string): UseGitSettingsResult
   const handleDeleteCredential = useCallback(
     async (id: number): Promise<boolean> => {
       try {
-        await userGitCredentialApi.delete(id);
+        await getUserCredentialService().delete_git_credential(BigInt(id));
         await refetch();
         return true;
       } catch (err) {
@@ -151,14 +150,8 @@ export function useGitSettings(t: (key: string) => string): UseGitSettingsResult
     async (id: number) => {
       try {
         setErrorMessage(null);
-        const result = await userRepositoryProviderApi.testConnection(id);
-        if (result.success) {
-          setSuccessMessage(t("settings.gitSettings.connectionSuccess"));
-        } else {
-          setErrorMessage(
-            result.error || t("settings.gitSettings.connectionFailed")
-          );
-        }
+        await getUserCredentialService().test_repo_provider(BigInt(id));
+        setSuccessMessage(t("settings.gitSettings.connectionSuccess"));
         setTimeout(() => {
           setSuccessMessage(null);
           setErrorMessage(null);

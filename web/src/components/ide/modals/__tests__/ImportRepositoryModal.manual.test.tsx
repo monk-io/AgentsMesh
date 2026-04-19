@@ -1,20 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { userRepositoryProviderApi } from "@/lib/api";
-import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
-} from "./ImportRepositoryModal.utils";
+import { setupProviderMocks } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Manual Entry", () => {
   const mockOnClose = vi.fn();
@@ -22,12 +10,7 @@ describe("ImportRepositoryModal - Manual Entry", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should navigate to manual entry step", async () => {
@@ -98,7 +81,6 @@ describe("ImportRepositoryModal - Manual Entry", () => {
       expect(screen.getByPlaceholderText("https://github.com/org/repo.git")).toBeInTheDocument();
     });
 
-    // Fill in required fields using userEvent
     const cloneUrlInput = screen.getByPlaceholderText("https://github.com/org/repo.git");
     const nameInput = screen.getByPlaceholderText("my-project");
     const slugInput = screen.getByPlaceholderText("org/my-project");
@@ -127,7 +109,6 @@ describe("ImportRepositoryModal - Manual Entry", () => {
       expect(screen.getByText("Continue")).toBeInTheDocument();
     });
 
-    // Click continue without filling required fields
     await user.click(screen.getByText("Continue"));
 
     await waitFor(() => {
@@ -151,7 +132,6 @@ describe("ImportRepositoryModal - Manual Entry", () => {
       expect(screen.getByPlaceholderText("https://github.com/org/repo.git")).toBeInTheDocument();
     });
 
-    // Fill in required fields using userEvent
     const cloneUrlInput = screen.getByPlaceholderText("https://github.com/org/repo.git");
     const nameInput = screen.getByPlaceholderText("my-project");
     const slugInput = screen.getByPlaceholderText("org/my-project");

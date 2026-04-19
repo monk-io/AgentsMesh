@@ -1,146 +1,256 @@
 "use client";
 
-import { Ticket, TicketStatus } from "@/stores/ticket";
-import { Button } from "@/components/ui/button";
-import { StatusSelect } from "./StatusSelect";
-import { RepositorySelect } from "@/components/common/RepositorySelect";
-import { SidebarPodSection } from "./SidebarPodSection";
-import { Trash2, Clock } from "lucide-react";
+import Link from "next/link";
+import { Ticket } from "@/stores/ticket";
+import type { TicketRelation } from "@/lib/api/ticketTypes";
+import { useAuthStore } from "@/stores/auth";
 import { cn } from "@/lib/utils";
+import { CheckCircle2, Circle, GitPullRequest, Clock, Terminal } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { getTicketService } from "@/lib/wasm-core";
+import { useWorkspaceStore } from "@/stores/workspace";
+import { getShortPodKey } from "@/lib/pod-utils";
+import { AgentStatusBadge } from "@/components/shared/AgentStatusBadge";
+
+interface TicketPod {
+  pod_key: string;
+  status: string;
+  agent_status: string;
+  model?: string;
+  started_at?: string;
+  runner_id: number;
+  created_by_id: number;
+}
 
 interface TicketDetailSidebarProps {
   ticket: Ticket;
-  onDelete: () => void;
-  onStatusChange: (status: TicketStatus) => void;
-  onRepositoryChange: (repositoryId: number | null) => void;
   ticketSlug: string;
+  subTickets?: Ticket[];
+  relations?: TicketRelation[];
+  commits?: Array<{
+    sha?: string;
+    message?: string;
+    hash?: string;
+    short_sha?: string;
+    created_at?: string;
+    url?: string;
+  }>;
   t: (key: string, params?: Record<string, string | number>) => string;
   commentsSlot?: React.ReactNode;
 }
 
-function formatRelativeDate(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-
-  if (diffDay > 30) return date.toLocaleDateString();
-  if (diffDay > 0) return `${diffDay}d ago`;
-  if (diffHr > 0) return `${diffHr}h ago`;
-  if (diffMin > 0) return `${diffMin}m ago`;
-  return "just now";
-}
-
 export function TicketDetailSidebar({
-  ticket, onDelete, onStatusChange, onRepositoryChange, ticketSlug, t, commentsSlot,
+  ticket,
+  ticketSlug,
+  subTickets = [],
+  relations = [],
+  commits = [],
+  t,
+  commentsSlot,
 }: TicketDetailSidebarProps) {
-  const handleStatusChange = async (status: TicketStatus) => {
-    onStatusChange(status);
+  const router = useRouter();
+  const { currentOrg } = useAuthStore();
+  const addPane = useWorkspaceStore((s) => s.addPane);
+  const [pods, setPods] = useState<TicketPod[]>([]);
+  const [podsLoading, setPodsLoading] = useState(true);
+
+  const fetchPods = useCallback(async () => {
+    setPodsLoading(true);
+    try {
+      const response = JSON.parse(await getTicketService().get_ticket_pods(ticketSlug, true));
+      setPods(response.pods || []);
+    } catch {
+      /* silent */
+    } finally {
+      setPodsLoading(false);
+    }
+  }, [ticketSlug]);
+
+  useEffect(() => {
+    fetchPods();
+  }, [fetchPods]);
+
+  const activePods = pods.filter((p) => p.status === "running" || p.status === "initializing");
+
+  const handleOpenPod = (podKey: string) => {
+    addPane(podKey);
+    router.push(`/${currentOrg?.slug}/workspace`);
   };
 
   return (
-    <div className="lg:w-72 shrink-0 space-y-3">
-      <SidebarPodSection ticket={ticket} ticketSlug={ticketSlug} />
-
-      <div className="rounded-xl border border-border/60 bg-card shadow-sm overflow-hidden">
-        {/* Status */}
-        <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">{t("tickets.filters.status")}</span>
-            <StatusSelect value={ticket.status} onChange={handleStatusChange} showLabel size="sm" />
-          </div>
-        </div>
-
-        <div className="mx-4 border-t border-border/40" />
-
-        {/* Repository */}
-        <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
-          <span className="text-xs font-medium text-muted-foreground block mb-2">{t("tickets.detail.repository")}</span>
-          <RepositorySelect value={ticket.repository_id ?? null} onChange={onRepositoryChange}
-            placeholder={t("tickets.detail.noRepository")} className="text-sm" />
-        </div>
-
-        <div className="mx-4 border-t border-border/40" />
-
-        {/* Due Date */}
-        {ticket.due_date && (
-          <>
-            <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">{t("tickets.detail.dueDate")}</span>
-                <span className={cn("text-sm tabular-nums",
-                  new Date(ticket.due_date) < new Date() && ticket.status !== "done"
-                    ? "text-destructive font-medium" : "text-foreground")}>
-                  {new Date(ticket.due_date).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-            <div className="mx-4 border-t border-border/40" />
-          </>
+    <aside className="lg:w-80 shrink-0 space-y-4">
+      {/* Working Pods */}
+      <RailSection title={t("tickets.rail.workingPods")} count={activePods.length}>
+        {podsLoading ? (
+          <RailEmpty icon={<Terminal className="h-4 w-4" />} text={t("common.loading")} />
+        ) : activePods.length === 0 ? (
+          <RailEmpty icon={<Terminal className="h-4 w-4" />} text={t("tickets.rail.noPods")} />
+        ) : (
+          <ul className="space-y-1">
+            {activePods.map((pod) => (
+              <li key={pod.pod_key}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenPod(pod.pod_key)}
+                  className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className={cn(
+                          "h-2 w-2 flex-shrink-0 rounded-full",
+                          pod.status === "running" ? "bg-success" : "bg-warning",
+                        )}
+                      />
+                      <span className="truncate font-mono text-[12px] font-medium text-foreground">
+                        {getShortPodKey(pod.pod_key)}
+                      </span>
+                    </div>
+                    <AgentStatusBadge agentStatus={pod.agent_status} podStatus={pod.status} variant="badge" />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
+      </RailSection>
 
-        {/* Assignees */}
-        <AssigneesSection assignees={ticket.assignees} t={t} />
+      {/* Sub-tickets */}
+      <RailSection title={t("tickets.rail.subTickets")} count={subTickets.length}>
+        {subTickets.length === 0 ? (
+          <RailEmpty icon={<Circle className="h-4 w-4" />} text={t("tickets.rail.noSubTickets")} />
+        ) : (
+          <ul className="space-y-1">
+            {subTickets.map((st) => {
+              const isDone = st.status === "done";
+              return (
+                <li key={st.slug}>
+                  <Link
+                    href={`/${currentOrg?.slug}/tickets/${st.slug}`}
+                    className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-success" />
+                    ) : (
+                      <Circle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {st.slug}
+                        </span>
+                      </div>
+                      <div
+                        className={cn(
+                          "truncate text-[12px]",
+                          isDone ? "text-muted-foreground line-through" : "text-foreground",
+                        )}
+                      >
+                        {st.title}
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </RailSection>
 
-        <div className="mx-4 border-t border-border/40" />
+      {/* PRs / Commits */}
+      <RailSection title={t("tickets.rail.pullRequests")} count={commits.length}>
+        {commits.length === 0 ? (
+          <RailEmpty icon={<GitPullRequest className="h-4 w-4" />} text={t("tickets.rail.noPRs")} />
+        ) : (
+          <ul className="space-y-1">
+            {commits.slice(0, 5).map((c, idx) => (
+              <li
+                key={c.sha ?? c.hash ?? idx}
+                className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
+              >
+                <GitPullRequest className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    {(c.short_sha ?? c.sha)?.slice(0, 7)}
+                  </div>
+                  <div className="truncate text-[12px] text-foreground">{c.message}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </RailSection>
 
-        {/* Timestamps */}
-        <div className="px-4 py-3">
-          <div className="flex flex-col gap-1 text-xs text-muted-foreground/70">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3 shrink-0" />
-              <span title={new Date(ticket.created_at).toLocaleString()}>
-                {t("tickets.detail.created")} {formatRelativeDate(ticket.created_at)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 ml-[18px]">
-              <span title={new Date(ticket.updated_at).toLocaleString()}>
-                {t("tickets.detail.updated")} {formatRelativeDate(ticket.updated_at)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Activity */}
+      <RailSection title={t("tickets.rail.activity")}>
+        <ul className="space-y-2">
+          <ActivityRow time={ticket.updated_at} text={t("tickets.rail.activityUpdated")} />
+          <ActivityRow time={ticket.created_at} text={t("tickets.rail.activityCreated")} />
+          {relations.slice(0, 2).map((rel, idx) => (
+            <ActivityRow
+              key={`rel-${idx}`}
+              time={undefined}
+              text={`${rel.relation_type}: ${rel.target_ticket?.slug ?? "—"}`}
+            />
+          ))}
+        </ul>
+      </RailSection>
 
       {commentsSlot}
+    </aside>
+  );
+}
 
-      <Button className="w-full" variant="outline" size="sm" onClick={onDelete}>
-        <Trash2 className="h-3.5 w-3.5 mr-1.5 text-destructive" />
-        <span className="text-destructive">{t("common.delete")}</span>
-      </Button>
+function RailSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-md border border-border bg-card">
+      <header className="flex items-center justify-between border-b border-border px-3 py-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </span>
+        {typeof count === "number" && count > 0 && (
+          <span className="font-mono text-[11px] text-muted-foreground">{count}</span>
+        )}
+      </header>
+      <div className="p-2">{children}</div>
+    </section>
+  );
+}
+
+function RailEmpty({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-2 px-2 py-3 text-[12px] text-muted-foreground/70">
+      {icon}
+      <span>{text}</span>
     </div>
   );
 }
 
-function AssigneesSection({ assignees, t }: {
-  assignees?: Ticket["assignees"];
-  t: (key: string) => string;
-}) {
+function ActivityRow({ time, text }: { time?: string; text: string }) {
+  if (!time) return null;
+  const date = new Date(time);
+  const diffMs = Date.now() - date.getTime();
+  const hours = Math.floor(diffMs / (60 * 60 * 1000));
+  const days = Math.floor(hours / 24);
+  const rel = days > 0 ? `${days}d ago` : hours > 0 ? `${hours}h ago` : "just now";
   return (
-    <div className="px-4 py-3">
-      <span className="text-xs font-medium text-muted-foreground block mb-2.5">{t("tickets.detail.assignees")}</span>
-      {assignees && assignees.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {assignees.map((a) => (
-            <div key={a.user_id} className="flex items-center gap-2 group">
-              {a.user?.avatar_url ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={a.user.avatar_url} alt="" className="w-6 h-6 rounded-full ring-1 ring-border/50" />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary ring-1 ring-primary/20">
-                  {(a.user?.name || a.user?.username || "?")[0].toUpperCase()}
-                </div>
-              )}
-              <span className="text-sm text-foreground/90">{a.user?.name || a.user?.username}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground/50 italic">{t("tickets.detail.noAssignees")}</p>
-      )}
-    </div>
+    <li className="flex items-start gap-2 px-2">
+      <Clock className="mt-0.5 h-3 w-3 flex-shrink-0 text-muted-foreground/60" />
+      <div className="flex-1 text-[12px]">
+        <div className="text-foreground">{text}</div>
+        <div className="text-[10px] text-muted-foreground">{rel}</div>
+      </div>
+    </li>
   );
 }
 

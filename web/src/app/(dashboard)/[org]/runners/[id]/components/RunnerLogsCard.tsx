@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { FileText, Upload, Download, Loader2 } from "lucide-react";
-import { runnerApi } from "@/lib/api";
-import type { RunnerLogData } from "@/lib/api";
+import { getRunnerService } from "@/lib/wasm-core";
+import type { RunnerLogData } from "@/lib/api/runnerTypes";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -27,7 +27,9 @@ export function RunnerLogsCard({ runnerId, runnerStatus }: RunnerLogsCardProps) 
 
   const loadLogs = useCallback(async () => {
     try {
-      const res = await runnerApi.listLogs(runnerId);
+      const res: { logs: RunnerLogData[] } = JSON.parse(
+        await getRunnerService().list_runner_logs(BigInt(runnerId))
+      );
       if (mountedRef.current) {
         setLogs(res.logs || []);
       }
@@ -61,7 +63,7 @@ export function RunnerLogsCard({ runnerId, runnerStatus }: RunnerLogsCardProps) 
   const handleUpload = async () => {
     setUploading(true);
     try {
-      await runnerApi.requestLogUpload(runnerId);
+      await getRunnerService().request_log_upload(BigInt(runnerId));
       toast.success(t("runners.logs.uploadSuccess"));
       await loadLogs();
     } catch {
@@ -126,7 +128,7 @@ export function RunnerLogsCard({ runnerId, runnerStatus }: RunnerLogsCardProps) 
                     {log.size_bytes > 0 ? formatBytes(log.size_bytes) : "-"}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(log.created_at ?? ''), { addSuffix: true })}
                   </td>
                   <td className="px-4 py-3">
                     {log.status === "completed" && log.download_url ? (

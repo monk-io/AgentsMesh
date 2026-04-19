@@ -11,11 +11,11 @@ import {
   TicketPriorityBadge,
 } from "@/components/support/ticket-status-badge";
 import { CreateTicketDialog } from "@/components/support/create-ticket-dialog";
-import {
-  listSupportTickets,
+import type {
   SupportTicket,
   SupportTicketListResponse,
-} from "@/lib/api/support-ticket";
+} from "@/lib/api/supportTicketTypes";
+import { getSupportTicketService } from "@/lib/wasm-core";
 import { formatTimeAgo } from "@/lib/utils/time";
 import { useEffect } from "react";
 
@@ -33,11 +33,13 @@ export default function SupportPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await listSupportTickets({
-        status: statusFilter || undefined,
-        page,
-        page_size: 20,
-      });
+      const result: SupportTicketListResponse = JSON.parse(
+        await getSupportTicketService().list(
+          statusFilter || null,
+          page,
+          20,
+        )
+      );
       setData(result);
     } catch {
       setError(t("support.error.loadFailed"));

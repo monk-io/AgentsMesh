@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
-import { repositoryApi, type WebhookStatus, type RepositoryData } from "@/lib/api";
+import { getRepositoryService } from "@/lib/wasm-core";
+import type { WebhookStatus, RepositoryData, WebhookSecretResponse } from "@/lib/api/repositoryTypes";
 import { cn } from "@/lib/utils";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
@@ -41,7 +42,9 @@ export function WebhookSettingsCard({
     try {
       setLoading(true);
       setError(null);
-      const res = await repositoryApi.getWebhookStatus(repository.id);
+      const res: { webhook_status: WebhookStatus } = JSON.parse(
+        await getRepositoryService().get_webhook_status(BigInt(repository.id))
+      );
       setStatus(res.webhook_status);
     } catch (err) {
       const msg = getLocalizedErrorMessage(err, t, t("repositories.webhook.retry"));
@@ -61,28 +64,9 @@ export function WebhookSettingsCard({
     try {
       setActionLoading("register");
       setError(null);
-      const res = await repositoryApi.registerWebhook(repository.id);
-      if (res.result.registered) {
-        await loadStatus();
-        onStatusChange?.();
-      } else if (res.result.needs_manual_setup) {
-        // Need to fetch secret for manual setup
-        try {
-          const secretRes = await repositoryApi.getWebhookSecret(repository.id);
-          // Transform API response to component format
-          setSecretInfo({
-            url: secretRes.webhook_url,
-            secret: secretRes.webhook_secret,
-            events: secretRes.events,
-          });
-          setShowSecret(true);
-        } catch (err) {
-          toast.error(getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed")));
-        }
-        await loadStatus();
-      } else if (res.result.error) {
-        setError(res.result.error);
-      }
+      await getRepositoryService().register_webhook(BigInt(repository.id));
+      await loadStatus();
+      onStatusChange?.();
     } catch (err) {
       const msg = getLocalizedErrorMessage(err, t, t("repositories.detail.webhookFailed"));
       setError(msg);
@@ -97,7 +81,7 @@ export function WebhookSettingsCard({
     try {
       setActionLoading("delete");
       setError(null);
-      await repositoryApi.deleteWebhook(repository.id);
+      await getRepositoryService().delete_webhook(BigInt(repository.id));
       setSecretInfo(null);
       setShowSecret(false);
       await loadStatus();
@@ -116,7 +100,7 @@ export function WebhookSettingsCard({
     try {
       setActionLoading("markConfigured");
       setError(null);
-      await repositoryApi.markWebhookConfigured(repository.id);
+      await getRepositoryService().mark_webhook_configured(BigInt(repository.id));
       setShowSecret(false);
       await loadStatus();
       onStatusChange?.();
@@ -134,7 +118,9 @@ export function WebhookSettingsCard({
     try {
       setActionLoading("getSecret");
       setError(null);
-      const res = await repositoryApi.getWebhookSecret(repository.id);
+      const res: WebhookSecretResponse = JSON.parse(
+        await getRepositoryService().get_webhook_secret(BigInt(repository.id))
+      );
       // Transform API response to component format
       setSecretInfo({
         url: res.webhook_url,

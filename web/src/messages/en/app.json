@@ -42,6 +42,10 @@
       "activePods": "{count} active pods",
       "channelsCount": "{count} channels",
       "bindingsCount": "{count} bindings",
+      "runnersOnline": "{online} of {total} runners online",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "fit": "Fit",
       "refresh": "Refresh",
       "dismiss": "Dismiss",
       "updating": "Updating..."
@@ -100,6 +104,25 @@
     "title": "Tickets",
     "newTicket": "New Ticket",
     "board": "Board",
+    "views": {
+      "board": "Board",
+      "list": "List"
+    },
+    "actions": {
+      "newTicket": "New",
+      "export": "Export"
+    },
+    "rail": {
+      "workingPods": "Working Pods",
+      "noPods": "No active pods",
+      "subTickets": "Sub-tickets",
+      "noSubTickets": "No sub-tickets",
+      "pullRequests": "Pull Requests",
+      "noPRs": "No PRs linked",
+      "activity": "Activity",
+      "activityCreated": "Ticket created",
+      "activityUpdated": "Ticket updated"
+    },
     "list": {
       "ticket": "Ticket",
       "assignees": "Assignees",
@@ -183,8 +206,10 @@
       "commits": "Commits",
       "actions": "Actions",
       "details": "Details",
-      "dueDate": "Due Date",
-      "repository": "Repository",
+      "dueDate": "Due",
+      "repository": "Repo",
+      "priority": "Priority",
+      "opened": "Opened",
       "noRepository": "No repository",
       "assignees": "Assignees",
       "noAssignees": "No assignees",
@@ -195,7 +220,9 @@
       "deleteConfirmation": "Are you sure you want to delete ticket {slug}? This action cannot be undone.",
       "labels": "Labels",
       "timeline": "Timeline",
-      "started": "Started",
+      "spawnPod": "Spawn Pod",
+      "markDone": "Mark Done",
+      "lastUsedAgent": "claude-code (last used)","started": "Started",
       "completed": "Completed",
       "viewFullDetails": "View Full Details",
       "comments": "Comments",
@@ -245,7 +272,37 @@
     "newPod": "New Pod",
     "noTerminalsOpen": "No terminals open",
     "noTerminalsDescription": "Click on a pod in the sidebar to open its terminal, or create a new pod to get started.",
-    "createNewPod": "Create New Pod",
+    "createNewPod": "New Pod",
+    "browseAgents": "Browse agents",
+    "emptyHeroTitle": "Spawn your first Pod",
+    "emptyHeroDescription": "A Pod is an isolated terminal where an AI agent works on your code. You can watch, intervene, or let it run on autopilot.",
+    "recipesHeading": "Or start from a recipe",
+    "recipes": {
+      "explain": {
+        "title": "Explain this codebase",
+        "description": "Claude Code walks through your repo and summarizes architecture.",
+        "duration": "2 min"
+      },
+      "tests": {
+        "title": "Run your tests",
+        "description": "Claude Code executes the test suite and reports failures.",
+        "duration": "3 min"
+      },
+      "bug": {
+        "title": "Fix an open bug",
+        "description": "Pick a ticket, spawn a Pod. Agent reads context and proposes a fix.",
+        "duration": "8 min"
+      }
+    },
+    "banner": {
+      "newUser": "New to AgentsMesh?",
+      "watchIntro": "Watch the 2-minute intro →"
+    },
+    "hints": {
+      "search": "to search",
+      "createPod": "to create pod",
+      "cli": "Prefer the CLI? agentsmesh pod new →"
+    },
     "podCreated": "Pod created! Waiting for it to start...",
     "podOpened": "Pod opened",
     "filters": {

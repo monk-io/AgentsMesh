@@ -119,8 +119,9 @@ describe("acpSession store", () => {
     it("is a no-op for non-existent session", () => {
       const store = useAcpSessionStore.getState();
       store.markLastMessageComplete("nonexistent");
-      // Should not throw
-      expect(useAcpSessionStore.getState().sessions["nonexistent"]).toBeUndefined();
+      // syncSession creates EMPTY_SESSION entry even when WASM returns null
+      const session = useAcpSessionStore.getState().sessions["nonexistent"];
+      expect(session.messages).toEqual([]);
     });
 
     it("is a no-op for empty messages", () => {

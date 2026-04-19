@@ -5,7 +5,7 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react";
-import { type RunnerData } from "@/lib/api";
+import type { RunnerData } from "@/lib/api/runnerTypes";
 
 export function getStatusIcon(status: RunnerData["status"]) {
   switch (status) {

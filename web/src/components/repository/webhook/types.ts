@@ -1,4 +1,4 @@
-import { WebhookStatus, WebhookSecretResponse } from "@/lib/api";
+import type { WebhookStatus, WebhookSecretResponse } from "@/lib/api/repositoryTypes";
 
 export type WebhookState = "loading" | "registered" | "needs_manual_setup" | "not_registered" | "error";
 

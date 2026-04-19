@@ -1,18 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/test/test-utils";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { userRepositoryProviderApi } from "@/lib/api";
 import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
+  setupProviderMocks,
+  stableCredSvc,
 } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Rendering", () => {
@@ -21,12 +12,7 @@ describe("ImportRepositoryModal - Rendering", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should not render when open is false", () => {
@@ -47,15 +33,14 @@ describe("ImportRepositoryModal - Rendering", () => {
   });
 
   it("should show loading state while fetching providers", async () => {
-    vi.mocked(userRepositoryProviderApi.list).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ providers: [] }), 100))
+    stableCredSvc.list_repo_providers.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(JSON.stringify({ providers: [] })), 100))
     );
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />
     );
 
-    // Loading spinner should be visible initially
     const spinners = document.querySelectorAll(".animate-spin");
     expect(spinners.length).toBeGreaterThan(0);
   });
@@ -72,7 +57,7 @@ describe("ImportRepositoryModal - Rendering", () => {
   });
 
   it("should show no connections message when no providers", async () => {
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({ providers: [] });
+    setupProviderMocks([]);
 
     render(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />

@@ -5,16 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useTranslations } from "next-intl";
-import { agentApi, AgentData } from "@/lib/api/agent";
+import { getAgentService } from "@/lib/wasm-core";
+import type { AgentData } from "@/lib/api";
 import {
   Settings,
   Users,
   Bot,
   CreditCard,
-  User,
   GitBranch,
   Bell,
-  Building2,
   ChevronDown,
   ChevronRight,
   Sparkles,
@@ -27,13 +26,12 @@ interface SettingsSidebarContentProps {
   className?: string;
 }
 
-type SettingsScope = "organization" | "personal";
+type SettingsScope = "personal" | "organization";
 
-// Tab item with optional children for three-level menu
 interface TabItem {
   id: string;
   labelKey?: string;
-  label?: string;  // Direct label (for dynamic items)
+  label?: string;
   icon: typeof Settings;
   children?: TabItem[];
 }
@@ -44,30 +42,31 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
   const { currentOrg } = useAuthStore();
   const t = useTranslations();
 
-  // Get current scope and tab from URL params - default to personal scope
   const currentScope: SettingsScope = (searchParams.get("scope") as SettingsScope) || "personal";
   const currentTab = searchParams.get("tab") || "general";
 
-  // Track expanded sections - expand personal by default
-  const [expandedSections, setExpandedSections] = useState<Record<SettingsScope, boolean>>({
-    personal: true,
-    organization: currentScope === "organization",
-  });
-
-  // Track expanded sub-sections (for three-level menu)
   const [expandedSubSections, setExpandedSubSections] = useState<Record<string, boolean>>({
     "agent-config": currentTab.startsWith("agents/"),
   });
 
-  // Agents from backend
+  useEffect(() => {
+    setExpandedSubSections((prev) => ({
+      ...prev,
+      "agent-config": currentTab.startsWith("agents/") || prev["agent-config"],
+    }));
+  }, [currentTab]);
+
   const [agents, setAgents] = useState<AgentData[]>([]);
 
-  // Fetch agents on mount
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const response = await agentApi.list();
-        setAgents(response.agents || []);
+        const response = JSON.parse(await getAgentService().list_agents());
+        const merged = [
+          ...(response.builtin_agents || []),
+          ...(response.custom_agents || []),
+        ];
+        setAgents(merged);
       } catch (error) {
         console.error("Failed to fetch agents:", error);
       }
@@ -75,8 +74,8 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
     fetchAgents();
   }, []);
 
-  // Organization settings tabs (removed "agents" - now in personal settings)
   const isOrgAdminOrOwner = currentOrg?.role === "owner" || currentOrg?.role === "admin";
+
   const orgSettingsTabs: TabItem[] = [
     { id: "general", labelKey: "ide.sidebar.settings.tabs.general", icon: Settings },
     { id: "members", labelKey: "ide.sidebar.settings.tabs.members", icon: Users },
@@ -88,7 +87,6 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
     { id: "billing", labelKey: "ide.sidebar.settings.tabs.billing", icon: CreditCard },
   ];
 
-  // Personal settings tabs with agent config as expandable section
   const personalSettingsTabs: TabItem[] = [
     { id: "general", labelKey: "ide.sidebar.settings.tabs.general", icon: Settings },
     { id: "git", labelKey: "settings.personal.tabs.git", icon: GitBranch },
@@ -96,7 +94,7 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
       id: "agent-config",
       labelKey: "settings.personal.tabs.agentConfig",
       icon: Sparkles,
-      children: agents.map(agent => ({
+      children: agents.map((agent) => ({
         id: `agents/${agent.slug}`,
         label: agent.name,
         icon: Bot,
@@ -105,181 +103,106 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
     { id: "notifications", labelKey: "settings.personal.tabs.notifications", icon: Bell },
   ];
 
-  // Toggle section expansion
-  const toggleSection = (scope: SettingsScope) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [scope]: !prev[scope],
-    }));
-  };
-
-  // Toggle sub-section expansion (for three-level menu)
   const toggleSubSection = (sectionId: string) => {
-    setExpandedSubSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId],
-    }));
+    setExpandedSubSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  // Handle tab click
-  const handleTabClick = (scope: SettingsScope, tabId: string) => {
-    if (scope === "organization") {
-      router.push(`/${currentOrg?.slug}/settings?scope=organization&tab=${tabId}`);
-    } else {
-      router.push(`/${currentOrg?.slug}/settings?scope=personal&tab=${tabId}`);
-    }
-    // Auto expand the section when clicking a tab
-    setExpandedSections(prev => ({
-      ...prev,
-      [scope]: true,
-    }));
+  const navigate = (scope: SettingsScope, tabId: string) => {
+    router.push(`/${currentOrg?.slug}/settings?scope=${scope}&tab=${tabId}`);
   };
 
-  // Render tab item (can be simple or expandable with children)
-  const renderTabItem = (
-    scope: SettingsScope,
-    tab: TabItem,
-    depth: number = 0
-  ) => {
+  const renderTabItem = (scope: SettingsScope, tab: TabItem, depth = 0): React.ReactNode => {
     const TabIcon = tab.icon;
     const hasChildren = tab.children && tab.children.length > 0;
     const isSubSectionExpanded = expandedSubSections[tab.id];
-
-    // Check if this tab or any of its children is active
     const isActive = currentScope === scope && currentTab === tab.id;
-    const isChildActive = hasChildren && tab.children?.some(
-      child => currentScope === scope && currentTab === child.id
-    );
-
-    const paddingLeft = depth === 0 ? "pl-4" : "pl-8";
+    const isChildActive =
+      hasChildren && tab.children?.some((child) => currentScope === scope && currentTab === child.id);
+    const paddingLeft = depth === 0 ? "pl-3" : "pl-8";
 
     if (hasChildren) {
-      // Render expandable sub-section
       return (
         <div key={tab.id}>
           <button
             className={cn(
-              "w-full flex items-center gap-2 pr-3 py-1.5 text-left transition-colors",
+              "w-full flex items-center gap-2 pr-3 py-1.5 text-left transition-colors rounded-md",
               paddingLeft,
-              isChildActive
-                ? "text-foreground"
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              isChildActive ? "text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
             onClick={() => toggleSubSection(tab.id)}
           >
             {isSubSectionExpanded ? (
-              <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <ChevronDown className="w-4 h-4 flex-shrink-0" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 flex-shrink-0" />
             )}
-            <span className={cn(
-              "text-sm truncate",
-              isChildActive && "font-medium"
-            )}>
+            <TabIcon className="w-4 h-4 flex-shrink-0" />
+            <span className={cn("text-sm truncate", isChildActive && "font-medium")}>
               {tab.label || (tab.labelKey && t(tab.labelKey))}
             </span>
           </button>
-
-          {/* Render children */}
           {isSubSectionExpanded && (
-            <div className="ml-4 border-l border-border/50">
-              {tab.children?.map(child => renderTabItem(scope, child, depth + 1))}
+            <div className="ml-4 border-l border-border">
+              {tab.children?.map((child) => renderTabItem(scope, child, depth + 1))}
             </div>
           )}
         </div>
       );
     }
 
-    // Render simple tab
     return (
       <button
         key={tab.id}
         className={cn(
-          "w-full flex items-center gap-2 pr-3 py-1.5 text-left transition-colors",
+          "w-full flex items-center gap-2 pr-3 py-1.5 text-left transition-colors rounded-md",
           paddingLeft,
-          isActive
-            ? "bg-muted text-foreground"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
-        onClick={() => handleTabClick(scope, tab.id)}
+        onClick={() => navigate(scope, tab.id)}
       >
-        <TabIcon className={cn(
-          "w-4 h-4 flex-shrink-0",
-          isActive && "text-primary"
-        )} />
-        <span className={cn(
-          "text-sm truncate",
-          isActive && "font-medium"
-        )}>
+        <TabIcon className={cn("w-4 h-4 flex-shrink-0", isActive && "text-primary")} />
+        <span className={cn("text-sm truncate", isActive && "font-medium")}>
           {tab.label || (tab.labelKey && t(tab.labelKey))}
         </span>
       </button>
     );
   };
 
-  // Render a collapsible section
-  const renderSection = (
-    scope: SettingsScope,
-    titleKey: string,
-    Icon: typeof Building2,
-    tabs: TabItem[]
-  ) => {
-    const isExpanded = expandedSections[scope];
-    const isCurrentScope = currentScope === scope;
-
-    return (
-      <div className="mb-1">
-        {/* Section header */}
-        <button
-          className={cn(
-            "w-full flex items-center gap-2 px-3 py-2 text-left transition-colors",
-            "hover:bg-muted/50",
-            isCurrentScope && "text-foreground"
-          )}
-          onClick={() => toggleSection(scope)}
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          )}
-          <Icon className="w-4 h-4" />
-          <span className="text-sm font-medium">{t(titleKey)}</span>
-        </button>
-
-        {/* Section items */}
-        {isExpanded && (
-          <div className="ml-4 border-l border-border">
-            {tabs.map(tab => renderTabItem(scope, tab))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const activeTabs = currentScope === "personal" ? personalSettingsTabs : orgSettingsTabs;
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      {/* Settings navigation */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {/* Personal settings section (on top) */}
-        {renderSection(
-          "personal",
-          "ide.sidebar.settings.scopePersonal",
-          User,
-          personalSettingsTabs
-        )}
-
-        {/* Organization settings section */}
-        {renderSection(
-          "organization",
-          "ide.sidebar.settings.scopeOrg",
-          Building2,
-          orgSettingsTabs
-        )}
+      {/* Scope Tabs — visible, replaces query-param-driven toggle */}
+      <div role="tablist" className="grid grid-cols-2 gap-1 p-2 border-b border-border">
+        {(["personal", "organization"] as const).map((scope) => (
+          <button
+            key={scope}
+            role="tab"
+            aria-selected={currentScope === scope}
+            onClick={() => navigate(scope, "general")}
+            className={cn(
+              "px-3 py-1.5 text-sm rounded-md transition-colors",
+              currentScope === scope
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            {t(
+              scope === "personal"
+                ? "ide.sidebar.settings.scopePersonal"
+                : "ide.sidebar.settings.scopeOrg",
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Organization info at bottom */}
-      {currentOrg && (
+      {/* Tab tree for the active scope */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        {activeTabs.map((tab) => renderTabItem(currentScope, tab))}
+      </div>
+
+      {/* Organization info at bottom (only meaningful when on org scope) */}
+      {currentOrg && currentScope === "organization" && (
         <div className="border-t border-border px-3 py-3">
           <div className="text-xs text-muted-foreground mb-1">{t("ide.sidebar.settings.currentOrg")}</div>
           <div className="text-sm font-medium truncate">{currentOrg.name}</div>

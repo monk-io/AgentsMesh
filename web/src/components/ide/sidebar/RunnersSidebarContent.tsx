@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
-import { useRunnerStore, Runner, RunnerStatus, getRunnerStatusInfo, formatHostInfo } from "@/stores/runner";
+import { useRunnerStore, useRunners, Runner, RunnerStatus, getRunnerStatusInfo, formatHostInfo } from "@/stores/runner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,8 +29,9 @@ const STATUS_FILTER_VALUES = ["all", "online", "offline"] as const;
 export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebarContentProps) {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const currentOrg = useAuthStore((s) => s.currentOrg);
-  const runners = useRunnerStore((s) => s.runners);
+  const runners = useRunners();
   const loading = useRunnerStore((s) => s.loading);
   const fetchRunners = useRunnerStore((s) => s.fetchRunners);
 
@@ -38,7 +39,13 @@ export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebar
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RunnerStatus>("all");
-  const [selectedRunnerId, setSelectedRunnerId] = useState<number | null>(null);
+
+  const selectedRunnerId = useMemo(() => {
+    const raw = searchParams.get("id");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isNaN(n) ? null : n;
+  }, [searchParams]);
 
   // Load runners on mount
   useEffect(() => {
@@ -80,18 +87,15 @@ export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebar
   const totalPods = runners.reduce((sum, r) => sum + r.current_pods, 0);
   const totalCapacity = runners.reduce((sum, r) => sum + r.max_concurrent_pods, 0);
 
-  // Handle runner click - navigate to runner detail page
   const handleRunnerClick = (runner: Runner) => {
-    setSelectedRunnerId(runner.id);
-    router.push(`/${currentOrg?.slug}/runners/${runner.id}`);
+    router.push(`/${currentOrg?.slug}/infra?tab=runners&id=${runner.id}`);
   };
 
-  // Handle add runner - use callback if provided, otherwise navigate
   const handleAddRunner = () => {
     if (onAddRunner) {
       onAddRunner();
     } else {
-      router.push(`/${currentOrg?.slug}/runners`);
+      router.push(`/${currentOrg?.slug}/infra?tab=runners`);
     }
   };
 

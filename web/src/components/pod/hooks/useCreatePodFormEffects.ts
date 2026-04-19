@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { AgentData, RepositoryData } from "@/lib/api";
-import { userAgentCredentialApi, CredentialProfileData } from "@/lib/api";
+import type { AgentData, RepositoryData, CredentialProfileData } from "@/lib/api";
+import { getUserCredentialService } from "@/lib/wasm-core";
 import { usePodCreationStore } from "@/stores/podCreation";
 import { RUNNER_HOST_PROFILE_ID } from "./useCreatePodFormTypes";
 
@@ -57,13 +57,15 @@ export function useCredentialProfiles(selectedAgent: string | null) {
     const loadCredentials = async () => {
       setLoadingCredentials(true);
       try {
-        const res = await userAgentCredentialApi.listForAgent(selectedAgent);
+        const res = JSON.parse(
+          await getUserCredentialService().list_agent_credentials_for_agent(selectedAgent)
+        );
         const profiles = res.profiles || [];
         setCredentialProfiles(profiles);
 
         // Auto-select: prefer saved preference, then default profile, then RunnerHost
-        const savedProfile = lastCredentialProfileId && profiles.find(p => p.id === lastCredentialProfileId);
-        const defaultProfile = profiles.find((p) => p.is_default);
+        const savedProfile = lastCredentialProfileId && profiles.find((p: CredentialProfileData) => p.id === lastCredentialProfileId);
+        const defaultProfile = profiles.find((p: CredentialProfileData) => p.is_default);
         if (savedProfile) {
           setSelectedCredentialProfile(savedProfile.id);
         } else if (defaultProfile) {

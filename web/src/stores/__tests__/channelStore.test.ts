@@ -2,24 +2,15 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "@testing-library/react";
 import { useChannelStore, useChannelMessageStore, Channel } from "../channel";
 import type { ChannelMessage } from "@/lib/api";
+import { getChannelService } from "@/lib/wasm-core";
 
-vi.mock("@/lib/api", () => ({
-  channelApi: {
-    list: vi.fn(),
-    get: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    archive: vi.fn(),
-    unarchive: vi.fn(),
-    getMessages: vi.fn(),
-    sendMessage: vi.fn(),
-    joinPod: vi.fn(),
-    leavePod: vi.fn(),
-    markRead: vi.fn(),
-  },
-}));
+const svc = () => getChannelService();
 
-import { channelApi } from "@/lib/api";
+const getChannels = (): Channel[] => JSON.parse(svc().channels_json());
+const getCurrentChannel = (): Channel | null => {
+  const v = svc().current_channel_json();
+  return v ? (typeof v === "string" ? JSON.parse(v) : v) : null;
+};
 
 const mockChannel: Channel = {
   id: 1,
@@ -56,11 +47,15 @@ const mockMessage: ChannelMessage = {
 };
 
 describe("Channel Store", () => {
+  const seedChannels = (channels: Channel[], currentChannel: Channel | null = null) => {
+    svc().set_channels(JSON.stringify(channels));
+    if (currentChannel) svc().set_current_channel(BigInt(currentChannel.id));
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     useChannelStore.setState({
-      channels: [],
-      currentChannel: null,
+      _tick: 0,
       loading: false,
       channelLoading: false,
       error: null,
@@ -74,8 +69,8 @@ describe("Channel Store", () => {
   describe("initial state", () => {
     it("should have default values", () => {
       const state = useChannelStore.getState();
-      expect(state.channels).toEqual([]);
-      expect(state.currentChannel).toBeNull();
+      expect(getChannels()).toEqual([]);
+      expect(getCurrentChannel()).toBeNull();
       expect(state.loading).toBe(false);
       expect(state.error).toBeNull();
     });
@@ -83,27 +78,23 @@ describe("Channel Store", () => {
 
   describe("fetchChannels", () => {
     it("should fetch channels successfully", async () => {
-      vi.mocked(channelApi.list).mockResolvedValue({ channels: [mockChannel, mockChannel2], total: 2 });
+      vi.mocked(svc().fetch_channels).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([mockChannel, mockChannel2]));
+        return JSON.stringify({ channels: [mockChannel, mockChannel2] });
+      });
       await act(async () => { await useChannelStore.getState().fetchChannels(); });
-      const state = useChannelStore.getState();
-      expect(state.channels).toHaveLength(2);
-      expect(state.channels[0].name).toBe("general");
+      expect(getChannels()).toHaveLength(2);
+      expect(getChannels()[0].name).toBe("general");
     });
 
-    it("should pass filters to API", async () => {
-      vi.mocked(channelApi.list).mockResolvedValue({ channels: [], total: 0 });
+    it("should pass filters to service", async () => {
+      vi.mocked(svc().fetch_channels).mockResolvedValue(JSON.stringify({ channels: [] }));
       await act(async () => { await useChannelStore.getState().fetchChannels({ includeArchived: true }); });
-      expect(channelApi.list).toHaveBeenCalledWith({ include_archived: true });
-    });
-
-    it("should handle empty response", async () => {
-      vi.mocked(channelApi.list).mockResolvedValue({ channels: undefined as unknown as Channel[], total: 0 });
-      await act(async () => { await useChannelStore.getState().fetchChannels(); });
-      expect(useChannelStore.getState().channels).toEqual([]);
+      expect(svc().fetch_channels).toHaveBeenCalledWith(true);
     });
 
     it("should handle fetch error", async () => {
-      vi.mocked(channelApi.list).mockRejectedValue(new Error("Network error"));
+      vi.mocked(svc().fetch_channels).mockRejectedValue(new Error("Network error"));
       await act(async () => { await useChannelStore.getState().fetchChannels(); });
       expect(useChannelStore.getState().error).toBe("Network error");
     });
@@ -111,13 +102,17 @@ describe("Channel Store", () => {
 
   describe("fetchChannel", () => {
     it("should fetch single channel", async () => {
-      vi.mocked(channelApi.get).mockResolvedValue({ channel: mockChannel });
+      svc().set_channels(JSON.stringify([mockChannel]));
+      vi.mocked(svc().fetch_channel).mockImplementation(async () => {
+        svc().set_current_channel(BigInt(1));
+        return JSON.stringify(mockChannel);
+      });
       await act(async () => { await useChannelStore.getState().fetchChannel(1); });
-      expect(useChannelStore.getState().currentChannel).toEqual(mockChannel);
+      expect(getCurrentChannel()).toEqual(mockChannel);
     });
 
     it("should handle error", async () => {
-      vi.mocked(channelApi.get).mockRejectedValue({ message: "Channel not found" });
+      vi.mocked(svc().fetch_channel).mockRejectedValue({ message: "Channel not found" });
       await act(async () => { await useChannelStore.getState().fetchChannel(999); });
       expect(useChannelStore.getState().error).toBe("Channel not found");
     });
@@ -125,85 +120,106 @@ describe("Channel Store", () => {
 
   describe("createChannel", () => {
     it("should create and add to list", async () => {
-      vi.mocked(channelApi.create).mockResolvedValue({ channel: mockChannel });
+      vi.mocked(svc().create_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([mockChannel]));
+        return JSON.stringify(mockChannel);
+      });
       let result: Channel;
       await act(async () => { result = await useChannelStore.getState().createChannel({ name: "general", description: "General discussion channel" }); });
       expect(result!).toEqual(mockChannel);
-      expect(useChannelStore.getState().channels).toContainEqual(mockChannel);
+      expect(getChannels()).toContainEqual(mockChannel);
     });
 
     it("should convert camelCase to snake_case", async () => {
-      vi.mocked(channelApi.create).mockResolvedValue({ channel: mockChannel });
+      vi.mocked(svc().create_channel).mockResolvedValue(JSON.stringify(mockChannel));
       await act(async () => { await useChannelStore.getState().createChannel({ name: "test", repositoryId: 1, ticketSlug: "PROJ-2" }); });
-      expect(channelApi.create).toHaveBeenCalledWith({ name: "test", description: undefined, document: undefined, repository_id: 1, ticket_slug: "PROJ-2" });
+      expect(svc().create_channel).toHaveBeenCalledWith(JSON.stringify({ name: "test", description: undefined, document: undefined, repository_id: 1, ticket_slug: "PROJ-2" }));
     });
 
     it("should handle error", async () => {
-      vi.mocked(channelApi.create).mockRejectedValue(new Error("Create failed"));
+      vi.mocked(svc().create_channel).mockRejectedValue(new Error("Create failed"));
       await expect(act(async () => { await useChannelStore.getState().createChannel({ name: "test" }); })).rejects.toThrow("Create failed");
     });
   });
 
   describe("updateChannel", () => {
-    beforeEach(() => { useChannelStore.setState({ channels: [mockChannel], currentChannel: mockChannel }); });
+    beforeEach(() => { seedChannels([mockChannel], mockChannel); });
 
     it("should update channel and currentChannel", async () => {
-      vi.mocked(channelApi.update).mockResolvedValue({ channel: { ...mockChannel, name: "updated" } });
+      const updated = { ...mockChannel, name: "updated" };
+      vi.mocked(svc().update_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([updated]));
+        return JSON.stringify(updated);
+      });
       await act(async () => { await useChannelStore.getState().updateChannel(1, { name: "updated" }); });
-      expect(useChannelStore.getState().channels[0].name).toBe("updated");
-      expect(useChannelStore.getState().currentChannel?.name).toBe("updated");
+      expect(getChannels()[0].name).toBe("updated");
+      expect(getCurrentChannel()?.name).toBe("updated");
     });
 
     it("should not update currentChannel if different id", async () => {
-      vi.mocked(channelApi.update).mockResolvedValue({ channel: { ...mockChannel2, name: "updated-dev" } });
-      useChannelStore.setState({ channels: [mockChannel, mockChannel2] });
+      const updated = { ...mockChannel2, name: "updated-dev" };
+      vi.mocked(svc().update_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([mockChannel, updated]));
+        return JSON.stringify(updated);
+      });
+      seedChannels([mockChannel, mockChannel2], mockChannel);
       await act(async () => { await useChannelStore.getState().updateChannel(2, { name: "updated-dev" }); });
-      expect(useChannelStore.getState().currentChannel?.name).toBe("general");
+      expect(getCurrentChannel()?.name).toBe("general");
     });
   });
 
   describe("archive/unarchive", () => {
     it("should archive", async () => {
-      useChannelStore.setState({ channels: [mockChannel], currentChannel: mockChannel });
-      vi.mocked(channelApi.archive).mockResolvedValue({ message: "ok" });
+      seedChannels([mockChannel], mockChannel);
+      vi.mocked(svc().archive_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([{ ...mockChannel, is_archived: true }]));
+      });
       await act(async () => { await useChannelStore.getState().archiveChannel(1); });
-      expect(useChannelStore.getState().channels[0].is_archived).toBe(true);
+      expect(getChannels()[0].is_archived).toBe(true);
     });
 
     it("should unarchive", async () => {
       const archived = { ...mockChannel, is_archived: true };
-      useChannelStore.setState({ channels: [archived], currentChannel: archived });
-      vi.mocked(channelApi.unarchive).mockResolvedValue({ message: "ok" });
+      seedChannels([archived], archived);
+      vi.mocked(svc().unarchive_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([{ ...mockChannel, is_archived: false }]));
+      });
       await act(async () => { await useChannelStore.getState().unarchiveChannel(1); });
-      expect(useChannelStore.getState().channels[0].is_archived).toBe(false);
+      expect(getChannels()[0].is_archived).toBe(false);
     });
   });
 
   describe("join/leave channel", () => {
     it("should join and refresh", async () => {
-      useChannelStore.setState({ channels: [mockChannel], currentChannel: mockChannel });
+      seedChannels([mockChannel], mockChannel);
       const updated = { ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] };
-      vi.mocked(channelApi.joinPod).mockResolvedValue({ message: "ok" });
-      vi.mocked(channelApi.get).mockResolvedValue({ channel: updated });
+      vi.mocked(svc().join_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([updated]));
+        return JSON.stringify(updated);
+      });
       await act(async () => { await useChannelStore.getState().joinChannel(1, "pod-123"); });
-      expect(useChannelStore.getState().channels[0].pods).toHaveLength(1);
+      expect(getChannels()[0].pods).toHaveLength(1);
     });
 
     it("should leave and refresh", async () => {
-      useChannelStore.setState({ channels: [{ ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] }], currentChannel: mockChannel });
-      vi.mocked(channelApi.leavePod).mockResolvedValue({ message: "ok" });
-      vi.mocked(channelApi.get).mockResolvedValue({ channel: { ...mockChannel, pods: [] } as never });
+      seedChannels([{ ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] }], mockChannel);
+      const updated = { ...mockChannel, pods: [] };
+      vi.mocked(svc().leave_channel).mockImplementation(async () => {
+        svc().set_channels(JSON.stringify([updated]));
+        return JSON.stringify(updated);
+      });
       await act(async () => { await useChannelStore.getState().leaveChannel(1, "pod-123"); });
-      expect(useChannelStore.getState().channels[0].pods).toHaveLength(0);
+      expect(getChannels()[0].pods).toHaveLength(0);
     });
   });
 
   describe("setCurrentChannel", () => {
     it("should set and clear", () => {
+      svc().set_channels(JSON.stringify([mockChannel]));
       act(() => { useChannelStore.getState().setCurrentChannel(mockChannel); });
-      expect(useChannelStore.getState().currentChannel).toEqual(mockChannel);
+      expect(getCurrentChannel()).toEqual(mockChannel);
       act(() => { useChannelStore.getState().setCurrentChannel(null); });
-      expect(useChannelStore.getState().currentChannel).toBeNull();
+      expect(getCurrentChannel()).toBeNull();
     });
 
     it("should not affect per-channel message cache", () => {

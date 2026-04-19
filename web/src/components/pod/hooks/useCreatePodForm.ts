@@ -59,7 +59,10 @@ export function useCreatePodForm(
   const supportedModes = useMemo(() => {
     if (!selectedAgent) return [POD_MODE_PTY];
     const agent = availableAgents.find((a) => a.slug === selectedAgent);
-    const modes = agent?.supported_modes?.split(",").map((m) => m.trim()).filter(Boolean) || [];
+    const raw = agent?.supported_modes;
+    const modes = Array.isArray(raw)
+      ? raw.map((m: string) => m.trim()).filter(Boolean)
+      : (typeof raw === "string" ? raw.split(",").map((m: string) => m.trim()).filter(Boolean) : []);
     return modes.length > 0 ? modes : [POD_MODE_PTY];
   }, [selectedAgent, availableAgents]);
 

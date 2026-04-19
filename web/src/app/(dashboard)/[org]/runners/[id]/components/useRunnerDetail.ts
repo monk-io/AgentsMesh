@@ -2,22 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import {
-  runnerApi,
-  podApi,
-  type RunnerData,
-  type RunnerPodData,
-  type SandboxStatus,
-  type RelayConnectionInfo,
-} from "@/lib/api";
+import type {
+  RunnerData,
+  RunnerPodData,
+  SandboxStatus,
+  RelayConnectionInfo,
+} from "@/lib/api/runnerTypes";
+import { getRunnerService, getPodService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
-export function useRunnerDetail(t: (key: string) => string) {
+export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number) {
   const params = useParams();
   const router = useRouter();
-  const runnerId = Number(params.id);
+  const runnerId = runnerIdArg ?? Number(params.id);
 
   const [runner, setRunner] = useState<RunnerData | null>(null);
   const [latestRunnerVersion, setLatestRunnerVersion] = useState<string | undefined>();
@@ -46,8 +45,8 @@ export function useRunnerDetail(t: (key: string) => string) {
 
   const loadRunner = useCallback(async () => {
     try {
-      const res = await runnerApi.get(runnerId);
-      setRunner(res.runner);
+      const res = JSON.parse(await getRunnerService().fetch_runner(BigInt(runnerId)));
+      setRunner(res);
       setRelayConnections(res.relay_connections || []);
       setLatestRunnerVersion(res.latest_runner_version);
     } catch (error) {
@@ -60,7 +59,9 @@ export function useRunnerDetail(t: (key: string) => string) {
   const loadPods = useCallback(async () => {
     setLoadingPods(true);
     try {
-      const res = await runnerApi.listPods(runnerId, { status: podFilter || undefined, limit, offset });
+      const res: { pods: RunnerPodData[]; total: number } = JSON.parse(
+        await getRunnerService().list_runner_pods(BigInt(runnerId), podFilter || null, limit ?? null, offset ?? null)
+      );
       setPods(res.pods || []);
       setTotal(res.total);
     } catch (error) {
@@ -79,7 +80,9 @@ export function useRunnerDetail(t: (key: string) => string) {
     if (inactivePodKeys.length === 0) return;
     setLoadingSandbox(true);
     try {
-      const res = await runnerApi.querySandboxes(runnerId, inactivePodKeys);
+      const res: { sandboxes: SandboxStatus[] } = JSON.parse(
+        await getRunnerService().query_runner_sandboxes(BigInt(runnerId), JSON.stringify({ pod_keys: inactivePodKeys }))
+      );
       const newStatuses = new Map<string, SandboxStatus>();
       for (const status of res.sandboxes || []) newStatuses.set(status.pod_key, status);
       setSandboxStatuses(newStatuses);
@@ -94,10 +97,10 @@ export function useRunnerDetail(t: (key: string) => string) {
     if (!runner || !resumingPod) return;
     setResumeLoading(true);
     try {
-      const res = await podApi.create({
+      const res: { pod: { pod_key: string } } = JSON.parse(await getPodService().create_pod(JSON.stringify({
         runner_id: runner.id, source_pod_key: resumingPod.pod_key,
         resume_agent_session: true, cols: 120, rows: 30,
-      });
+      })));
       setResumeDialogOpen(false);
       setResumingPod(null);
       router.push(`/${params.org}/workspace?pod=${res.pod.pod_key}`);
@@ -111,7 +114,7 @@ export function useRunnerDetail(t: (key: string) => string) {
   const handleToggleEnabled = async () => {
     if (!runner) return;
     try {
-      await runnerApi.update(runner.id, { is_enabled: !runner.is_enabled });
+      await getRunnerService().update_runner(BigInt(runner.id), JSON.stringify({ is_enabled: !runner.is_enabled }));
       loadRunner();
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
@@ -123,7 +126,7 @@ export function useRunnerDetail(t: (key: string) => string) {
     const confirmed = await deleteDialog.confirm();
     if (!confirmed) return;
     try {
-      await runnerApi.delete(runner.id);
+      await getRunnerService().delete_runner(BigInt(runner.id));
       router.push("../runners");
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));

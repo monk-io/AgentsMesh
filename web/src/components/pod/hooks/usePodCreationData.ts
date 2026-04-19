@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  runnerApi,
-  agentApi,
-  repositoryApi,
   RunnerData,
   AgentData,
   RepositoryData,
 } from "@/lib/api";
+import { getRunnerService, getAgentService, getRepositoryService } from "@/lib/wasm-core";
 
 export interface PodCreationData {
   runners: RunnerData[];
@@ -45,21 +43,22 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
       setError(null);
       try {
         const [runnersRes, agentsRes, reposRes] = await Promise.allSettled([
-          runnerApi.list(),
-          agentApi.list(),
-          repositoryApi.list(),
+          getRunnerService().fetch_runners(null).then((j: string) => JSON.parse(j)),
+          getAgentService().list_agents().then((j: string) => JSON.parse(j)),
+          getRepositoryService().list().then((j: string) => JSON.parse(j)),
         ]);
 
         if (cancelled) return;
 
         if (runnersRes.status === "fulfilled") {
           // Only online runners
-          const allRunners = runnersRes.value.runners || [];
-          const onlineRunners = allRunners.filter(r => r.status === "online");
+          const allRunners: RunnerData[] = runnersRes.value.runners || [];
+          const onlineRunners = allRunners.filter((r: RunnerData) => r.status === "online");
           setRunners(onlineRunners);
         }
         if (agentsRes.status === "fulfilled") {
-          const agentList = agentsRes.value.agents || [];
+          const res = agentsRes.value;
+          const agentList = [...(res.builtin_agents || []), ...(res.custom_agents || []), ...(res.agents || [])];
           setAgents(agentList);
         }
         if (reposRes.status === "fulfilled") {

@@ -24,15 +24,18 @@ function buildEventsWsUrl(orgSlug: string, token: string): string {
 export function useRealtimeConnection() {
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("disconnected");
-  const { currentOrg, token } = useAuthStore();
+  const { currentOrg, user } = useAuthStore();
   const managerRef = useRef(getEventSubscriptionManager());
 
+  // Connect and subscribe to state changes when org/user are available
   useEffect(() => {
-    if (!currentOrg || !token) {
+    if (!currentOrg || !user) {
+      // disconnect() will trigger onConnectionStateChange callback
       managerRef.current.disconnect();
       return;
     }
 
+    // Reset and reconnect when org or user changes
     resetEventSubscriptionManager();
     const manager = getEventSubscriptionManager();
     managerRef.current = manager;
@@ -54,7 +57,7 @@ export function useRealtimeConnection() {
       }, 100);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentOrg?.id, token]);
+  }, [currentOrg?.id, user]);
 
   const reconnect = useCallback(() => {
     const { currentOrg: org, token: t } = useAuthStore.getState();

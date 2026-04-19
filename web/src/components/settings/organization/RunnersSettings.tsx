@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useRunnerStore, Runner } from "@/stores/runner";
+import { useRunnerStore, useRunners, Runner } from "@/stores/runner";
 import { RunnerCard, TokenDialog, EditRunnerDialog } from "./runners";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ interface RunnersSettingsProps {
 
 export function RunnersSettings({ t }: RunnersSettingsProps) {
   const i18n = useTranslations();
-  const runners = useRunnerStore((s) => s.runners);
+  const runners = useRunners();
   const loading = useRunnerStore((s) => s.loading);
   const error = useRunnerStore((s) => s.error);
   const fetchRunners = useRunnerStore((s) => s.fetchRunners);

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { apiKeyApi, type APIKeyData, type UpdateAPIKeyRequest } from "@/lib/api/apikey";
+import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
+import { getApiKeyService } from "@/lib/wasm-core";
 import { APIKeyCard, CreateAPIKeyDialog, APIKeySecretDialog, EditAPIKeyDialog } from "./apikeys";
 import type { TranslationFn } from "./GeneralSettings";
 
@@ -28,7 +29,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiKeyApi.list();
+      const response = JSON.parse(await getApiKeyService().list());
       setApiKeys(response.api_keys || []);
     } catch (err) {
       console.error("Failed to load API keys:", err);
@@ -49,7 +50,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
     expires_in?: number;
   }) => {
     try {
-      const response = await apiKeyApi.create(data);
+      const response = JSON.parse(await getApiKeyService().create(JSON.stringify(data)));
       setCreatedRawKey(response.raw_key);
       setShowCreateDialog(false);
       fetchKeys();
@@ -62,7 +63,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
 
   const handleUpdate = useCallback(async (id: number, data: UpdateAPIKeyRequest) => {
     try {
-      await apiKeyApi.update(id, data);
+      await getApiKeyService().update(BigInt(id), JSON.stringify(data));
       fetchKeys();
     } catch (err) {
       console.error("Failed to update API key:", err);
@@ -82,7 +83,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
       });
       if (confirmed) {
         try {
-          await apiKeyApi.revoke(id);
+          await getApiKeyService().revoke(BigInt(id));
           fetchKeys();
         } catch (err) {
           console.error("Failed to revoke API key:", err);

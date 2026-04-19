@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { repositoryApi, WebhookStatus, WebhookSecretResponse } from "@/lib/api";
+import { WebhookStatus, WebhookSecretResponse } from "@/lib/api";
+import { getRepositoryService } from "@/lib/wasm-core";
 import { WebhookState, WebhookSettingsState, WebhookSettingsActions } from "./types";
 
 export interface UseWebhookStateResult extends WebhookSettingsState, WebhookSettingsActions {}
@@ -17,7 +18,7 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     setState("loading");
     setError(null);
     try {
-      const res = await repositoryApi.getWebhookStatus(repositoryId);
+      const res = JSON.parse(await getRepositoryService().get_webhook_status(BigInt(repositoryId)));
       setStatus(res.webhook_status);
 
       if (res.webhook_status.registered && res.webhook_status.is_active) {
@@ -26,7 +27,7 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
         setState("needs_manual_setup");
         // Load secret for manual setup
         try {
-          const secretRes = await repositoryApi.getWebhookSecret(repositoryId);
+          const secretRes = JSON.parse(await getRepositoryService().get_webhook_secret(BigInt(repositoryId)));
           setSecretData(secretRes);
         } catch {
           // Secret might not be available if already configured
@@ -45,17 +46,7 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     setLoading(true);
     setError(null);
     try {
-      const res = await repositoryApi.registerWebhook(repositoryId);
-      if (res.result.registered) {
-        setState("registered");
-      } else if (res.result.needs_manual_setup) {
-        setState("needs_manual_setup");
-        setSecretData({
-          webhook_url: res.result.manual_webhook_url || "",
-          webhook_secret: res.result.manual_webhook_secret || "",
-          events: ["merge_request", "pipeline"],
-        });
-      }
+      await getRepositoryService().register_webhook(BigInt(repositoryId));
       onUpdate?.();
       await loadStatus();
     } catch (err) {
@@ -70,7 +61,7 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     setLoading(true);
     setError(null);
     try {
-      await repositoryApi.deleteWebhook(repositoryId);
+      await getRepositoryService().delete_webhook(BigInt(repositoryId));
       setState("not_registered");
       setStatus(null);
       setSecretData(null);
@@ -87,7 +78,7 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     setLoading(true);
     setError(null);
     try {
-      await repositoryApi.markWebhookConfigured(repositoryId);
+      await getRepositoryService().mark_webhook_configured(BigInt(repositoryId));
       setState("registered");
       onUpdate?.();
       await loadStatus();

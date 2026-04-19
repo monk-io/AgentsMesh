@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { userRepositoryProviderApi } from "@/lib/api";
+import { getUserCredentialService } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 import { ChevronLeft } from "lucide-react";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
@@ -51,12 +51,12 @@ export function AddProviderDialog({ onClose, onSuccess }: AddProviderDialogProps
     setError(null);
 
     try {
-      await userRepositoryProviderApi.create({
+      await getUserCredentialService().create_repo_provider(JSON.stringify({
         provider_type: providerType,
         name,
         base_url: baseUrl,
         bot_token: botToken,
-      });
+      }));
       onSuccess();
     } catch (err) {
       console.error("Failed to create provider:", err);

@@ -227,7 +227,7 @@ export function RunnerPodsTab({
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(pod.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(pod.created_at ?? ''), { addSuffix: true })}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end space-x-2">

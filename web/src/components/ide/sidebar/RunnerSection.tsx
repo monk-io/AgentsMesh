@@ -72,7 +72,7 @@ export function RunnerSection({
                 <div
                   key={runner.id}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/${currentOrgSlug}/runners/${runner.id}`)}
+                  onClick={() => router.push(`/${currentOrgSlug}/infra?tab=runners&id=${runner.id}`)}
                 >
                   <span
                     className={cn(

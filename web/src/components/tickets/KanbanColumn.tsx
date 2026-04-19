@@ -69,7 +69,7 @@ export function DroppableColumn({
 
   return (
     <div ref={setNodeRef}
-      className={cn("flex-shrink-0 w-72 flex flex-col rounded-lg bg-muted/30 transition-all duration-200 overflow-hidden",
+      className={cn("flex-shrink-0 w-80 flex flex-col rounded-lg bg-muted/30 transition-all duration-200 overflow-hidden",
         highlighted && "ring-2 ring-primary/50 bg-primary/5")}>
       <div className={cn("h-1 w-full", topColor)} />
       <div className="flex items-center justify-between px-3 py-2.5">

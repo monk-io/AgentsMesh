@@ -1,0 +1,57 @@
+mod agent;
+mod apikey;
+mod auth_api;
+mod autopilot;
+mod billing;
+mod binding;
+mod channel;
+mod extension;
+mod file;
+mod invitation;
+mod loop_service;
+mod mesh;
+mod message;
+mod notification;
+mod org;
+mod pod;
+mod promocode;
+mod repository;
+mod runner;
+mod sso;
+mod support_ticket;
+mod ticket;
+mod ticket_relations;
+mod token_usage;
+mod user;
+mod user_credential;
+
+pub use agent::AgentService;
+pub use apikey::ApiKeyService;
+pub use auth_api::AuthApiService;
+pub use autopilot::AutopilotService;
+pub use billing::BillingService;
+pub use binding::BindingService;
+pub use channel::ChannelService;
+pub use extension::ExtensionService;
+pub use file::FileService;
+pub use invitation::InvitationService;
+pub use loop_service::LoopService;
+pub use mesh::MeshService;
+pub use message::MessageService;
+pub use notification::NotificationService;
+pub use org::OrgApiService;
+pub use pod::PodService;
+pub use promocode::PromoCodeService;
+pub use repository::RepositoryService;
+pub use runner::RunnerService;
+pub use sso::SSOService;
+pub use support_ticket::SupportTicketService;
+pub use ticket::TicketService;
+pub use ticket_relations::TicketRelationsService;
+pub use token_usage::TokenUsageService;
+pub use user::UserApiService;
+pub use user_credential::UserCredentialService;
+
+pub fn parse_status<T: serde::de::DeserializeOwned + Default>(s: &str) -> T {
+    serde_json::from_value(serde_json::Value::String(s.to_string())).unwrap_or_default()
+}

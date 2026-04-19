@@ -4,7 +4,8 @@ import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { authApi, organizationApi } from "@/lib/api";
+import { getAuthApiService, getOrgApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 import { getDefaultRoute } from "@/lib/default-route";
 import { useAuthStore } from "@/stores/auth";
@@ -28,18 +29,19 @@ function VerifyEmailContent() {
 
   // Auto-verify when token is present in URL
   const handleVerifyToken = useCallback(async (verificationToken: string) => {
+    await initWasmCore();
     setVerifyState("verifying");
     setError("");
     setMessage("");
 
     try {
-      const result = await authApi.verifyEmail(verificationToken);
+      const result = JSON.parse(await getAuthApiService().verify_email(verificationToken));
       setAuth(result.token, result.user, result.refresh_token);
       setVerifyState("success");
       setMessage(t("auth.verifyEmailPage.verificationSuccess"));
 
       try {
-        const orgsResponse = await organizationApi.list();
+        const orgsResponse = JSON.parse(await getOrgApiService().list());
         if (orgsResponse.organizations && orgsResponse.organizations.length > 0) {
           setOrganizations(orgsResponse.organizations);
           router.push(getDefaultRoute(orgsResponse.organizations[0].slug));
@@ -69,12 +71,13 @@ function VerifyEmailContent() {
   }, [token, verifyState, handleVerifyToken]);
 
   const handleResend = async () => {
+    await initWasmCore();
     if (!email) { setError(t("auth.verifyEmailPage.emailMissing")); return; }
     setLoading(true);
     setError("");
     setMessage("");
     try {
-      await authApi.resendVerification(email);
+      await getAuthApiService().resend_verification(email);
       setMessage(t("auth.verifyEmailPage.emailSent"));
     } catch {
       setError(t("auth.verifyEmailPage.resendFailed"));

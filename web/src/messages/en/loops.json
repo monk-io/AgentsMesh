@@ -23,6 +23,11 @@
     "cronExpression": "Cron Expression",
     "cronHelp": "Standard cron format: minute hour day month weekday",
     "trigger": "Trigger",
+    "runNow": "Run now",
+    "schedule": "Schedule",
+    "next": "Next",
+    "agent": "Agent",
+    "autopilot": "Autopilot",
     "enable": "Enable",
     "disable": "Disable",
     "enabled": "Loop enabled",
@@ -50,6 +55,12 @@
     "apiTriggerDesc": "Use an API Key with loops:write scope to trigger this loop programmatically. Manage API Keys in Settings.",
     "apiKeyHint": "Create an API Key with loops:write scope in Settings > API Keys",
     "runHistory": "Run History",
+    "recentRuns": "Recent runs",
+    "showingLast": "Showing last {count} · {total} total",
+    "viewAll": "View all",
+    "openRun": "Open",
+    "noArtifact": "No artifact",
+    "overviewTitle": "Last 30 days",
     "noRuns": "No runs yet. Trigger your first run to see results here.",
     "status": "Status",
     "triggerLabel": "Trigger",
@@ -116,6 +127,26 @@
     "deleteHasActiveRuns": "Cannot delete loop with active runs. Cancel or wait for runs to complete first.",
     "loadFailed": "Failed to load loops",
     "retry": "Retry",
-    "runWarningTitle": "Loop Run #{runNumber}"
+    "runWarningTitle": "Loop Run #{runNumber}",
+    "sortRecent": "Sort: recently run",
+    "groups": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "archived": "Archived"
+    },
+    "tabs": {
+      "runs": "Runs",
+      "prompt": "Prompt & config",
+      "autopilot": "Autopilot rules",
+      "history": "History",
+      "permissions": "Permissions",
+      "autopilotEmpty": "No autopilot rules configured for this loop.",
+      "historyEmpty": "No audit history yet.",
+      "permissionsEmpty": "Default permissions apply. Configure per-loop overrides in a future release."
+    },
+    "selectPrompt": {
+      "title": "Select a loop",
+      "description": "Pick a loop from the left to see its runs, prompt and config."
+    }
   }
 }

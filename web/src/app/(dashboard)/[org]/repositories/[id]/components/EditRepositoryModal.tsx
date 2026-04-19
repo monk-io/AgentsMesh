@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { repositoryApi, RepositoryData } from "@/lib/api";
+import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import { getRepositoryService } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 
 interface EditRepositoryModalProps {
@@ -41,14 +42,14 @@ export function EditRepositoryModal({
     setError("");
 
     try {
-      await repositoryApi.update(repository.id, {
+      await getRepositoryService().update(BigInt(repository.id), JSON.stringify({
         name,
         default_branch: defaultBranch,
         ticket_prefix: ticketPrefix || undefined,
         is_active: isActive,
         http_clone_url: httpCloneUrl || undefined,
         ssh_clone_url: sshCloneUrl || undefined,
-      });
+      }));
       onUpdated();
     } catch (err) {
       console.error("Failed to update repository:", err);

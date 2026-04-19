@@ -7,10 +7,17 @@
       "mesh": "Mesh",
       "loops": "Loop",
       "blocks": "Blocks",
+      "infra": "基础设施",
       "repositories": "仓库",
       "runners": "Runner",
       "settings": "设置",
       "help": "帮助与反馈"
+    },
+    "orgSwitcher": {
+      "title": "当前组织",
+      "empty": "暂无组织",
+      "create": "新建组织",
+      "manage": "组织设置"
     },
     "bottomPanel": {
       "output": "输出",
@@ -98,6 +105,7 @@
       "modeAcp": "对话 (ACP)"
     },
     "sidebar": {
+      "collapse": "折叠侧边栏",
       "settings": {
         "title": "设置",
         "description": "管理您的组织",
@@ -128,13 +136,22 @@
         }
       },
       "mesh": {
-        "searchPlaceholder": "搜索网络...",
+        "searchPlaceholder": "查找 Pod / Runner",
+        "resetFilters": "重置过滤",
+        "matchCount": "{count} 个匹配",
         "viewTopology": "查看拓扑",
         "showTerminatedPods": "显示已终止的 Pod",
         "networkStats": "网络统计",
         "active": "活跃",
         "channels": "频道",
         "bindings": "绑定",
+        "runnerFilter": "Runner",
+        "statusFilter": "状态",
+        "runnerPrefix": "Runner",
+        "statusRunning": "运行中",
+        "statusInit": "初始化",
+        "statusTerminated": "已终止",
+        "statusFailed": "失败",
         "channelsSection": "频道",
         "podsSection": "Pod",
         "noChannels": "暂无频道",

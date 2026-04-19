@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Ticket } from "@/stores/ticket";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { ticketApi } from "@/lib/api";
+import { getTicketService } from "@/lib/wasm-core";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useAuthStore } from "@/stores/auth";
 import { CreatePodModal } from "@/components/ide/CreatePodModal";
@@ -44,7 +44,7 @@ export function SidebarPodSection({
   const fetchPods = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await ticketApi.getPods(ticketSlug);
+      const response = JSON.parse(await getTicketService().get_ticket_pods(ticketSlug, true));
       setPods(response.pods || []);
     } catch { /* silently fail */ }
     finally { setLoading(false); }

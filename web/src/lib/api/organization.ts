@@ -1,91 +1,35 @@
-import { request } from "./base";
+import { getOrgApiService } from "@/lib/wasm-core";
+export type { OrganizationData, OrganizationMember } from "./organizationTypes";
 
-// Organization Member type
-export interface OrganizationMember {
-  id: number;
-  user_id: number;
-  role: "owner" | "admin" | "member";
-  joined_at: string;
-  user?: {
-    id: number;
-    email: string;
-    username: string;
-    name?: string;
-    avatar_url?: string;
-  };
-}
-
-// Organization data type (matches backend response)
-export interface OrganizationData {
-  id: number;
-  name: string;
-  slug: string;
-  role?: string;
-  logo_url?: string;
-  subscription_plan?: string;
-  subscription_status?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// Organization API
 export const organizationApi = {
-  list: () =>
-    request<{ organizations: OrganizationData[] }>(
-      "/api/v1/orgs"
-    ),
-
-  get: (slug: string) =>
-    request<{ organization: OrganizationData }>(
-      `/api/v1/orgs/${slug}`
-    ),
-
-  create: (data: { name: string; slug: string }) =>
-    request<{ message: string }>("/api/v1/orgs", {
-      method: "POST",
-      body: data,
-    }),
-
-  update: (slug: string, data: { name?: string }) =>
-    request<{ message: string }>(`/api/v1/orgs/${slug}`, {
-      method: "PUT",
-      body: data,
-    }),
-
-  delete: (slug: string) =>
-    request<{ message: string }>(`/api/v1/orgs/${slug}`, {
-      method: "DELETE",
-    }),
-
-  // Member management
-  listMembers: (slug: string) =>
-    request<{ members: OrganizationMember[]; total: number }>(
-      `/api/v1/orgs/${slug}/members`
-    ),
-
-  inviteMember: (slug: string, email: string, role?: string) =>
-    request<{ message: string; member?: OrganizationMember }>(
-      `/api/v1/orgs/${slug}/members`,
-      {
-        method: "POST",
-        body: { email, role: role || "member" },
-      }
-    ),
-
-  removeMember: (slug: string, userId: number) =>
-    request<{ message: string }>(
-      `/api/v1/orgs/${slug}/members/${userId}`,
-      {
-        method: "DELETE",
-      }
-    ),
-
-  updateMemberRole: (slug: string, userId: number, role: string) =>
-    request<{ message: string }>(
-      `/api/v1/orgs/${slug}/members/${userId}`,
-      {
-        method: "PUT",
-        body: { role },
-      }
-    ),
+  list: async () => {
+    const json = await getOrgApiService().list();
+    return JSON.parse(json);
+  },
+  create: async (data: { name: string; slug?: string }) => {
+    const json = await getOrgApiService().create(JSON.stringify(data));
+    return JSON.parse(json);
+  },
+  get: async (slug: string) => {
+    const json = await getOrgApiService().get(slug);
+    return JSON.parse(json);
+  },
+  update: async (slug: string, data: { name?: string }) => {
+    const json = await getOrgApiService().update(slug, JSON.stringify(data));
+    return JSON.parse(json);
+  },
+  delete: async (slug: string) => {
+    await getOrgApiService().delete(slug);
+  },
+  listMembers: async (slug: string) => {
+    const json = await getOrgApiService().list_members(slug);
+    return JSON.parse(json);
+  },
+  removeMember: async (slug: string, userId: number) => {
+    await getOrgApiService().remove_member(slug, BigInt(userId));
+  },
+  updateMemberRole: async (slug: string, userId: number, role: string) => {
+    const json = await getOrgApiService().update_member_role(slug, BigInt(userId), JSON.stringify({ role }));
+    return JSON.parse(json);
+  },
 };

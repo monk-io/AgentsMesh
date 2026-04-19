@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
-import { runnerAuthApi, RunnerAuthStatus } from "@/lib/api/runner";
-import { organizationApi, OrganizationData } from "@/lib/api/organization";
-import { ApiError } from "@/lib/api/base";
+import { getRunnerService, initWasmCore } from "@/lib/wasm-core";
+import type { RunnerAuthStatus } from "@/lib/api/runnerTypes";
+import type { OrganizationData } from "@/lib/api/organizationTypes";
+import { getOrgApiService } from "@/lib/wasm-getters";
+import { ApiError } from "@/lib/api/api-types";
 import { isApiErrorCode } from "@/lib/api/errors";
 import { useTranslations } from "next-intl";
 import { LoadingScreen, ErrorScreen, ExpiredScreen, SuccessScreen, BrandLogo } from "./StatusScreens";
@@ -19,7 +21,7 @@ export default function RunnerAuthorizePage() {
   const searchParams = useSearchParams();
   const authKey = searchParams.get("key");
 
-  const { token: authToken, user, organizations, setOrganizations, _hasHydrated } = useAuthStore();
+  const { user, organizations, setOrganizations, _hasHydrated } = useAuthStore();
 
   const [authStatus, setAuthStatus] = useState<RunnerAuthStatus | null>(null);
   const [selectedOrg, setSelectedOrg] = useState<OrganizationData | null>(null);
@@ -30,9 +32,12 @@ export default function RunnerAuthorizePage() {
   const [error, setError] = useState("");
 
   const fetchAuthStatus = useCallback(async () => {
+    await initWasmCore();
     if (!authKey) { setError(t("missingAuthKey")); setLoading(false); return; }
     try {
-      const status = await runnerAuthApi.getAuthStatus(authKey);
+      const status: RunnerAuthStatus = JSON.parse(
+        await getRunnerService().get_auth_status(authKey)
+      );
       setAuthStatus(status);
       if (status.node_id) setNodeIdInput(status.node_id);
     } catch { setError(t("invalidAuthKey")); }
@@ -40,24 +45,29 @@ export default function RunnerAuthorizePage() {
   }, [authKey, t]);
 
   const fetchOrganizations = useCallback(async () => {
-    if (!authToken) return;
+    await initWasmCore();
+    if (!user) return;
     try {
-      const { organizations: orgs } = await organizationApi.list();
-      setOrganizations(orgs);
-      const adminOrg = orgs.find((org) => org.subscription_status === "active" || org.subscription_plan);
-      setSelectedOrg(adminOrg || orgs[0] || null);
+      const resp: { organizations: OrganizationData[] } = JSON.parse(await getOrgApiService().list());
+      setOrganizations(resp.organizations);
+      const adminOrg = resp.organizations.find((org) => org.subscription_status === "active" || org.subscription_plan);
+      setSelectedOrg(adminOrg || resp.organizations[0] || null);
     } catch { /* ignore */ }
-  }, [authToken, setOrganizations]);
+  }, [user, setOrganizations]);
 
   useEffect(() => { fetchAuthStatus(); }, [fetchAuthStatus]);
-  useEffect(() => { if (authToken) fetchOrganizations(); }, [authToken, fetchOrganizations]);
+  useEffect(() => { if (user) fetchOrganizations(); }, [user, fetchOrganizations]);
 
   const handleAuthorize = async () => {
+    await initWasmCore();
     if (!authKey || !selectedOrg) return;
     setAuthorizing(true);
     setError("");
     try {
-      await runnerAuthApi.authorize(selectedOrg.slug, authKey, nodeIdInput || undefined);
+      const json = await getRunnerService().authorize_runner(
+        JSON.stringify({ auth_key: authKey, node_id: nodeIdInput || undefined })
+      );
+      const _result = JSON.parse(json);
       setAuthorized(true);
     } catch (err: unknown) {
       if (isApiErrorCode(err, "RUNNER_QUOTA_EXCEEDED")) setError(t("quotaExceeded"));
@@ -84,7 +94,7 @@ export default function RunnerAuthorizePage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center"><BrandLogo /></div>
-        <AuthForm authToken={authToken} userEmail={user?.email} authKey={authKey!}
+        <AuthForm authUser={user} userEmail={user?.email} authKey={authKey!}
           organizations={organizations} selectedOrg={selectedOrg} onSelectOrg={setSelectedOrg}
           nodeIdInput={nodeIdInput} onNodeIdChange={setNodeIdInput} authorizing={authorizing}
           onAuthorize={handleAuthorize} error={error} t={t} tCommon={tCommon} />

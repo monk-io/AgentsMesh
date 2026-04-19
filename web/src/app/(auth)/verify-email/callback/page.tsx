@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { authApi } from "@/lib/api";
+import { getAuthApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { Logo } from "@/components/common";
 
 function VerifyEmailCallbackContent() {
@@ -19,6 +20,7 @@ function VerifyEmailCallbackContent() {
 
   useEffect(() => {
     const verifyEmail = async () => {
+      await initWasmCore();
       if (!token) {
         setStatus("error");
         setError("Verification token is missing");
@@ -26,7 +28,7 @@ function VerifyEmailCallbackContent() {
       }
 
       try {
-        const response = await authApi.verifyEmail(token);
+        const response = JSON.parse(await getAuthApiService().verify_email(token));
 
         // Store auth tokens
         setAuth(response.token, {

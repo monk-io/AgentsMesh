@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useAcpSessionStore } from "@/stores/acpSession";
+import { EMPTY_SESSION } from "@/stores/acpSessionTypes";
 import { AcpPermissionDialog } from "@/components/workspace/acp/AcpPermissionDialog";
 import { relayPool } from "@/stores/relayConnection";
 
@@ -40,7 +41,9 @@ describe("AcpPermissionDialog", () => {
 
   it("sends approve command and removes permission", () => {
     vi.useFakeTimers();
-    useAcpSessionStore.getState().addPermissionRequest(POD, perms[0]);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [...perms] } },
+    });
 
     render(<AcpPermissionDialog podKey={POD} permissions={perms} />);
     fireEvent.click(screen.getByText("Approve"));
@@ -58,7 +61,9 @@ describe("AcpPermissionDialog", () => {
 
   it("sends deny command and removes permission", () => {
     vi.useFakeTimers();
-    useAcpSessionStore.getState().addPermissionRequest(POD, perms[0]);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [...perms] } },
+    });
 
     render(<AcpPermissionDialog podKey={POD} permissions={perms} />);
     fireEvent.click(screen.getByText("Deny"));
@@ -141,7 +146,9 @@ describe("AcpPermissionDialog", () => {
       }),
       description: "Question",
     };
-    useAcpSessionStore.getState().addPermissionRequest(POD, askPerm);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [askPerm] } },
+    });
     const permsFromStore = useAcpSessionStore.getState().sessions[POD].pendingPermissions;
 
     render(<AcpPermissionDialog podKey={POD} permissions={permsFromStore} />);
@@ -160,7 +167,9 @@ describe("AcpPermissionDialog", () => {
 
   it("auto-denies permission after timeout", () => {
     vi.useFakeTimers();
-    useAcpSessionStore.getState().addPermissionRequest(POD, perms[0]);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [...perms] } },
+    });
 
     render(<AcpPermissionDialog podKey={POD} permissions={perms} />);
 
@@ -176,7 +185,9 @@ describe("AcpPermissionDialog", () => {
 
   it("Always Allow sends updatedInput with _alwaysAllow flag", () => {
     vi.useFakeTimers();
-    useAcpSessionStore.getState().addPermissionRequest(POD, perms[0]);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [...perms] } },
+    });
 
     render(<AcpPermissionDialog podKey={POD} permissions={perms} />);
     fireEvent.click(screen.getByText("Always Allow"));
@@ -212,11 +223,12 @@ describe("AcpPermissionDialog", () => {
       }),
       description: "Pick features",
     };
-    useAcpSessionStore.getState().addPermissionRequest(POD, askPerm);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [askPerm] } },
+    });
     const permsFromStore = useAcpSessionStore.getState().sessions[POD].pendingPermissions;
 
     render(<AcpPermissionDialog podKey={POD} permissions={permsFromStore} />);
-    // Select two options
     fireEvent.click(screen.getByText("Auth"));
     fireEvent.click(screen.getByText("Cache"));
     fireEvent.click(screen.getByText("Submit"));
@@ -246,11 +258,12 @@ describe("AcpPermissionDialog", () => {
       }),
       description: "Pick framework",
     };
-    useAcpSessionStore.getState().addPermissionRequest(POD, askPerm);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, pendingPermissions: [askPerm] } },
+    });
     const permsFromStore = useAcpSessionStore.getState().sessions[POD].pendingPermissions;
 
     render(<AcpPermissionDialog podKey={POD} permissions={permsFromStore} />);
-    // Type custom text instead of selecting
     const customInput = screen.getByPlaceholderText("Other...");
     fireEvent.change(customInput, { target: { value: "Svelte" } });
     fireEvent.click(screen.getByText("Submit"));

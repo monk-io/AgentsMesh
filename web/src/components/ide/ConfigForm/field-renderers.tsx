@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import {
   BooleanField, StringField, SecretField, NumberField, SelectField,

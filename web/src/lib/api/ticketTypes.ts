@@ -15,8 +15,8 @@ export interface TicketData {
   due_date?: string;
   started_at?: string;
   completed_at?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   reporter?: { id: number; username: string; name?: string; avatar_url?: string };
   assignees?: Array<{
     ticket_id: number;
@@ -36,7 +36,7 @@ export interface TicketRelation {
   relation_type: string;
   source_ticket?: { id: number; slug: string; title: string };
   target_ticket?: { id: number; slug: string; title: string };
-  created_at: string;
+  created_at?: string;
 }
 
 export interface TicketCommit {
@@ -48,7 +48,7 @@ export interface TicketCommit {
   author_name?: string;
   author_email?: string;
   committed_at?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface TicketComment {
@@ -58,8 +58,8 @@ export interface TicketComment {
   content: string;
   parent_id?: number;
   mentions?: Array<{ user_id: number; username: string }>;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
   user?: { id: number; username: string; name?: string; avatar_url?: string };
   replies?: TicketComment[];
 }

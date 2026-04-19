@@ -1,0 +1,88 @@
+import {
+  WasmApiClient, WasmAuthManager, WasmPodState,
+  WasmPodService, WasmTicketService, WasmChannelService,
+  WasmRunnerService, WasmLoopService, WasmAutopilotService,
+  WasmMeshService, WasmBillingService, WasmRepositoryService,
+  WasmExtensionService, WasmInvitationService, WasmApiKeyService,
+  WasmBindingService, WasmMessageService, WasmNotificationService,
+  WasmPromoCodeService, WasmTokenUsageService, WasmSSOService,
+  WasmUserApiService, WasmUserCredentialService, WasmOrgApiService,
+  WasmAgentService, WasmTicketRelationsService, WasmFileService,
+  WasmSupportTicketService, WasmAuthApiService,
+  WasmRunnerState, WasmMeshState, WasmTicketState, WasmChannelState,
+  WasmLoopState, WasmAcpSessionManager, WasmOrgState, WasmUserState,
+  WasmGitProviderState, WasmRepoState, WasmAutopilotState, WasmRelayManager,
+} from "agentsmesh-wasm";
+import { registerServiceProvider } from "@agentsmesh/service-runtime";
+
+export function registerAll(client: WasmApiClient, baseUrl: string) {
+  const authManager = new WasmAuthManager(baseUrl);
+  if (typeof window !== "undefined") {
+    const seg = window.location.pathname.split("/")[1];
+    if (seg && seg !== "login" && seg !== "register" && !seg.startsWith("_")) {
+      client.set_org_slug(seg);
+    }
+  }
+  registerServiceProvider({
+    apiClient: client,
+    authManager,
+    podState: new WasmPodState(),
+    podService: client.create_pod_service(),
+    ticketService: client.create_ticket_service(),
+    channelService: client.create_channel_service(),
+    runnerService: client.create_runner_service(),
+    loopService: client.create_loop_service(),
+    autopilotService: client.create_autopilot_service(),
+    meshService: client.create_mesh_service(),
+    billingService: client.create_billing_service(),
+    repositoryService: client.create_repository_service(),
+    extensionService: client.create_extension_service(),
+    invitationService: client.create_invitation_service(),
+    apiKeyService: client.create_apikey_service(),
+    bindingService: client.create_binding_service(),
+    messageService: client.create_message_service(),
+    notificationService: client.create_notification_service(),
+    promoCodeService: client.create_promocode_service(),
+    tokenUsageService: client.create_token_usage_service(),
+    ssoService: client.create_sso_service(),
+    userApiService: client.create_user_api_service(),
+    userCredentialService: client.create_user_credential_service(),
+    orgApiService: client.create_org_api_service(),
+    agentService: client.create_agent_service(),
+    ticketRelationsService: client.create_ticket_relations_service(),
+    fileService: client.create_file_service(),
+    supportTicketService: client.create_support_ticket_service(),
+    authApiService: client.create_auth_api_service(),
+    runnerState: new WasmRunnerState(),
+    meshState: new WasmMeshState(),
+    ticketState: new WasmTicketState(),
+    channelState: new WasmChannelState(),
+    loopState: new WasmLoopState(),
+    acpManager: new WasmAcpSessionManager(),
+    orgState: new WasmOrgState(),
+    userState: new WasmUserState(),
+    gitProviderState: new WasmGitProviderState(),
+    repoState: new WasmRepoState(),
+    autopilotState: new WasmAutopilotState(),
+    relayManager: new WasmRelayManager(),
+  });
+}
+
+// Re-export everything from service-runtime for backward compatibility
+export {
+  NOOP_PROXY, isServiceReady as isWasmReady,
+  registerServiceProvider, parseWasmAny,
+  getApiClient, getAuthManager, getPodState, getPodService,
+  getTicketService, getChannelService, getRunnerService,
+  getLoopService, getAutopilotService, getMeshService,
+  getBillingService, getRepositoryService, getExtensionService,
+  getInvitationService, getApiKeyService, getBindingService,
+  getMessageService, getNotificationService, getPromoCodeService,
+  getTokenUsageService, getSSOService, getUserApiService,
+  getUserCredentialService, getOrgApiService, getAgentService,
+  getTicketRelationsService, getFileService, getSupportTicketService,
+  getAuthApiService, getRunnerState, getMeshState, getTicketState,
+  getChannelState, getLoopState, getAcpManager, getOrgState,
+  getUserState, getGitProviderState, getRepoState,
+  getAutopilotState, getRelayManager,
+} from "@agentsmesh/service-runtime";

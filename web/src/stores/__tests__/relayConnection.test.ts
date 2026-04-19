@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
+vi.mock("@/lib/wasm-core", () => import("@/test/__mocks__/wasm-core"));
+
 // Mock WebSocket
 class MockWebSocket {
   static CONNECTING = 0;
@@ -31,17 +33,6 @@ class MockWebSocket {
 }
 
 global.WebSocket = MockWebSocket as unknown as typeof WebSocket;
-
-// Mock pod API
-vi.mock("@/lib/api/pod", () => ({
-  podApi: {
-    getPodConnection: vi.fn().mockResolvedValue({
-      relay_url: "wss://relay.example.com",
-      token: "test-token",
-      pod_key: "pod-1",
-    }),
-  },
-}));
 
 describe("relayConnection", () => {
   let pool: typeof import("@/stores/relayConnection").relayPool;

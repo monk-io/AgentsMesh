@@ -2,26 +2,21 @@
  * Types and interfaces for relay WebSocket connections.
  */
 
-/**
- * Connection status of a relay WebSocket.
- * Single source of truth — import this type instead of redefining inline.
- */
+import type { IRelayTransport } from "./relayBackend";
+
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
-/**
- * Relay connection state
- */
 export interface RelayConnection {
-  ws: WebSocket;
+  transport: IRelayTransport;
   podKey: string;
   status: ConnectionStatus;
   lastActivity: number;
-  /** Subscribers map: subscriptionId -> callback */
   subscribers: Map<string, (data: Uint8Array | string) => void>;
   reconnectAttempts: number;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
-  /** Timer for delayed disconnect when all subscribers leave */
   disconnectTimer: ReturnType<typeof setTimeout> | null;
+  snapshotTimer: ReturnType<typeof setTimeout> | null;
+  snapshotReceived: boolean;
   pendingResize?: { rows: number; cols: number };
   podSize?: { rows: number; cols: number };
   relayUrl: string;
@@ -29,12 +24,8 @@ export interface RelayConnection {
   runnerDisconnected: boolean;
 }
 
-/**
- * Connection result with send and unsubscribe methods
- */
 export interface ConnectionHandle {
   send: (data: string) => void;
-  /** Unsubscribe from terminal output. Connection stays open if other subscribers exist. */
   unsubscribe: () => void;
 }
 

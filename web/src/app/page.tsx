@@ -18,7 +18,7 @@ import { getDefaultRoute } from "@/lib/default-route";
 
 export default function Home() {
   const router = useRouter();
-  const { token, currentOrg, _hasHydrated } = useAuthStore();
+  const { user, currentOrg, _hasHydrated } = useAuthStore();
 
   // Determine if we should redirect based on auth state
   const shouldRedirect = useMemo(() => {
@@ -30,10 +30,10 @@ export default function Home() {
       const referrer = document.referrer;
       const isInternalNavigation = referrer && new URL(referrer).origin === window.location.origin;
       // Only redirect if user is authenticated with an org and came from external source
-      return !!(token && currentOrg && !isInternalNavigation);
+      return !!(user && currentOrg && !isInternalNavigation);
     }
     return false;
-  }, [_hasHydrated, token, currentOrg]);
+  }, [_hasHydrated, user, currentOrg]);
 
   // Handle redirect in effect
   useEffect(() => {

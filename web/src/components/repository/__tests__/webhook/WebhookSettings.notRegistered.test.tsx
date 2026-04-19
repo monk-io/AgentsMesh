@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock must be at module level for Vitest hoisting
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
@@ -15,24 +14,10 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-// Import mock functions before mocking the module
 import {
   mockGetWebhookStatus,
-  mockGetWebhookSecret,
   mockRegisterWebhook,
-  mockDeleteWebhook,
-  mockMarkWebhookConfigured,
 } from "./testSetup";
-
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    getWebhookStatus: (...args: unknown[]) => mockGetWebhookStatus(...args),
-    getWebhookSecret: (...args: unknown[]) => mockGetWebhookSecret(...args),
-    registerWebhook: (...args: unknown[]) => mockRegisterWebhook(...args),
-    deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
-    markWebhookConfigured: (...args: unknown[]) => mockMarkWebhookConfigured(...args),
-  },
-}));
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { WebhookSettings } from "../../webhook";
@@ -49,7 +34,7 @@ describe("WebhookSettings - Not Registered State", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockGetWebhookStatus.mockResolvedValue({ webhook_status: notRegisteredStatus });
+    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: notRegisteredStatus }));
   });
 
   afterEach(() => {
@@ -81,12 +66,12 @@ describe("WebhookSettings - Not Registered State", () => {
   });
 
   it("should handle register click - successful auto registration", async () => {
-    mockRegisterWebhook.mockResolvedValue({
+    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
       result: { repo_id: 1, registered: true, webhook_id: "wh_new" },
-    });
+    }));
     mockGetWebhookStatus
-      .mockResolvedValueOnce({ webhook_status: notRegisteredStatus })
-      .mockResolvedValue({ webhook_status: registeredStatus });
+      .mockResolvedValueOnce(JSON.stringify({ webhook_status: notRegisteredStatus }))
+      .mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -104,7 +89,7 @@ describe("WebhookSettings - Not Registered State", () => {
   });
 
   it("should handle register click - needs manual setup", async () => {
-    mockRegisterWebhook.mockResolvedValue({
+    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
       result: {
         repo_id: 1,
         registered: false,
@@ -113,11 +98,11 @@ describe("WebhookSettings - Not Registered State", () => {
         manual_webhook_secret: "new_secret",
         error: "OAuth token not available",
       },
-    });
+    }));
 
     mockGetWebhookStatus
-      .mockResolvedValueOnce({ webhook_status: notRegisteredStatus })
-      .mockResolvedValue({ webhook_status: manualSetupStatus });
+      .mockResolvedValueOnce(JSON.stringify({ webhook_status: notRegisteredStatus }))
+      .mockResolvedValue(JSON.stringify({ webhook_status: manualSetupStatus }));
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

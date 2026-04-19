@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
-import { repositoryApi, RepositoryData } from "@/lib/api";
+import { RepositoryData } from "@/lib/api";
+import { getRepositoryService } from "@/lib/wasm-core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +30,7 @@ const PROVIDER_FILTER_VALUES = ["all", "github", "gitlab", "gitee"] as const;
 export function RepositoriesSidebarContent({ className, onImportRepo }: RepositoriesSidebarContentProps) {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentOrg } = useAuthStore();
 
   // State
@@ -37,8 +39,14 @@ export function RepositoriesSidebarContent({ className, onImportRepo }: Reposito
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("all");
-  const [selectedRepoId, setSelectedRepoId] = useState<number | null>(null);
   const [expandedRepos, setExpandedRepos] = useState<Set<number>>(new Set());
+
+  const selectedRepoId = useMemo(() => {
+    const raw = searchParams.get("id");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isNaN(n) ? null : n;
+  }, [searchParams]);
 
   // Load repositories on mount
   useEffect(() => {
@@ -49,7 +57,7 @@ export function RepositoriesSidebarContent({ className, onImportRepo }: Reposito
 
   const loadRepositories = async () => {
     try {
-      const response = await repositoryApi.list();
+      const response = JSON.parse(await getRepositoryService().list());
       setRepositories(response.repositories || []);
     } catch (error) {
       console.error("Failed to load repositories:", error);
@@ -86,10 +94,8 @@ export function RepositoriesSidebarContent({ className, onImportRepo }: Reposito
     return true;
   }), [repositories, searchQuery, selectedProvider]);
 
-  // Handle repository click
   const handleRepoClick = (repo: RepositoryData) => {
-    setSelectedRepoId(repo.id);
-    router.push(`/${currentOrg?.slug}/repositories/${repo.id}`);
+    router.push(`/${currentOrg?.slug}/infra?tab=repositories&id=${repo.id}`);
   };
 
   // Toggle repository expansion
@@ -106,12 +112,11 @@ export function RepositoriesSidebarContent({ className, onImportRepo }: Reposito
     });
   };
 
-  // Handle import repo - use callback if provided, otherwise navigate
   const handleImportRepo = () => {
     if (onImportRepo) {
       onImportRepo();
     } else {
-      router.push(`/${currentOrg?.slug}/repositories?import=true`);
+      router.push(`/${currentOrg?.slug}/infra?tab=repositories`);
     }
   };
 

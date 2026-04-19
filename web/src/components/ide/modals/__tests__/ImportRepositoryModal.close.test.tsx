@@ -1,19 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-
-// Mock API module
-vi.mock("@/lib/api", () => ({
-  repositoryApi: { create: vi.fn() },
-  userRepositoryProviderApi: { list: vi.fn(), listRepositories: vi.fn() },
-}));
-
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
-import { userRepositoryProviderApi } from "@/lib/api";
-import {
-  mockProvider,
-  mockGitLabProvider,
-  createListRepositoriesResponse,
-} from "./ImportRepositoryModal.utils";
+import { setupProviderMocks } from "./ImportRepositoryModal.utils";
 
 describe("ImportRepositoryModal - Close and Cancel", () => {
   const mockOnClose = vi.fn();
@@ -21,12 +9,7 @@ describe("ImportRepositoryModal - Close and Cancel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(userRepositoryProviderApi.list).mockResolvedValue({
-      providers: [mockProvider, mockGitLabProvider],
-    });
-    vi.mocked(userRepositoryProviderApi.listRepositories).mockResolvedValue(
-      createListRepositoriesResponse()
-    );
+    setupProviderMocks();
   });
 
   it("should call onClose when cancel button is clicked", async () => {
@@ -52,7 +35,6 @@ describe("ImportRepositoryModal - Close and Cancel", () => {
       expect(screen.getByText("Import Repository")).toBeInTheDocument();
     });
 
-    // Find and click the X button in the header
     const closeButton = document.querySelector("button[class*='hover:text-foreground']");
     if (closeButton) {
       fireEvent.click(closeButton);
@@ -69,25 +51,21 @@ describe("ImportRepositoryModal - Close and Cancel", () => {
       expect(screen.getByText("My GitHub")).toBeInTheDocument();
     });
 
-    // Select a provider
     fireEvent.click(screen.getByText("My GitHub"));
 
     await waitFor(() => {
       expect(screen.getByText("org/my-project")).toBeInTheDocument();
     });
 
-    // Close modal
     rerender(
       <ImportRepositoryModal open={false} onClose={mockOnClose} onImported={mockOnImported} />
     );
 
-    // Reopen modal
     rerender(
       <ImportRepositoryModal open={true} onClose={mockOnClose} onImported={mockOnImported} />
     );
 
     await waitFor(() => {
-      // Should be back to source selection step
       expect(screen.getByText("My GitHub")).toBeInTheDocument();
       expect(screen.getByText("My GitLab")).toBeInTheDocument();
     });

@@ -36,21 +36,21 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
 
   return (
     <div
-      className="border border-border/50 rounded-xl p-3.5 bg-card hover:shadow-md hover:border-primary/25 transition-all duration-200 cursor-pointer group"
+      className="cursor-pointer rounded-md border border-border bg-card p-3.5 transition-colors hover:border-border-strong"
       onClick={onClick}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      {/* Header: slug (mono) + status badge */}
+      <div className="mb-2 flex items-center justify-between gap-2">
         <Link
           href={`/${currentOrg?.slug}/tickets/${ticket.slug}`}
-          className="text-[11px] text-muted-foreground/60 hover:text-primary font-mono tracking-wide"
+          className="font-mono text-[11px] tracking-[0.02em] text-muted-foreground/80 hover:text-primary"
           onClick={(e) => e.stopPropagation()}
         >
           {ticket.slug}
         </Link>
         {showStatus && (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ring-inset ring-current/10 ${statusInfo.bgColor} ${statusInfo.color}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusInfo.bgColor} ${statusInfo.color}`}
           >
             <StatusIcon status={ticket.status} size="xs" />
             {t(`tickets.status.${ticket.status}`)}
@@ -58,18 +58,20 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
         )}
       </div>
 
-      {/* Title */}
-      <h3 className="font-semibold text-sm line-clamp-2 mb-2 group-hover:text-foreground transition-colors">{ticket.title}</h3>
+      {/* Title — clamped to 2 lines */}
+      <h3 className="mb-2 line-clamp-2 text-[13px] font-semibold leading-[18px] text-foreground">
+        {ticket.title}
+      </h3>
 
       {/* Labels */}
       {ticket.labels && ticket.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="mb-2 flex flex-wrap gap-1">
           {ticket.labels.map((label) => (
             <span
               key={label.id}
-              className="px-2 py-0.5 rounded-md text-[11px] font-medium"
+              className="rounded-sm px-1.5 py-0.5 text-[10px] font-medium"
               style={{
-                backgroundColor: `${label.color}15`,
+                backgroundColor: `${label.color}1F`,
                 color: label.color,
               }}
             >
@@ -79,18 +81,21 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/30">
+      {/* Divider */}
+      <div className="my-2 h-px w-full bg-border" />
+
+      {/* Footer: priority + due | assignees */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <PriorityIcon priority={ticket.priority} size="sm" />
           {ticket.due_date && (
             <span
-              className={`text-[11px] tabular-nums ${
+              className={`font-mono text-[11px] tabular-nums ${
                 isOverdue()
-                  ? "text-red-600 dark:text-red-400 font-medium"
+                  ? "font-medium text-destructive"
                   : isDueSoon()
-                  ? "text-orange-600 dark:text-orange-400"
-                  : "text-muted-foreground/60"
+                  ? "text-warning"
+                  : "text-muted-foreground/70"
               }`}
             >
               {new Date(ticket.due_date).toLocaleDateString()}
@@ -98,12 +103,11 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
           )}
         </div>
 
-        {/* Assignees */}
         <div className="flex -space-x-1.5">
           {ticket.assignees?.slice(0, 3).map((assignee) => (
             <div
               key={assignee.user_id}
-              className="w-6 h-6 rounded-full border-2 border-background overflow-hidden ring-1 ring-border/20"
+              className="h-5 w-5 overflow-hidden rounded-full border border-card ring-1 ring-border"
               title={assignee.user?.name || assignee.user?.username}
             >
               {assignee.user?.avatar_url ? (
@@ -111,17 +115,17 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
                 <img
                   src={assignee.user.avatar_url}
                   alt={assignee.user?.username}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary">
+                <div className="flex h-full w-full items-center justify-center bg-accent text-[9px] font-semibold text-accent-foreground">
                   {(assignee.user?.name || assignee.user?.username || "?")[0].toUpperCase()}
                 </div>
               )}
             </div>
           ))}
           {ticket.assignees && ticket.assignees.length > 3 && (
-            <div className="w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full border border-card bg-muted text-[9px] font-medium text-muted-foreground">
               +{ticket.assignees.length - 3}
             </div>
           )}
@@ -130,7 +134,7 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
 
       {/* Repository */}
       {showRepository && ticket.repository && (
-        <div className="mt-2 text-[11px] text-muted-foreground/50 font-mono">
+        <div className="mt-2 truncate font-mono text-[10px] text-muted-foreground/60">
           {ticket.repository.name}
         </div>
       )}

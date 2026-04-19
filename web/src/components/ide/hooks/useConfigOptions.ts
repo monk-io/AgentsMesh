@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { agentApi, userAgentConfigApi, ConfigField } from "@/lib/api";
+import { getAgentService } from "@/lib/wasm-core";
+import type { ConfigField } from "@/lib/api";
 
 export interface ConfigOptionsState {
   fields: ConfigField[];
@@ -62,7 +63,7 @@ export function useConfigOptions(
       setLoading(true);
       try {
         // Load config schema from Backend
-        const schemaResponse = await agentApi.getConfigSchema(agentSlug);
+        const schemaResponse = JSON.parse(await getAgentService().get_config_schema(agentSlug));
 
         if (cancelled) return;
 
@@ -79,7 +80,7 @@ export function useConfigOptions(
 
         // Step 2: Load user personal config and merge (higher priority)
         try {
-          const userConfigResponse = await userAgentConfigApi.get(agentSlug);
+          const userConfigResponse = JSON.parse(await getAgentService().get_user_config(agentSlug));
           if (!cancelled && userConfigResponse.config?.config_values) {
             const userConfig = userConfigResponse.config.config_values;
 
@@ -96,7 +97,7 @@ export function useConfigOptions(
 
         if (!cancelled) {
           // Step 3: Derive `model` field from `models` list if present
-          const modelsField = baseFields.find((f) => f.type === "model_list");
+          const modelsField = baseFields.find((f: ConfigField) => f.type === "model_list");
           const modelField = modelsField ? deriveModelField(mergedConfig[modelsField.name]) : null;
 
           // Combine base fields with derived model field

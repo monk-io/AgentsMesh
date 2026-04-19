@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GitBranch, CircleOff } from "lucide-react";
-import { repositoryApi, type RepositoryData } from "@/lib/api";
+import { type RepositoryData } from "@/lib/api";
+import { getRepositoryService } from "@/lib/wasm-core";
 import type { Ticket } from "@/stores/ticket";
 import { FilterSection } from "./FilterSection";
 
@@ -40,8 +41,8 @@ export function RepoFilterSection({
 
   const loadRepos = useCallback(async () => {
     try {
-      const res = await repositoryApi.list();
-      setRepositories((res.repositories || []).filter((r) => r.is_active));
+      const res = JSON.parse(await getRepositoryService().list());
+      setRepositories((res.repositories || []).filter((r: RepositoryData) => r.is_active));
     } catch {
       // Silently fail — filter section simply won't render
     } finally {

@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAutopilotStore } from "@/stores/autopilot";
+import { useAutopilotStore, useAutopilotControllers, type AutopilotController } from "@/stores/autopilot";
 import { Brain, ListChecks, History, Bot, Terminal } from "lucide-react";
 import {
   ThinkingTab,
@@ -24,11 +24,10 @@ export function AutopilotPanelContent({ podKey, className }: AutopilotPanelConte
   const [activeTab, setActiveTab] = React.useState<"thinking" | "progress" | "history">("thinking");
   // Reactive selectors — re-render only when the matched controller or its thinking changes
   const activePhases = ["initializing", "running", "paused", "user_takeover", "waiting_approval"];
-  const autopilotController = useAutopilotStore((s) =>
-    podKey
-      ? s.autopilotControllers.find((c) => c.pod_key === podKey && activePhases.includes(c.phase))
-      : undefined
-  );
+  const controllers = useAutopilotControllers();
+  const autopilotController = podKey
+    ? controllers.find((c: AutopilotController) => c.pod_key === podKey && activePhases.includes(c.phase))
+    : undefined;
   const autopilotControllerKey = autopilotController?.autopilot_controller_key;
   const thinking = useAutopilotStore((s) =>
     autopilotControllerKey ? s.thinking[autopilotControllerKey] ?? null : null

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { ShareDialog } from "@/components/shared/ShareDialog";
-import { RepositoryData } from "@/lib/api";
+import type { RepositoryData } from "@/lib/api/repositoryTypes";
 import { useTranslations } from "next-intl";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
 
@@ -61,7 +61,7 @@ export function RepositoryHeader({ repository, onEdit, onDelete }: RepositoryHea
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link href="../repositories" className="hover:text-foreground">
+        <Link href="../infra?tab=repositories" className="hover:text-foreground">
           {t("repositories.title")}
         </Link>
         <span>/</span>

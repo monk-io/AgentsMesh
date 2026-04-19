@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, Loader2 } from "lucide-react";
-import { extensionApi, McpMarketItem } from "@/lib/api";
+import { McpMarketItem } from "@/lib/api";
+import { getExtensionService } from "@/lib/wasm-core";
 import type { TranslationFn } from "../GeneralSettings";
 
 const PAGE_SIZE = 50;
@@ -30,12 +31,11 @@ export function McpMarketSettings({ t }: McpMarketSettingsProps) {
         setLoading(true);
         offsetRef.current = 0;
       }
-      const res = await extensionApi.listMarketMcpServers(
+      const res = JSON.parse(await getExtensionService().list_market_mcp_servers(
         query,
-        undefined,
         PAGE_SIZE,
         offsetRef.current
-      );
+      ));
       if (mounted && !mounted.current) return;
       const items = res.mcp_servers || [];
       if (append) {

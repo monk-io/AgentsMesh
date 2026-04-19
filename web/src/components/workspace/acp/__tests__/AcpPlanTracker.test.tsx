@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { useAcpSessionStore } from "@/stores/acpSession";
+import { EMPTY_SESSION } from "@/stores/acpSessionTypes";
 import { AcpPlanTracker } from "@/components/workspace/acp/AcpPlanTracker";
 
 const POD = "pod-plan";
@@ -16,17 +17,26 @@ describe("AcpPlanTracker", () => {
   });
 
   it("renders nothing for empty plan", () => {
-    useAcpSessionStore.getState().updatePlan(POD, "s1", []);
+    useAcpSessionStore.setState({
+      sessions: { [POD]: { ...EMPTY_SESSION, plan: [] } },
+    });
     const { container } = render(<AcpPlanTracker podKey={POD} />);
     expect(container.innerHTML).toBe("");
   });
 
   it("renders plan steps with correct labels", () => {
-    useAcpSessionStore.getState().updatePlan(POD, "s1", [
-      { title: "Read files", status: "completed" },
-      { title: "Write code", status: "in_progress" },
-      { title: "Run tests", status: "pending" },
-    ]);
+    useAcpSessionStore.setState({
+      sessions: {
+        [POD]: {
+          ...EMPTY_SESSION,
+          plan: [
+            { title: "Read files", status: "completed" },
+            { title: "Write code", status: "in_progress" },
+            { title: "Run tests", status: "pending" },
+          ],
+        },
+      },
+    });
 
     render(<AcpPlanTracker podKey={POD} />);
     expect(screen.getByText("Plan")).toBeInTheDocument();
@@ -36,11 +46,18 @@ describe("AcpPlanTracker", () => {
   });
 
   it("applies correct styling per status", () => {
-    useAcpSessionStore.getState().updatePlan(POD, "s1", [
-      { title: "Done step", status: "completed" },
-      { title: "Active step", status: "in_progress" },
-      { title: "Todo step", status: "pending" },
-    ]);
+    useAcpSessionStore.setState({
+      sessions: {
+        [POD]: {
+          ...EMPTY_SESSION,
+          plan: [
+            { title: "Done step", status: "completed" },
+            { title: "Active step", status: "in_progress" },
+            { title: "Todo step", status: "pending" },
+          ],
+        },
+      },
+    });
 
     render(<AcpPlanTracker podKey={POD} />);
 

@@ -27,6 +27,27 @@ export function ServiceWorkerRegistration({
       return;
     }
 
+    // Dev mode: don't register the SW, and unregister any stale copy from a
+    // previous session. A stale SW can serve 503 "Offline" responses when the
+    // dev-server URL doesn't match its caches. Also skip when explicitly
+    // requested via ?nosw=1 for debugging.
+    const isDev = process.env.NODE_ENV !== "production";
+    const nosw =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("nosw") !== null;
+
+    if (isDev || nosw) {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
+        .catch(() => undefined);
+      // Also drop caches so offline shell doesn't resurface.
+      if ("caches" in window) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => undefined);
+      }
+      return;
+    }
+
     const registerSW = async () => {
       try {
         const reg = await navigator.serviceWorker.register("/sw.js", {

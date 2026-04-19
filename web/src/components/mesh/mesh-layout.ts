@@ -1,6 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
-import type { MeshNode, MeshEdge } from "@/stores/mesh";
-import type { RunnerInfoData } from "@/lib/api";
+import type { MeshNode, MeshEdge, RunnerInfo } from "@/stores/mesh";
 
 const POD_WIDTH = 200;
 const POD_HEIGHT = 160;
@@ -16,7 +15,7 @@ const CANVAS_WIDTH = 1200;
 export function calculateGroupedLayout(
   pods: MeshNode[],
   edges: MeshEdge[],
-  runners?: RunnerInfoData[],
+  runners?: RunnerInfo[],
   savedPositions?: Record<string, { x: number; y: number }>
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
@@ -54,14 +53,15 @@ interface GridCursor { x: number; y: number; rowMaxH: number }
 function groupPodsByRunner(pods: MeshNode[]): Map<number, MeshNode[]> {
   const map = new Map<number, MeshNode[]>();
   for (const pod of pods) {
-    if (!map.has(pod.runner_id)) map.set(pod.runner_id, []);
-    map.get(pod.runner_id)!.push(pod);
+    const rid = pod.runner_id ?? 0;
+    if (!map.has(rid)) map.set(rid, []);
+    map.get(rid)!.push(pod);
   }
   return map;
 }
 
-function buildRunnerInfoMap(runners?: RunnerInfoData[]): Map<number, RunnerInfoData> {
-  const map = new Map<number, RunnerInfoData>();
+function buildRunnerInfoMap(runners?: RunnerInfo[]): Map<number, RunnerInfo> {
+  const map = new Map<number, RunnerInfo>();
   if (runners) for (const r of runners) map.set(r.id, r);
   return map;
 }
@@ -94,7 +94,7 @@ function calcGroupSize(podCount: number) {
 function layoutRunnerGroup(
   runnerId: number,
   runnerPods: MeshNode[],
-  runnerInfoMap: Map<number, RunnerInfoData>,
+  runnerInfoMap: Map<number, RunnerInfo>,
   savedPositions: Record<string, { x: number; y: number }> | undefined,
   cursor: GridCursor,
 ) {

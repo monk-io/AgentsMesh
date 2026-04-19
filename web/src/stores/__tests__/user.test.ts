@@ -58,7 +58,7 @@ describe('useUserStore', () => {
     })
 
     it('should set profile to null', () => {
-      useUserStore.setState({ profile: mockProfile })
+      useUserStore.getState().setProfile(mockProfile)
       useUserStore.getState().setProfile(null)
 
       const state = useUserStore.getState()
@@ -68,7 +68,7 @@ describe('useUserStore', () => {
 
   describe('updateProfile', () => {
     it('should update profile fields', () => {
-      useUserStore.setState({ profile: mockProfile })
+      useUserStore.getState().setProfile(mockProfile)
 
       useUserStore.getState().updateProfile({ name: 'Updated Name' })
 
@@ -78,7 +78,7 @@ describe('useUserStore', () => {
     })
 
     it('should update multiple fields', () => {
-      useUserStore.setState({ profile: mockProfile })
+      useUserStore.getState().setProfile(mockProfile)
 
       useUserStore.getState().updateProfile({
         name: 'New Name',
@@ -100,9 +100,7 @@ describe('useUserStore', () => {
 
   describe('addIdentity', () => {
     it('should add identity to profile', () => {
-      useUserStore.setState({
-        profile: { ...mockProfile, identities: [] },
-      })
+      useUserStore.getState().setProfile({ ...mockProfile, identities: [] })
 
       useUserStore.getState().addIdentity(mockIdentity)
 
@@ -118,9 +116,7 @@ describe('useUserStore', () => {
         provider_user_id: '67890',
         created_at: '2024-01-01T00:00:00Z',
       }
-      useUserStore.setState({
-        profile: { ...mockProfile, identities: [existingIdentity] },
-      })
+      useUserStore.getState().setProfile({ ...mockProfile, identities: [existingIdentity] })
 
       useUserStore.getState().addIdentity(mockIdentity)
 
@@ -138,9 +134,7 @@ describe('useUserStore', () => {
 
   describe('removeIdentity', () => {
     it('should remove identity by provider', () => {
-      useUserStore.setState({
-        profile: { ...mockProfile, identities: [mockIdentity] },
-      })
+      useUserStore.getState().setProfile({ ...mockProfile, identities: [mockIdentity] })
 
       useUserStore.getState().removeIdentity('github')
 
@@ -155,9 +149,7 @@ describe('useUserStore', () => {
         provider_user_id: '67890',
         created_at: '2024-01-01T00:00:00Z',
       }
-      useUserStore.setState({
-        profile: { ...mockProfile, identities: [mockIdentity, googleIdentity] },
-      })
+      useUserStore.getState().setProfile({ ...mockProfile, identities: [mockIdentity, googleIdentity] })
 
       useUserStore.getState().removeIdentity('github')
 

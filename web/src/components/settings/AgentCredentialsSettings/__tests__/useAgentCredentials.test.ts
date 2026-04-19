@@ -1,27 +1,12 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { getUserCredentialService, getAgentService } from "@/lib/wasm-core";
 
-// Mock API modules
-const mockList = vi.fn();
+const mockListCredentials = vi.fn();
 const mockListAgents = vi.fn();
 const mockGetConfigSchema = vi.fn();
-const mockApiCreate = vi.fn();
-const mockApiUpdate = vi.fn();
-
-vi.mock("@/lib/api", () => ({
-  userAgentCredentialApi: {
-    list: (...args: unknown[]) => mockList(...args),
-    create: (...args: unknown[]) => mockApiCreate(...args),
-    update: (...args: unknown[]) => mockApiUpdate(...args),
-    delete: vi.fn(),
-    setDefault: vi.fn(),
-    listForAgent: vi.fn(),
-  },
-  agentApi: {
-    list: (...args: unknown[]) => mockListAgents(...args),
-    getConfigSchema: (...args: unknown[]) => mockGetConfigSchema(...args),
-  },
-}));
+const mockCreateCredential = vi.fn();
+const mockUpdateCredential = vi.fn();
 
 import { useAgentCredentials } from "../useAgentCredentials";
 import type { CredentialFormData } from "../types";
@@ -31,9 +16,9 @@ const mockTranslate = (key: string) => key;
 describe("useAgentCredentials - handleSaveProfile error handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ items: [] });
-    mockListAgents.mockResolvedValue({ agents: [{ name: "Claude", slug: "claude-code" }] });
-    mockGetConfigSchema.mockResolvedValue({
+    mockListCredentials.mockResolvedValue(JSON.stringify({ items: [] }));
+    mockListAgents.mockResolvedValue(JSON.stringify({ agents: [{ name: "Claude", slug: "claude-code" }] }));
+    mockGetConfigSchema.mockResolvedValue(JSON.stringify({
       schema: {
         fields: [],
         credential_fields: [
@@ -42,12 +27,27 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
           { name: "ANTHROPIC_BASE_URL", type: "text", optional: true },
         ],
       },
-    });
+    }));
+
+    vi.mocked(getUserCredentialService).mockReturnValue({
+      ...getUserCredentialService(),
+      list_agent_credentials: mockListCredentials,
+      create_agent_credential: mockCreateCredential,
+      update_agent_credential: mockUpdateCredential,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+    vi.mocked(getAgentService).mockReturnValue({
+      ...getAgentService(),
+      list_agents: mockListAgents,
+      get_config_schema: mockGetConfigSchema,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
   });
 
   it("should propagate API errors from create to caller", async () => {
     const apiError = new Error("Network error");
-    mockApiCreate.mockRejectedValue(apiError);
+    mockCreateCredential.mockRejectedValue(apiError);
 
     const { result } = renderHook(() => useAgentCredentials(mockTranslate));
 
@@ -70,7 +70,7 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
 
   it("should propagate API errors from update to caller", async () => {
     const apiError = new Error("Unauthorized");
-    mockApiUpdate.mockRejectedValue(apiError);
+    mockUpdateCredential.mockRejectedValue(apiError);
 
     const { result } = renderHook(() => useAgentCredentials(mockTranslate));
 
@@ -104,7 +104,7 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
   });
 
   it("should set success message and call loadData on successful create", async () => {
-    mockApiCreate.mockResolvedValue({ profile: { id: 1 } });
+    mockCreateCredential.mockResolvedValue(JSON.stringify({ profile: { id: 1 } }));
 
     const { result } = renderHook(() => useAgentCredentials(mockTranslate));
 
@@ -122,9 +122,8 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
       await result.current.handleSaveProfile("claude-code", formData, null);
     });
 
-    expect(mockApiCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreateCredential).toHaveBeenCalledTimes(1);
     expect(result.current.success).toBe("settings.agentCredentials.profileCreated");
-    // loadData should have been called again (mockList called 2 times: initial + after save)
-    expect(mockList).toHaveBeenCalledTimes(2);
+    expect(mockListCredentials).toHaveBeenCalledTimes(2);
   });
 });

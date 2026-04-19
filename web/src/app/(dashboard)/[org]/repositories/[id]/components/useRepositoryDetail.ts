@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { repositoryApi, RepositoryData } from "@/lib/api";
+import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import { getRepositoryService } from "@/lib/wasm-core";
 import { useTranslations } from "next-intl";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -40,8 +41,8 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
 
   const loadRepository = useCallback(async () => {
     try {
-      const res = await repositoryApi.get(repositoryId);
-      setRepository(res.repository);
+      const res = JSON.parse(await getRepositoryService().get(BigInt(repositoryId)));
+      setRepository(res.repository ?? res);
     } catch (error) {
       console.error("Failed to load repository:", error);
     } finally {
@@ -58,7 +59,7 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
     const confirmed = await deleteDialog.confirm();
     if (!confirmed) return;
     try {
-      await repositoryApi.delete(repositoryId);
+      await getRepositoryService().delete(BigInt(repositoryId));
       router.push("../repositories");
     } catch (error) {
       console.error("Failed to delete repository:", error);

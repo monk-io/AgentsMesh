@@ -2,15 +2,15 @@
 
 import { useMemo, useCallback } from "react";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { useMeshStore, type MeshEdge } from "@/stores/mesh";
-import { usePodStore } from "@/stores/pod";
-import { useAutopilotStore } from "@/stores/autopilot";
+import { useMeshStore, useTopology, type MeshEdge, type ChannelInfo, type MeshNode } from "@/stores/mesh";
+import { usePod } from "@/stores/pod";
+import { useAutopilotStore, useAutopilotControllers, type AutopilotController } from "@/stores/autopilot";
 
 /** Derived pod-centric data for BottomPanel tabs */
 export function useBottomPanelData() {
   const panes = useWorkspaceStore((s) => s.panes);
   const activePane = useWorkspaceStore((s) => s.activePane);
-  const topology = useMeshStore((s) => s.topology);
+  const topology = useTopology();
   const fetchTopology = useMeshStore((s) => s.fetchTopology);
 
   const selectedPodKey = useMemo(() => {
@@ -19,31 +19,28 @@ export function useBottomPanelData() {
     return pane?.podKey ?? null;
   }, [activePane, panes]);
 
-  const currentPod = usePodStore((s) =>
-    selectedPodKey ? s.pods.find((p) => p.pod_key === selectedPodKey) ?? null : null
-  );
+  const currentPod = usePod(selectedPodKey ?? undefined) ?? null;
 
   const activePhases = ["initializing", "running", "paused", "user_takeover", "waiting_approval"];
-  const activeAutopilot = useAutopilotStore((s) =>
-    selectedPodKey
-      ? s.autopilotControllers.find((c) => c.pod_key === selectedPodKey && activePhases.includes(c.phase))
-      : undefined
-  );
+  const allControllers = useAutopilotControllers();
+  const activeAutopilot = selectedPodKey
+    ? allControllers.find((c: AutopilotController) => c.pod_key === selectedPodKey && activePhases.includes(c.phase))
+    : undefined;
 
   const podChannels = useMemo(() => {
     if (!selectedPodKey || !topology) return [];
-    return topology.channels.filter((c) => c.pod_keys.includes(selectedPodKey));
+    return topology.channels.filter((c: ChannelInfo) => c.pod_keys.includes(selectedPodKey));
   }, [selectedPodKey, topology]);
 
   const podEdges = useMemo(() => {
     if (!selectedPodKey || !topology) return [];
-    return topology.edges.filter((e) => e.source === selectedPodKey || e.target === selectedPodKey);
+    return topology.edges.filter((e: MeshEdge) => e.source === selectedPodKey || e.target === selectedPodKey);
   }, [selectedPodKey, topology]);
 
   const { incomingBindings, outgoingBindings } = useMemo(() => {
     const incoming: MeshEdge[] = [];
     const outgoing: MeshEdge[] = [];
-    podEdges.forEach((edge) => {
+    podEdges.forEach((edge: MeshEdge) => {
       if (edge.target === selectedPodKey) incoming.push(edge);
       else if (edge.source === selectedPodKey) outgoing.push(edge);
     });
@@ -51,7 +48,7 @@ export function useBottomPanelData() {
   }, [podEdges, selectedPodKey]);
 
   const getPodInfo = useCallback(
-    (podKey: string) => topology?.nodes.find((n) => n.pod_key === podKey),
+    (podKey: string) => topology?.nodes.find((n: MeshNode) => n.pod_key === podKey),
     [topology]
   );
 

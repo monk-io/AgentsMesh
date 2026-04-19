@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { ticketApi } from "@/lib/api";
+import { getTicketService } from "@/lib/wasm-core";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useAuthStore } from "@/stores/auth";
 import { Terminal, ExternalLink, Plus } from "lucide-react";
@@ -45,7 +45,7 @@ export default function TicketPodPanel({
 
   const fetchPods = useCallback(async () => {
     try {
-      const response = await ticketApi.getPods(ticketSlug);
+      const response = JSON.parse(await getTicketService().get_ticket_pods(ticketSlug, true));
       setPods(response.pods || []);
     } catch (err: unknown) {
       console.error("Failed to fetch pods:", err);

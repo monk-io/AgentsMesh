@@ -12,6 +12,7 @@ import { WorkspaceSidebarContent } from "./sidebar/WorkspaceSidebarContent";
 import { TicketsSidebarContent } from "./sidebar/TicketsSidebarContent";
 import { RepositoriesSidebarContent } from "./sidebar/RepositoriesSidebarContent";
 import { RunnersSidebarContent } from "./sidebar/RunnersSidebarContent";
+import { InfraSidebarContent } from "./sidebar/InfraSidebarContent";
 import { MeshSidebarContent } from "./sidebar/MeshSidebarContent";
 import { ChannelsSidebarContent } from "./sidebar/ChannelsSidebarContent";
 import { LoopsSidebarContent } from "./sidebar/LoopsSidebarContent";
@@ -64,6 +65,13 @@ function getSidebarContent(
       return <MeshSidebarContent />;
     case "loops":
       return <LoopsSidebarContent />;
+    case "infra":
+      return (
+        <InfraSidebarContent
+          onImportRepo={callbacks.onImportRepo}
+          onAddRunner={callbacks.onAddRunner}
+        />
+      );
     case "repositories":
       return <RepositoriesSidebarContent onImportRepo={callbacks.onImportRepo} />;
     case "runners":

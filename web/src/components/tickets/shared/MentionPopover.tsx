@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuthStore } from "@/stores/auth";
-import { organizationApi, OrganizationMember } from "@/lib/api";
+import type { OrganizationMember } from "@/lib/api";
+import { getOrgApiService } from "@/lib/wasm-getters";
 
 interface MentionPopoverProps {
   /** Whether the popover is visible */
@@ -44,9 +45,9 @@ export function MentionPopover({
   // Fetch members once
   useEffect(() => {
     if (!currentOrg?.slug) return;
-    organizationApi
-      .listMembers(currentOrg.slug)
-      .then((res) => setMembers(res.members || []))
+    getOrgApiService()
+      .list_members(currentOrg.slug)
+      .then((raw: string) => setMembers(JSON.parse(raw).members || []))
       .catch(() => setMembers([]));
   }, [currentOrg?.slug]);
 
@@ -110,7 +111,7 @@ export function MentionPopover({
     >
       {filtered.slice(0, 10).map((member, index) => (
         <button
-          key={member.user_id}
+          key={member.user_id ?? member.user?.id ?? index}
           type="button"
           className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors ${
             index === selectedIndex ? "bg-muted/50" : ""

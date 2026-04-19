@@ -1,35 +1,77 @@
 import { create } from "zustand";
-import { channelApi } from "@/lib/api";
+import { useMemo } from "react";
 import { getErrorMessage } from "@/lib/utils";
-import { useChannelMessageStore } from "./channelMessageStore";
-import type { Channel, ChannelState } from "./channelStoreTypes";
+import { getChannelService, getApiClient } from "@/lib/wasm-core";
 
-export const useChannelStore = create<ChannelState>((set, get) => {
-  /** Update a channel in both lists and currentChannel */
-  const patchChannel = (id: number, updater: (ch: Channel) => Channel) => {
-    set((state) => ({
-      channels: state.channels.map((c) => (c.id === id ? updater(c) : c)),
-      currentChannel: state.currentChannel?.id === id ? updater(state.currentChannel) : state.currentChannel,
-    }));
-  };
+export interface Channel {
+  id: number; organization_id?: number; name: string; description?: string; document?: string;
+  is_archived: boolean;
+  visibility?: "public" | "private";
+  is_member?: boolean;
+  member_count: number;
+  created_at?: string; updated_at?: string;
+  repository?: { id: number; name: string };
+  ticket?: { id: number; slug: string; title: string };
+  pods?: Array<{ pod_key: string; alias?: string; status: string; agent?: { name: string } }>;
+}
 
-  return {
-  channels: [],
+const svc = () => getChannelService();
+const bump = () => useChannelStore.setState((s) => ({ _tick: s._tick + 1 }));
+
+export function useChannels(): Channel[] {
+  const tick = useChannelStore((s) => s._tick);
+  return useMemo(() => JSON.parse(svc().channels_json()) as Channel[], [tick]);
+}
+
+export function useCurrentChannel(): Channel | null {
+  const tick = useChannelStore((s) => s._tick);
+  return useMemo(() => {
+    const v = svc().current_channel_json();
+    return v ? (typeof v === "string" ? JSON.parse(v) : v) : null;
+  }, [tick]);
+}
+
+interface ChannelState {
+  _tick: number; loading: boolean; channelLoading: boolean;
+  error: string | null; selectedChannelId: number | null; searchQuery: string; showArchived: boolean;
+  currentChannel: Channel | null;
+  setSelectedChannelId: (id: number | null) => void; setSearchQuery: (q: string) => void; setShowArchived: (s: boolean) => void;
+  fetchChannels: (f?: { includeArchived?: boolean }) => Promise<void>; fetchChannel: (id: number) => Promise<void>;
+  createChannel: (d: {
+    name: string; description?: string; document?: string;
+    repositoryId?: number; ticketSlug?: string;
+    visibility?: "public" | "private"; memberIds?: number[];
+  }) => Promise<Channel>;
+  updateChannel: (id: number, d: Partial<{ name: string; description: string; document: string }>) => Promise<Channel>;
+  archiveChannel: (id: number) => Promise<void>; unarchiveChannel: (id: number) => Promise<void>;
+  joinChannel: (channelId: number, podKey: string) => Promise<void>; leaveChannel: (channelId: number, podKey: string) => Promise<void>;
+  joinUserChannel: (channelId: number) => Promise<void>;
+  leaveUserChannel: (channelId: number) => Promise<void>;
+  inviteMembers: (channelId: number, userIds: number[]) => Promise<void>;
+  patchChannelMemberCount: (channelId: number, delta: number) => void;
+  setCurrentChannel: (ch: Channel | null) => void; clearError: () => void;
+}
+
+// TODO(wasm): move these to dedicated ChannelService methods once the core crate
+// adds invite/join/leave APIs. For now they use the shared ApiClient directly.
+async function orgScopedPost(path: string, body?: unknown): Promise<unknown> {
+  return await getApiClient().post(path, body ?? {});
+}
+
+export const useChannelStore = create<ChannelState>((set, get) => ({
+  _tick: 0, loading: false, channelLoading: false,
+  error: null, selectedChannelId: null, searchQuery: "", showArchived: false,
   currentChannel: null,
-  loading: false,
-  channelLoading: false,
-  error: null,
-  selectedChannelId: null,
-  searchQuery: "",
-  showArchived: false,
 
   setSelectedChannelId: (id) => {
     set({ selectedChannelId: id });
     if (id !== null) {
+      svc().select_channel(BigInt(id));
+      bump();
       get().fetchChannel(id);
-      useChannelMessageStore.getState().clearChannelUnread(id);
     } else {
-      set({ currentChannel: null });
+      svc().select_channel(undefined as unknown as bigint);
+      bump();
     }
   },
 
@@ -39,132 +81,96 @@ export const useChannelStore = create<ChannelState>((set, get) => {
   fetchChannels: async (filters) => {
     set({ error: null });
     try {
-      const apiFilters = filters ? { include_archived: filters.includeArchived } : undefined;
-      const response = await channelApi.list(apiFilters);
-      set({ channels: response.channels || [] });
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to fetch channels") });
-    }
+      await svc().fetch_channels(filters?.includeArchived);
+      bump();
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch channels") }); }
   },
 
   fetchChannel: async (id) => {
     set({ channelLoading: true, error: null });
     try {
-      const response = await channelApi.get(id);
-      set({ currentChannel: response.channel, channelLoading: false });
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to fetch channel"), channelLoading: false });
-    }
+      await svc().fetch_channel(BigInt(id));
+      set({ channelLoading: false, _tick: get()._tick + 1 });
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch channel"), channelLoading: false }); }
   },
 
   createChannel: async (data) => {
     set({ error: null });
     try {
-      const response = await channelApi.create({
+      const json = await svc().create_channel(JSON.stringify({
         name: data.name, description: data.description, document: data.document,
         repository_id: data.repositoryId, ticket_slug: data.ticketSlug,
         visibility: data.visibility, member_ids: data.memberIds,
-      });
-      set((state) => ({ channels: [response.channel, ...state.channels] }));
-      return response.channel;
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to create channel") });
-      throw error;
-    }
+      }));
+      const channel = JSON.parse(json) as Channel;
+      bump();
+      return channel;
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create channel") }); throw e; }
   },
 
   updateChannel: async (id, data) => {
     try {
-      const response = await channelApi.update(id, data);
-      patchChannel(id, () => response.channel);
-      return response.channel;
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to update channel") });
-      throw error;
-    }
+      const json = await svc().update_channel(BigInt(id), JSON.stringify(data));
+      const channel = JSON.parse(json) as Channel;
+      bump();
+      return channel;
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update channel") }); throw e; }
   },
 
   archiveChannel: async (id) => {
-    try {
-      await channelApi.archive(id);
-      patchChannel(id, (ch) => ({ ...ch, is_archived: true }));
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to archive channel") });
-      throw error;
-    }
+    try { await svc().archive_channel(BigInt(id)); bump(); }
+    catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to archive channel") }); throw e; }
   },
 
   unarchiveChannel: async (id) => {
-    try {
-      await channelApi.unarchive(id);
-      patchChannel(id, (ch) => ({ ...ch, is_archived: false }));
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to unarchive channel") });
-      throw error;
-    }
+    try { await svc().unarchive_channel(BigInt(id)); bump(); }
+    catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to unarchive channel") }); throw e; }
   },
 
   joinChannel: async (channelId, podKey) => {
-    try {
-      await channelApi.joinPod(channelId, podKey);
-      const response = await channelApi.get(channelId);
-      patchChannel(channelId, () => response.channel);
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to join channel") });
-      throw error;
-    }
+    try { await svc().join_channel(BigInt(channelId), podKey); bump(); }
+    catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to join channel") }); throw e; }
   },
 
   leaveChannel: async (channelId, podKey) => {
-    try {
-      await channelApi.leavePod(channelId, podKey);
-      const response = await channelApi.get(channelId);
-      patchChannel(channelId, () => response.channel);
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to leave channel") });
-      throw error;
-    }
+    try { await svc().leave_channel(BigInt(channelId), podKey); bump(); }
+    catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to leave channel") }); throw e; }
   },
-
-  patchChannelMemberCount: (channelId, delta) => {
-    patchChannel(channelId, (ch) => ({
-      ...ch,
-      member_count: Math.max(0, ch.member_count + delta),
-    }));
-  },
-
-  setCurrentChannel: (channel) => set({ currentChannel: channel }),
-  clearError: () => set({ error: null }),
 
   joinUserChannel: async (channelId) => {
     try {
-      await channelApi.joinChannel(channelId);
-      patchChannel(channelId, (ch) => ({ ...ch, is_member: true, member_count: ch.member_count + 1 }));
-      // Fetch messages now that user has access
-      useChannelMessageStore.getState().fetchMessages(channelId);
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to join channel") });
-      throw error;
-    }
+      await orgScopedPost(`/api/v1/channels/${channelId}/join`);
+      get().patchChannelMemberCount(channelId, 1);
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to join channel") }); throw e; }
   },
 
   leaveUserChannel: async (channelId) => {
     try {
-      await channelApi.leaveChannel(channelId);
-      patchChannel(channelId, (ch) => ({ ...ch, is_member: false, member_count: Math.max(0, ch.member_count - 1) }));
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to leave channel") });
-      throw error;
-    }
+      await orgScopedPost(`/api/v1/channels/${channelId}/leave`);
+      get().patchChannelMemberCount(channelId, -1);
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to leave channel") }); throw e; }
   },
 
   inviteMembers: async (channelId, userIds) => {
     try {
-      await channelApi.inviteMembers(channelId, userIds);
-      patchChannel(channelId, (ch) => ({ ...ch, member_count: ch.member_count + userIds.length }));
-    } catch (error: unknown) {
-      set({ error: getErrorMessage(error, "Failed to invite members") });
-      throw error;
-    }
+      await orgScopedPost(`/api/v1/channels/${channelId}/members`, { user_ids: userIds });
+      get().patchChannelMemberCount(channelId, userIds.length);
+    } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to invite members") }); throw e; }
   },
-}; });
+
+  patchChannelMemberCount: (channelId, delta) => {
+    const current = JSON.parse(svc().get_channel_json(BigInt(channelId)) as string) as Channel | null;
+    if (!current) return;
+    const next = { ...current, member_count: Math.max(0, current.member_count + delta) };
+    svc().update_channel_local(BigInt(channelId), JSON.stringify(next));
+    bump();
+  },
+
+  setCurrentChannel: (channel) => {
+    svc().set_current_channel(channel ? BigInt(channel.id) : null);
+    set({ currentChannel: channel });
+    bump();
+  },
+
+  clearError: () => set({ error: null }),
+}));

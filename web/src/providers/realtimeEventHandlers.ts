@@ -1,5 +1,6 @@
 import { usePodStore } from "@/stores/pod";
 import { useRunnerStore } from "@/stores/runner";
+import { getTicketService, parseWasmAny } from "@/lib/wasm-core";
 import { useTicketStore } from "@/stores/ticket";
 import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
 import { useAuthStore } from "@/stores/auth";
@@ -20,7 +21,7 @@ export function handleChannelEvent(event: RealtimeEvent, channelDebounceRef?: De
   switch (event.type) {
     case "channel:message": {
       const data = event.data as ChannelMessageData;
-      msgState.addMessage(data.channel_id, {
+      msgState.onNewMessage({
         id: data.id, channel_id: data.channel_id, sender_pod: data.sender_pod,
         sender_user_id: data.sender_user_id,
         message_type: data.message_type as "text" | "system" | "code" | "command",
@@ -84,9 +85,9 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
       const ticketState = useTicketStore.getState();
 
       if (event.type === "ticket:status_changed" && data.slug && data.status) {
-        ticketState.updateTicketStatusFromEvent(data.slug, data.status, data.previous_status);
+        ticketState.updateTicketStatusFromEvent?.(data.slug, data.status, data.previous_status);
       } else if (event.type === "ticket:deleted" && data.slug) {
-        ticketState.removeTicketFromEvent(data.slug);
+        ticketState.removeTicketFromEvent?.(data.slug);
       }
 
       debouncedTicketRefetch(ticketDebounceRef);
@@ -126,8 +127,9 @@ function debouncedTicketRefetch(debounceRef: DebounceRef | undefined) {
     debounceRef.current = null;
     const s = useTicketStore.getState();
     s.fetchTickets?.();
-    if (s.currentTicket?.slug) {
-      s.fetchTicket?.(s.currentTicket.slug);
+    const currentTicket = parseWasmAny<{ slug: string }>(getTicketService().current_ticket_json());
+    if (currentTicket?.slug) {
+      s.fetchTicket?.(currentTicket.slug);
     }
   }, 500);
 }

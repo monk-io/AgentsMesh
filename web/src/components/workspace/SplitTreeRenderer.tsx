@@ -5,7 +5,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore } from "@/stores/workspace";
 import type { SplitTreeNode } from "@/stores/workspace";
-import { usePodStore } from "@/stores/pod";
+import { usePod } from "@/stores/pod";
 import { POD_MODE_ACP } from "@/lib/pod-modes";
 import { TerminalPane } from "./TerminalPane";
 import { AgentPanel } from "./AgentPanel";
@@ -98,9 +98,8 @@ function LeafPane({
   onPopout?: (paneId: string) => void;
 }) {
   const podKey = useWorkspaceStore((s) => s.panes.find((p) => p.id === paneId)?.podKey);
-  const interactionMode = usePodStore(
-    (s) => s.pods.find((p) => p.pod_key === podKey)?.interaction_mode
-  );
+  const pod = usePod(podKey);
+  const interactionMode = pod?.interaction_mode;
   if (!podKey) return null;
 
   const sharedProps = {

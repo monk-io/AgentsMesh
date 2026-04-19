@@ -1,8 +1,8 @@
 "use client";
 
 import { Ticket, TicketStatus } from "@/stores/ticket";
-import { useTicketStore } from "@/stores/ticket";
-import { KanbanBoard } from "@/components/tickets";
+import { useTicketStore, useBoardColumns } from "@/stores/ticket";
+import { KanbanBoard, TicketsPageHeader } from "@/components/tickets";
 
 interface BoardViewLayoutProps {
   tickets: Ticket[];
@@ -11,25 +11,22 @@ interface BoardViewLayoutProps {
   onCreatePodRequest?: (ticket: Ticket) => void;
 }
 
-/**
- * Board view layout — bridges store state to KanbanBoard props.
- * KanbanBoard is a pure rendering component; all store access is here.
- */
 export function BoardViewLayout({
   tickets,
   onStatusChange,
   onTicketClick,
   onCreatePodRequest,
 }: BoardViewLayoutProps) {
-  const boardColumns = useTicketStore((s) => s.boardColumns);
+  const boardColumns = useBoardColumns();
   const columnPagination = useTicketStore((s) => s.columnPagination);
   const doneCollapsed = useTicketStore((s) => s.doneCollapsed);
   const loadMoreColumn = useTicketStore((s) => s.loadMoreColumn);
   const setDoneCollapsed = useTicketStore((s) => s.setDoneCollapsed);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 min-h-0 p-4">
+    <div className="flex h-full flex-col">
+      <TicketsPageHeader onExportClick={() => {}} />
+      <div className="min-h-0 flex-1 p-4">
         <KanbanBoard
           tickets={tickets}
           boardColumns={boardColumns.length > 0 ? boardColumns : undefined}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { usePodStore } from "@/stores/pod";
+import { usePods } from "@/stores/pod";
 import { Button } from "@/components/ui/button";
 import { getPodDisplayName } from "@/lib/pod-utils";
 
@@ -14,7 +14,7 @@ interface PodSelectorModalProps {
 export function PodSelectorModal({ openPodKeys, onSelect, onClose }: PodSelectorModalProps) {
   // Subscribe to raw pods array — filter in useMemo to avoid creating
   // a new array reference inside the selector (causes infinite re-render loop).
-  const allPods = usePodStore((s) => s.pods);
+  const allPods = usePods();
   const pods = useMemo(
     () => allPods.filter(
       (pod) => pod.status === "running" && !openPodKeys.includes(pod.pod_key)

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { billingApi, SeatUsage } from "@/lib/api/billing";
+import type { SeatUsage } from "@/lib/api/billing-types";
+import { getBillingService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 interface SeatManagementProps {
@@ -27,7 +28,7 @@ export function SeatManagement({
     setLoading(true);
     setError(null);
     try {
-      const usage = await billingApi.getSeatUsage();
+      const usage: SeatUsage = JSON.parse(await getBillingService().get_seat_usage());
       setSeatUsage(usage);
     } catch (err) {
       setError(getLocalizedErrorMessage(err, t, t("billing.seats.loadFailed") || "Failed to load seat data"));
@@ -46,7 +47,9 @@ export function SeatManagement({
     setPurchasing(true);
     setError(null);
     try {
-      const result = await billingApi.purchaseSeats(seatsToAdd);
+      const result = JSON.parse(await getBillingService().purchase_seats(
+        JSON.stringify({ seats: seatsToAdd })
+      ));
 
       // Update local state with new seat data
       if (result.seats) {

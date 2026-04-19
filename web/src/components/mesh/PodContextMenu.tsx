@@ -16,7 +16,7 @@ import {
   useConfirmDialog,
 } from "@/components/ui/confirm-dialog";
 import { RenameDialog } from "@/components/shared/RenameDialog";
-import { podApi } from "@/lib/api";
+import { getPodService } from "@/lib/wasm-core";
 import type { MeshNode } from "@/stores/mesh";
 import { useMeshStore } from "@/stores/mesh";
 import { usePodStore } from "@/stores/pod";
@@ -58,7 +58,7 @@ export default function PodContextMenu({ node, children }: PodContextMenuProps) 
       variant: "destructive",
     });
     if (confirmed) {
-      await podApi.terminate(node.pod_key);
+      await getPodService().terminate_pod(node.pod_key);
       removePaneByPodKey(node.pod_key);
       fetchTopology();
     }

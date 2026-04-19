@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
-import { extensionApi, InstalledSkill, InstalledMcpServer } from "@/lib/api";
+import type { InstalledSkill, InstalledMcpServer } from "@/lib/api/extensionTypes";
+import { getExtensionService } from "@/lib/wasm-core";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function useCapabilitiesData(repositoryId: number) {
@@ -20,8 +21,8 @@ export function useCapabilitiesData(repositoryId: number) {
   const loadSkills = useCallback(async (mounted?: { current: boolean }) => {
     try {
       const [orgRes, userRes] = await Promise.all([
-        extensionApi.listRepoSkills(repositoryId, "org"),
-        extensionApi.listRepoSkills(repositoryId, "user"),
+        getExtensionService().list_repo_skills(BigInt(repositoryId), "org").then(j => JSON.parse(j)),
+        getExtensionService().list_repo_skills(BigInt(repositoryId), "user").then(j => JSON.parse(j)),
       ]);
       if (mounted && !mounted.current) return;
       setOrgSkills(orgRes.skills || []);
@@ -35,8 +36,8 @@ export function useCapabilitiesData(repositoryId: number) {
   const loadMcpServers = useCallback(async (mounted?: { current: boolean }) => {
     try {
       const [orgRes, userRes] = await Promise.all([
-        extensionApi.listRepoMcpServers(repositoryId, "org"),
-        extensionApi.listRepoMcpServers(repositoryId, "user"),
+        getExtensionService().list_repo_mcp_servers(BigInt(repositoryId), "org").then(j => JSON.parse(j)),
+        getExtensionService().list_repo_mcp_servers(BigInt(repositoryId), "user").then(j => JSON.parse(j)),
       ]);
       if (mounted && !mounted.current) return;
       setOrgMcpServers(orgRes.mcp_servers || []);
@@ -59,7 +60,7 @@ export function useCapabilitiesData(repositoryId: number) {
   }, [loadSkills, loadMcpServers]);
 
   const handleToggleSkill = useCallback(async (skill: InstalledSkill) => {
-    try { await extensionApi.updateSkill(repositoryId, skill.id, { is_enabled: !skill.is_enabled }); await loadSkills(); }
+    try { await getExtensionService().update_skill(BigInt(repositoryId), BigInt(skill.id), JSON.stringify({ is_enabled: !skill.is_enabled })); await loadSkills(); }
     catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToUpdate"))); }
   }, [repositoryId, loadSkills, t]);
 
@@ -70,12 +71,12 @@ export function useCapabilitiesData(repositoryId: number) {
       variant: "destructive", confirmText: t("extensions.uninstall"), cancelText: t("extensions.cancel"),
     });
     if (!confirmed) return;
-    try { await extensionApi.uninstallSkill(repositoryId, skill.id); toast.success(t("extensions.uninstalled")); await loadSkills(); }
+    try { await getExtensionService().uninstall_skill(BigInt(repositoryId), BigInt(skill.id)); toast.success(t("extensions.uninstalled")); await loadSkills(); }
     catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToUninstall"))); }
   }, [repositoryId, loadSkills, t, confirm]);
 
   const handleToggleMcp = useCallback(async (mcp: InstalledMcpServer) => {
-    try { await extensionApi.updateMcpServer(repositoryId, mcp.id, { is_enabled: !mcp.is_enabled }); await loadMcpServers(); }
+    try { await getExtensionService().update_mcp_server(BigInt(repositoryId), BigInt(mcp.id), JSON.stringify({ is_enabled: !mcp.is_enabled })); await loadMcpServers(); }
     catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToUpdate"))); }
   }, [repositoryId, loadMcpServers, t]);
 
@@ -86,7 +87,7 @@ export function useCapabilitiesData(repositoryId: number) {
       variant: "destructive", confirmText: t("extensions.uninstall"), cancelText: t("extensions.cancel"),
     });
     if (!confirmed) return;
-    try { await extensionApi.uninstallMcpServer(repositoryId, mcp.id); toast.success(t("extensions.uninstalled")); await loadMcpServers(); }
+    try { await getExtensionService().uninstall_mcp_server(BigInt(repositoryId), BigInt(mcp.id)); toast.success(t("extensions.uninstalled")); await loadMcpServers(); }
     catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToUninstall"))); }
   }, [repositoryId, loadMcpServers, t, confirm]);
 

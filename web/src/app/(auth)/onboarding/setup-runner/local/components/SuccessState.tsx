@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { RunnerData } from "@/lib/api/runner";
+import type { RunnerData } from "@/lib/api/runnerTypes";
 import { Logo } from "@/components/common";
 
 interface SuccessStateProps {

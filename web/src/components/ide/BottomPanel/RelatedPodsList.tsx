@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import type { PodData } from "@/lib/api/pod";
+import type { PodData } from "@/lib/api";
 import { getPodDisplayName } from "@/lib/pod-utils";
 import { getPodStatusInfo } from "@/stores/mesh";
 import { Link2 } from "lucide-react";

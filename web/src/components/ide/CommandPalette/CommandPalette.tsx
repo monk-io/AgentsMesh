@@ -88,7 +88,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   const handleSelectRepository = useCallback(
     (repo: RepositorySearchResult) => {
-      router.push(`/${orgSlug}/repositories/${repo.id}`);
+      router.push(`/${orgSlug}/infra?tab=repositories&id=${repo.id}`);
       handleOpenChange(false);
     },
     [router, orgSlug, handleOpenChange]

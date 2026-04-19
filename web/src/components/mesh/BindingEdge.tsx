@@ -41,16 +41,27 @@ function BindingEdge({
   });
 
   const statusInfo = getBindingStatusInfo(data?.status || "active");
-  const scopeCount = (data?.grantedScopes?.length || 0) + (data?.pendingScopes?.length || 0);
+  const grantedScopes = data?.grantedScopes ?? [];
+  const pendingScopes = data?.pendingScopes ?? [];
+  const scopeCount = grantedScopes.length + pendingScopes.length;
+
+  // Design spec: write (control) edges = solid 2px dark; read (observe) edges = dashed 1px light.
+  // pending edges keep the dashed 5,5 treatment from before.
+  const isWrite = grantedScopes.some((s) => s.endsWith(":write") || s === "pod:write");
+  const isPending = data?.status === "pending";
+
+  const strokeWidth = selected ? 3 : isWrite ? 2 : 1;
+  const dash = isPending ? "5 5" : isWrite ? undefined : "4 4";
 
   return (
     <>
       <BaseEdge
         id={id}
         path={edgePath}
-        className={`${statusInfo.color} ${selected ? "stroke-[3px]" : "stroke-2"}`}
+        className={`${statusInfo.color} ${isWrite ? "opacity-100" : "opacity-60"}`}
         style={{
-          strokeDasharray: data?.status === "pending" ? "5 5" : undefined,
+          strokeWidth,
+          strokeDasharray: dash,
         }}
       />
       {scopeCount > 0 && (
@@ -64,12 +75,12 @@ function BindingEdge({
             className="nodrag nopan"
           >
             <div
-              className={`px-2 py-1 text-xs rounded-full bg-background border border-border shadow-sm ${
-                selected ? "ring-2 ring-primary/20" : ""
+              className={`px-2 py-0.5 text-xs rounded-full bg-background border border-border shadow-xs ${
+                selected ? "ring-1 ring-primary" : ""
               }`}
-              title={data?.grantedScopes?.join(", ")}
+              title={grantedScopes.join(", ") || undefined}
             >
-              {scopeCount} scope{scopeCount !== 1 ? "s" : ""}
+              {isWrite ? "W" : "R"} · {scopeCount}
             </div>
           </div>
         </EdgeLabelRenderer>

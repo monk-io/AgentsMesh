@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import type { TokenUsageTimeSeriesPoint } from "@/lib/api/token-usage";
+import type { TokenUsageTimeSeriesPoint } from "@/lib/api";
 import type { TranslationFn } from "../GeneralSettings";
 import { formatTokenCount } from "./format";
 import { resolveChartColors } from "./chart-colors";

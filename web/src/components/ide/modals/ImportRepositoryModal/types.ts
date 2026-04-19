@@ -1,4 +1,5 @@
-import type { RepositoryProviderData, UserRemoteRepositoryData, RepositoryData } from "@/lib/api";
+import type { RepositoryProviderData, RepositoryData } from "@/lib/api";
+import type { ProviderRepositoryData } from "@/lib/api/userRepositoryProviderTypes";
 
 /**
  * Wizard step types for repository import flow
@@ -12,8 +13,8 @@ export interface ImportWizardState {
   step: ImportWizardStep;
   providers: RepositoryProviderData[];
   selectedProvider: RepositoryProviderData | null;
-  repositories: UserRemoteRepositoryData[];
-  selectedRepo: UserRemoteRepositoryData | null;
+  repositories: ProviderRepositoryData[];
+  selectedRepo: ProviderRepositoryData | null;
   search: string;
   page: number;
   loadingProviders: boolean;
@@ -48,7 +49,7 @@ export interface ImportWizardActions {
   clearProvider: () => void;
 
   // Repository actions
-  selectRepo: (repo: UserRemoteRepositoryData, existingRepositories: RepositoryData[]) => void;
+  selectRepo: (repo: ProviderRepositoryData, existingRepositories: RepositoryData[]) => void;
 
   // Manual entry actions
   setManualProviderType: (type: string) => void;

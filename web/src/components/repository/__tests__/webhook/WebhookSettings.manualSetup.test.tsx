@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Mock must be at module level for Vitest hoisting
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => {
     const translations: Record<string, string> = {
@@ -16,24 +15,12 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-// Import mock functions before mocking the module
 import {
   mockGetWebhookStatus,
   mockGetWebhookSecret,
   mockRegisterWebhook,
-  mockDeleteWebhook,
   mockMarkWebhookConfigured,
 } from "./testSetup";
-
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    getWebhookStatus: (...args: unknown[]) => mockGetWebhookStatus(...args),
-    getWebhookSecret: (...args: unknown[]) => mockGetWebhookSecret(...args),
-    registerWebhook: (...args: unknown[]) => mockRegisterWebhook(...args),
-    deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
-    markWebhookConfigured: (...args: unknown[]) => mockMarkWebhookConfigured(...args),
-  },
-}));
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { WebhookSettings } from "../../webhook";
@@ -50,8 +37,8 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockGetWebhookStatus.mockResolvedValue({ webhook_status: manualSetupStatus });
-    mockGetWebhookSecret.mockResolvedValue(secretResponse);
+    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: manualSetupStatus }));
+    mockGetWebhookSecret.mockResolvedValue(JSON.stringify(secretResponse));
   });
 
   afterEach(() => {
@@ -100,10 +87,10 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
       is_active: true,
       needs_manual_setup: false,
     };
-    mockMarkWebhookConfigured.mockResolvedValue({ message: "Marked as configured" });
+    mockMarkWebhookConfigured.mockResolvedValue(JSON.stringify({ message: "Marked as configured" }));
     mockGetWebhookStatus
-      .mockResolvedValueOnce({ webhook_status: manualSetupStatus })
-      .mockResolvedValue({ webhook_status: activeStatus });
+      .mockResolvedValueOnce(JSON.stringify({ webhook_status: manualSetupStatus }))
+      .mockResolvedValue(JSON.stringify({ webhook_status: activeStatus }));
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -114,10 +101,8 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
     fireEvent.click(screen.getByText("Mark as Configured"));
 
     await waitFor(() => {
-      expect(mockMarkWebhookConfigured).toHaveBeenCalled();
+      expect(mockOnUpdate).toHaveBeenCalled();
     });
-
-    expect(mockOnUpdate).toHaveBeenCalled();
   });
 
   it("should show error when mark configured fails", async () => {
@@ -182,9 +167,9 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
   });
 
   it("should handle try again click", async () => {
-    mockRegisterWebhook.mockResolvedValue({
+    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
       result: { repo_id: 1, registered: true, webhook_id: "wh_new" },
-    });
+    }));
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

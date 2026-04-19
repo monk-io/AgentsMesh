@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authApi } from "@/lib/api";
+import { getAuthApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { Logo } from "@/components/common";
 
 function ResetPasswordContent() {
@@ -21,6 +22,7 @@ function ResetPasswordContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    await initWasmCore();
 
     if (!token) {
       setError("Reset token is missing. Please request a new password reset link.");
@@ -41,7 +43,7 @@ function ResetPasswordContent() {
     setError("");
 
     try {
-      await authApi.resetPassword(token, password);
+      await getAuthApiService().reset_password(JSON.stringify({token, new_password: password}));
       setSuccess(true);
 
       // Redirect to login after a brief delay

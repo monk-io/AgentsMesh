@@ -13,6 +13,9 @@ vi.mock("@/stores/pod", () => ({
     };
     return selector ? selector(state) : state;
   },
+  usePods: vi.fn(() => mockPods),
+  usePod: vi.fn((key: string) => mockPods.find((p: { pod_key: string }) => p.pod_key === key)),
+  useCurrentPod: vi.fn(() => null),
 }));
 
 vi.mock("@/lib/pod-utils", () => ({

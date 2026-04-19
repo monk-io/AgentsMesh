@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScopeSelector } from "./ScopeSelector";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikey";
+import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
 import type { TranslationFn } from "../GeneralSettings";
 
 interface EditAPIKeyDialogProps {

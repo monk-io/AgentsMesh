@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { APIKeyCard } from "../APIKeyCard";
-import type { APIKeyData } from "@/lib/api/apikey";
+import type { APIKeyData } from "@/lib/api/apikeyTypes";
 
 // Create a simple translation function that returns the key
 // but also handles parameterized translations

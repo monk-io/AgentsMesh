@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WebhookStatus } from "@/lib/api";
+import type { WebhookStatus } from "@/lib/api/repositoryTypes";
 
 interface WebhookRegisteredViewProps {
   status: WebhookStatus;

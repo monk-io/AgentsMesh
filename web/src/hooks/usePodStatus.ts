@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useMemo, useState } from "react";
-import { usePodStore } from "@/stores/pod";
-import { ApiError } from "@/lib/api";
+import { usePod, usePodStore } from "@/stores/pod";
+import { ApiError } from "@/lib/api/api-types";
 
 interface UsePodStatusResult {
   podStatus: string;
@@ -21,8 +21,7 @@ export function usePodStatus(podKey: string): UsePodStatusResult {
   const retryCount = useRef(0);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Granular selectors — only re-render when THIS pod changes or fetchPod ref changes
-  const storePod = usePodStore((state) => state.pods.find((p) => p.pod_key === podKey));
+  const storePod = usePod(podKey);
   const fetchPod = usePodStore((state) => state.fetchPod);
 
   // Derive status from store.

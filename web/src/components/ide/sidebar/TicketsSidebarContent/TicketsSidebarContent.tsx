@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth";
-import { useTicketStore } from "@/stores/ticket";
+import { useTicketStore, useTickets, useBoardColumns } from "@/stores/ticket";
 import { TicketCreateDialog } from "@/components/tickets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,11 +23,11 @@ export function TicketsSidebarContent({ className }: TicketsSidebarContentProps)
   const router = useRouter();
   const currentOrg = useAuthStore((s) => s.currentOrg);
   const viewMode = useTicketStore((s) => s.viewMode);
-  const allTickets = useTicketStore((s) => s.tickets);
+  const allTickets = useTickets();
   const fetchTickets = useTicketStore((s) => s.fetchTickets);
   const fetchBoard = useTicketStore((s) => s.fetchBoard);
   const setViewMode = useTicketStore((s) => s.setViewMode);
-  const boardColumns = useTicketStore((s) => s.boardColumns);
+  const boardColumns = useBoardColumns();
   const storePriorityCounts = useTicketStore((s) => s.priorityCounts);
 
   const externalStatusCounts = useMemo(() => {

@@ -5,7 +5,8 @@ import { BellOff, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
-import { notificationApi, type NotificationPreference } from "@/lib/api";
+import { getNotificationService } from "@/lib/wasm-core";
+import type { NotificationPreference } from "@/lib/api";
 
 // Available notification sources with i18n keys
 const NOTIFICATION_SOURCES = [
@@ -33,7 +34,7 @@ export function ServerNotificationPreferences() {
 
   const fetchPrefs = useCallback(async () => {
     try {
-      const res = await notificationApi.getPreferences();
+      const res = JSON.parse(await getNotificationService().get_preferences());
       setPrefs(res.preferences || []);
     } catch {
       // Silently fail - user might not have org context yet
@@ -60,14 +61,14 @@ export function ServerNotificationPreferences() {
   const handleMuteToggle = async (source: string, muted: boolean) => {
     const updated = { ...getPref(source), is_muted: muted };
     updatePref(source, updated);
-    try { await notificationApi.setPreference(updated); } catch { fetchPrefs(); }
+    try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
   };
 
   const handleChannelToggle = async (source: string, channel: string, value: boolean) => {
     const current = getPref(source);
     const updated = { ...current, channels: { ...current.channels, [channel]: value } };
     updatePref(source, updated);
-    try { await notificationApi.setPreference(updated); } catch { fetchPrefs(); }
+    try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
   };
 
   if (loading) {
@@ -102,7 +103,7 @@ export function ServerNotificationPreferences() {
                 <div className="flex items-center gap-4 pl-1">
                   {Object.entries(pref.channels).map(([ch, enabled]) => (
                     <label key={ch} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                      <Switch className="scale-75" checked={enabled} onCheckedChange={(v) => handleChannelToggle(source, ch, v)} />
+                      <Switch className="scale-75" checked={enabled as boolean} onCheckedChange={(v) => handleChannelToggle(source, ch, v)} />
                       {CHANNEL_LABELS[ch] ?? ch}
                     </label>
                   ))}

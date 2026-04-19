@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { billingApi, BillingCycle } from "@/lib/api/billing";
+import type { BillingCycle } from "@/lib/api/billing-types";
+import { getBillingService } from "@/lib/wasm-core";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 
 export interface BillingCycleSwitchProps {
@@ -29,7 +30,9 @@ export function BillingCycleSwitch({
   const handleSwitchCycle = async (newCycle: BillingCycle) => {
     setLoading(true);
     try {
-      const result = await billingApi.changeBillingCycle(newCycle);
+      const result = JSON.parse(await getBillingService().change_cycle(
+        JSON.stringify({ billing_cycle: newCycle })
+      ));
       onCycleChanged?.(newCycle, result.effective_date);
       setShowConfirm(false);
       setTargetCycle(null);

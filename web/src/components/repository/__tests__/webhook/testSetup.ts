@@ -1,36 +1,13 @@
 import { vi } from "vitest";
-import { RepositoryData, WebhookStatus, WebhookSecretResponse } from "@/lib/api";
+import type { RepositoryData, WebhookStatus, WebhookSecretResponse } from "@/lib/api";
+import { getRepositoryService, getApiClient } from "@/lib/wasm-core";
 
-/**
- * IMPORTANT: Each test file must include its own vi.mock() calls at the module level.
- * Vitest hoists mocks per-file, so mocks defined here won't affect imports in other files.
- *
- * Add this to the TOP of each test file (before any other imports except vitest):
- * ```
- * vi.mock("next-intl", () => ({
- *   useTranslations: () => (key: string) => key,
- * }));
- *
- * vi.mock("@/lib/api", () => ({
- *   repositoryApi: {
- *     getWebhookStatus: () => mockGetWebhookStatus(),
- *     getWebhookSecret: () => mockGetWebhookSecret(),
- *     registerWebhook: () => mockRegisterWebhook(),
- *     deleteWebhook: () => mockDeleteWebhook(),
- *     markWebhookConfigured: () => mockMarkWebhookConfigured(),
- *   },
- * }));
- * ```
- */
-
-// Mock functions for repositoryApi
 export const mockGetWebhookStatus = vi.fn();
 export const mockGetWebhookSecret = vi.fn();
 export const mockRegisterWebhook = vi.fn();
 export const mockDeleteWebhook = vi.fn();
 export const mockMarkWebhookConfigured = vi.fn();
 
-// Mock clipboard API
 export const mockClipboardWriteText = vi.fn();
 Object.assign(navigator, {
   clipboard: {
@@ -38,7 +15,6 @@ Object.assign(navigator, {
   },
 });
 
-// Test fixtures
 export const mockRepository: RepositoryData = {
   id: 1,
   organization_id: 100,
@@ -86,6 +62,42 @@ export const secretResponse: WebhookSecretResponse = {
   events: ["merge_request", "pipeline"],
 };
 
+const stableRepoSvc = {
+  get_webhook_status: mockGetWebhookStatus,
+  get_webhook_secret: mockGetWebhookSecret,
+  delete_webhook: mockDeleteWebhook,
+  register_webhook: mockRegisterWebhook,
+  mark_webhook_configured: mockMarkWebhookConfigured,
+  list: vi.fn().mockResolvedValue('{"repositories":[]}'),
+  get: vi.fn().mockResolvedValue('{}'),
+  create: vi.fn().mockResolvedValue('{}'),
+  update: vi.fn().mockResolvedValue('{}'),
+  delete: vi.fn().mockResolvedValue(undefined),
+  list_branches: vi.fn().mockResolvedValue('{"branches":[]}'),
+  sync_branches: vi.fn().mockResolvedValue('{"branches":[]}'),
+  get_webhook_secret_for_setup: vi.fn().mockResolvedValue('{}'),
+  list_merge_requests: vi.fn().mockResolvedValue('{"merge_requests":[]}'),
+};
+
+const stableClient = {
+  get: vi.fn().mockResolvedValue('{}'),
+  post: vi.fn().mockResolvedValue('{}'),
+  put: vi.fn().mockResolvedValue('{}'),
+  delete: vi.fn().mockResolvedValue('{}'),
+  patch: vi.fn().mockResolvedValue('{}'),
+  set_token: vi.fn(),
+  set_org_slug: vi.fn(),
+  clear_auth: vi.fn(),
+  org_path: vi.fn((p: string) => `/api/v1/orgs/test-org${p}`),
+};
+
+export function setupWebhookMocks() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  vi.mocked(getRepositoryService).mockReturnValue(stableRepoSvc as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  vi.mocked(getApiClient).mockReturnValue(stableClient as any);
+}
+
 export function resetAllMocks() {
   mockGetWebhookStatus.mockReset();
   mockGetWebhookSecret.mockReset();
@@ -94,4 +106,5 @@ export function resetAllMocks() {
   mockMarkWebhookConfigured.mockReset();
   mockClipboardWriteText.mockReset();
   mockClipboardWriteText.mockResolvedValue(undefined);
+  setupWebhookMocks();
 }

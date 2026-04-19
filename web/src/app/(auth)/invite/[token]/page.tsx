@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { invitationApi, InvitationInfo } from "@/lib/api/invitation";
-import { organizationApi } from "@/lib/api/organization";
+import type { InvitationInfo } from "@/lib/api/invitationTypes";
+import { getInvitationService, getOrgApiService } from "@/lib/wasm-getters";
+import { initWasmCore } from "@/lib/wasm-core";
 import { Logo } from "@/components/common";
 import { getDefaultRoute } from "@/lib/default-route";
 
@@ -17,7 +18,7 @@ interface PageParams {
 export default function InvitePage({ params }: { params: Promise<PageParams> }) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const { token: authToken, user, setOrganizations, setCurrentOrg } = useAuthStore();
+  const { user, setOrganizations, setCurrentOrg } = useAuthStore();
   const [invitation, setInvitation] = useState<InvitationInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -25,8 +26,9 @@ export default function InvitePage({ params }: { params: Promise<PageParams> }) 
 
   useEffect(() => {
     const fetchInvitation = async () => {
+      await initWasmCore();
       try {
-        const { invitation: inv } = await invitationApi.getByToken(resolvedParams.token);
+        const { invitation: inv } = JSON.parse(await getInvitationService().get_by_token(resolvedParams.token));
         setInvitation(inv);
       } catch {
         setError("This invitation is invalid or has expired.");
@@ -39,26 +41,29 @@ export default function InvitePage({ params }: { params: Promise<PageParams> }) 
   }, [resolvedParams.token]);
 
   const handleAccept = async () => {
+    await initWasmCore();
     if (!invitation) return;
 
     setAccepting(true);
     setError("");
 
     try {
-      const { organization } = await invitationApi.accept(resolvedParams.token);
+      await getInvitationService().accept(resolvedParams.token);
 
       // Refresh organizations list
-      const { organizations } = await organizationApi.list();
+      const { organizations } = JSON.parse(await getOrgApiService().list()) as {
+        organizations: Array<{ id: number; name: string; slug: string }>;
+      };
       setOrganizations(organizations);
 
-      // Set the new org as current
-      const newOrg = organizations.find((o) => o.id === organization.id);
+      // Set the new org as current — use the invitation's org info
+      const newOrg = organizations.find((o) => o.slug === invitation.organization_slug);
       if (newOrg) {
         setCurrentOrg(newOrg);
       }
 
       // Redirect to the organization workspace
-      router.push(getDefaultRoute(organization.slug));
+      router.push(getDefaultRoute(invitation.organization_slug));
     } catch (err: unknown) {
       if (err && typeof err === "object" && "data" in err) {
         const apiErr = err as { data?: { error?: string } };
@@ -244,7 +249,7 @@ export default function InvitePage({ params }: { params: Promise<PageParams> }) 
           )}
 
           {/* Actions */}
-          {authToken && user ? (
+          {user ? (
             <div className="space-y-3">
               <p className="text-sm text-center text-muted-foreground">
                 Signed in as <strong>{user.email}</strong>

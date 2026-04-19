@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { RepositoryProviderData } from "@/lib/api";
+import type { RepositoryProviderData } from "@/lib/api/userRepositoryProviderTypes";
 import { Settings, Trash2, TestTube } from "lucide-react";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
 

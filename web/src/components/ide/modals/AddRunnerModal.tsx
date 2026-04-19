@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { runnerApi } from "@/lib/api";
+import { getRunnerService } from "@/lib/wasm-core";
 import { isApiErrorCode, getLocalizedErrorMessage } from "@/lib/api/errors";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Check, Copy, Terminal, ShieldAlert } from "lucide-react";
@@ -43,7 +43,7 @@ export function AddRunnerModal({ open, onClose, onCreated }: AddRunnerModalProps
     setLoading(true);
     setError(null);
     try {
-      const res = await runnerApi.createToken();
+      const res = JSON.parse(await getRunnerService().create_token(JSON.stringify({})));
       setGeneratedToken(res.token);
     } catch (err) {
       if (isApiErrorCode(err, "ADMIN_REQUIRED") || isApiErrorCode(err, "INSUFFICIENT_PERMISSIONS")) {

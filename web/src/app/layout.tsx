@@ -5,6 +5,7 @@ import { Geist, Geist_Mono, Space_Grotesk, Manrope } from "next/font/google";
 import { ThemeProvider, ThemeColorMeta } from "@/components/theme";
 import { PWAProvider } from "@/components/pwa";
 import { PostHogProvider } from "@/providers/PostHogProvider";
+import { WasmProvider } from "@/providers/WasmProvider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "sonner";
@@ -109,9 +110,11 @@ export default async function RootLayout({
         >
           <PostHogProvider>
             <NextIntlClientProvider locale={locale} messages={messages}>
-              <PWAProvider>
-                {children}
-              </PWAProvider>
+              <WasmProvider>
+                <PWAProvider>
+                  {children}
+                </PWAProvider>
+              </WasmProvider>
             </NextIntlClientProvider>
           </PostHogProvider>
           <ThemeColorMeta />

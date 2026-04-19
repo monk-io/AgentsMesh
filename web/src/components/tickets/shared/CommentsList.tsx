@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Reply, Pencil, Trash2 } from "lucide-react";
-import { TicketComment } from "@/lib/api";
+import type { TicketComment } from "@/lib/api/ticketTypes";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/auth";
 import { CommentInput } from "./CommentInput";
@@ -155,8 +155,8 @@ export function CommentsList({
     const isAuthor = user?.id === comment.user_id;
     const isEdited =
       comment.updated_at !== comment.created_at &&
-      new Date(comment.updated_at).getTime() -
-        new Date(comment.created_at).getTime() >
+      new Date(comment.updated_at ?? '').getTime() -
+        new Date(comment.created_at ?? '').getTime() >
         1000;
     const hasReplies = comment.replies && comment.replies.length > 0;
 
@@ -181,9 +181,9 @@ export function CommentsList({
             </span>
             <span
               className="text-xs text-muted-foreground/50"
-              title={new Date(comment.created_at).toLocaleString()}
+              title={new Date(comment.created_at ?? '').toLocaleString()}
             >
-              {formatRelativeDate(comment.created_at)}
+              {formatRelativeDate(comment.created_at ?? '')}
             </span>
             {isEdited && (
               <span className="text-[10px] text-muted-foreground/40 italic">

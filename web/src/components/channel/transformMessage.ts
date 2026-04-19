@@ -6,10 +6,10 @@ export function transformMessage(msg: ChannelMessage): TransformedMessage {
   return {
     id: msg.id,
     content: msg.content,
-    messageType: msg.message_type as TransformedMessage["messageType"],
+    messageType: (msg.message_type ?? 'text') as TransformedMessage["messageType"],
     metadata: msg.metadata,
     editedAt: msg.edited_at,
-    createdAt: msg.created_at,
+    createdAt: msg.created_at ?? '',
     pod: msg.sender_pod_info
       ? {
           podKey: msg.sender_pod_info.pod_key,

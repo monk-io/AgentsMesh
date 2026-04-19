@@ -13,14 +13,15 @@ import { CenteredSpinner } from "@/components/ui/spinner";
 import PodNode from "./PodNode";
 import BindingEdge from "./BindingEdge";
 import RunnerGroupNode from "./RunnerGroupNode";
-import { useMeshStore, type MeshNode } from "@/stores/mesh";
+import { useMeshStore, useTopology, type MeshNode } from "@/stores/mesh";
 import { calculateGroupedLayout } from "./mesh-layout";
 
 const nodeTypes: NodeTypes = { pod: PodNode, runnerGroup: RunnerGroupNode };
 const edgeTypes: EdgeTypes = { binding: BindingEdge };
 
 export default function MeshTopology() {
-  const { topology, selectedNode, selectNode, fetchTopology, updateNodePosition } = useMeshStore();
+  const topology = useTopology();
+  const { selectedNode, selectNode, fetchTopology, updateNodePosition } = useMeshStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 

@@ -4,7 +4,7 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AgentStatusBadge } from "@/components/shared/AgentStatusBadge";
-import { usePodStore } from "@/stores/pod";
+import { usePod } from "@/stores/pod";
 import { useAcpSessionStore } from "@/stores/acpSession";
 import { usePodTitle } from "@/hooks/usePodTitle";
 import { getShortPodKey } from "@/lib/pod-utils";
@@ -140,13 +140,11 @@ function IconButton({
 }
 
 function AgentPanelAgentStatus({ podKey }: { podKey: string }) {
-  const pod = usePodStore(
-    (state) => state.pods.find((p) => p.pod_key === podKey)
-  );
+  const pod = usePod(podKey);
   if (!pod) return null;
   return (
     <AgentStatusBadge
-      agentStatus={pod.agent_status}
+      agentStatus={pod.agent_status ?? ''}
       podStatus={pod.status}
       variant="inline"
     />

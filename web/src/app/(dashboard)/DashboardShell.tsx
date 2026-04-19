@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 import { ResponsiveShell } from "@/components/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { RealtimeProvider } from "@/providers/RealtimeProvider";
+import { initWasmCore, getAuthManager, getApiClient } from "@/lib/wasm-core";
 import { useBrowserNotification } from "@/hooks";
 import { handleNotificationEvent } from "@/stores/notificationHandler";
 import type { RealtimeEvent } from "@/lib/realtime";
@@ -16,23 +17,58 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { token, currentOrg, _hasHydrated } = useAuthStore();
+  const [wasmReady, setWasmReady] = useState(false);
+  const { user, currentOrg } = useAuthStore();
   const { permission, showNotification, requestPermission } = useBrowserNotification();
 
   useEffect(() => {
-    if (_hasHydrated && !token) {
-      router.push("/login");
-    }
-  }, [token, router, _hasHydrated]);
+    initWasmCore().then(async () => {
+      const mgr = getAuthManager();
+      const restored = await mgr.restore_session();
+      if (restored) {
+        const token = mgr.get_token();
+        const refreshToken = mgr.get_refresh_token();
+        if (token) getApiClient().set_token(token, refreshToken || "");
+        const userJson = mgr.get_current_user_json();
+        if (userJson) {
+          const user = typeof userJson === "string" ? JSON.parse(userJson) : userJson;
+          useAuthStore.getState().setAuth(token || "", user, refreshToken || "");
+          let orgs = JSON.parse(mgr.get_organizations_json() || "[]");
+          if (orgs.length === 0) {
+            try {
+              const fetchedJson = await mgr.fetch_organizations();
+              orgs = JSON.parse(fetchedJson || "[]");
+            } catch { /* token may be expired */ }
+          }
+          if (orgs.length > 0) {
+            const urlSlug = window.location.pathname.split("/")[1];
+            const matchedOrg = orgs.find((o: { slug: string }) => o.slug === urlSlug);
+            const org = matchedOrg || orgs[0];
+            getApiClient().set_org_slug(org.slug);
+            mgr.switch_org(org.slug);
+            useAuthStore.getState().setOrganizations(orgs);
+            useAuthStore.getState().setCurrentOrg(org);
+          }
+        }
+      }
+      useAuthStore.getState().setHasHydrated(true);
+      setWasmReady(true);
+    });
+  }, []);
 
   useEffect(() => {
-    if (_hasHydrated && token && permission === "default") {
+    if (wasmReady && !user) {
+      router.push("/login");
+    }
+  }, [user, router, wasmReady]);
+
+  useEffect(() => {
+    if (wasmReady && user && permission === "default") {
       const timer = setTimeout(() => { requestPermission(); }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [_hasHydrated, token, permission, requestPermission]);
+  }, [wasmReady, user, permission, requestPermission]);
 
-  // Handle events not matched by RealtimeProvider's entity routing (i.e. notifications)
   const handleEvent = useCallback(
     (event: RealtimeEvent) => {
       handleNotificationEvent(event, {
@@ -54,7 +90,7 @@ export default function DashboardShell({
     [showNotification, router, currentOrg]
   );
 
-  if (!_hasHydrated) {
+  if (!wasmReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Spinner />
@@ -62,7 +98,7 @@ export default function DashboardShell({
     );
   }
 
-  if (!token) {
+  if (!user) {
     return null;
   }
 

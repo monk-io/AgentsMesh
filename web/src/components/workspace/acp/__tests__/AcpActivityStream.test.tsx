@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { useAcpSessionStore } from "@/stores/acpSession";
+import { EMPTY_SESSION } from "@/stores/acpSessionTypes";
+import type { AcpSessionState } from "@/stores/acpSessionTypes";
 import { AcpActivityStream } from "@/components/workspace/acp/AcpActivityStream";
 
 const POD = "pod-stream";
 
-function seedSession(setup: () => void) {
-  useAcpSessionStore.setState({ sessions: {} });
-  setup();
+function seedSession(partial: Partial<AcpSessionState>) {
+  useAcpSessionStore.setState({
+    sessions: { [POD]: { ...EMPTY_SESSION, ...partial } },
+  });
 }
 
 describe("AcpActivityStream", () => {
@@ -21,9 +24,8 @@ describe("AcpActivityStream", () => {
   });
 
   it("renders user instruction with > prefix", () => {
-    seedSession(() => {
-      const s = useAcpSessionStore.getState();
-      s.addContentChunk(POD, "s1", "create a hello world app", "user");
+    seedSession({
+      messages: [{ text: "create a hello world app", role: "user", timestamp: 1 }],
     });
 
     render(<AcpActivityStream podKey={POD} />);
@@ -32,9 +34,8 @@ describe("AcpActivityStream", () => {
   });
 
   it("renders slash commands with distinct styling", () => {
-    seedSession(() => {
-      const s = useAcpSessionStore.getState();
-      s.addContentChunk(POD, "s1", "/compact", "user");
+    seedSession({
+      messages: [{ text: "/compact", role: "user", timestamp: 1 }],
     });
 
     render(<AcpActivityStream podKey={POD} />);
@@ -44,9 +45,8 @@ describe("AcpActivityStream", () => {
   });
 
   it("renders assistant output as markdown", () => {
-    seedSession(() => {
-      const s = useAcpSessionStore.getState();
-      s.addContentChunk(POD, "s1", "I'll help you with that.", "assistant");
+    seedSession({
+      messages: [{ text: "I'll help you with that.", role: "assistant", timestamp: 1 }],
     });
 
     render(<AcpActivityStream podKey={POD} />);
@@ -54,12 +54,13 @@ describe("AcpActivityStream", () => {
   });
 
   it("renders tool calls in timeline", () => {
-    seedSession(() => {
-      const s = useAcpSessionStore.getState();
-      s.updateToolCall(POD, "s1", {
-        toolCallId: "tc1", toolName: "write_file", status: "completed",
-        argumentsJson: '{"path":"main.ts"}', timestamp: 0,
-      });
+    seedSession({
+      toolCalls: {
+        tc1: {
+          toolCallId: "tc1", toolName: "write_file", status: "completed",
+          argumentsJson: '{"path":"main.ts"}', timestamp: 1,
+        },
+      },
     });
 
     render(<AcpActivityStream podKey={POD} />);
@@ -67,9 +68,8 @@ describe("AcpActivityStream", () => {
   });
 
   it("renders thinking indicator", () => {
-    seedSession(() => {
-      const s = useAcpSessionStore.getState();
-      s.addThinking(POD, "s1", "Let me analyze this problem...");
+    seedSession({
+      thinkings: [{ text: "Let me analyze this problem...", timestamp: 1 }],
     });
 
     render(<AcpActivityStream podKey={POD} />);
@@ -77,21 +77,22 @@ describe("AcpActivityStream", () => {
   });
 
   it("renders complete timeline in correct order", () => {
-    seedSession(() => {
-      const s = useAcpSessionStore.getState();
-      // Seed with timestamps to ensure order
-      s.addContentChunk(POD, "s1", "fix the bug", "user");
-      s.addThinking(POD, "s1", "Analyzing...");
-      s.addContentChunk(POD, "s1", "I see the issue.", "assistant");
-      s.updateToolCall(POD, "s1", {
-        toolCallId: "tc1", toolName: "edit_file", status: "running",
-        argumentsJson: "{}", timestamp: 0,
-      });
+    seedSession({
+      messages: [
+        { text: "fix the bug", role: "user", timestamp: 1 },
+        { text: "I see the issue.", role: "assistant", timestamp: 3 },
+      ],
+      thinkings: [{ text: "Analyzing...", timestamp: 2 }],
+      toolCalls: {
+        tc1: {
+          toolCallId: "tc1", toolName: "edit_file", status: "running",
+          argumentsJson: "{}", timestamp: 4,
+        },
+      },
     });
 
     render(<AcpActivityStream podKey={POD} />);
 
-    // All elements should be present
     expect(screen.getByText("fix the bug")).toBeInTheDocument();
     expect(screen.getByText("Thinking...")).toBeInTheDocument();
     expect(screen.getByText(/I see the issue/)).toBeInTheDocument();

@@ -1,36 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
 import RepositoriesPage from "../page";
+import { getRepositoryService, getUserCredentialService } from "@/lib/wasm-core";
 
-// Mock next/link
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
 }));
 
-// Mock next/navigation
 vi.mock("next/navigation", () => ({
   useParams: () => ({ org: "test-org" }),
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-// Mock the API modules
-vi.mock("@/lib/api", () => ({
-  repositoryApi: {
-    list: vi.fn(),
-    delete: vi.fn(),
-    create: vi.fn(),
-  },
-  userRepositoryProviderApi: {
-    list: vi.fn(),
-    listRepositories: vi.fn(),
-  },
-}));
-
-import { repositoryApi, userRepositoryProviderApi } from "@/lib/api";
-const mockRepositoryApi = vi.mocked(repositoryApi);
-const mockUserRepositoryProviderApi = vi.mocked(userRepositoryProviderApi);
+const mockRepoService = vi.mocked(getRepositoryService);
+const mockCredentialService = vi.mocked(getUserCredentialService);
 
 describe("RepositoriesPage - import and links", () => {
   const mockRepositories = [
@@ -60,10 +45,23 @@ describe("RepositoriesPage - import and links", () => {
     { id: 2, user_id: 1, provider_type: "gitlab", name: "Company GitLab", base_url: "https://gitlab.company.com", has_client_id: false, has_bot_token: true, has_identity: false, is_default: false, is_active: true, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z" },
   ];
 
+  let mockList: ReturnType<typeof vi.fn>;
+  let mockListProviders: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRepositoryApi.list.mockResolvedValue({ repositories: mockRepositories });
-    mockUserRepositoryProviderApi.list.mockResolvedValue({ providers: mockProviders });
+    mockList = vi.fn().mockResolvedValue(JSON.stringify({ repositories: mockRepositories }));
+    mockListProviders = vi.fn().mockResolvedValue(JSON.stringify({ providers: mockProviders }));
+
+    mockRepoService.mockReturnValue({
+      ...getRepositoryService(),
+      list: mockList,
+    } as unknown as ReturnType<typeof getRepositoryService>);
+
+    mockCredentialService.mockReturnValue({
+      ...getUserCredentialService(),
+      list_repo_providers: mockListProviders,
+    } as unknown as ReturnType<typeof getUserCredentialService>);
   });
 
   afterEach(() => {
@@ -72,7 +70,7 @@ describe("RepositoriesPage - import and links", () => {
 
   describe("empty state", () => {
     it("should show empty state when no repositories", async () => {
-      mockRepositoryApi.list.mockResolvedValue({ repositories: [] });
+      mockList.mockResolvedValue(JSON.stringify({ repositories: [] }));
       render(<RepositoriesPage />);
       await waitFor(() => {
         expect(screen.getByText("No repositories yet")).toBeInTheDocument();
@@ -80,7 +78,7 @@ describe("RepositoriesPage - import and links", () => {
     });
 
     it("should still show import button in empty state", async () => {
-      mockRepositoryApi.list.mockResolvedValue({ repositories: [] });
+      mockList.mockResolvedValue(JSON.stringify({ repositories: [] }));
       render(<RepositoriesPage />);
       await waitFor(() => {
         expect(screen.getByText("Import Repository")).toBeInTheDocument();
@@ -124,7 +122,7 @@ describe("RepositoriesPage - import and links", () => {
     });
 
     it("should show message when no providers available", async () => {
-      mockUserRepositoryProviderApi.list.mockResolvedValue({ providers: [] });
+      mockListProviders.mockResolvedValue(JSON.stringify({ providers: [] }));
       render(<RepositoriesPage />);
       await waitFor(() => { expect(screen.getByText("Import Repository")).toBeInTheDocument(); });
       fireEvent.click(screen.getByText("Import Repository"));
@@ -151,7 +149,7 @@ describe("RepositoriesPage - import and links", () => {
 
   describe("error handling", () => {
     it("should handle API errors gracefully", async () => {
-      mockRepositoryApi.list.mockRejectedValue(new Error("Network error"));
+      mockList.mockRejectedValue(new Error("Network error"));
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       render(<RepositoriesPage />);
       await waitFor(() => {

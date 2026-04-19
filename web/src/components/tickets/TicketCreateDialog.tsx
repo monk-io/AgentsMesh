@@ -14,8 +14,9 @@ import {
   ResponsiveDialogFooter,
 } from "@/components/ui/responsive-dialog";
 import { TicketPriority } from "@/lib/api/ticketTypes";
-import { ticketApi } from "@/lib/api";
-import { organizationApi, OrganizationMember } from "@/lib/api/organization";
+import { getTicketService } from "@/lib/wasm-core";
+import type { OrganizationMember } from "@/lib/api/organizationTypes";
+import { getOrgApiService } from "@/lib/wasm-getters";
 import { useAuthStore } from "@/stores/auth";
 import { RepositorySelect } from "@/components/common/RepositorySelect";
 import { useBreakpoint } from "@/components/layout/useBreakpoint";
@@ -63,8 +64,8 @@ export function TicketCreateDialog({
 
   useEffect(() => {
     if (open && currentOrg?.slug && members.length === 0) {
-      organizationApi.listMembers(currentOrg.slug)
-        .then((res) => setMembers(res.members || []))
+      getOrgApiService().list_members(currentOrg.slug)
+        .then((raw: string) => setMembers(JSON.parse(raw).members || []))
         .catch(() => {});
     }
   }, [open, currentOrg?.slug, members.length]);
@@ -112,14 +113,14 @@ export function TicketCreateDialog({
     setError(null);
 
     try {
-      const response = await ticketApi.create({
-        repositoryId: form.repositoryId,
+      const response = JSON.parse(await getTicketService().create_ticket(JSON.stringify({
+        repository_id: form.repositoryId,
         title: form.title.trim(),
         content: form.content || undefined,
         priority: form.priority,
-        parentSlug: parentTicketSlug,
-        assigneeIds: form.assigneeIds.length > 0 ? form.assigneeIds : undefined,
-      });
+        parent_ticket_slug: parentTicketSlug,
+        assignee_ids: form.assigneeIds.length > 0 ? form.assigneeIds : undefined,
+      })));
 
       onCreated?.(response.id, response.slug);
       handleClose();
