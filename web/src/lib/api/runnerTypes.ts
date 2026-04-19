@@ -18,6 +18,7 @@ export interface RunnerData {
     hostname?: string;
   };
   available_agents?: string[];
+  tags?: string[];
   created_at?: string;
   updated_at?: string;
   active_pods?: Array<{

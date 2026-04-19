@@ -4,9 +4,8 @@ import { ApiError } from "@/lib/api/api-types";
 import { reconnectRegistry } from "@/lib/realtime";
 import { useAuthStore } from "@/stores/auth";
 import { getErrorMessage } from "@/lib/utils";
-import { initWasmCore, getPodService } from "@/lib/wasm-core";
+import { initWasmCore, getPodService, getApiClient } from "@/lib/wasm-core";
 import type { PodState, Pod } from "./podTypes";
-import { upsertPod } from "./podTypes";
 
 export type { Pod } from "./podTypes";
 export { SIDEBAR_STATUS_MAP } from "./podTypes";
@@ -162,12 +161,30 @@ export const usePodStore = create<PodState>((set, get) => ({
   },
 
   updatePodPerpetualFromEvent: (podKey, perpetual) => {
-    set((state) => {
-      const result = upsertPod(state, podKey, (existing) =>
-        existing ? { ...existing, perpetual } : undefined,
+    const raw = getPodService().get_pod_json(podKey);
+    if (!raw) return;
+    const pod = JSON.parse(String(raw)) as Pod;
+    getPodService().upsert_pod(JSON.stringify({ ...pod, perpetual }));
+    bump();
+  },
+
+  updatePodPerpetual: async (podKey, perpetual) => {
+    await initWasmCore();
+    try {
+      await getApiClient().patch(
+        getApiClient().org_path(`/pods/${podKey}/perpetual`),
+        JSON.stringify({ perpetual }),
       );
-      return result ?? state;
-    });
+      const raw = getPodService().get_pod_json(podKey);
+      if (raw) {
+        const pod = JSON.parse(String(raw)) as Pod;
+        getPodService().upsert_pod(JSON.stringify({ ...pod, perpetual }));
+      }
+      bump();
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, "Failed to update perpetual") });
+      throw error;
+    }
   },
 
   updatePodInitProgress: (podKey, phase, progress, message) => {

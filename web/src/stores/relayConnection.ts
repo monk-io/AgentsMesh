@@ -11,7 +11,7 @@
  */
 
 import { MsgType, encodeMessage, encodeJsonMessage } from "./relayProtocol";
-import { podApi } from "@/lib/api/pod";
+import { getPodService } from "@/lib/wasm-core";
 import type { RelayConnection, ConnectionHandle, StatusListener } from "./relayConnectionTypes";
 import { createNewConnection, doSendResize, type PoolContext } from "./relayConnectionWebSocket";
 
@@ -78,7 +78,7 @@ class RelayConnectionPool {
   }
 
   private isConnectionAlive(conn: RelayConnection): boolean {
-    return conn.ws.readyState === WebSocket.OPEN && conn.status === "connected";
+    return conn.transport.isOpen && conn.status === "connected";
   }
 
   async subscribe(podKey: string, subscriptionId: string, onMessage: (data: Uint8Array | string) => void): Promise<ConnectionHandle> {
@@ -104,7 +104,7 @@ class RelayConnectionPool {
     if (pending) { await pending; return this.subscribe(podKey, subscriptionId, onMessage); }
 
     const createPromise = (async () => {
-      const relayInfo = await podApi.getPodConnection(podKey);
+      const relayInfo = JSON.parse(await getPodService().get_pod_connection(podKey));
       return createNewConnection(this.ctx, podKey, relayInfo.relay_url, relayInfo.token, subscriptionId, onMessage);
     })();
     this.pendingSubscriptions.set(podKey, createPromise);

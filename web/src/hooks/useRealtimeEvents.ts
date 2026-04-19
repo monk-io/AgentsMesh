@@ -11,6 +11,7 @@ import {
   type ConnectionState,
 } from "@/lib/realtime";
 import { useAuthStore } from "@/stores/auth";
+import { getAuthManager } from "@/lib/wasm-core";
 import { getWsBaseUrl } from "@/lib/env";
 
 function buildEventsWsUrl(orgSlug: string, token: string): string {
@@ -40,7 +41,8 @@ export function useRealtimeConnection() {
     const manager = getEventSubscriptionManager();
     managerRef.current = manager;
     manager.connect(() => {
-      const { currentOrg: o, token: t } = useAuthStore.getState();
+      const { currentOrg: o } = useAuthStore.getState();
+      const t = getAuthManager().get_token?.();
       return o && t ? buildEventsWsUrl(o.slug, t) : "";
     });
 
@@ -60,12 +62,14 @@ export function useRealtimeConnection() {
   }, [currentOrg?.id, user]);
 
   const reconnect = useCallback(() => {
-    const { currentOrg: org, token: t } = useAuthStore.getState();
+    const { currentOrg: org } = useAuthStore.getState();
+    const t = getAuthManager().get_token?.();
     if (!org || !t) return;
     resetEventSubscriptionManager();
     managerRef.current = getEventSubscriptionManager();
     managerRef.current.connect(() => {
-      const { currentOrg: o, token: tk } = useAuthStore.getState();
+      const { currentOrg: o } = useAuthStore.getState();
+      const tk = getAuthManager().get_token?.();
       return o && tk ? buildEventsWsUrl(o.slug, tk) : "";
     });
   }, []);

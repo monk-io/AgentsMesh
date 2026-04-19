@@ -1,5 +1,6 @@
 import { useAutopilotStore } from "@/stores/autopilot";
 import { useLoopStore } from "@/stores/loop";
+import { getLoopService, parseWasmAny } from "@/lib/wasm-core";
 import type { DebounceRef } from "./realtimeEventHandlers";
 import type {
   RealtimeEvent,
@@ -58,10 +59,10 @@ export function handleLoopEvent(
         debounceRef.current = null;
         const s = useLoopStore.getState();
         s.fetchLoops?.();
-        if (s.currentLoop?.id === (event.data as LoopRunEventData).loop_id) {
-          s.fetchLoop?.(s.currentLoop.slug);
-          useLoopStore.setState({ runsOffset: 0 });
-          s.fetchRuns?.(s.currentLoop.slug, { limit: 20, offset: 0 });
+        const currentLoop = parseWasmAny<{ id: number; slug: string }>(getLoopService().current_loop_json());
+        if (currentLoop?.id === (event.data as LoopRunEventData).loop_id) {
+          s.fetchLoop?.(currentLoop.slug);
+          s.fetchRuns?.(currentLoop.slug, { limit: 20, offset: 0 });
         }
       }, 500);
       break;
