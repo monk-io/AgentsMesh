@@ -4,6 +4,7 @@ use agentsmesh_api_client::ApiClient;
 use agentsmesh_auth::AuthManager;
 
 use crate::callbacks::StorageCallback;
+use crate::dto::{OrganizationDto, UserDto};
 use crate::error::CoreError;
 use crate::storage_bridge::StorageBridge;
 
@@ -30,6 +31,28 @@ impl AgentsMeshCore {
     pub fn restore_session(&self) -> Result<bool, CoreError> {
         self.auth.restore_session().map_err(CoreError::from)
     }
+
+    /// Strongly-typed current-user accessor for Swift/Kotlin.
+    pub fn get_current_user(&self) -> Option<UserDto> {
+        self.auth.current_user().map(UserDto::from)
+    }
+
+    /// Strongly-typed current-org accessor for Swift/Kotlin.
+    pub fn get_current_org(&self) -> Option<OrganizationDto> {
+        self.auth.get_current_org().map(OrganizationDto::from)
+    }
+
+    /// Strongly-typed organization list accessor for Swift/Kotlin.
+    pub fn get_organizations(&self) -> Vec<OrganizationDto> {
+        self.auth
+            .get_organizations()
+            .into_iter()
+            .map(OrganizationDto::from)
+            .collect()
+    }
+
+    // ── Legacy JSON accessors ──
+    // Retained for WASM/node-bridge parity until those frontends migrate off.
 
     pub fn get_current_user_json(&self) -> Option<String> {
         self.auth

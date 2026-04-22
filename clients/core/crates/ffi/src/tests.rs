@@ -86,10 +86,7 @@ fn bridge_clear() {
 #[test]
 fn from_auth_not_authenticated() {
     let err: CoreError = AuthError::NotAuthenticated.into();
-    match err {
-        CoreError::Auth { message } => assert!(message.contains("not authenticated")),
-        other => panic!("expected Auth, got {other:?}"),
-    }
+    assert!(matches!(err, CoreError::AuthExpired));
 }
 
 #[test]
@@ -101,11 +98,16 @@ fn from_auth_server_error() {
     }
     .into();
     match err {
-        CoreError::Api { status, message } => {
+        CoreError::Http {
+            status,
+            code,
+            message,
+        } => {
             assert_eq!(status, 422);
+            assert_eq!(code.as_deref(), Some("INVALID"));
             assert_eq!(message, "validation failed");
         }
-        other => panic!("expected Api, got {other:?}"),
+        other => panic!("expected Http, got {other:?}"),
     }
 }
 
@@ -113,8 +115,8 @@ fn from_auth_server_error() {
 fn from_auth_storage_error() {
     let err: CoreError = AuthError::Storage("corrupt".into()).into();
     match err {
-        CoreError::Auth { message } => assert!(message.contains("corrupt")),
-        other => panic!("expected Auth, got {other:?}"),
+        CoreError::Unknown { message } => assert!(message.contains("corrupt")),
+        other => panic!("expected Unknown, got {other:?}"),
     }
 }
 
@@ -123,28 +125,27 @@ fn from_auth_storage_error() {
 #[test]
 fn from_api_auth_expired() {
     let err: CoreError = ApiError::AuthExpired.into();
-    match err {
-        CoreError::Auth { message } => assert!(message.contains("auth expired")),
-        other => panic!("expected Auth, got {other:?}"),
-    }
+    assert!(matches!(err, CoreError::AuthExpired));
 }
 
 #[test]
 fn from_api_http_with_server_message() {
     let err: CoreError = ApiError::Http {
-        status: 404,
-        status_text: "Not Found".into(),
+        status: 400,
+        status_text: "Bad Request".into(),
         code: None,
-        server_message: Some("resource missing".into()),
+        server_message: Some("field invalid".into()),
         data: None,
     }
     .into();
     match err {
-        CoreError::Api { status, message } => {
-            assert_eq!(status, 404);
-            assert_eq!(message, "resource missing");
+        CoreError::Http {
+            status, message, ..
+        } => {
+            assert_eq!(status, 400);
+            assert_eq!(message, "field invalid");
         }
-        other => panic!("expected Api, got {other:?}"),
+        other => panic!("expected Http, got {other:?}"),
     }
 }
 
@@ -159,22 +160,21 @@ fn from_api_http_falls_back_to_status_text() {
     }
     .into();
     match err {
-        CoreError::Api { status, message } => {
+        CoreError::Http {
+            status, message, ..
+        } => {
             assert_eq!(status, 500);
             assert_eq!(message, "Internal Server Error");
         }
-        other => panic!("expected Api, got {other:?}"),
+        other => panic!("expected Http, got {other:?}"),
     }
 }
 
 #[test]
-fn from_api_json_error_becomes_internal() {
+fn from_api_json_error_becomes_invalid_json() {
     let json_err = serde_json::from_str::<i32>("not json").unwrap_err();
     let err: CoreError = ApiError::Json(json_err).into();
-    match err {
-        CoreError::Internal { .. } => {}
-        other => panic!("expected Internal, got {other:?}"),
-    }
+    assert!(matches!(err, CoreError::InvalidJson { .. }));
 }
 
 // ── CoreError From<serde_json::Error> ──
@@ -184,28 +184,26 @@ fn from_serde_json_error() {
     let json_err = serde_json::from_str::<i32>("bad").unwrap_err();
     let err: CoreError = json_err.into();
     match err {
-        CoreError::Internal { message } => assert!(!message.is_empty()),
-        other => panic!("expected Internal, got {other:?}"),
+        CoreError::InvalidJson { message } => assert!(!message.is_empty()),
+        other => panic!("expected InvalidJson, got {other:?}"),
     }
 }
 
 // ── CoreError Display ──
 
 #[test]
-fn display_auth_error() {
-    let err = CoreError::Auth {
-        message: "not authenticated".into(),
-    };
-    assert_eq!(err.to_string(), "auth error: not authenticated");
+fn display_auth_expired() {
+    assert_eq!(CoreError::AuthExpired.to_string(), "auth expired");
 }
 
 #[test]
-fn display_api_error() {
-    let err = CoreError::Api {
+fn display_http_error() {
+    let err = CoreError::Http {
         status: 404,
+        code: None,
         message: "not found".into(),
     };
-    assert_eq!(err.to_string(), "api error: 404 - not found");
+    assert_eq!(err.to_string(), "HTTP 404: not found");
 }
 
 #[test]
@@ -217,11 +215,11 @@ fn display_not_connected_error() {
 }
 
 #[test]
-fn display_internal_error() {
-    let err = CoreError::Internal {
+fn display_unknown_error() {
+    let err = CoreError::Unknown {
         message: "boom".into(),
     };
-    assert_eq!(err.to_string(), "internal: boom");
+    assert_eq!(err.to_string(), "boom");
 }
 
 // ── AgentsMeshCore ──
@@ -337,15 +335,15 @@ fn api_org_path_with_org() {
     assert!(path.contains("test-org"));
 }
 
-// ── api_ffi: invalid JSON body triggers CoreError::Internal ──
+// ── api_ffi: invalid JSON body triggers CoreError::InvalidJson ──
 
 #[tokio::test]
 async fn api_post_invalid_body_returns_error() {
     let core = make_core();
     let result = core.api_post("/endpoint".into(), "not json".into()).await;
     match result {
-        Err(CoreError::Internal { .. }) => {}
-        other => panic!("expected Internal error from bad JSON body, got {other:?}"),
+        Err(CoreError::InvalidJson { .. }) => {}
+        other => panic!("expected InvalidJson error from bad JSON body, got {other:?}"),
     }
 }
 
@@ -354,8 +352,8 @@ async fn api_put_invalid_body_returns_error() {
     let core = make_core();
     let result = core.api_put("/endpoint".into(), "{bad".into()).await;
     match result {
-        Err(CoreError::Internal { .. }) => {}
-        other => panic!("expected Internal error from bad JSON body, got {other:?}"),
+        Err(CoreError::InvalidJson { .. }) => {}
+        other => panic!("expected InvalidJson error from bad JSON body, got {other:?}"),
     }
 }
 
@@ -364,8 +362,8 @@ async fn api_patch_invalid_body_returns_error() {
     let core = make_core();
     let result = core.api_patch("/endpoint".into(), "???".into()).await;
     match result {
-        Err(CoreError::Internal { .. }) => {}
-        other => panic!("expected Internal error from bad JSON body, got {other:?}"),
+        Err(CoreError::InvalidJson { .. }) => {}
+        other => panic!("expected InvalidJson error from bad JSON body, got {other:?}"),
     }
 }
 
@@ -384,8 +382,13 @@ fn switch_org_nonexistent_returns_error() {
 fn from_auth_invalid_response() {
     let err: CoreError = AuthError::InvalidResponse("bad body".into()).into();
     match err {
-        CoreError::Auth { message } => assert!(message.contains("bad body")),
-        other => panic!("expected Auth, got {other:?}"),
+        CoreError::Http {
+            status, message, ..
+        } => {
+            assert_eq!(status, 0);
+            assert!(message.contains("bad body"));
+        }
+        other => panic!("expected Http, got {other:?}"),
     }
 }
 
@@ -398,11 +401,16 @@ fn from_auth_server_with_code() {
     }
     .into();
     match err {
-        CoreError::Api { status, message } => {
+        CoreError::Http {
+            status,
+            code,
+            message,
+        } => {
             assert_eq!(status, 403);
+            assert_eq!(code.as_deref(), Some("FORBIDDEN"));
             assert_eq!(message, "forbidden");
         }
-        other => panic!("expected Api, got {other:?}"),
+        other => panic!("expected Http, got {other:?}"),
     }
 }
 
@@ -419,10 +427,36 @@ fn from_api_http_with_code_and_data() {
     }
     .into();
     match err {
-        CoreError::Api { status, message } => {
+        CoreError::Http {
+            status,
+            code,
+            message,
+        } => {
             assert_eq!(status, 422);
+            assert_eq!(code.as_deref(), Some("VALIDATION_ERROR"));
             assert_eq!(message, "field invalid");
         }
-        other => panic!("expected Api, got {other:?}"),
+        other => panic!("expected Http, got {other:?}"),
+    }
+}
+
+// ── CoreError: 404 maps to NotFound ──
+
+#[test]
+fn from_api_404_becomes_not_found() {
+    let err: CoreError = ApiError::Http {
+        status: 404,
+        status_text: "Not Found".into(),
+        code: Some("Pod".into()),
+        server_message: None,
+        data: None,
+    }
+    .into();
+    match err {
+        CoreError::NotFound { resource, id } => {
+            assert_eq!(resource, "Pod");
+            assert!(id.is_none());
+        }
+        other => panic!("expected NotFound, got {other:?}"),
     }
 }

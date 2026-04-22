@@ -15,8 +15,8 @@ interface InfraSidebarContentProps {
 type InfraTab = "repositories" | "runners";
 
 const TABS: { id: InfraTab; labelKey: string }[] = [
-  { id: "repositories", labelKey: "infra.tabs.repositories" },
   { id: "runners", labelKey: "infra.tabs.runners" },
+  { id: "repositories", labelKey: "infra.tabs.repositories" },
 ];
 
 export function InfraSidebarContent({ className, onImportRepo, onAddRunner }: InfraSidebarContentProps) {
@@ -25,7 +25,7 @@ export function InfraSidebarContent({ className, onImportRepo, onAddRunner }: In
   const params = useParams<{ org: string }>();
   const searchParams = useSearchParams();
 
-  const tab: InfraTab = (searchParams.get("tab") as InfraTab) || "repositories";
+  const tab: InfraTab = (searchParams.get("tab") as InfraTab) || "runners";
 
   const navigate = (next: InfraTab) => {
     router.push(`/${params.org}/infra?tab=${next}`);

@@ -14,6 +14,7 @@ members = [
     "crates/wasm",
     "crates/transport",
     "crates/node-bridge",
+    "crates/uniffi-bindgen",
 ]
 
 [workspace.package]
@@ -27,8 +28,9 @@ repository = "https://github.com/anthropics/agentsmesh"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# Async runtime
-tokio = { version = "1", features = ["full"] }
+# Async runtime — iOS-compatible subset of `full`.
+# Dropped: process/signal/io-std (not supported on iOS sandbox).
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs", "parking_lot"] }
 
 # HTTP
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

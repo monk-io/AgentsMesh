@@ -1,0 +1,58 @@
+name: iOS XCFramework
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "clients/core/**"
+      - "clients/core/scripts/build-ios-xcframework.sh"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "clients/core/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build-xcframework:
+    name: Build AgentsMeshCore.xcframework
+    runs-on: macos-14  # arm64 runner with Xcode 15+
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/core -> target
+          key: ios-xcframework-v1
+
+      - name: Build XCFramework
+        run: bash clients/core/scripts/build-ios-xcframework.sh
+
+      - name: Inspect output
+        run: |
+          ls -la clients/core/ios-framework/AgentsMeshCore.xcframework/
+          wc -l clients/core/ios-framework/Generated/AgentsMeshCore.swift
+
+      - name: Package artifact
+        run: |
+          cd clients/core/ios-framework
+          zip -r AgentsMeshCore.xcframework.zip AgentsMeshCore.xcframework Generated
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgentsMeshCore-xcframework
+          path: clients/core/ios-framework/AgentsMeshCore.xcframework.zip
+          retention-days: 14

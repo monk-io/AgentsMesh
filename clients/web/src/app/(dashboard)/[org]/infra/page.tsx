@@ -21,13 +21,13 @@ export default function InfraPage() {
   const searchParams = useSearchParams();
   const t = useTranslations();
 
-  const tab = (searchParams.get("tab") as InfraTab) ?? "repositories";
+  const tab = (searchParams.get("tab") as InfraTab) ?? "runners";
   const idParam = searchParams.get("id");
   const selectedId = idParam ? Number(idParam) : NaN;
 
   useEffect(() => {
     if (!searchParams.get("tab")) {
-      router.replace(`/${params.org}/infra?tab=repositories`);
+      router.replace(`/${params.org}/infra?tab=runners`);
     }
   }, [searchParams, router, params.org]);
 

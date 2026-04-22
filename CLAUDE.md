@@ -104,6 +104,38 @@ make lint                        # golangci-lint
 make build-all                   # Cross-platform builds
 ```
 
+### iOS (SwiftUI + TCA, powered by Rust Core via UniFFI)
+
+```bash
+# One-time setup
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+brew install xcodegen        # generates AgentsMesh.xcodeproj
+
+# Build AgentsMeshCore.xcframework (consumed by clients/ios SPM package)
+bash clients/core/scripts/build-ios-xcframework.sh
+
+# Or one-shot (xcframework + symlink into SPM + xcodegen):
+cd clients/ios && make ios-setup && xcodegen
+
+# Then open in Xcode:
+open AgentsMesh.xcodeproj
+```
+
+Output:
+- `clients/core/ios-framework/AgentsMeshCore.xcframework/` — device + universal-sim slices
+- `clients/core/ios-framework/Generated/AgentsMeshCore.swift` — Swift glue (~18k lines)
+- `clients/core/ios-framework/Headers/` — C headers + module.modulemap
+
+Layout:
+- `clients/ios/Packages/AgentsMeshCore/` — SPM facade: CoreBridge (singleton),
+  KeychainStorage (StorageCallback impl), EventStream, PodOutputDispatcher
+- `clients/ios/Packages/AgentsMeshFeatures/` — TCA reducers + SwiftUI views:
+  AppFeature (root), AuthFeature (login), WorkspaceFeature (pod list),
+  TerminalFeature (SwiftTerm + Relay WS), DesignSystem (tokens + primitives)
+- `clients/ios/App/` — Xcode App target (@main entry, Info.plist)
+
+Requirements: macOS with Xcode 15+. CI: `.github/workflows/ios.yml` (macOS runner).
+
 ### Database Migrations
 
 Migrations are located in `backend/migrations/` using golang-migrate format.
