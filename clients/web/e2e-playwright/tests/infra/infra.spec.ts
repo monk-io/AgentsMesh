@@ -11,11 +11,11 @@ import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-
 uiTest.describe("Infra page — UI", () => {
   uiTest.beforeEach(async () => { clearAuthRateLimit(); });
 
-  uiTest("root /infra defaults to ?tab=repositories", async ({ page }) => {
+  uiTest("root /infra defaults to ?tab=runners", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra`);
     await page.waitForLoadState("networkidle");
-    await uiExpect(page).toHaveURL(/tab=repositories/);
+    await uiExpect(page).toHaveURL(/tab=runners/);
     assertNoWasmErrors(errors);
   });
 
