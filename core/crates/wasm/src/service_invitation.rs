@@ -16,38 +16,38 @@ impl WasmInvitationService {
     }
 
     pub async fn list(&self) -> Result<String, String> {
-        let resp = self.client.list_invitations().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.list_invitations().await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn create(&self, json: &str) -> Result<String, String> {
-        let req: CreateInvitationRequest = serde_json::from_str(json).map_err(|e| e.to_string())?;
-        let resp = self.client.create_invitation(&req).await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let req: CreateInvitationRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
+        let resp = self.client.create_invitation(&req).await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn revoke(&self, id: i64) -> Result<(), String> {
-        self.client.revoke_invitation(id).await.map_err(|e| e.to_string())?;
+        self.client.revoke_invitation(id).await.map_err(agentsmesh_services::wire)?;
         Ok(())
     }
 
     pub async fn resend(&self, id: i64) -> Result<(), String> {
-        self.client.resend_invitation(id).await.map_err(|e| e.to_string())?;
+        self.client.resend_invitation(id).await.map_err(agentsmesh_services::wire)?;
         Ok(())
     }
 
     pub async fn get_by_token(&self, token: &str) -> Result<String, String> {
-        let resp = self.client.get_invitation_by_token(token).await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.get_invitation_by_token(token).await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn accept(&self, token: &str) -> Result<(), String> {
-        self.client.accept_invitation(token).await.map_err(|e| e.to_string())?;
+        self.client.accept_invitation(token).await.map_err(agentsmesh_services::wire)?;
         Ok(())
     }
 
     pub async fn list_pending(&self) -> Result<String, String> {
-        let resp = self.client.list_pending_invitations().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.list_pending_invitations().await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 }

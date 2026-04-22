@@ -74,11 +74,11 @@ impl WasmRelayManager {
         command: String,
     ) -> Result<(), String> {
         let val: serde_json::Value =
-            serde_json::from_str(&command).map_err(|e| e.to_string())?;
+            serde_json::from_str(&command).map_err(agentsmesh_services::wire)?;
         self.pool
             .send_acp_command(&pod_key, &val)
             .await
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn on_status_change(

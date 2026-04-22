@@ -29,7 +29,7 @@ impl TokenUsageService {
                 model.as_deref(),
                 granularity.as_deref(),
             )
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

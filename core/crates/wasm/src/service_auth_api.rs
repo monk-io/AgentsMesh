@@ -15,11 +15,11 @@ impl WasmAuthApiService {
     }
 
     pub async fn register(&self, json: &str) -> Result<String, String> {
-        let val: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        let val: serde_json::Value = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
         let resp: serde_json::Value = self.client
             .public_post("/api/v1/auth/register", &val)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn verify_email(&self, token: &str) -> Result<String, String> {
@@ -28,8 +28,8 @@ impl WasmAuthApiService {
                 &format!("/api/v1/auth/verify-email/{token}"),
                 &serde_json::json!({}),
             )
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn resend_verification(&self, email: &str) -> Result<String, String> {
@@ -38,8 +38,8 @@ impl WasmAuthApiService {
                 "/api/v1/auth/resend-verification",
                 &serde_json::json!({ "email": email }),
             )
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn forgot_password(&self, email: &str) -> Result<String, String> {
@@ -48,15 +48,15 @@ impl WasmAuthApiService {
                 "/api/v1/auth/forgot-password",
                 &serde_json::json!({ "email": email }),
             )
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn reset_password(&self, json: &str) -> Result<String, String> {
-        let val: serde_json::Value = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        let val: serde_json::Value = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
         let resp: serde_json::Value = self.client
             .public_post("/api/v1/auth/reset-password", &val)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 }

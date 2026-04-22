@@ -17,8 +17,8 @@ impl GrantService {
             .client
             .list_resource_grants(resource_type, resource_id)
             .await
-            .map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn grant(
@@ -32,8 +32,8 @@ impl GrantService {
             .client
             .grant_resource_access(resource_type, resource_id, &req)
             .await
-            .map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn revoke(
@@ -45,7 +45,7 @@ impl GrantService {
         self.client
             .revoke_resource_grant(resource_type, resource_id, grant_id)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         Ok(())
     }
 }

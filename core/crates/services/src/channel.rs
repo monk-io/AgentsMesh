@@ -203,41 +203,41 @@ impl ChannelService {
     pub async fn fetch_channels(&self, include_archived: Option<bool>) -> Result<String, String> {
         let resp = self.client
             .list_channels(include_archived)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_channels(resp.channels.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn fetch_channel(&self, id: i64) -> Result<String, String> {
         let ch: Channel = self.client
             .get_channel(id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_channel(id, ch.clone());
-        serde_json::to_string(&ch).map_err(|e| e.to_string())
+        serde_json::to_string(&ch).map_err(crate::wire)
     }
 
     pub async fn create_channel(&self, request_json: &str) -> Result<String, String> {
         let req: CreateChannelRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let ch: Channel = self.client
             .create_channel(&req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().add_channel(ch.clone());
-        serde_json::to_string(&ch).map_err(|e| e.to_string())
+        serde_json::to_string(&ch).map_err(crate::wire)
     }
 
     pub async fn update_channel(&self, id: i64, request_json: &str) -> Result<String, String> {
         let req: UpdateChannelRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let ch: Channel = self.client
             .update_channel(id, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_channel(id, ch.clone());
-        serde_json::to_string(&ch).map_err(|e| e.to_string())
+        serde_json::to_string(&ch).map_err(crate::wire)
     }
 
     pub async fn archive_channel(&self, id: i64) -> Result<(), String> {
-        self.client.archive_channel(id).await.map_err(|e| e.to_string())?;
+        self.client.archive_channel(id).await.map_err(crate::wire)?;
         if let Some(ch) = self.state.read().unwrap().get_channel(id).cloned() {
             let mut updated = ch;
             updated.is_archived = true;
@@ -247,7 +247,7 @@ impl ChannelService {
     }
 
     pub async fn unarchive_channel(&self, id: i64) -> Result<(), String> {
-        self.client.unarchive_channel(id).await.map_err(|e| e.to_string())?;
+        self.client.unarchive_channel(id).await.map_err(crate::wire)?;
         if let Some(ch) = self.state.read().unwrap().get_channel(id).cloned() {
             let mut updated = ch;
             updated.is_archived = false;
@@ -258,21 +258,21 @@ impl ChannelService {
 
     pub async fn join_channel(&self, channel_id: i64, pod_key: &str) -> Result<String, String> {
         let req = JoinChannelPodRequest { pod_key: pod_key.to_string() };
-        self.client.join_channel_pod(channel_id, &req).await.map_err(|e| e.to_string())?;
+        self.client.join_channel_pod(channel_id, &req).await.map_err(crate::wire)?;
         let ch: Channel = self.client
             .get_channel(channel_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_channel(channel_id, ch.clone());
-        serde_json::to_string(&ch).map_err(|e| e.to_string())
+        serde_json::to_string(&ch).map_err(crate::wire)
     }
 
     pub async fn leave_channel(&self, channel_id: i64, pod_key: &str) -> Result<String, String> {
-        self.client.leave_channel_pod(channel_id, pod_key).await.map_err(|e| e.to_string())?;
+        self.client.leave_channel_pod(channel_id, pod_key).await.map_err(crate::wire)?;
         let ch: Channel = self.client
             .get_channel(channel_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_channel(channel_id, ch.clone());
-        serde_json::to_string(&ch).map_err(|e| e.to_string())
+        serde_json::to_string(&ch).map_err(crate::wire)
     }
 
     pub async fn fetch_messages(
@@ -280,7 +280,7 @@ impl ChannelService {
     ) -> Result<String, String> {
         let resp = self.client
             .get_channel_messages(channel_id, limit, before_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         if before_id.is_some() {
             self.state.write().unwrap().prepend_messages(
                 channel_id, resp.messages.clone(), false,
@@ -290,17 +290,17 @@ impl ChannelService {
                 channel_id, resp.messages.clone(), false,
             );
         }
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn send_message(&self, channel_id: i64, request_json: &str) -> Result<String, String> {
         let req: SendChannelMessageRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let msg: ChannelMessage = self.client
             .send_channel_message(channel_id, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().on_new_message(msg.clone());
-        serde_json::to_string(&msg).map_err(|e| e.to_string())
+        serde_json::to_string(&msg).map_err(crate::wire)
     }
 
     /// Edit a message. `content_json` is the raw JSON string of the structured
@@ -313,15 +313,15 @@ impl ChannelService {
         let req = EditChannelMessageRequest { content };
         let msg: ChannelMessage = self.client
             .edit_channel_message(channel_id, message_id, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_message(channel_id, msg.clone());
-        serde_json::to_string(&msg).map_err(|e| e.to_string())
+        serde_json::to_string(&msg).map_err(crate::wire)
     }
 
     pub async fn delete_message(&self, channel_id: i64, message_id: i64) -> Result<(), String> {
         self.client
             .delete_channel_message(channel_id, message_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_message(channel_id, message_id);
         Ok(())
     }
@@ -329,35 +329,35 @@ impl ChannelService {
     pub async fn fetch_unread_counts(&self) -> Result<String, String> {
         let resp = self.client
             .get_channel_unread_counts()
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         let counts: std::collections::HashMap<i64, u32> = resp.unread
             .into_iter()
             .filter_map(|(k, v)| k.parse::<i64>().ok().map(|id| (id, v)))
             .collect();
         self.state.write().unwrap().set_unread_counts(counts);
-        serde_json::to_string(self.state.read().unwrap().get_all_unread_counts()).map_err(|e| e.to_string())
+        serde_json::to_string(self.state.read().unwrap().get_all_unread_counts()).map_err(crate::wire)
     }
 
     pub async fn mark_read(&self, channel_id: i64, message_id: i64) -> Result<(), String> {
         self.client
             .mark_channel_read(channel_id, message_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().clear_channel_unread(channel_id);
         Ok(())
     }
 
     pub async fn mute_channel(&self, channel_id: i64, muted: bool) -> Result<(), String> {
         let req = MuteChannelRequest { muted };
-        self.client.mute_channel(channel_id, &req).await.map_err(|e| e.to_string())?;
+        self.client.mute_channel(channel_id, &req).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn get_channel_pods(&self, id: i64) -> Result<String, String> {
         let resp = self.client
             .get_channel_pods(id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_channel_pods(id, resp.pods.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub fn channel_pods_json(&self, id: i64) -> String {
@@ -368,21 +368,21 @@ impl ChannelService {
     pub async fn fetch_channel_members(&self, id: i64) -> Result<String, String> {
         let resp = self.client
             .list_channel_members(id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_channel_members(id, resp.members.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn invite_channel_members(&self, id: i64, user_ids_json: &str) -> Result<(), String> {
-        let user_ids: Vec<i64> = serde_json::from_str(user_ids_json).map_err(|e| e.to_string())?;
+        let user_ids: Vec<i64> = serde_json::from_str(user_ids_json).map_err(crate::wire)?;
         let req = agentsmesh_types::InviteChannelMembersRequest { user_ids };
         self.client
             .invite_channel_members(id, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         // Server returns only ack; refresh cache by fetching updated list.
         let fresh = self.client
             .list_channel_members(id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_channel_members(id, fresh.members);
         Ok(())
     }
@@ -390,7 +390,7 @@ impl ChannelService {
     pub async fn remove_channel_member(&self, id: i64, user_id: i64) -> Result<(), String> {
         self.client
             .remove_channel_member(id, user_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_channel_member(id, user_id);
         Ok(())
     }
@@ -403,7 +403,7 @@ impl ChannelService {
     pub async fn search_channel_messages(&self, id: i64, q: &str, limit: Option<u32>) -> Result<String, String> {
         let resp = self.client
             .search_channel_messages(id, q, limit)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

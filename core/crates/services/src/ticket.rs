@@ -122,17 +122,17 @@ impl TicketService {
     ) -> Result<String, String> {
         let resp = self.client
             .list_tickets(status.as_deref(), limit, offset)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_tickets(resp.tickets.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn fetch_board(&self, repository_id: Option<i64>) -> Result<String, String> {
         let resp = self.client
             .get_ticket_board(repository_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_board_columns(resp.columns.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn load_more_column(
@@ -140,42 +140,42 @@ impl TicketService {
     ) -> Result<String, String> {
         let resp = self.client
             .list_tickets(Some(status), Some(limit), Some(offset))
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         let parsed = parse_status::<TicketStatus>(status);
         self.state.write().unwrap().append_column_tickets(parsed, resp.tickets.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn fetch_ticket(&self, slug: &str) -> Result<String, String> {
         let ticket: Ticket = self.client
             .get_ticket(slug)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_current_ticket(Some(ticket.clone()));
-        serde_json::to_string(&ticket).map_err(|e| e.to_string())
+        serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn create_ticket(&self, request_json: &str) -> Result<String, String> {
         let req: CreateTicketRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let ticket: Ticket = self.client
             .create_ticket(&req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().add_ticket(ticket.clone());
-        serde_json::to_string(&ticket).map_err(|e| e.to_string())
+        serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn update_ticket(&self, slug: &str, request_json: &str) -> Result<String, String> {
         let req: UpdateTicketRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let ticket: Ticket = self.client
             .update_ticket(slug, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_ticket(slug, ticket.clone());
-        serde_json::to_string(&ticket).map_err(|e| e.to_string())
+        serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn delete_ticket(&self, slug: &str) -> Result<(), String> {
-        self.client.delete_ticket(slug).await.map_err(|e| e.to_string())?;
+        self.client.delete_ticket(slug).await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_ticket(slug);
         Ok(())
     }
@@ -185,17 +185,17 @@ impl TicketService {
         let req = UpdateTicketStatusRequest { status: parsed };
         let ticket: Ticket = self.client
             .update_ticket_status(slug, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_ticket(slug, ticket.clone());
-        serde_json::to_string(&ticket).map_err(|e| e.to_string())
+        serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn fetch_labels(&self, repository_id: Option<i64>) -> Result<String, String> {
         let resp = self.client
             .list_labels(repository_id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_labels(resp.labels.clone());
-        serde_json::to_string(&resp.labels).map_err(|e| e.to_string())
+        serde_json::to_string(&resp.labels).map_err(crate::wire)
     }
 
     pub async fn create_label(&self, name: &str, color: &str, repository_id: Option<i64>) -> Result<String, String> {
@@ -203,13 +203,13 @@ impl TicketService {
         let _ = repository_id;
         let label: Label = self.client
             .create_label(&req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().add_label(label.clone());
-        serde_json::to_string(&label).map_err(|e| e.to_string())
+        serde_json::to_string(&label).map_err(crate::wire)
     }
 
     pub async fn delete_label(&self, id: f64) -> Result<(), String> {
-        self.client.delete_label(id as i64).await.map_err(|e| e.to_string())?;
+        self.client.delete_label(id as i64).await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_label(id as i64);
         Ok(())
     }
@@ -219,9 +219,9 @@ impl TicketService {
     ) -> Result<String, String> {
         let resp = self.client
             .get_ticket_pods(slug, active_only)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_ticket_pods(slug, resp.pods.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub fn ticket_pods_json(&self, slug: &str) -> String {
@@ -232,7 +232,7 @@ impl TicketService {
     pub async fn get_sub_tickets(&self, slug: &str) -> Result<String, String> {
         let resp = self.client
             .get_sub_tickets(slug)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

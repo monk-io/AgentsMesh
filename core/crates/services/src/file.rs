@@ -13,9 +13,9 @@ impl FileService {
     }
 
     pub async fn presign_upload(&self, json: &str) -> Result<String, String> {
-        let req: PresignRequest = serde_json::from_str(json).map_err(|e| e.to_string())?;
-        let resp = self.client.presign_file_upload(&req).await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let req: PresignRequest = serde_json::from_str(json).map_err(crate::wire)?;
+        let resp = self.client.presign_file_upload(&req).await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn upload_file(
@@ -27,10 +27,10 @@ impl FileService {
             content_type: content_type.to_string(),
             size: size as i64,
         };
-        let presign = self.client.presign_file_upload(&req).await.map_err(|e| e.to_string())?;
+        let presign = self.client.presign_file_upload(&req).await.map_err(crate::wire)?;
 
         self.client.put_raw_bytes(&presign.put_url, content_type, file_data)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         Ok(presign.get_url)
     }
 }

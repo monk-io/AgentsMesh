@@ -12,12 +12,12 @@ impl UserApiService {
     }
 
     pub async fn get_me(&self) -> Result<String, String> {
-        let resp = self.client.get_me().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.get_me().await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_organizations(&self) -> Result<String, String> {
-        let resp = self.client.get_organizations().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.get_organizations().await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

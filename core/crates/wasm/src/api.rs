@@ -97,27 +97,27 @@ impl WasmApiClient {
             .get::<serde_json::Value>(&endpoint)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn post(&self, endpoint: String, body: String) -> Result<String, String> {
         let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(|e| e.to_string())?;
+            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
         self.client
             .post::<serde_json::Value>(&endpoint, &val)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn put(&self, endpoint: String, body: String) -> Result<String, String> {
         let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(|e| e.to_string())?;
+            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
         self.client
             .put::<serde_json::Value>(&endpoint, &val)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn delete(&self, endpoint: String) -> Result<String, String> {
@@ -125,17 +125,17 @@ impl WasmApiClient {
             .delete::<serde_json::Value>(&endpoint)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn patch(&self, endpoint: String, body: String) -> Result<String, String> {
         let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(|e| e.to_string())?;
+            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
         self.client
             .patch::<serde_json::Value>(&endpoint, &val)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn public_get(&self, endpoint: String) -> Result<String, String> {
@@ -143,7 +143,7 @@ impl WasmApiClient {
             .public_get::<serde_json::Value>(&endpoint)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     pub async fn public_post(
@@ -152,12 +152,12 @@ impl WasmApiClient {
         body: String,
     ) -> Result<String, String> {
         let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(|e| e.to_string())?;
+            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
         self.client
             .public_post::<serde_json::Value>(&endpoint, &val)
             .await
             .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(|e| e.to_string())
+            .map_err(agentsmesh_services::wire)
     }
 
     /// Create a WasmPodService that shares this client's ApiClient and auth.

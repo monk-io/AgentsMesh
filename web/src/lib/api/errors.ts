@@ -1,61 +1,61 @@
 import { ApiError } from "./api-types";
+import {
+  getErrorCode as getServiceErrorCode,
+  getErrorStatus as getServiceErrorStatus,
+  getErrorMessage as getServiceErrorMessage,
+  parseServiceError,
+} from "@/lib/errors/serviceError";
 
 /**
- * Extract the error code from an API error
+ * Extract the error code from an error.
+ *
+ * Handles both the legacy web `ApiError` class (direct HTTP calls) and the new
+ * Rust `ServiceError` wire format (WASM / node-bridge). Callers don't need to
+ * know which transport raised the error.
  */
 export function getApiErrorCode(error: unknown): string | undefined {
   if (error instanceof ApiError) {
     return error.code;
   }
-  return undefined;
+  return getServiceErrorCode(error);
 }
 
-/**
- * Check if an error matches a specific API error code
- */
 export function isApiErrorCode(error: unknown, code: string): boolean {
   return getApiErrorCode(error) === code;
 }
 
-/**
- * Check if an error has a specific HTTP status
- */
 export function isApiStatus(error: unknown, status: number): boolean {
-  return error instanceof ApiError && error.status === status;
+  if (error instanceof ApiError && error.status === status) return true;
+  return getServiceErrorStatus(error) === status;
 }
 
 /**
- * Get a localized error message, falling back through: i18n code translation → server message → fallback
- *
- * @param error - The caught error
- * @param t - next-intl translation function (must have access to "apiErrors" namespace in common.json)
- * @param fallback - Fallback message if no translation or server message is available
+ * Get a localized error message, falling back through: i18n code translation
+ * → server message → service-error message → Error.message → `fallback`.
  */
 export function getLocalizedErrorMessage(
   error: unknown,
   t: (key: string, values?: Record<string, string>) => string,
   fallback: string
 ): string {
-  if (error instanceof ApiError) {
-    const code = error.code;
-    if (code) {
-      // Try to get i18n translation for this error code
-      // next-intl returns the key path itself when translation is missing
-      const key = `apiErrors.${code}`;
-      try {
-        const translated = t(key);
-        // next-intl returns the key itself if not found
-        if (translated && translated !== key) {
-          return translated;
-        }
-      } catch {
-        // Translation not found, fall through
+  const code = getApiErrorCode(error);
+  if (code) {
+    const key = `apiErrors.${code}`;
+    try {
+      const translated = t(key);
+      if (translated && translated !== key) {
+        return translated;
       }
+    } catch {
+      // fall through
     }
-    // Fall back to server message
-    if (error.serverMessage) {
-      return error.serverMessage;
-    }
+  }
+  if (error instanceof ApiError) {
+    if (error.serverMessage) return error.serverMessage;
+  }
+  const svc = parseServiceError(error);
+  if (svc.kind !== "unknown") {
+    return getServiceErrorMessage(error);
   }
   if (error instanceof Error) {
     return error.message;

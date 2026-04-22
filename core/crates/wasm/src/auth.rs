@@ -70,30 +70,30 @@ impl WasmAuthManager {
     pub fn base_url(&self) -> String { self.base_url.clone() }
 
     pub async fn login(&self, email: String, password: String) -> Result<String, String> {
-        let session = self.manager.login(&email, &password).await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&session).map_err(|e| e.to_string())
+        let session = self.manager.login(&email, &password).await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&session).map_err(agentsmesh_services::wire)
     }
 
     pub async fn logout(&self) -> Result<(), String> {
-        self.manager.logout().await.map_err(|e| e.to_string())
+        self.manager.logout().await.map_err(agentsmesh_services::wire)
     }
 
     pub async fn refresh_token(&self) -> Result<String, String> {
-        let tokens = self.manager.refresh_token().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&tokens).map_err(|e| e.to_string())
+        let tokens = self.manager.refresh_token().await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&tokens).map_err(agentsmesh_services::wire)
     }
 
     pub fn restore_session(&self) -> Result<bool, String> {
-        self.manager.restore_session().map_err(|e| e.to_string())
+        self.manager.restore_session().map_err(agentsmesh_services::wire)
     }
 
     pub async fn fetch_organizations(&self) -> Result<String, String> {
-        let orgs = self.manager.fetch_organizations().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&orgs).map_err(|e| e.to_string())
+        let orgs = self.manager.fetch_organizations().await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&orgs).map_err(agentsmesh_services::wire)
     }
 
     pub fn switch_org(&self, slug: &str) -> Result<(), String> {
-        self.manager.switch_org(slug).map_err(|e| e.to_string())
+        self.manager.switch_org(slug).map_err(agentsmesh_services::wire)
     }
 
     pub fn is_authenticated(&self) -> bool { self.manager.is_authenticated() }
@@ -120,7 +120,7 @@ impl WasmAuthManager {
     /// Writes token + refresh_token + user into Rust AuthState and persists.
     pub fn apply_session(&self, session_json: &str) -> Result<(), String> {
         let session: agentsmesh_types::AuthSession = serde_json::from_str(session_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(agentsmesh_services::wire)?;
         self.manager.apply_session(&session);
         Ok(())
     }
@@ -129,7 +129,7 @@ impl WasmAuthManager {
     /// Also promotes the first org to current_org if none is set.
     pub fn set_organizations(&self, orgs_json: &str) -> Result<(), String> {
         let orgs: Vec<agentsmesh_types::Organization> = serde_json::from_str(orgs_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(agentsmesh_services::wire)?;
         self.manager.replace_organizations(orgs);
         Ok(())
     }
@@ -140,7 +140,7 @@ impl WasmAuthManager {
             self.manager.set_current_org_direct(None);
         } else {
             let org: agentsmesh_types::Organization = serde_json::from_str(org_json)
-                .map_err(|e| e.to_string())?;
+                .map_err(agentsmesh_services::wire)?;
             self.manager.set_current_org_direct(Some(org));
         }
         Ok(())

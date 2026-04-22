@@ -15,11 +15,11 @@ impl MessageService {
     pub async fn send_message(
         &self, json: &str, pod_key: Option<String>,
     ) -> Result<String, String> {
-        let req: SendDirectMessageRequest = serde_json::from_str(json).map_err(|e| e.to_string())?;
+        let req: SendDirectMessageRequest = serde_json::from_str(json).map_err(crate::wire)?;
         let resp = self.client
             .send_mesh_message(&req, pod_key.as_deref())
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_messages(
@@ -27,28 +27,28 @@ impl MessageService {
     ) -> Result<String, String> {
         let resp = self.client
             .get_mesh_messages(unread_only, limit, offset)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_unread_count(&self) -> Result<String, String> {
-        let resp = self.client.get_mesh_unread_count().await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.get_mesh_unread_count().await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_message(&self, id: i64) -> Result<String, String> {
-        let resp = self.client.get_mesh_message(id).await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        let resp = self.client.get_mesh_message(id).await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn mark_read(&self, json: &str) -> Result<(), String> {
-        let req: MarkMessagesReadRequest = serde_json::from_str(json).map_err(|e| e.to_string())?;
-        self.client.mark_mesh_messages_read(&req).await.map_err(|e| e.to_string())?;
+        let req: MarkMessagesReadRequest = serde_json::from_str(json).map_err(crate::wire)?;
+        self.client.mark_mesh_messages_read(&req).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn mark_all_read(&self) -> Result<(), String> {
-        self.client.mark_all_mesh_messages_read().await.map_err(|e| e.to_string())?;
+        self.client.mark_all_mesh_messages_read().await.map_err(crate::wire)?;
         Ok(())
     }
 
@@ -57,8 +57,8 @@ impl MessageService {
     ) -> Result<String, String> {
         let resp = self.client
             .get_mesh_conversation(correlation_id, limit)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_sent_messages(
@@ -66,8 +66,8 @@ impl MessageService {
     ) -> Result<String, String> {
         let resp = self.client
             .get_mesh_sent_messages(limit, offset)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_dead_letters(
@@ -75,12 +75,12 @@ impl MessageService {
     ) -> Result<String, String> {
         let resp = self.client
             .get_mesh_dead_letters(limit, offset)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn replay_dead_letter(&self, entry_id: i64) -> Result<(), String> {
-        self.client.replay_mesh_dead_letter(entry_id).await.map_err(|e| e.to_string())?;
+        self.client.replay_mesh_dead_letter(entry_id).await.map_err(crate::wire)?;
         Ok(())
     }
 }

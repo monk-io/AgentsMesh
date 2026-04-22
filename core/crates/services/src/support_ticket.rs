@@ -16,22 +16,22 @@ impl SupportTicketService {
     ) -> Result<String, String> {
         let resp = self.client
             .list_support_tickets(status.as_deref(), page, page_size)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_detail(&self, id: i64) -> Result<String, String> {
         let resp = self.client
             .get_support_ticket_detail(id)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_attachment_url(&self, id: i64) -> Result<String, String> {
         let resp = self.client
             .get_support_ticket_attachment_url(id)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn create_ticket(
@@ -49,8 +49,8 @@ impl SupportTicketService {
         }
         let resp = self.client
             .post_multipart::<serde_json::Value>("/api/v1/support-tickets", form)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn add_message(
@@ -67,7 +67,7 @@ impl SupportTicketService {
             .post_multipart::<serde_json::Value>(
                 &format!("/api/v1/support-tickets/{ticket_id}/messages"), form,
             )
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

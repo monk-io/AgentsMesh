@@ -93,72 +93,72 @@ impl AutopilotService {
     }
 
     pub async fn fetch_controllers(&self) -> Result<String, String> {
-        let resp = self.client.list_autopilots().await.map_err(|e| e.to_string())?;
+        let resp = self.client.list_autopilots().await.map_err(crate::wire)?;
         self.state.write().unwrap().set_controllers(resp.controllers.clone());
-        serde_json::to_string(&resp.controllers).map_err(|e| e.to_string())
+        serde_json::to_string(&resp.controllers).map_err(crate::wire)
     }
 
     pub async fn fetch_controller(&self, key: &str) -> Result<String, String> {
         let c: AutopilotController = self.client
             .get_autopilot(key)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         let mut s = self.state.write().unwrap();
         s.add_controller(c.clone());
         s.set_current_controller(Some(c.clone()));
         drop(s);
-        serde_json::to_string(&c).map_err(|e| e.to_string())
+        serde_json::to_string(&c).map_err(crate::wire)
     }
 
     pub async fn create_controller(&self, request_json: &str) -> Result<String, String> {
         let req: CreateAutopilotRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let c: AutopilotController = self.client
             .create_autopilot(&req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         let mut s = self.state.write().unwrap();
         s.add_controller(c.clone());
         s.set_current_controller(Some(c.clone()));
         drop(s);
-        serde_json::to_string(&c).map_err(|e| e.to_string())
+        serde_json::to_string(&c).map_err(crate::wire)
     }
 
     pub async fn pause_controller(&self, key: &str) -> Result<(), String> {
-        self.client.pause_autopilot(key).await.map_err(|e| e.to_string())?;
+        self.client.pause_autopilot(key).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn resume_controller(&self, key: &str) -> Result<(), String> {
-        self.client.resume_autopilot(key).await.map_err(|e| e.to_string())?;
+        self.client.resume_autopilot(key).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn stop_controller(&self, key: &str) -> Result<(), String> {
-        self.client.stop_autopilot(key).await.map_err(|e| e.to_string())?;
+        self.client.stop_autopilot(key).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn approve_controller(&self, key: &str, request_json: &str) -> Result<(), String> {
         let req: ApproveAutopilotRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
-        self.client.approve_autopilot(key, &req).await.map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
+        self.client.approve_autopilot(key, &req).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn takeover_controller(&self, key: &str) -> Result<(), String> {
-        self.client.takeover_autopilot(key).await.map_err(|e| e.to_string())?;
+        self.client.takeover_autopilot(key).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn handback_controller(&self, key: &str) -> Result<(), String> {
-        self.client.handback_autopilot(key).await.map_err(|e| e.to_string())?;
+        self.client.handback_autopilot(key).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn fetch_iterations(&self, key: &str) -> Result<String, String> {
         let resp = self.client
             .get_autopilot_iterations(key)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_iterations(key.to_string(), resp.iterations.clone());
-        serde_json::to_string(&resp.iterations).map_err(|e| e.to_string())
+        serde_json::to_string(&resp.iterations).map_err(crate::wire)
     }
 }

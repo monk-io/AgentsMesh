@@ -98,9 +98,9 @@ impl PodService {
         let resp = self.client
             .list_pods(status.as_deref(), runner_id, created_by_id, limit, offset)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.state.write().unwrap().set_pods(resp.pods.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn fetch_sidebar_pods(
@@ -111,7 +111,7 @@ impl PodService {
         let resp = self.client
             .list_pods(status_param, None, created_by_id, Some(SIDEBAR_PAGE_SIZE), Some(0))
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let total = resp.total.unwrap_or(0);
         let pods = resp.pods;
         let has_more = (pods.len() as i64) < total;
@@ -121,7 +121,7 @@ impl PodService {
             "total": total,
             "hasMore": has_more,
         });
-        serde_json::to_string(&result).map_err(|e| e.to_string())
+        serde_json::to_string(&result).map_err(crate::wire)
     }
 
     pub async fn load_more_pods(
@@ -132,7 +132,7 @@ impl PodService {
         let resp = self.client
             .list_pods(status_param, None, created_by_id, Some(SIDEBAR_PAGE_SIZE), Some(offset))
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let total = resp.total.unwrap_or(0);
         let new_pods = resp.pods;
         {
@@ -149,34 +149,34 @@ impl PodService {
             "hasMore": has_more,
             "allCount": all_count,
         });
-        serde_json::to_string(&result).map_err(|e| e.to_string())
+        serde_json::to_string(&result).map_err(crate::wire)
     }
 
     pub async fn fetch_pod(&self, pod_key: &str) -> Result<String, String> {
         let pod: Pod = self.client
             .get_pod(pod_key)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.state.write().unwrap().upsert_pod(pod.clone(), None);
-        serde_json::to_string(&pod).map_err(|e| e.to_string())
+        serde_json::to_string(&pod).map_err(crate::wire)
     }
 
     pub async fn create_pod(&self, request_json: &str) -> Result<String, String> {
         let req: CreatePodRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let pod: Pod = self.client
             .create_pod(&req)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.state.write().unwrap().upsert_pod(pod.clone(), None);
-        serde_json::to_string(&pod).map_err(|e| e.to_string())
+        serde_json::to_string(&pod).map_err(crate::wire)
     }
 
     pub async fn terminate_pod(&self, pod_key: &str) -> Result<(), String> {
         self.client
             .terminate_pod(pod_key)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.state.write().unwrap().update_pod_status(
             pod_key, PodStatus::Terminated, None, None, None, None,
         );
@@ -205,7 +205,7 @@ impl PodService {
         let info = self.client
             .get_pod_relay_connection(pod_key)
             .await
-            .map_err(|e| e.to_string())?;
-        serde_json::to_string(&info).map_err(|e| e.to_string())
+            .map_err(crate::wire)?;
+        serde_json::to_string(&info).map_err(crate::wire)
     }
 }

@@ -72,85 +72,85 @@ impl RunnerService {
     pub async fn fetch_runners(&self, status: Option<String>) -> Result<String, String> {
         let resp = self.client
             .list_runners(status.as_deref())
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_runners(resp.runners.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn fetch_available_runners(&self) -> Result<String, String> {
         let resp = self.client
             .list_available_runners()
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_available_runners(resp.runners.clone());
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn fetch_runner(&self, id: i64) -> Result<String, String> {
         let runner: Runner = self.client
             .get_runner(id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_current_runner(Some(runner.clone()));
-        serde_json::to_string(&runner).map_err(|e| e.to_string())
+        serde_json::to_string(&runner).map_err(crate::wire)
     }
 
     pub async fn update_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
         let req: UpdateRunnerRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let runner: Runner = self.client
             .update_runner(id, &req)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().update_runner(id, runner.clone());
-        serde_json::to_string(&runner).map_err(|e| e.to_string())
+        serde_json::to_string(&runner).map_err(crate::wire)
     }
 
     pub async fn delete_runner(&self, id: i64) -> Result<(), String> {
-        self.client.delete_runner(id).await.map_err(|e| e.to_string())?;
+        self.client.delete_runner(id).await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_runner(id);
         Ok(())
     }
 
     pub async fn create_token(&self, request_json: &str) -> Result<String, String> {
         let req: CreateRunnerTokenRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let token = self.client
             .create_runner_token(&req)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&token).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&token).map_err(crate::wire)
     }
 
     pub async fn fetch_tokens(&self) -> Result<String, String> {
         let resp = self.client
             .list_runner_tokens()
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn delete_token(&self, id: i64) -> Result<(), String> {
-        self.client.delete_runner_token(id).await.map_err(|e| e.to_string())?;
+        self.client.delete_runner_token(id).await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn list_runner_logs(&self, id: i64) -> Result<String, String> {
         let resp = self.client
             .list_runner_logs(id)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn request_log_upload(&self, id: i64) -> Result<(), String> {
         self.client
             .request_runner_log_upload(id)
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         Ok(())
     }
 
     pub async fn upgrade_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
         let req: agentsmesh_types::UpgradeRunnerRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let resp = self.client
             .upgrade_runner(id, &req)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn list_runner_pods(
@@ -158,32 +158,32 @@ impl RunnerService {
     ) -> Result<String, String> {
         let resp = self.client
             .list_runner_pods(id, status.as_deref(), limit, offset)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn query_runner_sandboxes(&self, id: i64, request_json: &str) -> Result<String, String> {
         let req: agentsmesh_types::SandboxQueryRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let resp = self.client
             .query_runner_sandboxes(id, &req)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_auth_status(&self, auth_key: &str) -> Result<String, String> {
         let resp = self.client
             .get_runner_auth_status(auth_key)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn authorize_runner(&self, request_json: &str) -> Result<String, String> {
         let req: agentsmesh_types::AuthorizeRunnerRequest = serde_json::from_str(request_json)
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let resp = self.client
             .authorize_runner(&req)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

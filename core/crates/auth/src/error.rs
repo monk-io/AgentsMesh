@@ -1,3 +1,4 @@
+use agentsmesh_types::ServiceError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -20,6 +21,51 @@ pub enum AuthError {
 
     #[error("storage error: {0}")]
     Storage(String),
+}
+
+impl From<&AuthError> for ServiceError {
+    fn from(e: &AuthError) -> Self {
+        match e {
+            AuthError::NotAuthenticated => ServiceError::AuthExpired,
+            AuthError::Http(e) => ServiceError::Network {
+                message: e.to_string(),
+            },
+            AuthError::InvalidResponse(msg) => ServiceError::Http {
+                status: 0,
+                code: None,
+                message: msg.clone(),
+            },
+            AuthError::Server {
+                status,
+                message,
+                code,
+            } => {
+                if *status == 401 {
+                    return ServiceError::AuthExpired;
+                }
+                if *status == 404 {
+                    return ServiceError::ResourceNotFound {
+                        resource: code.clone().unwrap_or_else(|| "resource".into()),
+                        id: None,
+                    };
+                }
+                ServiceError::Http {
+                    status: *status,
+                    code: code.clone(),
+                    message: message.clone(),
+                }
+            }
+            AuthError::Storage(msg) => ServiceError::Unknown {
+                message: msg.clone(),
+            },
+        }
+    }
+}
+
+impl From<AuthError> for ServiceError {
+    fn from(e: AuthError) -> Self {
+        ServiceError::from(&e)
+    }
 }
 
 #[derive(serde::Deserialize)]

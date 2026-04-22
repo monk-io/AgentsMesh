@@ -75,8 +75,8 @@ impl MeshService {
     pub async fn fetch_topology(&self) -> Result<String, String> {
         let topo: MeshTopology = self.client
             .get_mesh_topology()
-            .await.map_err(|e| e.to_string())?;
+            .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_topology(topo.clone());
-        serde_json::to_string(&topo).map_err(|e| e.to_string())
+        serde_json::to_string(&topo).map_err(crate::wire)
     }
 }

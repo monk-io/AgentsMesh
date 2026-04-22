@@ -15,16 +15,16 @@ impl NotificationService {
     pub async fn get_preferences(&self) -> Result<String, String> {
         let resp = self.client
             .get_notification_preferences()
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn set_preference(&self, json: &str) -> Result<String, String> {
         let req: SetNotificationPreferenceRequest =
-            serde_json::from_str(json).map_err(|e| e.to_string())?;
+            serde_json::from_str(json).map_err(crate::wire)?;
         let resp = self.client
             .set_notification_preference(&req)
-            .await.map_err(|e| e.to_string())?;
-        serde_json::to_string(&resp).map_err(|e| e.to_string())
+            .await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

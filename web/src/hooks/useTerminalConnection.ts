@@ -3,15 +3,11 @@ import { MutableRefObject } from "react";
 import { relayPool, useWorkspaceStore } from "@/stores/workspace";
 import type { ConnectionStatus } from "@/stores/relayConnection";
 import { TerminalWriteScheduler } from "@/lib/terminalScheduler";
+import { isResourceNotFound } from "@/lib/errors/serviceError";
 
 export interface TerminalConnection {
   send: (data: string) => void;
   unsubscribe: () => void;
-}
-
-function isPodGone(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err ?? "");
-  return /HTTP 404|Pod not found|RESOURCE_NOT_FOUND/i.test(msg);
 }
 
 /**
@@ -47,7 +43,7 @@ export function setupConnection(
       connectionRef.current = handle;
     } catch (error) {
       if (abort.signal.aborted) return;
-      if (isPodGone(error)) {
+      if (isResourceNotFound(error)) {
         useWorkspaceStore.getState().removePaneByPodKey(podKey);
         return;
       }

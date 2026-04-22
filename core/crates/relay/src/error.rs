@@ -1,3 +1,4 @@
+use agentsmesh_types::ServiceError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -13,4 +14,18 @@ pub enum RelayError {
 
     #[error("protocol error: {0}")]
     Protocol(#[from] agentsmesh_protocol::ProtocolError),
+}
+
+impl From<&RelayError> for ServiceError {
+    fn from(e: &RelayError) -> Self {
+        ServiceError::Network {
+            message: e.to_string(),
+        }
+    }
+}
+
+impl From<RelayError> for ServiceError {
+    fn from(e: RelayError) -> Self {
+        ServiceError::from(&e)
+    }
 }

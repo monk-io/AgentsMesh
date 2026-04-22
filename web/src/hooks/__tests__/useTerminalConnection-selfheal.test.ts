@@ -30,7 +30,7 @@ describe("useTerminalConnection · 404 self-heal", () => {
   // connect, each producing an error-status spam. Now a definitive "pod
   // gone" response (HTTP 404 / RESOURCE_NOT_FOUND) removes the dead pane
   // from the store so subsequent renders stay clean.
-  it("drops the pane when server returns Pod not found 404", async () => {
+  it("drops the pane when server returns Pod not found 404 (legacy string)", async () => {
     mocks.subscribe.mockRejectedValueOnce(
       new Error("Error invoking remote method 'podGetPodConnection': Error: HTTP 404: Pod not found [RESOURCE_NOT_FOUND]"),
     );
@@ -40,6 +40,19 @@ describe("useTerminalConnection · 404 self-heal", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(mocks.removePaneByPodKey).toHaveBeenCalledWith("1-404-gone");
+    expect(setConnectionStatus).not.toHaveBeenCalledWith("error");
+  });
+
+  it("drops the pane when server returns ServiceError resource_not_found JSON", async () => {
+    mocks.subscribe.mockRejectedValueOnce(
+      new Error('{"kind":"resource_not_found","resource":"Pod","id":"pk_1"}'),
+    );
+
+    const setConnectionStatus = vi.fn();
+    setupConnection("1-404-json", scheduler, { current: null }, setConnectionStatus, vi.fn());
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mocks.removePaneByPodKey).toHaveBeenCalledWith("1-404-json");
     expect(setConnectionStatus).not.toHaveBeenCalledWith("error");
   });
 

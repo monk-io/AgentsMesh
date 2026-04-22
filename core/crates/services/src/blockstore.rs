@@ -24,9 +24,9 @@ impl BlockstoreService {
         let req: ApplyOpsRequest = serde_json::from_str(req_json)
             .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
         let res: ApplyOpsResult = self.client.blocks_apply_ops(&req).await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.apply_local_ops(&req, &res);
-        serde_json::to_string(&res).map_err(|e| e.to_string())
+        serde_json::to_string(&res).map_err(crate::wire)
     }
 
     fn apply_local_ops(&self, req: &ApplyOpsRequest, res: &ApplyOpsResult) {
@@ -54,22 +54,22 @@ impl BlockstoreService {
 
     pub async fn list_workspaces(&self) -> Result<String, String> {
         let list: Vec<Workspace> = self.client.blocks_list_workspaces().await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.state.write().unwrap().replace_workspaces(list.clone());
         serde_json::to_string(&serde_json::json!({ "workspaces": list }))
-            .map_err(|e| e.to_string())
+            .map_err(crate::wire)
     }
 
     pub async fn ensure_default_workspace(&self) -> Result<String, String> {
         let ws: Workspace = self.client.blocks_ensure_default_workspace().await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         self.state.write().unwrap().upsert_workspace(ws.clone());
-        serde_json::to_string(&ws).map_err(|e| e.to_string())
+        serde_json::to_string(&ws).map_err(crate::wire)
     }
 
     pub async fn load_subtree(&self, workspace_id: &str, root_id: &str) -> Result<(), String> {
         let res = self.client.blocks_get_subtree(workspace_id, root_id, 64).await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let mut state = self.state.write().unwrap();
         for b in res.blocks { state.upsert_block(b); }
         for r in res.refs { state.upsert_ref(r); }
@@ -82,7 +82,7 @@ impl BlockstoreService {
 
     pub async fn load_type_defs(&self, workspace_id: &str) -> Result<(), String> {
         let blocks: Vec<Block> = self.client.blocks_list_type_defs(workspace_id).await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let mut state = self.state.write().unwrap();
         for b in blocks { state.upsert_block(b); }
         Ok(())
@@ -91,7 +91,7 @@ impl BlockstoreService {
     pub async fn catchup(&self, workspace_id: &str) -> Result<(), String> {
         let after = self.state.read().unwrap().get_last_op_id(workspace_id);
         let ops: Vec<BlockOp> = self.client.blocks_catchup_ops(workspace_id, after, 500).await
-            .map_err(|e| e.to_string())?;
+            .map_err(crate::wire)?;
         let mut state = self.state.write().unwrap();
         for op in &ops { state.apply_remote_op(op); }
         Ok(())
@@ -101,8 +101,8 @@ impl BlockstoreService {
         let req: SemanticSearchRequest = serde_json::from_str(req_json)
             .map_err(|e| format!("invalid search request: {e}"))?;
         let hits: Vec<SearchHit> = self.client.blocks_semantic_search(workspace_id, &req).await
-            .map_err(|e| e.to_string())?;
-        serde_json::to_string(&serde_json::json!({ "hits": hits })).map_err(|e| e.to_string())
+            .map_err(crate::wire)?;
+        serde_json::to_string(&serde_json::json!({ "hits": hits })).map_err(crate::wire)
     }
 
     // ── Remote op stream (realtime) ──
