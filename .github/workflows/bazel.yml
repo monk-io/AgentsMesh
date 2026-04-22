@@ -1,0 +1,112 @@
+name: Bazel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: bazel-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Minimal job: Bazel's own consistency + buildifier formatting. Catches
+  # "I added a macro that doesn't parse" before the expensive Go/Rust
+  # jobs queue behind it.
+  smoke:
+    name: Smoke (info + buildifier)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      - run: bazel info workspace
+      - run: bazel run //:buildifier_check
+
+  go:
+    name: Go (backend + runner + relay + agentfile + proto)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      # Full Go module graph — Bazel figures out what changed since the
+      # last cached run and only recompiles / retests the affected
+      # packages.
+      - run: bazel test //backend/... //runner/... //relay/... //agentfile/... //proto/...
+
+  rust:
+    name: Rust Core (clients/core)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      - run: bazel test //clients/core/...
+
+  web:
+    name: Web + Web-Admin + Desktop (TS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      - run: bazel build //clients/web //clients/web-admin //clients/desktop
+      - run: bazel test //clients/...
+
+  ios:
+    name: iOS (Swift + XCFramework)
+    runs-on: macos-14
+    timeout-minutes: 60
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      # `ios-simulator` transition is the fastest signal; device builds
+      # are reserved for tag releases.
+      - run: bazel build //clients/ios:AgentsMesh
+      - run: bazel test //clients/ios/...
+
+  oci-images:
+    name: OCI images (Go + Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [go, web]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      - run: |
+          bazel build \
+            //backend/cmd/server:image \
+            //runner/cmd/runner:image \
+            //relay/cmd/relay:image \
+            //clients/web:image

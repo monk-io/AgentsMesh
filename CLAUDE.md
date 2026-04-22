@@ -63,6 +63,35 @@ docker compose logs -f runner    # Runner logs
 
 ## Build Commands (for CI/testing outside Docker)
 
+> **Note — Bazel migration in progress.** The Bazel-based build system
+> (see `.claude/plans/snuggly-spinning-dewdrop.md`) is landing
+> incrementally. Until it's complete the **legacy commands below stay
+> authoritative**; Bazel targets listed under "Bazel (migration)" are
+> opt-in and verified in CI on `bazel.yml` only.
+
+### Bazel (migration in progress)
+
+```bash
+# One-shot validation that the workspace still parses
+bazel info workspace
+bazel run //:buildifier_check
+
+# Regenerate Go BUILD.bazel files after editing imports / adding packages
+bazel run //:gazelle
+
+# Build a Go binary + its OCI image
+bazel build //backend/cmd/server:server
+bazel build //backend/cmd/server:image
+bazel run //backend/cmd/server:image_tarball   # → docker load
+
+# Build the Rust → XCFramework chain (once Phase 3b is live)
+bazel build //clients/core/crates/ffi:AgentsMeshCore
+
+# Build the iOS app (once Phase 5 is live)
+bazel build //clients/ios:AgentsMesh
+bazel run //clients/ios:AgentsMesh_xcodeproj   # → Xcode project
+```
+
 ### Backend (Go)
 
 ```bash
