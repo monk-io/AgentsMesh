@@ -67,7 +67,7 @@ docker build \
     -f ci/web.Dockerfile \
     --build-arg REGISTRY="${REGISTRY}" \
     -t "agentsmesh/web:${VERSION}" \
-    ./web
+    ./clients/web
 echo "  Done."
 
 echo "[3/8] Building web-admin image (runtime env via docker-entrypoint.sh)..."
@@ -75,7 +75,7 @@ docker build \
     -f ci/web-admin.Dockerfile \
     --build-arg REGISTRY="${REGISTRY}" \
     -t "agentsmesh/web-admin:${VERSION}" \
-    ./web-admin
+    ./clients/web-admin
 echo "  Done."
 
 echo "[4/8] Building relay image..."

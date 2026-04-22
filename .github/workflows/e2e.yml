@@ -4,20 +4,18 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - "web/**"
+      - "clients/web/**"
       - "backend/**"
       - "runner/**"
       - "relay/**"
-      - "e2e-playwright/**"
       - "deploy/**"
   pull_request:
     branches: [main, develop]
     paths:
-      - "web/**"
+      - "clients/web/**"
       - "backend/**"
       - "runner/**"
       - "relay/**"
-      - "e2e-playwright/**"
       - "deploy/**"
 
 env:
@@ -177,11 +175,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: |
-            web/pnpm-lock.yaml
-            e2e-playwright/pnpm-lock.yaml
+            pnpm-lock.yaml
+            clients/web/e2e-playwright/pnpm-lock.yaml
+
+      - name: Install dependencies (workspace)
+        run: pnpm install --frozen-lockfile
 
       - name: Build frontend
-        working-directory: web
+        working-directory: clients/web
         run: |
           cat > .env.local <<'EOF'
           PRIMARY_DOMAIN=localhost:10000
@@ -190,11 +191,10 @@ jobs:
           NEXT_PUBLIC_WS_URL=ws://localhost:10000
           EOF
           sed -i 's/^[[:space:]]*//' .env.local
-          pnpm install --frozen-lockfile
           pnpm build
 
       - name: Start frontend
-        working-directory: web
+        working-directory: clients/web
         run: |
           pnpm start &
           echo "Waiting for frontend..."
@@ -205,13 +205,13 @@ jobs:
       # 3. Install and run Playwright
       # ----------------------------------------------------------
       - name: Install Playwright dependencies
-        working-directory: e2e-playwright
+        working-directory: clients/web/e2e-playwright
         run: |
           pnpm install --frozen-lockfile
           npx playwright install chromium --with-deps
 
       - name: Run Playwright tests
-        working-directory: e2e-playwright
+        working-directory: clients/web/e2e-playwright
         env:
           CI: "true"
           WEB_PORT: "3000"
@@ -227,7 +227,7 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: e2e-playwright/playwright-report/
+          path: clients/web/e2e-playwright/playwright-report/
           retention-days: 7
 
       - name: Upload test results on failure
@@ -235,7 +235,7 @@ jobs:
         if: failure()
         with:
           name: playwright-results
-          path: e2e-playwright/test-results/
+          path: clients/web/e2e-playwright/test-results/
           retention-days: 14
 
       - name: Upload JUnit report
@@ -243,5 +243,5 @@ jobs:
         if: always()
         with:
           name: junit-report
-          path: e2e-playwright/report.xml
+          path: clients/web/e2e-playwright/report.xml
           retention-days: 7

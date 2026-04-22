@@ -1,8 +1,9 @@
 packages:
-  - web
-  - desktop
+  - clients/web
+  - clients/web-admin
+  - clients/desktop
   - packages/*
-  - core/crates/node-bridge
+  - clients/core/crates/node-bridge
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver

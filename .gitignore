@@ -21,33 +21,55 @@
 .env.*
 !.env.example
 
+# Dependencies — catch-all for any node_modules anywhere in the tree
+**/node_modules/
+
 # =========================
 # Frontend (Next.js / Web)
 # =========================
-web/node_modules/
-web/.next/
-web/out/
-web/build/
-web/.pnp
-web/.pnp.*
-web/.yarn/*
-!web/.yarn/patches
-!web/.yarn/plugins
-!web/.yarn/releases
-!web/.yarn/versions
-web/coverage/
-web/*.pem
-web/npm-debug.log*
-web/yarn-debug.log*
-web/yarn-error.log*
-web/.pnpm-debug.log*
-web/.vercel
-web/*.tsbuildinfo
-web/next-env.d.ts
+clients/web/node_modules/
+clients/web/.next/
+clients/web/out/
+clients/web/build/
+clients/web/.pnp
+clients/web/.pnp.*
+clients/web/.yarn/*
+!clients/web/.yarn/patches
+!clients/web/.yarn/plugins
+!clients/web/.yarn/releases
+!clients/web/.yarn/versions
+clients/web/coverage/
+clients/web/*.pem
+clients/web/npm-debug.log*
+clients/web/yarn-debug.log*
+clients/web/yarn-error.log*
+clients/web/.pnpm-debug.log*
+clients/web/.vercel
+clients/web/*.tsbuildinfo
+clients/web/next-env.d.ts
 
 # Playwright run artifacts — regenerated every run, never commit.
-web/test-results/
-web/playwright-report/
+clients/web/test-results/
+clients/web/playwright-report/
+clients/web/e2e-playwright/node_modules/
+clients/web/e2e-playwright/test-results/
+clients/web/e2e-playwright/playwright-report/
+
+# Web-Admin (Next.js)
+clients/web-admin/node_modules/
+clients/web-admin/.next/
+clients/web-admin/out/
+clients/web-admin/build/
+clients/web-admin/coverage/
+clients/web-admin/next-env.d.ts
+clients/web-admin/*.tsbuildinfo
+
+# Desktop (Electron)
+clients/desktop/node_modules/
+clients/desktop/out/
+clients/desktop/dist/
+clients/desktop/test-results/
+clients/desktop/playwright-report/
 
 # =========================
 # Backend (Go)
@@ -116,16 +138,16 @@ runner/agentsmesh-runner
 agentsmesh-onpremise-v1.0.0.tar.gz
 
 # =========================
-# Rust / WASM (core/)
+# Rust / WASM (clients/core/)
 # =========================
-core/target/
-core/**/target/
+clients/core/target/
+clients/core/**/target/
 # wasm-pack intermediate outputs (stale builds in wrong locations)
-core/crates/*/pkg/
-core/crates/*/*/pkg/
-core/crates/*/*/*/pkg/
-core/core/pkg/
-# Keep core/pkg/ — it's the canonical wasm-pack output referenced by web/package.json
+clients/core/crates/*/pkg/
+clients/core/crates/*/*/pkg/
+clients/core/crates/*/*/*/pkg/
+clients/core/core/pkg/
+# Keep clients/core/pkg/ — it's the canonical wasm-pack output referenced by clients/web/package.json
 
 # =========================
 # Claude Code
@@ -136,5 +158,4 @@ core/core/pkg/
 # Reports (generated artifacts)
 # =========================
 E2E_TEST_REPORT.md
-web-admin/coverage/
 .loopal/worktrees/

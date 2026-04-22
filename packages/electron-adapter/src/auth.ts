@@ -79,6 +79,39 @@ export class ElectronAuthService implements IAuthManager {
     return result;
   }
 
+  // ---------------------------------------------------------------------------
+  // Synchronous cache-setters matching the Wasm AuthManager API. Zustand's
+  // `setAuth` / `setOrganizations` / `setCurrentOrg` / `logout` call these to
+  // keep the local cache in sync after an IPC round-trip. Previously missing
+  // → Zustand's try/catch silently swallowed TypeErrors, leaving downstream
+  // selectors (`readCurrentUser`, `readCurrentOrg`) reading stale or empty
+  // values and bouncing the renderer back to /login.
+  // ---------------------------------------------------------------------------
+  apply_session(sessionJson: string): void {
+    const parsed = JSON.parse(sessionJson) as {
+      token?: string; refresh_token?: string; user?: unknown;
+    };
+    if (parsed.token) this._token = parsed.token;
+    if (parsed.refresh_token) this._refreshToken = parsed.refresh_token;
+    if (parsed.user != null) this._currentUserCache = JSON.stringify(parsed.user);
+  }
+
+  set_organizations(orgsJson: string): void {
+    this._organizationsCache = orgsJson;
+  }
+
+  set_current_org(orgJson: string): void {
+    this._currentOrgCache = orgJson;
+  }
+
+  clear_session(): void {
+    this._token = undefined;
+    this._refreshToken = undefined;
+    this._currentUserCache = null;
+    this._currentOrgCache = null;
+    this._organizationsCache = "[]";
+  }
+
   static new_with_storage(baseUrl: string, _storage: unknown): IAuthManager {
     return new ElectronAuthService(baseUrl);
   }

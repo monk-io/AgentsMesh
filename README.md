@@ -154,7 +154,7 @@ cd deploy/dev && ./dev.sh
 docker compose logs -f backend
 
 # 3. Frontend (local with Turbopack)
-cd web && pnpm install && pnpm dev
+cd clients/web && pnpm install && pnpm dev
 ```
 
 </details>
@@ -211,8 +211,10 @@ See [deploy/selfhost/](deploy/selfhost/) for self-hosted deployment guide.
 ```
 AgentsMesh/
 ├── backend/          # Go API server
-├── web/              # Next.js frontend
-├── web-admin/        # Admin console (Next.js)
+├── clients/          # Frontend clients (web, web-admin, desktop)
+│   ├── web/          # Next.js frontend
+│   ├── web-admin/    # Admin console (Next.js)
+│   └── desktop/      # Electron desktop app
 ├── runner/           # Self-hosted runner daemon (Go)
 ├── relay/            # Terminal relay server (Go)
 ├── proto/            # Protocol Buffers definitions

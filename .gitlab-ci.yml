@@ -87,7 +87,7 @@ test-web:
   before_script:
     - corepack enable
   script:
-    - cd web
+    - cd clients/web
     - pnpm install --frozen-lockfile
     - pnpm lint
     - pnpm test:run --coverage
@@ -95,18 +95,18 @@ test-web:
   artifacts:
     when: always
     reports:
-      junit: web/report.xml
+      junit: clients/web/report.xml
       coverage_report:
         coverage_format: cobertura
-        path: web/coverage/cobertura-coverage.xml
+        path: clients/web/coverage/cobertura-coverage.xml
     paths:
-      - web/coverage/
-      - web/report.xml
+      - clients/web/coverage/
+      - clients/web/report.xml
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - web/**/*
+        - clients/web/**/*
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # Test web-admin (Next.js)
@@ -119,14 +119,14 @@ test-web-admin:
   before_script:
     - corepack enable
   script:
-    - cd web-admin
+    - cd clients/web-admin
     - pnpm install --frozen-lockfile
     - pnpm lint
     - pnpm build
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - web-admin/**/*
+        - clients/web-admin/**/*
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # Test runner (Go)
@@ -233,12 +233,12 @@ verify-build-web:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - cd web
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../ci/web.Dockerfile -t web-verify:${CI_COMMIT_SHORT_SHA} .
+    - cd clients/web
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../../ci/web.Dockerfile -t web-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - web/**/*
+        - clients/web/**/*
         - ci/web.Dockerfile
 
 # Verify web-admin build (MR only)
@@ -252,12 +252,12 @@ verify-build-web-admin:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - cd web-admin
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../ci/web-admin.Dockerfile -t web-admin-verify:${CI_COMMIT_SHORT_SHA} .
+    - cd clients/web-admin
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../../ci/web-admin.Dockerfile -t web-admin-verify:${CI_COMMIT_SHORT_SHA} .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
-        - web-admin/**/*
+        - clients/web-admin/**/*
         - ci/web-admin.Dockerfile
 
 # Verify runner build (MR only)
@@ -335,14 +335,14 @@ build-web:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - cd web
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../ci/web.Dockerfile -t ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_IMAGE}:latest .
+    - cd clients/web
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../../ci/web.Dockerfile -t ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_IMAGE}:latest .
     - docker push ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${WEB_IMAGE}:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - web/**/*
+        - clients/web/**/*
         - ci/web.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -357,14 +357,14 @@ build-web-admin:
     - name: ${REGISTRY}/library/docker:dind
       alias: docker
   script:
-    - cd web-admin
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../ci/web-admin.Dockerfile -t ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_ADMIN_IMAGE}:latest .
+    - cd clients/web-admin
+    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../../ci/web-admin.Dockerfile -t ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_ADMIN_IMAGE}:latest .
     - docker push ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${WEB_ADMIN_IMAGE}:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - web-admin/**/*
+        - clients/web-admin/**/*
         - ci/web-admin.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -463,7 +463,7 @@ deploy:cn-prod:web:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - web/**/*
+        - clients/web/**/*
         - ci/web.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -487,7 +487,7 @@ deploy:cn-prod:web-admin:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - web-admin/**/*
+        - clients/web-admin/**/*
         - ci/web-admin.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -594,7 +594,7 @@ deploy:uswest-prod:web:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - web/**/*
+        - clients/web/**/*
         - ci/web.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
@@ -618,7 +618,7 @@ deploy:uswest-prod:web-admin:
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
-        - web-admin/**/*
+        - clients/web-admin/**/*
         - ci/web-admin.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 

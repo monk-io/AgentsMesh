@@ -39,10 +39,10 @@ jobs:
               - 'agentfile/**'
               - 'ci/backend.Dockerfile'
             web:
-              - 'web/**'
+              - 'clients/web/**'
               - 'ci/web.Dockerfile'
             web-admin:
-              - 'web-admin/**'
+              - 'clients/web-admin/**'
               - 'ci/web-admin.Dockerfile'
             relay:
               - 'relay/**'
@@ -67,11 +67,11 @@ jobs:
             use_ecr: true
           - service: web
             dockerfile: ci/web.Dockerfile
-            context: ./web
+            context: ./clients/web
             use_ecr: true
           - service: web-admin
             dockerfile: ci/web-admin.Dockerfile
-            context: ./web-admin
+            context: ./clients/web-admin
             use_ecr: true
           - service: relay
             dockerfile: ci/relay.Dockerfile

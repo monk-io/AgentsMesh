@@ -2,8 +2,8 @@
 /**
  * IPC contract test generator.
  *
- * Parses core/crates/node-bridge/src/commands_gen.rs (auto-gen from Rust) and emits
- * one .api.spec.ts per service group under desktop/e2e/tests/ipc/_generated/.
+ * Parses clients/core/crates/node-bridge/src/commands_gen.rs (auto-gen from Rust) and emits
+ * one .api.spec.ts per service group under clients/desktop/e2e/tests/ipc/_generated/.
  *
  * Each emitted spec has smoke tests per handler:
  *   - can-invoke: calls the handler with default args and asserts it doesn't crash the bridge
@@ -20,9 +20,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const REPO_ROOT = resolve(__dirname, "..");
-const COMMANDS_FILE = resolve(REPO_ROOT, "core/crates/node-bridge/src/commands_gen.rs");
-const OUT_DIR = resolve(REPO_ROOT, "desktop/e2e/tests/ipc/_generated");
-const SCHEMA_FILE = resolve(REPO_ROOT, "desktop/e2e/tests/ipc/schema.ts");
+const COMMANDS_FILE = resolve(REPO_ROOT, "clients/core/crates/node-bridge/src/commands_gen.rs");
+const OUT_DIR = resolve(REPO_ROOT, "clients/desktop/e2e/tests/ipc/_generated");
+const SCHEMA_FILE = resolve(REPO_ROOT, "clients/desktop/e2e/tests/ipc/schema.ts");
 
 interface IpcMethod {
   name: string;

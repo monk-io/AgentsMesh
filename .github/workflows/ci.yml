@@ -240,22 +240,21 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: web
         run: pnpm install --frozen-lockfile
 
       - name: Run lint
-        working-directory: web
+        working-directory: clients/web
         run: pnpm lint
 
       - name: Run type check
-        working-directory: web
+        working-directory: clients/web
         run: pnpm type-check
 
       - name: Run tests
-        working-directory: web
+        working-directory: clients/web
         run: pnpm test:coverage
 
   # ===========================================================================
@@ -278,18 +277,17 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          cache-dependency-path: web-admin/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: web-admin
         run: pnpm install --frozen-lockfile
 
       - name: Run lint
-        working-directory: web-admin
+        working-directory: clients/web-admin
         run: pnpm lint
 
       - name: Run build
-        working-directory: web-admin
+        working-directory: clients/web-admin
         run: pnpm build
 
   # ===========================================================================
@@ -310,11 +308,11 @@ jobs:
             use_ecr: true
           - service: web
             dockerfile: ci/web.Dockerfile
-            context: ./web
+            context: ./clients/web
             use_ecr: true
           - service: web-admin
             dockerfile: ci/web-admin.Dockerfile
-            context: ./web-admin
+            context: ./clients/web-admin
             use_ecr: true
           - service: runner
             dockerfile: ci/runner.Dockerfile

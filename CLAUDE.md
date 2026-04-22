@@ -75,7 +75,7 @@ go test -v ./internal/service/... -run TestAuth  # Run specific test
 ### Web (Next.js)
 
 ```bash
-cd web
+cd clients/web
 pnpm install                     # Install dependencies
 pnpm build                       # Production build
 pnpm lint                        # ESLint
@@ -87,7 +87,7 @@ pnpm test:coverage               # Test coverage
 ### Web-Admin (Next.js)
 
 ```bash
-cd web-admin
+cd clients/web-admin
 pnpm install                     # Install dependencies
 pnpm build                       # Production build
 pnpm lint                        # ESLint
@@ -210,7 +210,7 @@ backend/
 ## Web Structure
 
 ```
-web/src/
+clients/web/src/
 ├── app/                  # Next.js App Router
 │   ├── (auth)/           # Auth pages (login, register)
 │   ├── (dashboard)/      # Dashboard pages
@@ -226,7 +226,7 @@ web/src/
 ## Web-Admin Structure (Admin Console)
 
 ```
-web-admin/src/
+clients/web-admin/src/
 ├── app/                  # Next.js App Router (basePath: /admin)
 │   ├── login/            # GitLab SSO login page
 │   ├── auth/callback/    # OAuth callback handler
