@@ -1,0 +1,44 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//build_defs/ios:rust_xcframework.bzl", "rust_xcframework")
+
+# FFI layer — Rust-facing library + the iOS XCFramework assembly target.
+#
+# The library target compiles as a staticlib so it can land inside an
+# XCFramework. The Swift + Kotlin bindings are generated from uniffi's
+# proc-macros during compilation; running the `rust_xcframework` macro
+# below materializes them into a consumable XCFramework.
+rust_library(
+    name = "ffi",
+    srcs = glob(["src/**/*.rs"]),
+    crate_features = ["staticlib"],
+    crate_name = "agentsmesh_ffi",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/api-client:api_client",
+        "//clients/core/crates/auth",
+        "//clients/core/crates/protocol",
+        "//clients/core/crates/services",
+        "//clients/core/crates/types",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:thiserror",
+        "@crates//:tokio",
+        "@crates//:uniffi",
+    ],
+)
+
+rust_test(
+    name = "ffi_test",
+    crate = ":ffi",
+    edition = "2021",
+)
+
+# Phase 3b — produce `AgentsMeshCore.xcframework` + Swift glue so the iOS
+# app's `swift_library` can consume them directly from `clients/ios/`.
+rust_xcframework(
+    name = "AgentsMeshCore",
+    crate = ":ffi",
+    module_name = "AgentsMeshCoreFFI",
+    visibility = ["//clients/ios:__subpackages__"],
+)

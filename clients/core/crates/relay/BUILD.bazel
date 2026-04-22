@@ -1,0 +1,29 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+# Relay WebSocket connection pool + terminal session management. Sits
+# above protocol (framing) and transport (the socket itself).
+rust_library(
+    name = "relay",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_relay",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/protocol",
+        "//clients/core/crates/transport",
+        "//clients/core/crates/types",
+        "@crates//:rand",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:thiserror",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:urlencoding",
+    ],
+)
+
+rust_test(
+    name = "relay_test",
+    crate = ":relay",
+    edition = "2021",
+)

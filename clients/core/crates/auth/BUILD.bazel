@@ -1,0 +1,31 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+# Auth manager — OAuth2 code exchange, refresh-token rotation, org switch.
+# Depends on api-client for HTTP and types for the wire shapes.
+rust_library(
+    name = "auth",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_auth",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/api-client:api_client",
+        "//clients/core/crates/types",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:thiserror",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "auth_test",
+    crate = ":auth",
+    edition = "2021",
+    deps = [
+        "@crates//:tokio-test",
+        "@crates//:wiremock",
+    ],
+)

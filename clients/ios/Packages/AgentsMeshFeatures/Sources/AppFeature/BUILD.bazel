@@ -1,0 +1,17 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+# Root app reducer + dashboard composition. Wires all child features
+# together and owns the top-level navigation state.
+swift_library(
+    name = "AppFeature",
+    srcs = glob(["*.swift"]),
+    module_name = "AppFeature",
+    visibility = ["//clients/ios:__subpackages__"],
+    deps = [
+        "//clients/ios/Packages/AgentsMeshCore",
+        "//clients/ios/Packages/AgentsMeshFeatures/Sources/AuthFeature",
+        "//clients/ios/Packages/AgentsMeshFeatures/Sources/TerminalFeature",
+        "//clients/ios/Packages/AgentsMeshFeatures/Sources/WorkspaceFeature",
+        "@swiftpkg_swift_composable_architecture//:ComposableArchitecture",
+    ],
+)

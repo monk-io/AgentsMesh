@@ -1,0 +1,16 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+# Auth flow reducers + SwiftUI views (login screen, session refresh).
+# CoreClient here is the TCA DependencyClient wrapper over the Rust
+# AgentsMeshCore singleton.
+swift_library(
+    name = "AuthFeature",
+    srcs = glob(["*.swift"]),
+    module_name = "AuthFeature",
+    visibility = ["//clients/ios:__subpackages__"],
+    deps = [
+        "//clients/ios/Packages/AgentsMeshCore",
+        "//clients/ios/Packages/AgentsMeshFeatures/Sources/DesignSystem",
+        "@swiftpkg_swift_composable_architecture//:ComposableArchitecture",
+    ],
+)

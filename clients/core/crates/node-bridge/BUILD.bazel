@@ -1,0 +1,33 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//build_defs/rust:napi.bzl", "napi_rust_library")
+
+# NAPI layer — Electron's main process loads this as a `.node` addon.
+# The rust_library compiles as a cdylib; napi_rust_library renames
+# the platform-specific dylib suffix (`.dylib`/`.so`/`.dll`) → `.node`.
+rust_library(
+    name = "node_bridge_lib",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_node_bridge",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/api-client:api_client",
+        "//clients/core/crates/services",
+        "//clients/core/crates/types",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "node_bridge_test",
+    crate = ":node_bridge_lib",
+    edition = "2021",
+)
+
+napi_rust_library(
+    name = "node_bridge",
+    crate = ":node_bridge_lib",
+    visibility = ["//clients/desktop:__subpackages__"],
+)

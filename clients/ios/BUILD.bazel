@@ -1,0 +1,28 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+load("//build_defs/ios:ios_product.bzl", "ios_app")
+
+# The @main entry point has to live in a Swift library target so
+# ios_application can link it. Keep it small — all real logic is in
+# AppFeature.
+swift_library(
+    name = "AgentsMesh_entry",
+    srcs = ["App/AgentsMeshApp.swift"],
+    module_name = "AgentsMeshEntry",
+    deps = [
+        "//clients/ios/Packages/AgentsMeshCore",
+        "//clients/ios/Packages/AgentsMeshFeatures/Sources/AppFeature",
+        "@swiftpkg_swift_composable_architecture//:ComposableArchitecture",
+    ],
+)
+
+# Assembles the final iOS app binary. Produces both the `.app` target
+# and a `:AgentsMesh_xcodeproj` target for day-to-day development in
+# Xcode (replaces `xcodegen generate`).
+ios_app(
+    name = "AgentsMesh",
+    bundle_id = "ai.agentsmesh.ios",
+    infoplists = ["//clients/ios/App:Info.plist"],
+    minimum_os_version = "16.0",
+    visibility = ["//visibility:public"],
+    deps = [":AgentsMesh_entry"],
+)
