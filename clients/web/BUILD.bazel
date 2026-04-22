@@ -1,0 +1,64 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//build_defs/web:next.bzl", "next_app")
+load("//build_defs/web:next_oci.bzl", "next_oci_image")
+
+# Pull every npm dep listed in package.json into a local `node_modules`
+# virtual tree that Bazel understands. aspect_rules_js reads the root
+# pnpm-lock and hydrates this target lazily.
+npm_link_all_packages(name = "node_modules")
+
+# TypeScript sources — everything under src/. tsc runs via the pinned
+# TypeScript from MODULE.bazel, not the one in node_modules, so builds
+# stay hermetic.
+ts_project(
+    name = "src",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+        ],
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+    declaration = True,
+    tsconfig = "tsconfig.json",
+    deps = [":node_modules"],
+)
+
+# Shared data for the three Next.js modes. Config files + the local
+# node_modules link + the Rust-produced WASM package.
+_NEXT_DATA = [
+    "next.config.ts",
+    "postcss.config.mjs",
+    "package.json",
+    "tsconfig.json",
+    ":node_modules",
+    "//clients/core/crates/wasm:wasm_pkg",
+]
+
+next_app(
+    name = "next",
+    srcs = [":src"],
+    data = _NEXT_DATA,
+    next_js_binary = ":node_modules/next/package:next_bin",
+)
+
+# Production container for the main marketing + dashboard web app.
+next_oci_image(
+    name = "image",
+    exposed_ports = ["3000/tcp"],
+    repository = "registry.corp.agentsmesh.ai/web",
+    start_binary = ":next_start_binary",
+)
+
+# Re-exported so other Bazel targets (e2e tests, docker compose) can
+# reach the build output directly.
+js_library(
+    name = "web",
+    srcs = [":next"],
+    visibility = ["//visibility:public"],
+)

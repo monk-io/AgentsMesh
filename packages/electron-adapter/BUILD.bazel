@@ -1,0 +1,18 @@
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+npm_link_all_packages(name = "node_modules")
+
+# Electron adapter — thin glue that lets the desktop renderer talk to
+# the N-API addon via typed IPC. Consumed by clients/desktop.
+ts_project(
+    name = "electron_adapter",
+    srcs = glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.test.ts"],
+    ),
+    declaration = True,
+    tsconfig = "tsconfig.json",
+    visibility = ["//visibility:public"],
+    deps = [":node_modules"],
+)

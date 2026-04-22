@@ -1,0 +1,20 @@
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+npm_link_all_packages(name = "node_modules")
+
+# Service-interface — TypeScript type declarations that describe every
+# client-side service boundary (web, desktop, test harness). The runtime
+# impls (service-runtime, electron-adapter, generated IPC stubs) depend
+# on this for type safety.
+ts_project(
+    name = "service_interface",
+    srcs = glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.test.ts"],
+    ),
+    declaration = True,
+    tsconfig = "tsconfig.json",
+    visibility = ["//visibility:public"],
+    deps = [":node_modules"],
+)

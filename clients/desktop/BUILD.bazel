@@ -1,0 +1,48 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//build_defs/web:electron.bzl", "electron_app")
+
+npm_link_all_packages(name = "node_modules")
+
+# Main-process TS (lives in `src/main/`). Produces a Node-loadable
+# bundle; electron-vite handles any esbuild tweaks we need.
+ts_project(
+    name = "main",
+    srcs = glob([
+        "src/main/**/*.ts",
+        "src/preload/**/*.ts",
+    ]),
+    declaration = True,
+    tsconfig = "tsconfig.json",
+    deps = [":node_modules"],
+)
+
+# Renderer (React/SwiftUI-adjacent Electron renderer). Built via
+# electron-vite downstream; we just package the TS here.
+ts_project(
+    name = "renderer",
+    srcs = glob([
+        "src/renderer/**/*.ts",
+        "src/renderer/**/*.tsx",
+    ]),
+    declaration = True,
+    tsconfig = "tsconfig.json",
+    deps = [":node_modules"],
+)
+
+# Assemble the Electron on-disk layout. The N-API native addon is
+# pulled in from the Rust crate under clients/core/.
+electron_app(
+    name = "desktop",
+    main = ":main",
+    napi_addon = "//clients/core/crates/node-bridge",
+    renderer = ":renderer",
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "app",
+    srcs = [":desktop_app"],
+    visibility = ["//visibility:public"],
+)

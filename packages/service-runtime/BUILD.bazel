@@ -1,0 +1,23 @@
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+npm_link_all_packages(name = "node_modules")
+
+# Service-runtime — browser-side implementation of the service-interface
+# types. Wraps the Rust WASM package so web and desktop renderer code
+# share a single façade.
+ts_project(
+    name = "service_runtime",
+    srcs = glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.test.ts"],
+    ),
+    declaration = True,
+    tsconfig = "tsconfig.json",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":node_modules",
+        "//clients/core/crates/wasm:wasm_pkg",
+        "//packages/service-interface:service_interface",
+    ],
+)
