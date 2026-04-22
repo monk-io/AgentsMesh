@@ -8,6 +8,7 @@
 
 load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 load("@gazelle//:def.bzl", "gazelle")
+load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
 
 # gazelle:prefix github.com/anthropics/agentsmesh
 # gazelle:proto disable_global
@@ -25,6 +26,13 @@ exports_files(
 # `bazel run //:gazelle` regenerates BUILD.bazel files for every Go package
 # under backend/, runner/, relay/, agentfile/, proto/.
 gazelle(name = "gazelle")
+
+# `bazel run @rules_rust//tools/rust_analyzer:gen_rust_project` emits a
+# rust-project.json at the workspace root that rust-analyzer picks up
+# automatically. Required once we delete Cargo.toml (Phase 2 final step);
+# safe to run now alongside Cargo (rust-analyzer prefers Cargo metadata
+# when both are present).
+rust_analyzer_dependencies()
 
 # Runs buildifier on every BUILD/MODULE/.bzl file. CI enforces this via
 # `bazel run //:buildifier_check`.

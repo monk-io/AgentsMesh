@@ -1,3 +1,7 @@
+# MIGRATION NOTE — Bazel migration in progress.
+# Parallel to .github/workflows/bazel.yml; see
+# .claude/plans/snuggly-spinning-dewdrop.md for the cutover plan.
+
 # Include runner release pipeline (triggered by tags)
 include:
   - local: 'runner/.gitlab-ci.yml'

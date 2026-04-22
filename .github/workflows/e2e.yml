@@ -1,3 +1,8 @@
+# MIGRATION NOTE — Bazel migration in progress.
+# Legacy workflow, authoritative until .github/workflows/bazel.yml lands
+# all per-language jobs green (see .claude/plans/snuggly-spinning-dewdrop.md).
+# Once the Bazel CI reaches parity, delete this file.
+
 name: E2E Tests
 
 on:
