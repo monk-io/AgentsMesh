@@ -1,3 +1,7 @@
+# DEPRECATED --- Bazel migration
+# Replacement: //clients/ios:AgentsMesh (build) and //clients/ios:AgentsMesh_xcodeproj (IDE)
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # AgentsMesh iOS — build helpers.
 #
 # Why symlinks: `Package.swift` cannot reach files outside its root, and we

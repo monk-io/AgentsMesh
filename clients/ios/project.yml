@@ -1,3 +1,7 @@
+# DEPRECATED --- Bazel migration
+# Replacement: //clients/ios:AgentsMesh_xcodeproj (generated via rules_xcodeproj)
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # Declarative Xcode project spec consumed by XcodeGen (brew install xcodegen).
 # Produces `AgentsMesh.xcodeproj`. The project references the local SPM
 # packages under `Packages/` — everything outside the Xcode project

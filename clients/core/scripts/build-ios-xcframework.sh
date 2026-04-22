@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# DEPRECATED --- Bazel migration
+# Replacement: bazel build //clients/core/crates/ffi:AgentsMeshCore
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # Build AgentsMeshCore.xcframework for iOS (device + simulator universal).
 #
 # Output:

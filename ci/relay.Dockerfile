@@ -1,3 +1,7 @@
+# DEPRECATED --- Bazel migration
+# Replacement: //relay/cmd/relay:image
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # Build stage
 # Build context should be project root (not relay/)
 # REGISTRY_PREFIX: Use internal mirror for GitLab CI (e.g., registry.corp.agentsmesh.ai/library/)

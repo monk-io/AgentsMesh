@@ -1,3 +1,7 @@
+# DEPRECATED --- Bazel migration
+# Replacement: //backend/cmd/server:image
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # Build stage
 # Build context should be project root (not backend/)
 # REGISTRY_PREFIX: Use internal mirror for GitLab CI (e.g., registry.corp.agentsmesh.ai/library/)

@@ -1,3 +1,7 @@
+# DEPRECATED --- Bazel migration
+# Replacement: //clients/web-admin:image
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # REGISTRY_PREFIX: Use internal mirror for GitLab CI (e.g., registry.corp.agentsmesh.ai/library/)
 #                  Leave empty for Docker Hub (GitHub Actions)
 ARG REGISTRY_PREFIX=

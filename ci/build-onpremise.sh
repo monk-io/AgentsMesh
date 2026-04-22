@@ -1,4 +1,8 @@
 #!/bin/bash
+# DEPRECATED --- Bazel migration
+# Replacement: //deploy/onpremise:bundle
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # =============================================================================
 # Build OnPremise Deployment Images
 # =============================================================================

@@ -1,3 +1,7 @@
+# DEPRECATED --- Bazel migration
+# Replacement: //runner/cmd/runner:image
+# Kept until .github/workflows/bazel.yml is authoritative, then delete.
+#
 # Build stage
 # Build context should be project root (not runner/)
 # REGISTRY_PREFIX: Use internal mirror for GitLab CI (e.g., registry.corp.agentsmesh.ai/library/)
