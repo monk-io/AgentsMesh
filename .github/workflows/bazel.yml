@@ -4,10 +4,11 @@ name: Bazel
 # Bazel targets where they exist (Go tests, Rust tests, buildifier,
 # Vitest) and falls back to pnpm / go / docker CLIs for jobs whose
 # Bazel equivalents aren't wired yet (lint, Next.js build, Docker
-# image verify, Playwright e2e).
+# image verify, Playwright e2e, iOS XCFramework).
 #
-# Legacy ci.yml and e2e.yml are deleted; this file is the only PR gate
-# alongside ios.yml (macOS) and release.yml (tag-gated).
+# Legacy ci.yml / e2e.yml / ios.yml are deleted; this file is the only
+# PR gate. release.yml (tag-triggered) is kept separate — it's the
+# deploy pipeline, not a CI gate.
 
 on:
   push:
@@ -263,9 +264,49 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
+  ios-xcframework:
+    name: Build AgentsMeshCore.xcframework
+    runs-on: macos-14  # arm64 runner with Xcode 15+
+    timeout-minutes: 30
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - name: Cache Cargo registry + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/core -> target
+          key: ios-xcframework-v1
+      # Build via the shell wrapper until the Bazel-side
+      # `rust_xcframework` macro (build_defs/ios/rust_xcframework.bzl)
+      # clears its rules_apple/rules_rust attribute alignment issues.
+      # Target: `bazel build //clients/core/crates/ffi:AgentsMeshCore`.
+      - name: Build XCFramework
+        run: bash clients/core/scripts/build-ios-xcframework.sh
+      - name: Inspect output
+        run: |
+          ls -la clients/core/ios-framework/AgentsMeshCore.xcframework/
+          wc -l clients/core/ios-framework/Generated/AgentsMeshCore.swift
+      - name: Package artifact
+        run: |
+          cd clients/core/ios-framework
+          zip -r AgentsMeshCore.xcframework.zip AgentsMeshCore.xcframework Generated
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgentsMeshCore-xcframework
+          path: clients/core/ios-framework/AgentsMeshCore.xcframework.zip
+          retention-days: 14
+
   # =========================================================================
-  # TODO: jobs below are in progress. They remain in legacy workflows
-  # (ios.yml / release.yml) until each unblocks here.
+  # TODO: Bazel-native replacements tracked below. Each jobs above
+  # currently uses shell/CLI because the Bazel target isn't ready:
   # =========================================================================
 
   # next-build:
@@ -279,11 +320,13 @@ jobs:
   #   enabling.
 
   # oci-images:
-  #   Ready (go_oci_image macro green in Phase 1) but we want the
-  #   OCI-load/run smoke test in place before replacing release.yml's
-  #   docker build path.
+  #   rules_oci push targets //{backend,runner,relay}/cmd/*:image_push
+  #   exist; release.yml will wire them once dual-registry + semver
+  #   tag generation is ported (currently docker/metadata-action does
+  #   that).
 
-  # ios-xcframework:
+  # ios-xcframework (Bazel-native):
   #   Blocked on: rules_apple fork attr alignment for
   #   apple_static_xcframework + rust_static_library slicing.
-  #   Lives in ios.yml (macOS runners) until then.
+  #   The shell wrapper job above keeps CI green until the Bazel
+  #   target `//clients/core/crates/ffi:AgentsMeshCore` resolves.

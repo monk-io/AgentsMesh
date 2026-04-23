@@ -1,7 +1,24 @@
-# MIGRATION NOTE — Bazel migration in progress.
-# Legacy workflow, authoritative until .github/workflows/bazel.yml lands
-# all per-language jobs green (see .claude/plans/snuggly-spinning-dewdrop.md).
-# Once the Bazel CI reaches parity, delete this file.
+# Production release pipeline — triggered by main branch pushes and
+# version tags. Separate from bazel.yml (PR gate) because this workflow
+# runs against self-hosted deploy runners and coordinates dual-region
+# rollout (US West + CN) plus GoReleaser for the runner CLI.
+#
+# Image build strategy:
+#   - backend / runner / relay: via `docker/build-push-action` today.
+#     Bazel alternatives exist (`//backend/cmd/server:image_push`,
+#     etc. — see build_defs/docker/go_oci_image.bzl) but their
+#     `repository` attributes are pinned to registry.corp.agentsmesh.ai
+#     and don't yet emit the dual-registry + semver tag set that
+#     docker/metadata-action generates. Migration to rules_oci push
+#     is tracked in the "TODO: oci-images" comment at the bottom of
+#     bazel.yml.
+#   - web / web-admin: TEMPORARILY DISABLED. The Dockerfiles COPY
+#     pnpm-lock.yaml from the per-service context (./clients/web); the
+#     Bazel migration moved pnpm-lock to the workspace root. Merging
+#     a web change to main will skip the image build (and the deploy
+#     step that depends on it will be skipped by the `changes` filter
+#     producing no-op). Fix path: Bazel-native next_app() image target
+#     or a Dockerfile rewrite that COPYs from the repo root.
 
 name: Release
 
@@ -70,13 +87,16 @@ jobs:
             dockerfile: ci/backend.Dockerfile
             context: .
             use_ecr: true
-          - service: web
-            dockerfile: ci/web.Dockerfile
-            context: ./clients/web
-            use_ecr: true
-          - service: web-admin
-            dockerfile: ci/web-admin.Dockerfile
-            context: ./clients/web-admin
+          # web + web-admin Dockerfiles COPY pnpm-lock.yaml from the
+          # per-service context (./clients/web). After the Bazel
+          # migration the lockfile lives at the workspace root, so
+          # `npm i` falls back and chokes on `workspace:*` deps.
+          # Re-enable once the Bazel OCI targets (//clients/web:image,
+          # //clients/web-admin:image) are wired, or after the
+          # Dockerfiles are rewritten to COPY from the repo root.
+          - service: runner
+            dockerfile: ci/runner.Dockerfile
+            context: .
             use_ecr: true
           - service: relay
             dockerfile: ci/relay.Dockerfile
