@@ -2,7 +2,6 @@
   "name": "agentsmesh-workspace-root",
   "private": true,
   "description": "Workspace root for Bazel aspect_rules_js — pnpm workspace packages live under clients/ and packages/.",
-  "packageManager": "pnpm@10.0.0",
   "devDependencies": {
     "@playwright/test": "1.50.1"
   },
