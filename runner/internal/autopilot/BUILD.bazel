@@ -33,7 +33,7 @@ go_library(
     deps = [
         "//proto/gen/go/runner/v1:runner",
         "//runner/internal/acp",
-        "//runner/internal/acp/claude",
+        "//runner/internal/agents/claude",
         "//runner/internal/logger",
         "//runner/internal/safego",
         "//runner/internal/textutil",

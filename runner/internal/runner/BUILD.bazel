@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "runner",
     srcs = [
+        "agents_import.go",
         "autopilot_store.go",
         "handler_autopilot.go",
         "handler_events.go",
@@ -63,8 +64,13 @@ go_library(
     deps = [
         "//proto/gen/go/runner/v1:runner",
         "//runner/internal/acp",
-        "//runner/internal/acp/claude",
-        "//runner/internal/acp/codex",
+        "//runner/internal/agentkit",
+        "//runner/internal/agents/aider",
+        "//runner/internal/agents/claude",
+        "//runner/internal/agents/codex",
+        "//runner/internal/agents/gemini",
+        "//runner/internal/agents/loopal",
+        "//runner/internal/agents/opencode",
         "//runner/internal/autopilot",
         "//runner/internal/cache",
         "//runner/internal/client",
@@ -87,7 +93,6 @@ go_library(
         "//runner/internal/tokenusage",
         "//runner/internal/updater",
         "//runner/internal/workspace",
-        "@com_github_pelletier_go_toml_v2//:go-toml",
         "@com_github_thejerf_suture_v4//:suture",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
@@ -166,6 +171,7 @@ go_test(
     deps = [
         "//proto/gen/go/runner/v1:runner",
         "//runner/internal/acp",
+        "//runner/internal/agentkit",
         "//runner/internal/autopilot",
         "//runner/internal/client",
         "//runner/internal/config",

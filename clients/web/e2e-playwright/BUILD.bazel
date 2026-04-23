@@ -24,8 +24,8 @@ playwright_test(
             "fixtures/**/*.ts",
             "pages/**/*.ts",
         ],
-        exclude = ["node_modules/**"],
         allow_empty = True,
+        exclude = ["node_modules/**"],
     ),
     config = "playwright.config.ts",
     data = [

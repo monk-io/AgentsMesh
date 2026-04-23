@@ -11,6 +11,7 @@ go_library(
     importpath = "github.com/anthropics/agentsmesh/runner/internal/monitor",
     visibility = ["//runner:__subpackages__"],
     deps = [
+        "//runner/internal/agentkit",
         "//runner/internal/logger",
         "//runner/internal/process",
         "//runner/internal/safego",
@@ -34,5 +35,8 @@ go_test(
         "claude_registration_test.go",
     ],
     embed = [":monitor"],
-    deps = ["//runner/internal/terminal/detector"],
+    deps = [
+        "//runner/internal/agents/claude",
+        "//runner/internal/terminal/detector",
+    ],
 )

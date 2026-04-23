@@ -42,6 +42,7 @@ napi_rust_library(
     proc_macro_deps = [
         "@crates//:napi-derive",
     ],
+    visibility = ["//clients/desktop:__subpackages__"],
     deps = [
         "//clients/core/crates/api-client:api_client",
         "//clients/core/crates/auth",
@@ -54,7 +55,6 @@ napi_rust_library(
         "@crates//:serde_json",
         "@crates//:tokio",
     ],
-    visibility = ["//clients/desktop:__subpackages__"],
 )
 
 # npm package wrapping the .node addon so pnpm's
