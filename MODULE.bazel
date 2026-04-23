@@ -350,7 +350,11 @@ bazel_dep(name = "rules_apple", version = "4.1.1", repo_name = "build_bazel_rule
 # SHA as the AIO project so we don't multiply the maintenance surface.
 git_override(
     module_name = "rules_apple",
-    branch = "master",
+    # Pinned to a concrete commit so Bazel caches the checkout and
+    # doesn't hit `git fetch origin master` on every build — GitHub's
+    # fork endpoint has been flaky with HTTP 500s. Bump by updating
+    # this SHA; the AIO project keeps the same fork in lockstep.
+    commit = "44d64ce8c540b60b72f17e87a61099c20d36be6d",
     remote = "https://github.com/yishuiliunian/rules_apple.git",
 )
 
