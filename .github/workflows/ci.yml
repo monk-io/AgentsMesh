@@ -311,14 +311,12 @@ jobs:
             dockerfile: ci/backend.Dockerfile
             context: .
             use_ecr: true
-          - service: web
-            dockerfile: ci/web.Dockerfile
-            context: ./clients/web
-            use_ecr: true
-          - service: web-admin
-            dockerfile: ci/web-admin.Dockerfile
-            context: ./clients/web-admin
-            use_ecr: true
+          # web + web-admin skipped during Bazel migration — their
+          # Dockerfiles still expect pnpm-lock.yaml inside the service
+          # context (./clients/web), but aspect_rules_js now hosts the
+          # lock at the workspace root. Rebuild via Bazel OCI once the
+          # //clients/web:image + //clients/web-admin:image targets land
+          # (tracked in bazel.yml under "TODO: oci-images").
           - service: runner
             dockerfile: ci/runner.Dockerfile
             context: .
