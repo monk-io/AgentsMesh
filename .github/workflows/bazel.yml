@@ -244,40 +244,40 @@ jobs:
       - uses: actions/checkout@v4
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
-      - name: Cache Cargo registry + target
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: clients/core -> target
-          key: ios-xcframework-v1
       - uses: bazel-contrib/setup-bazel@0.9.1
         with:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-      # Bazel label is the single entrypoint. The sh_binary under
-      # build_defs/ios/rust_xcframework.bzl shells out to
-      # build-ios-xcframework.sh (cargo + lipo + uniffi-bindgen +
-      # xcodebuild); pure-Bazel replacement is still TODO.
+      # Pure-Bazel XCFramework pipeline: rules_rust supplies the iOS
+      # triples (extra_target_triples in MODULE.bazel), our
+      # rust_xcframework macro (build_defs/ios) transitions the
+      # rust_static_library through three iOS platforms, lipos the
+      # simulator pair, runs uniffi-bindgen, and assembles the tree
+      # artifact. No cargo/rustup setup needed — Bazel handles it.
       - name: Build XCFramework
-        run: bazel run //clients/core/crates/ffi:AgentsMeshCore
+        run: bazel build //clients/core/crates/ffi:AgentsMeshCore //clients/core/crates/ffi:AgentsMeshCore_swift
       - name: Inspect output
         run: |
-          ls -la clients/core/ios-framework/AgentsMeshCore.xcframework/
-          wc -l clients/core/ios-framework/Generated/AgentsMeshCore.swift
+          ls -la bazel-bin/clients/core/crates/ffi/AgentsMeshCore.xcframework/
+          wc -l bazel-bin/clients/core/crates/ffi/AgentsMeshCore_bindings_out/AgentsMeshCore.swift
       - name: Package artifact
         run: |
-          cd clients/core/ios-framework
-          zip -r AgentsMeshCore.xcframework.zip AgentsMeshCore.xcframework Generated
+          # Stage the bazel-built xcframework next to the Swift glue
+          # (both live under bazel-bin/). Use ditto to preserve the
+          # read-only tree artifact permissions; `zip` chokes on them.
+          mkdir -p dist
+          ditto bazel-bin/clients/core/crates/ffi/AgentsMeshCore.xcframework \
+                dist/AgentsMeshCore.xcframework
+          cp bazel-bin/clients/core/crates/ffi/AgentsMeshCore_bindings_out/AgentsMeshCore.swift \
+             dist/AgentsMeshCore.swift
+          cd dist && zip -r AgentsMeshCore-xcframework.zip \
+                          AgentsMeshCore.xcframework AgentsMeshCore.swift
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AgentsMeshCore-xcframework
-          path: clients/core/ios-framework/AgentsMeshCore.xcframework.zip
+          path: dist/AgentsMeshCore-xcframework.zip
           retention-days: 14
 
   # =========================================================================
@@ -300,9 +300,3 @@ jobs:
   #   exist; release.yml will wire them once dual-registry + semver
   #   tag generation is ported (currently docker/metadata-action does
   #   that).
-
-  # ios-xcframework (Bazel-native):
-  #   Blocked on: rules_apple fork attr alignment for
-  #   apple_static_xcframework + rust_static_library slicing.
-  #   The shell wrapper job above keeps CI green until the Bazel
-  #   target `//clients/core/crates/ffi:AgentsMeshCore` resolves.

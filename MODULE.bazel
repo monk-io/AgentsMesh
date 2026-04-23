@@ -82,6 +82,16 @@ bazel_dep(name = "rules_rust", version = "0.68.1")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
+    # iOS triples register a per-target rustc/std slice so the
+    # build_defs/ios:rust_xcframework macro can transition into them
+    # without `rustup target add`. macOS host runners carry the iOS SDK;
+    # Linux workers resolve to the host toolchain only and skip the iOS
+    # jobs via target_compatible_with.
+    extra_target_triples = [
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim",
+        "x86_64-apple-ios",
+    ],
     versions = ["1.88.0"],
 )
 use_repo(rust, "rust_toolchains")
@@ -273,7 +283,20 @@ crate.spec(
     package = "console_error_panic_hook",
     version = "0.1",
 )
-crate.from_specs()
+crate.from_specs(
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "aarch64-apple-ios",
+        "aarch64-apple-ios-sim",
+        "aarch64-unknown-linux-gnu",
+        "wasm32-unknown-unknown",
+        "wasm32-wasip1",
+        "x86_64-apple-ios",
+        "x86_64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-nixos-gnu",
+    ],
+)
 use_repo(crate, "crates")
 
 ###############################################################################
