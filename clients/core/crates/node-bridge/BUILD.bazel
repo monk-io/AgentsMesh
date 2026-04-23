@@ -68,14 +68,14 @@ napi_rust_library(
 # transparently surfaces the pre-built artifact.
 npm_package(
     name = "pkg",
-    srcs = glob(
-        [
-            "*.node",
-            "index.js",
-            "index.d.ts",
-        ],
+    srcs = [
+        "index.d.ts",
+        "index.js",
+        "package.json",
+    ] + glob(
+        ["*.node"],
         allow_empty = True,
-    ) + ["package.json"],
+    ),
     visibility = ["//visibility:public"],
 )
 
@@ -86,13 +86,13 @@ npm_package(
 # Bazel (via `pnpm -C clients/desktop build`).
 js_library(
     name = "prebuilt_addon",
-    srcs = glob(
-        [
-            "*.node",
-            "index.js",
-            "index.d.ts",
-        ],
+    srcs = [
+        "index.d.ts",
+        "index.js",
+        "package.json",
+    ] + glob(
+        ["*.node"],
         allow_empty = True,
-    ) + ["package.json"],
+    ),
     visibility = ["//visibility:public"],
 )

@@ -1,7 +1,4 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("//build_defs/web:next.bzl", "next_app")
-load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
 load("//build_defs/web:vitest.bzl", "vitest_test")
@@ -31,22 +28,21 @@ ts_project(
     deps = [":node_modules"],
 )
 
-# Shared data for the three Next.js modes. Config files + the local
-# node_modules link + the Rust-produced WASM package.
-_NEXT_DATA = [
-    "next.config.ts",
-    "postcss.config.mjs",
-    "package.json",
-    "tsconfig.json",
-    ":node_modules",
-    "//clients/core/crates/wasm:wasm_pkg",
-]
-
 # next_app() and next_oci_image() are TEMPORARILY DISABLED — the
 # next_js_binary label format (`:node_modules/next/package:next_bin`) is
 # stale with the current aspect_rules_js (2.9.2), which rejects labels
 # with more than one colon. Re-enable after resolving the real bin
 # target name (likely `:node_modules/next/package/next_bin`).
+#
+# Reference data bundle for when we turn the Next.js targets back on:
+#   _NEXT_DATA = [
+#       "next.config.ts",
+#       "postcss.config.mjs",
+#       "package.json",
+#       "tsconfig.json",
+#       ":node_modules",
+#       "//clients/core/crates/wasm:wasm_pkg",
+#   ]
 #
 # next_app(
 #     name = "next",
