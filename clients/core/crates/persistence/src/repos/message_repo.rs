@@ -58,7 +58,8 @@ mod tests {
 
     fn make_msg(id: i64, channel_id: i64, content: &str) -> ChannelMessage {
         ChannelMessage {
-            id, channel_id, content: content.into(),
+            id, channel_id, body: content.into(),
+            content: None, mentions: None, reply_to: None,
             sender_user: None, sender_user_id: None, sender_pod: None, sender_pod_info: None,
             message_type: None, pod_key: None, metadata: None, edited_at: None, is_deleted: None, created_at: None,
         }

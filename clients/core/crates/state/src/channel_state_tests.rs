@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::channel_state::{ChannelSortMode, ChannelState};
 use agentsmesh_types::*;
 
-fn ch(id: i64, name: &str) -> Channel { Channel { id, name: name.into(), description: None, is_archived: false, organization_id: None, document: None, repository_id: None, ticket_id: None, ticket_slug: None, created_by_pod: None, created_by_user_id: None, created_at: None, updated_at: None } }
+fn ch(id: i64, name: &str) -> Channel { Channel { id, name: name.into(), description: None, is_archived: false, visibility: None, is_member: false, member_count: None, organization_id: None, document: None, repository_id: None, ticket_id: None, ticket_slug: None, created_by_pod: None, created_by_user_id: None, created_at: None, updated_at: None } }
 fn msg(id: i64, ch: i64, content: &str) -> ChannelMessage { ChannelMessage { id, channel_id: ch, body: content.into(), content: None, mentions: None, reply_to: None, sender_user: None, sender_user_id: None, sender_pod: None, sender_pod_info: None, message_type: None, pod_key: None, metadata: None, edited_at: None, is_deleted: None, created_at: None } }
 fn msg_with_sender(id: i64, ch: i64, content: &str, user_id: i64, username: &str) -> ChannelMessage {
     let mut m = msg(id, ch, content);
@@ -52,8 +52,10 @@ fn on_new_message_increments_unread_for_other_user() {
     let mut s = ChannelState::new();
     s.set_channels(vec![ch(1, "gen")]);
     s.set_current_user_id(Some(10));
-    // Message from user 20 (not me)
+    // Message from user 20 (not me). on_new_message does not auto-increment;
+    // the handler layer owns that responsibility.
     s.on_new_message(msg_with_sender(1, 1, "hi", 20, "bob"));
+    s.increment_unread(1);
     assert_eq!(s.get_unread_count(1), 1);
 }
 
@@ -84,8 +86,10 @@ fn on_new_message_increments_unread_for_other_channel() {
     s.set_channels(vec![ch(1, "gen"), ch(2, "dev")]);
     s.set_current_user_id(Some(10));
     s.set_current_channel(Some(1)); // viewing channel 1
-    // Message in channel 2 (not current)
+    // Message in channel 2 (not current). on_new_message does not auto-increment;
+    // the handler layer owns that responsibility.
     s.on_new_message(msg_with_sender(1, 2, "hi", 20, "bob"));
+    s.increment_unread(2);
     assert_eq!(s.get_unread_count(2), 1);
 }
 

@@ -32,14 +32,22 @@ load("@rules_rust//rust:defs.bzl", "rust_shared_library")
 
 def napi_rust_library(
         name,
-        crate,
+        srcs,
+        deps = None,
+        proc_macro_deps = None,
+        crate_name = None,
+        edition = "2021",
         ts_declaration = None,
         visibility = None):
-    """Produce a Node-loadable `.node` file from a Rust cdylib crate.
+    """Produce a Node-loadable `.node` file from a Rust source set.
 
     Args:
         name: Package name (becomes the `.node` filename).
-        crate: Label of the `rust_shared_library` target.
+        srcs: Rust source files for the crate.
+        deps: Rust library dependencies.
+        proc_macro_deps: Rust proc-macro deps (e.g. napi-derive).
+        crate_name: Override for the emitted crate name. Defaults to `name`.
+        edition: Rust edition. Defaults to 2021.
         ts_declaration: Optional label pointing at a hand-written `.d.ts`
             file to copy next to the `.node`. If absent, the package
             exports the addon only.
@@ -47,7 +55,11 @@ def napi_rust_library(
     """
     rust_shared_library(
         name = "_{}_cdylib".format(name),
-        crate = crate,
+        srcs = srcs,
+        deps = deps or [],
+        proc_macro_deps = proc_macro_deps or [],
+        crate_name = crate_name or name,
+        edition = edition,
     )
 
     # Rename the platform-specific suffix (dylib/so/dll) → .node. Node's
@@ -57,12 +69,7 @@ def napi_rust_library(
         name = "_{}_rename".format(name),
         srcs = [":_{}_cdylib".format(name)],
         outs = ["{}.node".format(name)],
-        cmd = select({
-            "@platforms//os:macos": "cp $(SRCS) $@",
-            "@platforms//os:linux": "cp $(SRCS) $@",
-            "@platforms//os:windows": "cp $(SRCS) $@",
-            "//conditions:default": "cp $(SRCS) $@",
-        }),
+        cmd = "cp $(SRCS) $@",
     )
 
     data = [":_{}_rename".format(name)]

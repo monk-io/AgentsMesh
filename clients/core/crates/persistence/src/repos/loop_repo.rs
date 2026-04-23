@@ -73,12 +73,9 @@ mod tests {
         let ld = LoopData {
             slug: "loop-1".into(),
             name: "Hourly".into(),
-            description: None,
             schedule: Some("0 * * * *".into()),
             is_enabled: true,
-            last_run_at: None,
-            created_at: None,
-            updated_at: None,
+            ..Default::default()
         };
         repo.save_loop(&ld).unwrap();
         let loaded = repo.get_loop("loop-1").unwrap().unwrap();
@@ -93,12 +90,8 @@ mod tests {
         let ld = LoopData {
             slug: "l".into(),
             name: "n".into(),
-            description: None,
-            schedule: None,
             is_enabled: false,
-            last_run_at: None,
-            created_at: None,
-            updated_at: None,
+            ..Default::default()
         };
         repo.save_loop(&ld).unwrap();
         assert_eq!(repo.list_loops().unwrap().len(), 1);
@@ -109,9 +102,7 @@ mod tests {
             id,
             loop_slug: loop_slug.into(),
             status: agentsmesh_types::LoopRunStatus::Completed,
-            started_at: None,
-            completed_at: None,
-            error_message: None,
+            ..Default::default()
         }
     }
 
@@ -166,9 +157,10 @@ mod tests {
     fn save_loop_overwrites() {
         let repo = make_repo();
         let mut ld = LoopData {
-            slug: "l1".into(), name: "A".into(), description: None,
-            schedule: None, is_enabled: true, last_run_at: None,
-            created_at: None, updated_at: None,
+            slug: "l1".into(),
+            name: "A".into(),
+            is_enabled: true,
+            ..Default::default()
         };
         repo.save_loop(&ld).unwrap();
         ld.name = "B".into();

@@ -242,12 +242,12 @@ mod api_pod_runner_tests {
     #[tokio::test]
     async fn authorize_runner() {
         let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/runners/3/authorize"))
+        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/runners/grpc/authorize"))
             .respond_with(ok(json!({}))).expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), Tok::org("acme"));
         let data = agentsmesh_types::AuthorizeRunnerRequest {
             auth_key: "k".into(), node_id: None,
         };
-        let _ = c.authorize_runner(3, &data).await.unwrap();
+        let _ = c.authorize_runner(&data).await.unwrap();
     }
 }

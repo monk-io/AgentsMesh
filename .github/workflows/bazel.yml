@@ -1,5 +1,11 @@
 name: Bazel
 
+# Green-only CI — every job in this workflow is individually verified
+# on the composed-honking-lemur branch before merge. Jobs that touch
+# targets still in progress (Next.js build, iOS, OCI images) live in
+# legacy workflows (ci.yml / e2e.yml / ios.yml / release.yml) and will
+# migrate one at a time.
+
 on:
   push:
     branches: [main]
@@ -11,9 +17,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Minimal job: Bazel's own consistency + buildifier formatting. Catches
-  # "I added a macro that doesn't parse" before the expensive Go/Rust
-  # jobs queue behind it.
   smoke:
     name: Smoke (info + buildifier)
     runs-on: ubuntu-latest
@@ -42,7 +45,9 @@ jobs:
           repository-cache: true
       # Full Go module graph — Bazel figures out what changed since the
       # last cached run and only recompiles / retests the affected
-      # packages.
+      # packages. CGO is enabled so SQLite-backed integration tests
+      # (backend/internal/testkit) compile; release builds flip to
+      # pure Go via --config=release.
       - run: bazel test //backend/... //runner/... //relay/... //agentfile/... //proto/...
 
   rust:
@@ -57,56 +62,29 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-      - run: bazel test //clients/core/...
+      # Every crate under clients/core/crates/... has a Bazel target;
+      # 11 test targets were green on the migration branch. The
+      # ffi/wasm/xcframework cross-language products are exercised by
+      # the iOS / web jobs (not yet on Bazel CI).
+      - run: bazel test //clients/core/crates/...
 
-  web:
-    name: Web + Web-Admin + Desktop (TS)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    needs: smoke
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
-        with:
-          bazelisk-cache: true
-          disk-cache: true
-          repository-cache: true
-      - run: bazel build //clients/web //clients/web-admin //clients/desktop
-      - run: bazel test //clients/...
+  # =========================================================================
+  # TODO: jobs below are in progress. They remain in legacy workflows
+  # (ci.yml / e2e.yml / ios.yml / release.yml) until each unblocks here.
+  # =========================================================================
 
-  ios:
-    name: iOS (Swift + XCFramework)
-    runs-on: macos-14
-    timeout-minutes: 60
-    needs: smoke
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
-        with:
-          bazelisk-cache: true
-          disk-cache: true
-          repository-cache: true
-      # `ios-simulator` transition is the fastest signal; device builds
-      # are reserved for tag releases.
-      - run: bazel build //clients/ios:AgentsMesh
-      - run: bazel test //clients/ios/...
+  # web:
+  #   Blocked on: next_app() label format for `next_js_binary`; Vitest
+  #   blocked on aspect_rules_js nested-importer ESM/CJS boundary.
+  #   Playwright e2e targets (//clients/web:e2e,
+  #   //clients/web/e2e-playwright:e2e, //clients/desktop:e2e) are
+  #   green locally but need dev-stack setup in CI before enabling.
 
-  oci-images:
-    name: OCI images (Go + Next.js)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [go, web]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
-        with:
-          bazelisk-cache: true
-          disk-cache: true
-          repository-cache: true
-      - run: |
-          bazel build \
-            //backend/cmd/server:image \
-            //runner/cmd/runner:image \
-            //relay/cmd/relay:image \
-            //clients/web:image
+  # ios:
+  #   Blocked on: rules_apple fork attr alignment for
+  #   apple_static_xcframework + rust_static_library slicing.
+
+  # oci-images:
+  #   Ready (go_oci_image macro green in Phase 1) but we want the
+  #   OCI-load/run smoke test in place before replacing release.yml's
+  #   docker build path.

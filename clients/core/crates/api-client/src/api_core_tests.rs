@@ -257,7 +257,7 @@ mod api_core_tests {
     async fn list_autopilots() {
         let s = MockServer::start().await;
         Mock::given(method("GET")).and(path("/api/v1/orgs/acme/autopilot-controllers"))
-            .respond_with(ok(json!({"controllers":[]})))
+            .respond_with(ok(json!([])))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
         let _ = c.list_autopilots().await.unwrap();

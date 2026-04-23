@@ -300,22 +300,20 @@ mod api_channel_extension_tests {
         Mock::given(method("POST"))
             .and(path("/api/v1/orgs/acme/channels/2/messages"))
             .and(body_json(json!({
-                "content":"hello","pod_key":null,
-                "message_type":null,"mentions":null
+                "content":"hello"
             })))
             .respond_with(ok(json!({
-                "id":1,"channel_id":2,"content":"hello"
+                "id":1,"channel_id":2,"body":"hello","content":"hello"
             })))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
         let data = agentsmesh_types::SendChannelMessageRequest {
-            content: "hello".into(),
+            content: serde_json::json!("hello"),
             pod_key: None,
-            message_type: None,
-            mentions: None,
+            reply_to: None,
         };
         let r = c.send_channel_message(2, &data).await.unwrap();
-        assert_eq!(r.content, "hello");
+        assert_eq!(r.body, "hello");
     }
 
     #[tokio::test]
@@ -386,15 +384,15 @@ mod api_channel_extension_tests {
             .and(path("/api/v1/orgs/acme/channels/2/messages/10"))
             .and(body_json(json!({"content":"edited"})))
             .respond_with(ok(json!({
-                "id":10,"channel_id":2,"content":"edited"
+                "id":10,"channel_id":2,"body":"edited","content":"edited"
             })))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
         let data = agentsmesh_types::EditChannelMessageRequest {
-            content: "edited".into(),
+            content: serde_json::json!("edited"),
         };
         let r = c.edit_channel_message(2, 10, &data).await.unwrap();
-        assert_eq!(r.content, "edited");
+        assert_eq!(r.body, "edited");
     }
 
     #[tokio::test]
@@ -465,7 +463,7 @@ mod api_channel_extension_tests {
     #[tokio::test]
     async fn toggle_skill_registry() {
         let s = MockServer::start().await;
-        Mock::given(method("POST"))
+        Mock::given(method("PUT"))
             .and(path("/api/v1/orgs/acme/skill-registries/3/toggle"))
             .and(body_json(json!({"disabled":true})))
             .respond_with(ok(json!({"id":3,"is_disabled":true})))
@@ -491,7 +489,7 @@ mod api_channel_extension_tests {
     async fn list_skill_registry_overrides() {
         let s = MockServer::start().await;
         Mock::given(method("GET"))
-            .and(path("/api/v1/orgs/acme/skill-registries/overrides"))
+            .and(path("/api/v1/orgs/acme/skill-registry-overrides"))
             .respond_with(ok(json!({"overrides":[]})))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));

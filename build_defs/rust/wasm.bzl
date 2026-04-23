@@ -21,7 +21,7 @@ Usage:
     )
 """
 
-load("@rules_rust//wasm_bindgen:defs.bzl", "rust_wasm_bindgen")
+load("@rules_rust_wasm_bindgen//:defs.bzl", "rust_wasm_bindgen")
 
 def rust_wasm_library(
         name,

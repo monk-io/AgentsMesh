@@ -8,11 +8,18 @@
 
 load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 load("@gazelle//:def.bzl", "gazelle")
-load("@rules_rust//tools/rust_analyzer:deps.bzl", "rust_analyzer_dependencies")
+load("@npm//:defs.bzl", "npm_link_all_packages")
 
 # gazelle:prefix github.com/anthropics/agentsmesh
 # gazelle:proto disable_global
 # gazelle:go_naming_convention import_alias
+
+# Workspace-root node_modules link. aspect_rules_js requires this in
+# the root BUILD so that sub-package references like
+# `//clients/web:node_modules/react` resolve back to the shared
+# `.aspect_rules_js/node_modules/react@X.Y.Z` store. Without a root
+# package.json + this target, every workspace TS BUILD fails analysis.
+npm_link_all_packages(name = "node_modules")
 
 exports_files(
     [
@@ -27,12 +34,10 @@ exports_files(
 # under backend/, runner/, relay/, agentfile/, proto/.
 gazelle(name = "gazelle")
 
-# `bazel run @rules_rust//tools/rust_analyzer:gen_rust_project` emits a
-# rust-project.json at the workspace root that rust-analyzer picks up
-# automatically. Required once we delete Cargo.toml (Phase 2 final step);
-# safe to run now alongside Cargo (rust-analyzer prefers Cargo metadata
-# when both are present).
-rust_analyzer_dependencies()
+# rust-project.json is generated via `bazel run
+# @rules_rust//tools/rust_analyzer:gen_rust_project`. The legacy
+# `rust_analyzer_dependencies()` call was removed because it uses
+# `http_archive` (WORKSPACE-only) and fails under bzlmod.
 
 # Runs buildifier on every BUILD/MODULE/.bzl file. CI enforces this via
 # `bazel run //:buildifier_check`.

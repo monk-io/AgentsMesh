@@ -12,6 +12,7 @@ rust_library(
         "//clients/core/crates/protocol",
         "//clients/core/crates/transport",
         "//clients/core/crates/types",
+        "@crates//:getrandom",
         "@crates//:rand",
         "@crates//:serde",
         "@crates//:serde_json",
@@ -26,4 +27,7 @@ rust_test(
     name = "relay_test",
     crate = ":relay",
     edition = "2021",
+    deps = [
+        "@crates//:tokio-test",
+    ],
 )

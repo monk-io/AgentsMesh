@@ -11,6 +11,7 @@ rust_library(
     visibility = ["//clients/core:__subpackages__"],
     deps = [
         "//clients/core/crates/types",
+        "@crates//:futures",
         "@crates//:futures-util",
         "@crates//:reqwest",
         "@crates//:serde",

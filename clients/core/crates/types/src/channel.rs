@@ -191,7 +191,9 @@ mod tests {
     fn channel_roundtrip() {
         let ch = Channel {
             id: 1, name: "general".into(), description: Some("General channel".into()),
-            is_archived: false, organization_id: Some(10), document: None,
+            is_archived: false, visibility: Some("public".into()),
+            is_member: true, member_count: Some(3),
+            organization_id: Some(10), document: None,
             repository_id: Some(42), ticket_id: None, ticket_slug: None,
             created_by_pod: None, created_by_user_id: None,
             created_at: None, updated_at: None,

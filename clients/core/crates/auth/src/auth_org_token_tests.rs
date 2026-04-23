@@ -90,10 +90,12 @@ mod auth_org_token_tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(session_json()))
             .mount(&server).await;
         Mock::given(method("GET")).and(path("/api/v1/users/me/organizations"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([
-                {"id": 1, "name": "Org A", "slug": "org-a"},
-                {"id": 2, "name": "Org B", "slug": "org-b"}
-            ])))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "organizations": [
+                    {"id": 1, "name": "Org A", "slug": "org-a"},
+                    {"id": 2, "name": "Org B", "slug": "org-b"}
+                ]
+            })))
             .mount(&server).await;
 
         let storage = InMemoryStorage::new();
@@ -115,10 +117,12 @@ mod auth_org_token_tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(session_json()))
             .mount(&server).await;
         Mock::given(method("GET")).and(path("/api/v1/users/me/organizations"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([
-                {"id": 1, "name": "Org A", "slug": "org-a"},
-                {"id": 2, "name": "Org B", "slug": "org-b"}
-            ])))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "organizations": [
+                    {"id": 1, "name": "Org A", "slug": "org-a"},
+                    {"id": 2, "name": "Org B", "slug": "org-b"}
+                ]
+            })))
             .mount(&server).await;
 
         let storage = InMemoryStorage::new();
@@ -137,9 +141,11 @@ mod auth_org_token_tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(session_json()))
             .mount(&server).await;
         Mock::given(method("GET")).and(path("/api/v1/users/me/organizations"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([
-                {"id": 1, "name": "Org A", "slug": "org-a"}
-            ])))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "organizations": [
+                    {"id": 1, "name": "Org A", "slug": "org-a"}
+                ]
+            })))
             .mount(&server).await;
 
         let storage = InMemoryStorage::new();
@@ -158,9 +164,11 @@ mod auth_org_token_tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(session_json()))
             .mount(&server).await;
         Mock::given(method("GET")).and(path("/api/v1/users/me/organizations"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!([
-                {"id": 1, "name": "Org A", "slug": "org-a"}
-            ])))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "organizations": [
+                    {"id": 1, "name": "Org A", "slug": "org-a"}
+                ]
+            })))
             .mount(&server).await;
 
         let storage = InMemoryStorage::new();

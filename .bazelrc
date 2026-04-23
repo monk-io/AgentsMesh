@@ -35,8 +35,26 @@ test --test_summary=detailed
 # Language-specific configs (populated by subsequent Phases)
 ###############################################################################
 
-# Phase 1 (Go) — pure builds without CGO so backends stay statically linked.
-build --@rules_go//go/config:pure
+# Phase 1 (Go) — CGO is ENABLED by default so tests that link against
+# native libraries (go-sqlite3, native-host extensions) still work. Release
+# builds opt into pure mode via `--config=release` for static binaries.
+build:release --@rules_go//go/config:pure
+
+# Forward the developer's Go module proxy to Bazel's fetch actions. When
+# GOPROXY points to a local filesystem cache first (or `direct`), Gazelle's
+# go_repository rule reuses it instead of roundtripping proxy.golang.org
+# every clean build. Required on networks where BCR/proxy.golang.org are
+# flaky — otherwise `bazel build` hangs on TLS timeouts.
+build --action_env=GOPROXY
+build --action_env=GOSUMDB
+build --action_env=GOPRIVATE
+build --action_env=GOMODCACHE
+build --action_env=HOME
+build --repo_env=GOPROXY
+build --repo_env=GOSUMDB
+build --repo_env=GOPRIVATE
+build --repo_env=GOMODCACHE
+build --repo_env=HOME
 
 # Phase 2 (Rust) — release config with thin LTO.
 # build:rust-release --compilation_mode=opt

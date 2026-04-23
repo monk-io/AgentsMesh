@@ -102,7 +102,6 @@ export interface IAuthManager {
   is_authenticated(): boolean;
   login(email: string, password: string): Promise<string>;
   logout(): Promise<void>;
-  static new_with_storage(base_url: string, storage: any): IAuthManager;
   refresh_token(): Promise<string>;
   restore_session(): boolean;
   switch_org(slug: string): void;
@@ -285,7 +284,6 @@ export interface IEventsManager {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   get_connection_state(): Promise<string>;
-  static new_with_options(ws_url: string, max_reconnect_attempts: number, initial_reconnect_delay_ms: number, max_reconnect_delay_ms: number, ping_interval_ms: number, pong_timeout_ms: number): IEventsManager;
   on_connection_state_change(callback: Function): Promise<number>;
   subscribe(event_type: string, callback: Function): Promise<number>;
   subscribe_all(callback: Function): Promise<number>;
@@ -571,7 +569,6 @@ export interface IRunnerService {
 
 export interface IRunnerState {
   available_runners_json(): string;
-  static can_accept_pods(runner_json: string): boolean;
   current_runner_json(): any;
   get_runner_json(id: bigint): any;
   remove_runner(id: bigint): void;

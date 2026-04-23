@@ -10,13 +10,12 @@ rust_library(
     visibility = ["//clients/core:__subpackages__"],
     deps = [
         "//clients/core/crates/types",
+        "@crates//:rusqlite",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:thiserror",
+        "@crates//:tokio",
         "@crates//:tracing",
-        # rusqlite + bundled SQLite. Swapped out on wasm32 targets by
-        # the crate's own cfg handling; no Bazel-side platform split
-        # needed because Bazel builds one target at a time.
     ],
 )
 

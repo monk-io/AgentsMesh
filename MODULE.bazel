@@ -82,7 +82,7 @@ bazel_dep(name = "rules_rust", version = "0.68.1")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
-    versions = ["1.83.0"],
+    versions = ["1.88.0"],
 )
 use_repo(rust, "rust_toolchains")
 
@@ -129,6 +129,8 @@ crate.spec(
     features = [
         "json",
         "rustls-tls",
+        "multipart",
+        "stream",
     ],
     package = "reqwest",
     version = "0.12",
@@ -186,6 +188,54 @@ crate.spec(
     version = "0.9",
 )
 
+# Cross-platform userspace directories (used by node-bridge / desktop storage).
+crate.spec(
+    package = "dirs",
+    version = "6",
+)
+
+# Base futures crate (distinct from futures-util — needed by api-client SSE).
+crate.spec(
+    package = "futures",
+    version = "0.3",
+)
+
+# getrandom with wasm_js backend — Relay connection IDs must generate in the
+# browser without falling back to OS rand (which panics under wasm32).
+crate.spec(
+    features = ["wasm_js"],
+    package = "getrandom",
+    version = "0.3",
+)
+
+# SQLite — bundled feature so the build does not depend on a system libsqlite3.
+crate.spec(
+    features = ["bundled"],
+    package = "rusqlite",
+    version = "0.32",
+)
+
+# N-API bindings for the Electron desktop native addon (Phase 3c).
+crate.spec(
+    default_features = False,
+    features = [
+        "napi9",
+        "async",
+        "tokio_rt",
+        "serde-json",
+    ],
+    package = "napi",
+    version = "3",
+)
+crate.spec(
+    package = "napi-derive",
+    version = "3",
+)
+crate.spec(
+    package = "napi-build",
+    version = "2",
+)
+
 # URL encoding (used by api-client for query params).
 crate.spec(
     package = "urlencoding",
@@ -206,7 +256,16 @@ crate.spec(
     version = "0.3",
 )
 crate.spec(
-    features = ["console"],
+    features = [
+        "console",
+        "BinaryType",
+        "CloseEvent",
+        "ErrorEvent",
+        "MessageEvent",
+        "Storage",
+        "WebSocket",
+        "Window",
+    ],
     package = "web-sys",
     version = "0.3",
 )
@@ -232,6 +291,20 @@ bazel_dep(name = "aspect_rules_ts", version = "3.8.3")
 bazel_dep(name = "aspect_rules_jest", version = "0.24.2")
 bazel_dep(name = "rules_nodejs", version = "6.3.3")
 
+# rules_playwright gives us `playwright_bin.playwright_test` via the
+# pnpm-linked @playwright/test package — Bazel drives the Playwright CLI
+# the same way aspect_rules_js drives any other npm bin.
+#
+# Browsers themselves are NOT fetched via rules_playwright's
+# `@playwright//:chromium-headless-shell` targets: the 0.5.3 release
+# still points at playwright.azureedge.net with the legacy Chromium URL
+# pattern, which 404s for Playwright 1.59 (now on Chrome-for-Testing via
+# cdn.playwright.dev). Instead we rely on `pnpm exec playwright install`
+# populating `~/Library/Caches/ms-playwright` (or
+# `$PLAYWRIGHT_BROWSERS_PATH` in CI) the same way every other Playwright
+# consumer does — NexusAPI follows the same pattern.
+bazel_dep(name = "rules_playwright", version = "0.5.3")
+
 # TypeScript compiler pin. Matches `clients/*/package.json` devDeps.
 rules_ts_ext = use_extension("@aspect_rules_ts//ts:extensions.bzl", "ext")
 rules_ts_ext.deps(
@@ -243,7 +316,7 @@ use_repo(rules_ts_ext, "npm_typescript")
 # (test runners, Next.js build), not necessarily the Node the Electron
 # desktop renderer ships with. Keep the major in sync with CI images.
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
-node.toolchain(node_version = "20.9.0")
+node.toolchain(node_version = "22.11.0")
 use_repo(node, "nodejs_toolchains")
 
 register_toolchains("@nodejs_toolchains//:all")
@@ -255,9 +328,10 @@ npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
     pnpm_lock = "//:pnpm-lock.yaml",
-    public_hoist_packages = {
-        "eslint-config-next": [""],
-    },
+    # Public hoist is disabled — clients/web and clients/web-admin bring
+    # in different `eslint-config-next` versions, and the hoist picker
+    # can't disambiguate. Lint runs fine against each package's own
+    # node_modules, so we don't need a root-visible copy.
     verify_node_modules_ignored = "//:.bazelignore",
 )
 use_repo(npm, "npm")

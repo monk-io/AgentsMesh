@@ -1,4 +1,5 @@
-load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@aspect_rules_js//npm:defs.bzl", "npm_package")
+load("//build_defs/web:ts.bzl", "ts_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 
 npm_link_all_packages(name = "node_modules")
@@ -17,7 +18,22 @@ ts_project(
     visibility = ["//visibility:public"],
     deps = [
         ":node_modules",
-        "//clients/core/crates/wasm:wasm_pkg",
+        # Bazel-built wasm is a Phase 3a TODO — reference the checked-in
+        # wasm-pack output directly via its npm_package target so TS
+        # compilation doesn't block on the rust_wasm_bindgen rule.
+        "//clients/core/pkg:pkg",
         "//packages/service-interface:service_interface",
     ],
+)
+
+# npm_package creates the `:pkg` target that pnpm workspace link
+# (`@agentsmesh/service-runtime: workspace:*`) resolves to from
+# downstream packages (clients/web, clients/desktop).
+npm_package(
+    name = "pkg",
+    srcs = [
+        "package.json",
+        ":service_runtime",
+    ],
+    visibility = ["//visibility:public"],
 )

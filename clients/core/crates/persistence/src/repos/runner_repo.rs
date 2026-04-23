@@ -56,13 +56,9 @@ mod tests {
             id,
             name: format!("runner-{id}"),
             status,
-            version: None,
             max_concurrent_pods: 4,
-            active_pod_count: 0,
             is_enabled: true,
-            host_info: None,
-            created_at: None,
-            updated_at: None,
+            ..Default::default()
         }
     }
 

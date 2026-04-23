@@ -1,7 +1,8 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("//build_defs/web:ts.bzl", "ts_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//build_defs/web:electron.bzl", "electron_app")
+load("//build_defs/web:playwright.bzl", "playwright_test")
 
 npm_link_all_packages(name = "node_modules")
 
@@ -45,4 +46,62 @@ js_library(
     name = "app",
     srcs = [":desktop_app"],
     visibility = ["//visibility:public"],
+)
+
+# Desktop Playwright e2e suite (Electron-hosted). Tagged `manual + e2e`
+# so `bazel test //...` skips it; run via:
+#   pnpm -C clients/desktop build          # build out/ first (electron-vite)
+#   pnpm exec playwright install chromium-headless-shell
+#   bazel test //clients/desktop:e2e --test_tag_filters=e2e
+#
+# Unlike Web, this target can't rebuild the Electron app itself — the
+# `electron-vite build` pipeline (napi addon + main/preload/renderer
+# bundles) happens outside Bazel. We ship the pre-built `out/` dir as
+# runfiles so Playwright's `_electron.launch()` can reach it.
+#
+# Note: we DO NOT depend on `:node_modules/@agentsmesh/node-bridge` —
+# that label pulls in the Rust napi target whose cdylib compile needs
+# Node headers the sandbox doesn't provide. Instead the pre-built
+# `.node` binary is packaged via the wildcard glob below, same as the
+# rest of the Electron runtime.
+playwright_test(
+    name = "e2e",
+    srcs = glob(
+        [
+            "e2e/**/*.spec.ts",
+            "e2e/**/*.ts",
+        ],
+        exclude = ["e2e/node_modules/**"],
+        allow_empty = True,
+    ),
+    config = "playwright.config.ts",
+    data = [
+        "package.json",
+        # Root-linked @playwright/test (single version across the repo
+        # via pnpm overrides — see build_defs/web/playwright.bzl).
+        "//:node_modules/@playwright/test",
+        # Electron binary lives under this package's own node_modules
+        # link — `_electron.launch()` resolves `require('electron')`
+        # from the caller (e2e spec) directory.
+        ":node_modules/electron",
+        # Workspace link to the napi addon. After the node-bridge
+        # npm_package switched to pre-built sources (not the cdylib
+        # target), this label no longer triggers a Rust compile in the
+        # sandbox, and Bazel materializes the `.node` binary as part of
+        # `clients/desktop/node_modules/@agentsmesh/node-bridge/` in the
+        # runfiles tree — exactly where `require('@agentsmesh/node-bridge')`
+        # from the Electron main process will look.
+        ":node_modules/@agentsmesh/node-bridge",
+        # Shared helpers/fixtures from web/e2e-playwright (desktop specs
+        # reach them via relative imports `../../../web/e2e-playwright/...`).
+        "//clients/web/e2e-playwright:shared_fixtures",
+    ] + glob(
+        [
+            # Pre-built Electron app (produced by `pnpm -C clients/desktop build`).
+            "out/**",
+            # dotenv + other runtime configs the Electron main reads.
+            ".env*",
+        ],
+        allow_empty = True,
+    ),
 )
