@@ -1,14 +1,17 @@
 name: Bazel
 
-# Green-only CI — every job in this workflow is individually verified
-# on the composed-honking-lemur branch before merge. Jobs that touch
-# targets still in progress (Next.js build, iOS, OCI images) live in
-# legacy workflows (ci.yml / e2e.yml / ios.yml / release.yml) and will
-# migrate one at a time.
+# Unified CI workflow — one entry point for everything. Delegates to
+# Bazel targets where they exist (Go tests, Rust tests, buildifier,
+# Vitest) and falls back to pnpm / go / docker CLIs for jobs whose
+# Bazel equivalents aren't wired yet (lint, Next.js build, Docker
+# image verify, Playwright e2e).
+#
+# Legacy ci.yml and e2e.yml are deleted; this file is the only PR gate
+# alongside ios.yml (macOS) and release.yml (tag-gated).
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
   workflow_dispatch:
 
@@ -16,7 +19,17 @@ concurrency:
   group: bazel-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  GO_VERSION: "1.25"
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+  REGISTRY_PREFIX: "registry.agentsmesh.ai/library/"
+
 jobs:
+  # ===========================================================================
+  # Bazel-native: lives inside the sandbox, uses Bazel remote cache.
+  # ===========================================================================
+
   smoke:
     name: Smoke (info + buildifier)
     runs-on: ubuntu-latest
@@ -32,7 +45,7 @@ jobs:
       - run: bazel run //:buildifier_check
 
   go:
-    name: Go (backend + runner + relay + agentfile + proto)
+    name: Go (tests)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: smoke
@@ -43,11 +56,9 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-      # Full Go module graph — Bazel figures out what changed since the
-      # last cached run and only recompiles / retests the affected
-      # packages. CGO is enabled so SQLite-backed integration tests
-      # (backend/internal/testkit) compile; release builds flip to
-      # pure Go via --config=release.
+      # Full Go module graph. CGO is enabled for SQLite-backed testkit
+      # integration tests. Release builds flip to pure Go via
+      # --config=release.
       # --flaky_test_attempts=3: TestPtyReaderForwardsOutput is a
       # PTY/TCP-timing test that occasionally hits i/o timeouts under
       # CI load. The timeout is 2s; local runs are consistently green.
@@ -66,9 +77,7 @@ jobs:
           disk-cache: true
           repository-cache: true
       # Every crate under clients/core/crates/... has a Bazel target;
-      # 11 test targets were green on the migration branch. The
-      # ffi/wasm/xcframework cross-language products are exercised by
-      # the iOS / web jobs (not yet on Bazel CI).
+      # 12 test targets were green on the migration branch.
       # --build_tests_only: skip building non-test library targets in
       # the same packages — some (ffi xcframework, wasm_pkg) require
       # Apple / wasm-bindgen toolchains not present on ubuntu runners.
@@ -79,23 +88,184 @@ jobs:
       # on ubuntu. iOS CI (macOS runners) owns the ffi analysis.
       - run: bazel test --build_tests_only --deleted_packages=clients/core/crates/ffi //clients/core/crates/...
 
+  # ===========================================================================
+  # Shell fallback — the workflow drives pnpm / go / docker directly.
+  # Bazel equivalents tracked in the "TODO" block below.
+  # ===========================================================================
+
+  go-lint:
+    name: Go Lint (backend + runner + relay)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: smoke
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [backend, runner, relay]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: ${{ matrix.module }}
+          install-mode: goinstall
+          version: latest
+          args: --timeout=5m
+
+  go-windows:
+    name: Runner Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: runner/go.sum
+      - name: Download dependencies
+        working-directory: runner
+        run: go mod download
+      - name: Run tests
+        working-directory: runner
+        shell: bash
+        run: go test -race -coverprofile=coverage.out ./...
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: runner/coverage.out
+          flags: runner-windows
+          fail_ci_if_error: false
+
+  web:
+    name: Web (lint + type-check + vitest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: clients/web
+        run: pnpm lint
+      - name: Type check
+        working-directory: clients/web
+        run: pnpm type-check
+      - name: Vitest
+        working-directory: clients/web
+        run: pnpm test:run
+
+  web-admin:
+    name: Web-Admin (lint + build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: clients/web-admin
+        run: pnpm lint
+      - name: Build
+        working-directory: clients/web-admin
+        run: pnpm build
+
+  docker-verify:
+    name: Docker Build Verify (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: smoke
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            dockerfile: ci/backend.Dockerfile
+            context: .
+          # web + web-admin Dockerfiles COPY pnpm-lock.yaml from the
+          # per-service context — post-migration the lock lives at the
+          # workspace root. Rebuild path is the Bazel OCI targets
+          # (//clients/web:image, //clients/web-admin:image) once they
+          # land (see the "TODO: oci-images" block below).
+          - service: runner
+            dockerfile: ci/runner.Dockerfile
+            context: .
+          - service: relay
+            dockerfile: ci/relay.Dockerfile
+            context: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check if internal registry is available
+        id: registry
+        run: echo "available=${{ github.event.pull_request.head.repo.full_name == github.repository }}" >> "$GITHUB_OUTPUT"
+      - name: Log in to AgentsMesh Registry
+        if: steps.registry.outputs.available == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: registry.agentsmesh.ai
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: ${{ steps.registry.outputs.available == 'true' && 'image=registry.agentsmesh.ai/library/buildkit:buildx-stable-1' || '' }}
+      - name: Build ${{ matrix.service }}
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          build-args: |
+            GO_VERSION=${{ env.GO_VERSION }}
+            REGISTRY_PREFIX=${{ steps.registry.outputs.available == 'true' && env.REGISTRY_PREFIX || '' }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
   # =========================================================================
   # TODO: jobs below are in progress. They remain in legacy workflows
-  # (ci.yml / e2e.yml / ios.yml / release.yml) until each unblocks here.
+  # (ios.yml / release.yml) until each unblocks here.
   # =========================================================================
 
-  # web:
-  #   Blocked on: next_app() label format for `next_js_binary`; Vitest
-  #   blocked on aspect_rules_js nested-importer ESM/CJS boundary.
+  # next-build:
+  #   Blocked on: next_app() label format for `next_js_binary`.
+  #   Re-enable with `bazel build //clients/web //clients/web-admin`.
+
+  # e2e-playwright:
   #   Playwright e2e targets (//clients/web:e2e,
   #   //clients/web/e2e-playwright:e2e, //clients/desktop:e2e) are
-  #   green locally but need dev-stack setup in CI before enabling.
-
-  # ios:
-  #   Blocked on: rules_apple fork attr alignment for
-  #   apple_static_xcframework + rust_static_library slicing.
+  #   green locally but need docker dev-stack setup in CI before
+  #   enabling.
 
   # oci-images:
   #   Ready (go_oci_image macro green in Phase 1) but we want the
   #   OCI-load/run smoke test in place before replacing release.yml's
   #   docker build path.
+
+  # ios-xcframework:
+  #   Blocked on: rules_apple fork attr alignment for
+  #   apple_static_xcframework + rust_static_library slicing.
+  #   Lives in ios.yml (macOS runners) until then.
