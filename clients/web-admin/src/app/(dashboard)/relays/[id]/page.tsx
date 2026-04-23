@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -32,34 +32,45 @@ export default function RelayDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [relaysData, setRelaysData] = useState<RelayListResponse | null>(null);
+  const [refetchKey, setRefetchKey] = useState(0);
 
-  const fetchRelay = useCallback(async () => {
-    try {
-      const result = await getRelay(relayId);
-      setData(result);
-      setError(null);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [relayId]);
+  useEffect(() => {
+    let cancelled = false;
+    getRelay(relayId)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setError(null);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err);
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [relayId, refetchKey]);
 
-  const fetchRelays = useCallback(async () => {
-    try {
-      const result = await listRelays();
-      setRelaysData(result);
-    } catch {
-      // Non-critical
-    }
+  useEffect(() => {
+    let cancelled = false;
+    listRelays()
+      .then((result) => {
+        if (!cancelled) setRelaysData(result);
+      })
+      .catch(() => {
+        // Non-critical
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    fetchRelay();
-    fetchRelays();
-    const interval = setInterval(fetchRelay, 5000);
+    const interval = setInterval(() => setRefetchKey((k) => k + 1), 5000);
     return () => clearInterval(interval);
-  }, [fetchRelay, fetchRelays]);
+  }, []);
 
   const handleUnregister = async (migrate: boolean) => {
     const msg = migrate
@@ -90,7 +101,7 @@ export default function RelayDetailPage() {
         toast.success(`Session migrated from ${result.from_relay} to ${result.to_relay}`);
         setMigratingPod(null);
         setTargetRelay("");
-        await fetchRelay();
+        setRefetchKey((k) => k + 1);
       } catch (err: unknown) {
         toast.error((err as { error?: string })?.error || "Failed to migrate session");
       } finally {

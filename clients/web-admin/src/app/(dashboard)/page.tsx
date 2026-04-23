@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   Building2,
@@ -54,24 +54,31 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const result = await getDashboardStats();
-      setStats(result);
-      setError(null);
-    } catch (err) {
-      setError(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+    let cancelled = false;
+    getDashboardStats()
+      .then((result) => {
+        if (cancelled) return;
+        setStats(result);
+        setError(null);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err);
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refetchKey]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setRefetchKey((k) => k + 1), 30000);
     return () => clearInterval(interval);
-  }, [fetchStats]);
+  }, []);
 
   if (isLoading) {
     return (

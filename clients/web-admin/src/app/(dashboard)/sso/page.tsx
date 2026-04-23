@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,30 +36,39 @@ export default function SSOPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const [refetchKey, setRefetchKey] = useState(0);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<SSOConfig | null>(null);
   const [deletingConfig, setDeletingConfig] = useState<SSOConfig | null>(null);
 
-  const fetchConfigs = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listSSOConfigs({
-        search: search || undefined,
-        protocol: protocolFilter !== "all" ? (protocolFilter as SSOProtocol) : undefined,
-        page,
-        page_size: pageSize,
+  useEffect(() => {
+    let cancelled = false;
+    listSSOConfigs({
+      search: search || undefined,
+      protocol: protocolFilter !== "all" ? (protocolFilter as SSOProtocol) : undefined,
+      page,
+      page_size: pageSize,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setConfigs(result.data || []);
+        setTotal(result.total || 0);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
       });
-      setConfigs(result.data || []);
-      setTotal(result.total || 0);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, protocolFilter, page]);
+    return () => {
+      cancelled = true;
+    };
+  }, [search, protocolFilter, page, refetchKey]);
 
-  useEffect(() => { fetchConfigs(); }, [fetchConfigs]);
+  const triggerRefetch = () => {
+    setIsLoading(true);
+    setRefetchKey((k) => k + 1);
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -72,7 +81,7 @@ export default function SSOPage() {
         await createSSOConfig(data);
         toast.success("SSO config created");
       }
-      await fetchConfigs();
+      triggerRefetch();
     } catch (err: unknown) {
       const message = (err as { error?: string })?.error || "Failed to save SSO config";
       toast.error(message);
@@ -84,7 +93,7 @@ export default function SSOPage() {
     try {
       await enableSSOConfig(id);
       toast.success("SSO config enabled");
-      await fetchConfigs();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to enable SSO config");
     }
@@ -94,7 +103,7 @@ export default function SSOPage() {
     try {
       await disableSSOConfig(id);
       toast.success("SSO config disabled");
-      await fetchConfigs();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to disable SSO config");
     }
@@ -106,7 +115,7 @@ export default function SSOPage() {
       await deleteSSOConfig(deletingConfig.id);
       toast.success("SSO config deleted");
       setDeletingConfig(null);
-      await fetchConfigs();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to delete SSO config");
     }

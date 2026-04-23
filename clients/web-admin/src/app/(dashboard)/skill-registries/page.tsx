@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,21 +34,26 @@ export default function SkillRegistriesPage() {
 
   const [data, setData] = useState<{ items: SkillRegistry[]; total: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchRegistries = useCallback(async () => {
-    try {
-      const result = await listSkillRegistries();
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
-    fetchRegistries();
-  }, [fetchRegistries]);
+    let cancelled = false;
+    listSkillRegistries()
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refetchKey]);
+
+  const triggerRefetch = () => setRefetchKey((k) => k + 1);
 
   const resetForm = () => {
     setFormUrl("");
@@ -72,7 +77,7 @@ export default function SkillRegistriesPage() {
       toast.success("Skill registry added successfully");
       setDialogOpen(false);
       resetForm();
-      await fetchRegistries();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to create skill registry");
     } finally {
@@ -85,7 +90,7 @@ export default function SkillRegistriesPage() {
     try {
       await syncSkillRegistry(id);
       toast.success("Sync triggered successfully");
-      await fetchRegistries();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to sync skill registry");
     } finally {
@@ -98,7 +103,7 @@ export default function SkillRegistriesPage() {
     try {
       await deleteSkillRegistry(registry.id);
       toast.success("Skill registry deleted successfully");
-      await fetchRegistries();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to delete skill registry");
     }

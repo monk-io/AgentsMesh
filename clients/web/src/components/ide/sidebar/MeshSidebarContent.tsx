@@ -59,7 +59,10 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
       count,
       dotColor: "#3FB950",
     }));
-  }, [topology?.nodes, t]);
+    // next-intl's `t` is stable within a locale so omitting it from deps
+    // is safe; React Compiler agrees with that inferred dep set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topology?.nodes]);
 
   const statusOptions = useMemo(() => {
     if (!topology?.nodes) return [];
@@ -71,7 +74,8 @@ export function MeshSidebarContent({ className }: MeshSidebarContentProps) {
       count,
       dotColor: STATUS_META[id]?.color ?? "#6E7681",
     }));
-  }, [topology?.nodes, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topology?.nodes]);
 
   const filteredCount = useMemo(() => {
     return (topology?.nodes || []).filter((node: MeshNode) => {

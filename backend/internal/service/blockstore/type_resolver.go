@@ -8,33 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// resolveTypeSpec looks up the effective spec for a block type in a workspace,
-// using the main repo (outside any transaction). Precedence (highest-first):
-//
-//  1. A block_type_def block in this workspace whose data.type_key == typeKey
-//     (latest revision).
-//  2. The bootstrap static registry (blockstore.LookupTypeSpec).
-//
-// Callers that are *inside* an ApplyOps transaction should use
-// resolveTypeSpecInTx so that type definitions written earlier in the same
-// batch are visible.
-func (s *Service) resolveTypeSpec(
-	ctx context.Context,
-	workspaceID uuid.UUID,
-	typeKey string,
-) (blockstore.BlockTypeSpec, bool) {
-	b, err := s.repo.GetTypeDefByKey(ctx, workspaceID, typeKey)
-	if err == nil && b != nil {
-		if spec, ok := decodeTypeDef(b.Data); ok && spec.Type == typeKey {
-			return spec, true
-		}
-	}
-	return blockstore.LookupTypeSpec(typeKey)
-}
-
-// resolveTypeSpecInTx is the in-transaction counterpart. It reads block_type_def
-// rows through the active TxWriter so definitions inserted earlier in the same
-// ApplyOps batch are visible to subsequent ops.
+// resolveTypeSpecInTx reads block_type_def rows through the active TxWriter so
+// definitions inserted earlier in the same ApplyOps batch are visible to
+// subsequent ops. For lookups *outside* a transaction, use
+// Service.listAllTypes or the domain-layer blockstore.LookupTypeSpec directly.
 func (s *Service) resolveTypeSpecInTx(
 	ctx context.Context,
 	tx blockstore.TxWriter,

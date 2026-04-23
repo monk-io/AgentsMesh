@@ -166,7 +166,7 @@ func (r *Repository) GetTypeDefByKey(
 		Order("updated_at DESC").
 		Limit(1)
 
-	if r.db.Dialector.Name() == "postgres" {
+	if r.db.Name() == "postgres" {
 		q = q.Where("data->>'type_key' = ?", typeKey)
 	} else {
 		// SQLite fallback: data is stored as TEXT JSON; match the key literal.

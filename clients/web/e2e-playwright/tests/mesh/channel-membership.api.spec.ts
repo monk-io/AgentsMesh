@@ -1,5 +1,5 @@
 import { test, expect } from "../../fixtures/index";
-import { TEST_ORG_SLUG } from "../../helpers/env";
+import { getApiBaseUrl, TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { textContent } from "../../helpers/test-data";
 
@@ -207,7 +207,7 @@ test.describe("Channel IM Group Model", () => {
 
     // Admin tries to remove creator — should fail
     const rmRes = await fetch(
-      `${(api as any).baseUrl || ""}${CHANNELS}/${channel.id}/members/${creatorId}`,
+      `${getApiBaseUrl()}${CHANNELS}/${channel.id}/members/${creatorId}`,
       { method: "DELETE", headers: { Authorization: `Bearer ${adminToken}` } }
     );
     expect(rmRes.status).toBe(403);

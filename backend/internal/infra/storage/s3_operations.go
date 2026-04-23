@@ -78,19 +78,6 @@ func (s *S3Storage) GetURL(ctx context.Context, key string, expiry time.Duration
 	return request.URL, nil
 }
 
-// buildPublicURL constructs a direct public URL for the file.
-// Reserved for future anonymous-read bucket deployments; currently unused.
-func (s *S3Storage) buildPublicURL(key string) string {
-	scheme := "http"
-	if s.useSSL {
-		scheme = "https"
-	}
-	if s.usePathStyle {
-		return fmt.Sprintf("%s://%s/%s/%s", scheme, s.publicEndpointHost, s.bucket, key)
-	}
-	return fmt.Sprintf("%s://%s.%s/%s", scheme, s.bucket, s.publicEndpointHost, key)
-}
-
 // presignGetURL generates a presigned GET URL using the internal presign client.
 func (s *S3Storage) presignGetURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
 	request, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{

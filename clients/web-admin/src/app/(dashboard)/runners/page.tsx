@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,28 +21,35 @@ export default function RunnersPage() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PaginatedResponse<Runner> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchRunners = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listRunners({ search, page, page_size: 20 });
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, page]);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
-    fetchRunners();
-  }, [fetchRunners]);
+    let cancelled = false;
+    listRunners({ search, page, page_size: 20 })
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search, page, refetchKey]);
+
+  const triggerRefetch = () => {
+    setIsLoading(true);
+    setRefetchKey((k) => k + 1);
+  };
 
   const handleDisable = async (runnerId: number) => {
     try {
       await disableRunner(runnerId);
       toast.success("Runner disabled successfully");
-      await fetchRunners();
+      triggerRefetch();
     } catch (err: unknown) {
       const message = (err as { error?: string })?.error || "Failed to disable runner";
       toast.error(message);
@@ -53,7 +60,7 @@ export default function RunnersPage() {
     try {
       await enableRunner(runnerId);
       toast.success("Runner enabled successfully");
-      await fetchRunners();
+      triggerRefetch();
     } catch (err: unknown) {
       const message = (err as { error?: string })?.error || "Failed to enable runner";
       toast.error(message);
@@ -67,7 +74,7 @@ export default function RunnersPage() {
     try {
       await deleteRunner(runner.id);
       toast.success("Runner deleted successfully");
-      await fetchRunners();
+      triggerRefetch();
     } catch (err: unknown) {
       const message = (err as { error?: string })?.error || "Failed to delete runner";
       toast.error(message);

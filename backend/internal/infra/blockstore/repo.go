@@ -53,7 +53,7 @@ func (r *Repository) WithinWorkspaceTx(ctx context.Context, workspaceID uuid.UUI
 // the SQLite test DB) where the service layer's sequential op apply inside a
 // single test process is already serial.
 func acquireWorkspaceLock(tx *gorm.DB, workspaceID uuid.UUID) error {
-	if tx.Dialector.Name() != "postgres" {
+	if tx.Name() != "postgres" {
 		return nil
 	}
 	key := workspaceLockKey(workspaceID)

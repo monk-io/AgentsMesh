@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,27 +24,32 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PaginatedResponse<User> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refetchKey, setRefetchKey] = useState(0);
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listUsers({ search, page, page_size: 20 });
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, page]);
-
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    let cancelled = false;
+    listUsers({ search, page, page_size: 20 })
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search, page, refetchKey]);
 
   const makeHandler = (action: (id: number) => Promise<unknown>, successMsg: string, errorMsg: string) => {
     return async (userId: number) => {
       try {
         await action(userId);
         toast.success(successMsg);
-        await fetchUsers();
+        setIsLoading(true);
+        setRefetchKey((k) => k + 1);
       } catch (err: unknown) {
         toast.error((err as { error?: string })?.error || errorMsg);
       }

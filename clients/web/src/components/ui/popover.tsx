@@ -64,7 +64,9 @@ export function PopoverTrigger({ children, asChild }: PopoverTriggerProps) {
         const forwardedRef = (child as { ref?: React.Ref<HTMLElement> }).ref;
         if (typeof forwardedRef === "function") forwardedRef(node);
         else if (forwardedRef && typeof forwardedRef === "object") {
-          (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node;
+          // React 19 unified RefObject: .current is writable.
+          // eslint-disable-next-line react-hooks/immutability
+          (forwardedRef as { current: HTMLElement | null }).current = node;
         }
       },
       onClick: (e: React.MouseEvent) => {

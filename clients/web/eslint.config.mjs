@@ -13,6 +13,15 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Playwright fixture files use a `use()` callback that the React Hooks
+  // plugin mistakes for React 19's `use()` hook. The naming collision is
+  // in Playwright's public API, not something we can rename in our code.
+  {
+    files: ["e2e-playwright/**/*.ts", "e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

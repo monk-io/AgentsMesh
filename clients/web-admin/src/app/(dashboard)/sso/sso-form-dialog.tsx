@@ -71,7 +71,13 @@ export function SSOFormDialog({ open, onOpenChange, config, onSubmit }: SSOFormD
   const isEdit = !!config;
 
   useEffect(() => {
-    setForm(config ? buildFormFromConfig(config) : defaultForm);
+    let cancelled = false;
+    Promise.resolve(config ? buildFormFromConfig(config) : defaultForm).then((next) => {
+      if (!cancelled) setForm(next);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [config, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {

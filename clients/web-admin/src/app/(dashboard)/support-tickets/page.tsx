@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,40 +31,49 @@ export default function SupportTicketsPage() {
   const [stats, setStats] = useState<SupportTicketStats | null>(null);
   const [data, setData] = useState<PaginatedResponse<SupportTicket> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [statsKey, setStatsKey] = useState(0);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const result = await getSupportTicketStats();
-      setStats(result);
-    } catch {
-      // Stats are non-critical
-    }
-  }, []);
-
-  const fetchTickets = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listSupportTickets({
-        search: search || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-        category: categoryFilter !== "all" ? categoryFilter : undefined,
-        page,
-        page_size: pageSize,
-      });
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, statusFilter, categoryFilter, page, pageSize]);
-
-  useEffect(() => { fetchTickets(); }, [fetchTickets]);
   useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+    let cancelled = false;
+    listSupportTickets({
+      search: search || undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      category: categoryFilter !== "all" ? categoryFilter : undefined,
+      page,
+      page_size: pageSize,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search, statusFilter, categoryFilter, page]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSupportTicketStats()
+      .then((result) => {
+        if (!cancelled) setStats(result);
+      })
+      .catch(() => {
+        // Stats are non-critical
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [statsKey]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setStatsKey((k) => k + 1), 30000);
     return () => clearInterval(interval);
-  }, [fetchStats]);
+  }, []);
 
   const total = data?.total || 0;
   const totalPages = data?.total_pages || 1;

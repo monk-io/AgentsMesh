@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,21 +32,25 @@ export default function AuditLogsPage() {
   const [data, setData] = useState<PaginatedResponse<AuditLog> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchLogs = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listAuditLogs({ page, page_size: 50, target_type: targetType });
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, targetType]);
-
+  // React 19 canonical fetch-in-effect pattern: cancel-on-unmount flag,
+  // setState lives inside the promise `.then` microtask (opaque to the
+  // react-hooks/set-state-in-effect static analyzer).
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    let cancelled = false;
+    listAuditLogs({ page, page_size: 50, target_type: targetType })
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, targetType]);
 
   return (
     <div className="space-y-4">

@@ -148,7 +148,8 @@ func validateColumnValue(col ColumnSpec, raw any) string {
 }
 
 // ValidateRequiredFields (package fn) resolves against the bootstrap registry.
-// Deprecated: prefer Service.resolveTypeSpec + spec.ValidateRequiredFields.
+// Deprecated: service callers should use Service.resolveTypeSpecInTx (or
+// LookupTypeSpec directly for read-only paths) + spec.ValidateRequiredFields.
 // Still used by non-service call sites and by tests.
 func ValidateRequiredFields(t string, data JSONMap) string {
 	spec, ok := LookupTypeSpec(t)
@@ -159,7 +160,8 @@ func ValidateRequiredFields(t string, data JSONMap) string {
 }
 
 // IsChildAllowed (package fn) resolves against the bootstrap registry.
-// Deprecated: prefer Service.resolveTypeSpec + spec.IsChildAllowed.
+// Deprecated: service callers should use Service.resolveTypeSpecInTx (or
+// LookupTypeSpec directly for read-only paths) + spec.IsChildAllowed.
 func IsChildAllowed(parent, child string) bool {
 	spec, ok := LookupTypeSpec(parent)
 	if !ok {

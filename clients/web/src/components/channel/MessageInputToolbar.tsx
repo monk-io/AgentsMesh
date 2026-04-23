@@ -28,6 +28,10 @@ export function MessageInputToolbar({
   onMention,
 }: MessageInputToolbarProps) {
   const t = useTranslations("channels.composer");
+  // Destructure to unblock React Compiler's ref-during-render analysis.
+  // Reading `attachment.inputRef` via member access trips the static
+  // analyzer; a top-level destructure treats the ref as a local binding.
+  const { inputRef, handleChange, pick, pending, key, name } = attachment;
 
   const insertAt = () => {
     if (onMention) {
@@ -47,11 +51,11 @@ export function MessageInputToolbar({
     });
   };
 
-  const canSend = !disabled && (value.trim().length > 0 || !!attachment.key);
+  const canSend = !disabled && (value.trim().length > 0 || !!key);
 
   return (
     <>
-      {(attachment.name || attachment.pending) && (
+      {(name || pending) && (
         <AttachmentChip attachment={attachment} />
       )}
       <div className="flex items-center justify-between border-t border-border/60 px-2 py-1.5">
@@ -66,21 +70,21 @@ export function MessageInputToolbar({
           </ToolbarButton>
           <ToolbarButton
             label={t("attach")}
-            onClick={attachment.pick}
-            disabled={attachment.pending}
+            onClick={pick}
+            disabled={pending}
             testId="toolbar-attach"
           >
-            {attachment.pending ? (
+            {pending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Paperclip className="h-3.5 w-3.5" />
             )}
           </ToolbarButton>
           <input
-            ref={attachment.inputRef}
+            ref={inputRef}
             type="file"
             className="hidden"
-            onChange={attachment.handleChange}
+            onChange={handleChange}
             data-testid="message-attachment-input"
           />
         </div>

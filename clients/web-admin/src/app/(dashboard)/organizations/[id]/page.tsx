@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -35,42 +35,53 @@ export default function OrganizationDetailPage({
   const [runnersData, setRunnersData] = useState<PaginatedResponse<Runner> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchOrg = useCallback(async () => {
-    try {
-      const result = await getOrganization(orgId);
-      setOrg(result);
-    } catch {
-      // Keep null on error
-    } finally {
-      setOrgLoading(false);
-    }
-  }, [orgId]);
-
-  const fetchMembers = useCallback(async () => {
-    try {
-      const result = await getOrganizationMembers(orgId);
-      setMembersData(result);
-    } catch {
-      // Keep null on error
-    } finally {
-      setMembersLoading(false);
-    }
-  }, [orgId]);
-
-  const fetchRunners = useCallback(async () => {
-    try {
-      const result = await listRunners({ org_id: orgId, page_size: 100 });
-      setRunnersData(result);
-    } catch {
-      // Keep null on error
-    }
+  useEffect(() => {
+    let cancelled = false;
+    getOrganization(orgId)
+      .then((result) => {
+        if (!cancelled) {
+          setOrg(result);
+          setOrgLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setOrgLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [orgId]);
 
   useEffect(() => {
-    fetchOrg();
-    fetchMembers();
-    fetchRunners();
-  }, [fetchOrg, fetchMembers, fetchRunners]);
+    let cancelled = false;
+    getOrganizationMembers(orgId)
+      .then((result) => {
+        if (!cancelled) {
+          setMembersData(result);
+          setMembersLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMembersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRunners({ org_id: orgId, page_size: 100 })
+      .then((result) => {
+        if (!cancelled) setRunnersData(result);
+      })
+      .catch(() => {
+        // Keep null on error
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
 
   const handleDelete = async () => {
     if (

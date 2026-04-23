@@ -17,7 +17,7 @@ import (
 // to false so SQLite tests stay on the JSONB path.
 func (r *Repository) detectPgvector() (bool, int) {
 	r.pgvectorOnce.Do(func() {
-		if r.db.Dialector.Name() != "postgres" {
+		if r.db.Name() != "postgres" {
 			return
 		}
 		var typeName string
@@ -35,7 +35,7 @@ func (r *Repository) detectPgvector() (bool, int) {
 		if i := strings.Index(typeName, "("); i > 0 {
 			rest := typeName[i+1:]
 			if j := strings.Index(rest, ")"); j > 0 {
-				fmt.Sscanf(rest[:j], "%d", &r.pgvectorDims)
+				_, _ = fmt.Sscanf(rest[:j], "%d", &r.pgvectorDims)
 			}
 		}
 		r.pgvectorReady = r.pgvectorDims > 0

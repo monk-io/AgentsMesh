@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -37,35 +37,43 @@ export function SubscriptionSection({ orgId }: { orgId: number }) {
   const [sub, setSub] = useState<any>(null);
   const [subLoading, setSubLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-
-  const fetchSubscription = useCallback(async () => {
-    try {
-      const result = await getOrganizationSubscription(orgId);
-      setSub(result);
-    } catch (err: unknown) {
-      if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 404) {
-        setSub(null);
-      }
-    } finally {
-      setSubLoading(false);
-    }
-  }, [orgId]);
-
-  const fetchPlans = useCallback(async () => {
-    try {
-      const result = await getSubscriptionPlans(orgId);
-      setPlans(result?.data || []);
-    } catch {
-      // Keep empty plans on error
-    }
-  }, [orgId]);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
-    fetchSubscription();
-    fetchPlans();
-  }, [fetchSubscription, fetchPlans]);
+    let cancelled = false;
+    getOrganizationSubscription(orgId)
+      .then((result) => {
+        if (cancelled) return;
+        setSub(result);
+        setSubLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 404) {
+          setSub(null);
+        }
+        setSubLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, refetchKey]);
 
-  const refreshData = async () => { await fetchSubscription(); };
+  useEffect(() => {
+    let cancelled = false;
+    getSubscriptionPlans(orgId)
+      .then((result) => {
+        if (!cancelled) setPlans(result?.data || []);
+      })
+      .catch(() => {
+        // Keep empty plans on error
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  const refreshData = async () => { setRefetchKey((k) => k + 1); };
 
   const actions = useSubscriptionActions(orgId, sub, refreshData, {
     setNewSeatCount,

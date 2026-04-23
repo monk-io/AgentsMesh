@@ -29,9 +29,9 @@ describe("isSafeURL", () => {
   it("rejects non-string input", () => {
     // @ts-expect-error — guard handles runtime junk from user-authored data
     expect(isSafeURL(null)).toBe(false);
-    // @ts-expect-error
+    // @ts-expect-error — guard handles runtime junk from user-authored data
     expect(isSafeURL(undefined)).toBe(false);
-    // @ts-expect-error
+    // @ts-expect-error — guard handles runtime junk from user-authored data
     expect(isSafeURL(123)).toBe(false);
   });
 });

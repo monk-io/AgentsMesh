@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -33,34 +33,41 @@ export default function PromoCodesPage() {
 
   const [data, setData] = useState<PaginatedResponse<PromoCode> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchPromoCodes = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listPromoCodes({
-        search: search || undefined,
-        type: typeFilter !== "all" ? (typeFilter as PromoCodeType) : undefined,
-        is_active: statusFilter === "all" ? undefined : statusFilter === "active",
-        page,
-        page_size: pageSize,
-      });
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, typeFilter, statusFilter, page, pageSize]);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
-    fetchPromoCodes();
-  }, [fetchPromoCodes]);
+    let cancelled = false;
+    listPromoCodes({
+      search: search || undefined,
+      type: typeFilter !== "all" ? (typeFilter as PromoCodeType) : undefined,
+      is_active: statusFilter === "all" ? undefined : statusFilter === "active",
+      page,
+      page_size: pageSize,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search, typeFilter, statusFilter, page, refetchKey]);
+
+  const triggerRefetch = () => {
+    setIsLoading(true);
+    setRefetchKey((k) => k + 1);
+  };
 
   const handleActivate = async (id: number) => {
     try {
       await activatePromoCode(id);
       toast.success("Promo code activated");
-      await fetchPromoCodes();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to activate promo code");
     }
@@ -70,7 +77,7 @@ export default function PromoCodesPage() {
     try {
       await deactivatePromoCode(id);
       toast.success("Promo code deactivated");
-      await fetchPromoCodes();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to deactivate promo code");
     }
@@ -81,7 +88,7 @@ export default function PromoCodesPage() {
     try {
       await deletePromoCode(code.id);
       toast.success("Promo code deleted");
-      await fetchPromoCodes();
+      triggerRefetch();
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to delete promo code");
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, Trash2, Users, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -16,22 +16,24 @@ export default function OrganizationsPage() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PaginatedResponse<Organization> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchOrganizations = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await listOrganizations({ search, page, page_size: 20 });
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, page]);
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
+    let cancelled = false;
+    listOrganizations({ search, page, page_size: 20 })
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [search, page, refetchKey]);
 
   const handleDelete = async (org: Organization) => {
     if (!confirm(`Are you sure you want to delete "${org.name}"? This action cannot be undone.`)) {
@@ -40,7 +42,8 @@ export default function OrganizationsPage() {
     try {
       await deleteOrganization(org.id);
       toast.success("Organization deleted successfully");
-      await fetchOrganizations();
+      setIsLoading(true);
+      setRefetchKey((k) => k + 1);
     } catch (err: unknown) {
       const message = (err as { error?: string })?.error || "Failed to delete organization";
       toast.error(message);

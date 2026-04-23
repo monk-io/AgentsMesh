@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -35,37 +35,48 @@ export default function PromoCodeDetailPage({
   const [redemptionsData, setRedemptionsData] = useState<PaginatedResponse<PromoCodeRedemption> | null>(null);
   const [redemptionsLoading, setRedemptionsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refetchKey, setRefetchKey] = useState(0);
 
-  const fetchPromoCode = useCallback(async () => {
-    try {
-      const result = await getPromoCode(promoCodeId);
-      setPromoCode(result);
-    } catch {
-      // Keep null on error
-    } finally {
-      setCodeLoading(false);
-    }
-  }, [promoCodeId]);
+  useEffect(() => {
+    let cancelled = false;
+    getPromoCode(promoCodeId)
+      .then((result) => {
+        if (!cancelled) {
+          setPromoCode(result);
+          setCodeLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCodeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [promoCodeId, refetchKey]);
 
-  const fetchRedemptions = useCallback(async () => {
-    try {
-      const result = await listPromoCodeRedemptions(promoCodeId, { page_size: 50 });
-      setRedemptionsData(result);
-    } catch {
-      // Keep null on error
-    } finally {
-      setRedemptionsLoading(false);
-    }
-  }, [promoCodeId]);
-
-  useEffect(() => { fetchPromoCode(); }, [fetchPromoCode]);
-  useEffect(() => { if (promoCode) fetchRedemptions(); }, [promoCode, fetchRedemptions]);
+  useEffect(() => {
+    if (!promoCode) return;
+    let cancelled = false;
+    listPromoCodeRedemptions(promoCodeId, { page_size: 50 })
+      .then((result) => {
+        if (!cancelled) {
+          setRedemptionsData(result);
+          setRedemptionsLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRedemptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [promoCode, promoCodeId]);
 
   const handleActivate = async () => {
     try {
       await activatePromoCode(promoCodeId);
       toast.success("Promo code activated");
-      await fetchPromoCode();
+      setRefetchKey((k) => k + 1);
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to activate promo code");
     }
@@ -75,7 +86,7 @@ export default function PromoCodeDetailPage({
     try {
       await deactivatePromoCode(promoCodeId);
       toast.success("Promo code deactivated");
-      await fetchPromoCode();
+      setRefetchKey((k) => k + 1);
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to deactivate promo code");
     }

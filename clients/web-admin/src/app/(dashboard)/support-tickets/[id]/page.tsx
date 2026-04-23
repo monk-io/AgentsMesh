@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
@@ -32,27 +32,34 @@ export default function SupportTicketDetailPage() {
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [refetchKey, setRefetchKey] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const fetchDetail = useCallback(async () => {
-    try {
-      const result = await getSupportTicketDetail(ticketId);
-      setData(result);
-    } catch {
-      // Keep previous data on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, [ticketId]);
 
   useEffect(() => {
     if (!ticketId) return;
-    fetchDetail();
+    let cancelled = false;
+    getSupportTicketDetail(ticketId)
+      .then((result) => {
+        if (cancelled) return;
+        setData(result);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ticketId, refetchKey]);
+
+  useEffect(() => {
+    if (!ticketId) return;
     const interval = setInterval(() => {
-      if (!document.hidden) fetchDetail();
+      if (!document.hidden) setRefetchKey((k) => k + 1);
     }, 15000);
     return () => clearInterval(interval);
-  }, [ticketId, fetchDetail]);
+  }, [ticketId]);
 
   const ticket = data?.ticket;
   const messages = data?.messages || [];
@@ -69,7 +76,7 @@ export default function SupportTicketDetailPage() {
       setReplyContent("");
       setReplyFiles([]);
       toast.success("Reply sent successfully");
-      await fetchDetail();
+      setRefetchKey((k) => k + 1);
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to send reply");
     } finally {
@@ -82,7 +89,7 @@ export default function SupportTicketDetailPage() {
     try {
       await updateSupportTicketStatus(ticketId, status);
       toast.success("Status updated successfully");
-      await fetchDetail();
+      setRefetchKey((k) => k + 1);
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to update status");
     } finally {
@@ -95,7 +102,7 @@ export default function SupportTicketDetailPage() {
     try {
       await assignSupportTicket(ticketId, user?.id || 0);
       toast.success("Ticket assigned successfully");
-      await fetchDetail();
+      setRefetchKey((k) => k + 1);
     } catch (err: unknown) {
       toast.error((err as { error?: string })?.error || "Failed to assign ticket");
     } finally {
