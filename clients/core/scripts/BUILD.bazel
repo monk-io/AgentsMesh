@@ -1,0 +1,4 @@
+exports_files(
+    ["build-ios-xcframework.sh"],
+    visibility = ["//clients/core/crates/ffi:__pkg__"],
+)
