@@ -72,7 +72,12 @@ jobs:
       # --build_tests_only: skip building non-test library targets in
       # the same packages — some (ffi xcframework, wasm_pkg) require
       # Apple / wasm-bindgen toolchains not present on ubuntu runners.
-      - run: bazel test --build_tests_only //clients/core/crates/...
+      # --deleted_packages: skip loading clients/core/crates/ffi
+      # entirely. Its BUILD.bazel calls apple_static_xcframework +
+      # rust_static_library with attrs that only resolve under
+      # rules_apple's Apple-host toolchains, so `//...` fails to load
+      # on ubuntu. iOS CI (macOS runners) owns the ffi analysis.
+      - run: bazel test --build_tests_only --deleted_packages=clients/core/crates/ffi //clients/core/crates/...
 
   # =========================================================================
   # TODO: jobs below are in progress. They remain in legacy workflows
