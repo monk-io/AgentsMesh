@@ -102,9 +102,9 @@ go_test(
     ],
 )
 
-# Bazel replacement for `ci/backend.Dockerfile`. Produces a distroless OCI
-# image and a local-load tarball; `bazel run :image_push --stamp
-# --embed_label=<sha>` publishes to the registry in release workflows.
+# Produces a distroless OCI image and a local-load tarball;
+# `bazel run :image_push --stamp --embed_label=<sha>` publishes to the
+# registry in release workflows.
 go_oci_image(
     name = "image",
     binary = ":server",
@@ -113,7 +113,8 @@ go_oci_image(
         "9443/tcp",
     ],
     repositories = {
-        "dockerhub": "agentsmesh/backend",
         "agentsmesh": "registry.agentsmesh.ai/agentsmesh/backend",
+        "corp": "registry.corp.agentsmesh.ai/agentsmesh/backend",
+        "dockerhub": "agentsmesh/backend",
     },
 )

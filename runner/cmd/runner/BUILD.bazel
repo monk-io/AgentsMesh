@@ -43,12 +43,14 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-# Bazel replacement for `ci/runner.Dockerfile`.
+# Distroless OCI image for the runner daemon. See
+# //build_defs/docker:go_oci_image for the macro.
 go_oci_image(
     name = "image",
     binary = ":runner",
     repositories = {
-        "dockerhub": "agentsmesh/runner",
         "agentsmesh": "registry.agentsmesh.ai/agentsmesh/runner",
+        "corp": "registry.corp.agentsmesh.ai/agentsmesh/runner",
+        "dockerhub": "agentsmesh/runner",
     },
 )

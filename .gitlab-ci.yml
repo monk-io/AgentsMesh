@@ -1,8 +1,15 @@
-# MIGRATION NOTE — Bazel migration in progress.
-# Parallel to .github/workflows/bazel.yml; see
-# .claude/plans/snuggly-spinning-dewdrop.md for the cutover plan.
+# GitLab CI pipeline for the corporate (China) build + deploy flow.
+# Mirrors .github/workflows/release.yml but pushes to the internal
+# `registry.corp.agentsmesh.ai` registry and rolls out via ssh.
+#
+# Image build strategy:
+#   All services (backend / runner / relay / web / web-admin) build via
+#   Bazel rules_oci. Each BUILD.bazel exposes `//<target>:image_push_corp`
+#   (see build_defs/docker/go_oci_image.bzl and build_defs/web/next_oci.bzl
+#   for the dict layout). Tags are stamped from
+#   `build_defs/workspace_status.sh` using IMAGE_VERSION / IMAGE_MINOR.
 
-# Include runner release pipeline (triggered by tags)
+# Runner release pipeline (triggered by tags only).
 include:
   - local: 'runner/.gitlab-ci.yml'
     rules:
@@ -10,32 +17,55 @@ include:
 
 variables:
   REGISTRY: registry.corp.agentsmesh.ai
-  BACKEND_IMAGE: ${REGISTRY}/agentsmesh/backend
-  WEB_IMAGE: ${REGISTRY}/agentsmesh/web
-  WEB_ADMIN_IMAGE: ${REGISTRY}/agentsmesh/web-admin
-  RUNNER_IMAGE: ${REGISTRY}/agentsmesh/runner
-  RELAY_IMAGE: ${REGISTRY}/agentsmesh/relay
-  VERSION: ${CI_COMMIT_TAG:-dev}
   GO_VERSION: "1.25"
-  # China Go proxy for faster module downloads (injected into Dockerfile via --build-arg)
+  # China-friendly package mirrors for the `test-*` jobs below.
   GOPROXY: "https://goproxy.cn,https://goproxy.io,direct"
-  # China NPM registry (injected into Dockerfile via --build-arg)
   NPM_REGISTRY: "https://repo.huaweicloud.com/repository/npm/"
-  # Registry prefix for Dockerfile base images (internal mirror avoids Docker Hub timeouts)
-  REGISTRY_PREFIX: "${REGISTRY}/library/"
 
 stages:
   - test
   - build
-  - package
-  - release
   - deploy
 
 # =============================================================================
-# Test Stage - Run on MR pipelines
+# Shared anchors — Bazel OCI build/push boilerplate.
+# =============================================================================
+#
+# The CI image must provide:
+#   - bazel / bazelisk on PATH
+#   - docker CLI (rules_oci shells out to `docker` only if you use oci_load;
+#     `oci_push` talks to the registry directly)
+#   - git + bash
+#
+# We reuse the corp-mirrored Bazel image. If that mirror is unavailable,
+# swap in any image with `bazel` on PATH — no other tooling required.
+
+.bazel-defaults: &bazel-defaults
+  tags:
+    - x86
+    - docker
+  image: ${REGISTRY}/library/bazel:latest
+  variables:
+    # Bazel outputs under /tmp survive a warm runner, and CI disk caches
+    # can be wired to GitLab's cache: declaration if desired.
+    BAZEL_DISK_CACHE: /tmp/bazel-disk-cache
+
+.bazel-push: &bazel-push
+  <<: *bazel-defaults
+  services:
+    - name: ${REGISTRY}/library/docker:dind
+      alias: docker
+  variables:
+    BAZEL_DISK_CACHE: /tmp/bazel-disk-cache
+    DOCKER_HOST: tcp://docker:2375
+  before_script:
+    # rules_oci reads ~/.docker/config.json for registry auth.
+    - echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY" -u "$REGISTRY_USER" --password-stdin
+
+# =============================================================================
+# Test Stage — Run on MR pipelines
 # =============================================================================
 
-# Test backend (Go)
 test-backend:
   stage: test
   tags:
@@ -79,9 +109,9 @@ test-backend:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - backend/**/*
+        - proto/**/*
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Test web (Next.js/Vitest)
 test-web:
   stage: test
   tags:
@@ -113,7 +143,6 @@ test-web:
         - clients/web/**/*
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Test web-admin (Next.js)
 test-web-admin:
   stage: test
   tags:
@@ -133,7 +162,6 @@ test-web-admin:
         - clients/web-admin/**/*
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Test runner (Go)
 test-runner:
   stage: test
   tags:
@@ -167,7 +195,6 @@ test-runner:
         - runner/**/*
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Test relay (Go)
 test-relay:
   stage: test
   tags:
@@ -202,227 +229,188 @@ test-relay:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Build Verification - Run on MR pipelines (no push)
+# Build Verification — Run on MR pipelines (build only, no push)
 # =============================================================================
-# These jobs verify that the code compiles successfully without pushing images.
-# This catches build errors before merging to main.
+# `bazel build //<target>:image` catches compile errors + OCI layering
+# problems before merge, without touching the registry.
 
-# Verify backend build (MR only)
 verify-build-backend:
+  <<: *bazel-defaults
   stage: test
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
   script:
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/backend.Dockerfile -t backend-verify:${CI_COMMIT_SHORT_SHA} .
+    - bazel build //backend/cmd/server:image
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - backend/**/*
         - proto/**/*
-        - ci/backend.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
+        - .bazelrc
 
-# Verify web build (MR only)
 verify-build-web:
+  <<: *bazel-defaults
   stage: test
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
   script:
-    - cd clients/web
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../../ci/web.Dockerfile -t web-verify:${CI_COMMIT_SHORT_SHA} .
+    - bazel build //clients/web:image
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - clients/web/**/*
-        - ci/web.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
+        - .bazelrc
 
-# Verify web-admin build (MR only)
 verify-build-web-admin:
+  <<: *bazel-defaults
   stage: test
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
   script:
-    - cd clients/web-admin
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../../ci/web-admin.Dockerfile -t web-admin-verify:${CI_COMMIT_SHORT_SHA} .
+    - bazel build //clients/web-admin:image
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - clients/web-admin/**/*
-        - ci/web-admin.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
+        - .bazelrc
 
-# Verify runner build (MR only)
 verify-build-runner:
+  <<: *bazel-defaults
   stage: test
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
   script:
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/runner.Dockerfile -t runner-verify:${CI_COMMIT_SHORT_SHA} .
+    - bazel build //runner/cmd/runner:image
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - runner/**/*
         - proto/**/*
-        - ci/runner.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
+        - .bazelrc
 
-# Verify relay build (MR only)
 verify-build-relay:
+  <<: *bazel-defaults
   stage: test
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
   script:
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/relay.Dockerfile -t relay-verify:${CI_COMMIT_SHORT_SHA} .
+    - bazel build //relay/cmd/relay:image
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       changes:
         - relay/**/*
-        - ci/relay.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
+        - .bazelrc
 
 # =============================================================================
-# Build Stage - Run on main branch (push to registry)
+# Build Stage — Run on main branch (build + push to corp registry)
 # =============================================================================
+# `bazel run //<target>:image_push_corp` publishes tags `latest`,
+# `${IMAGE_VERSION}`, `${IMAGE_MINOR}` as stamped by
+# build_defs/workspace_status.sh.
 
-# Build backend image
 build-backend:
+  <<: *bazel-push
   stage: build
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
+  variables:
+    IMAGE_VERSION: sha-${CI_COMMIT_SHORT_SHA}
+    IMAGE_MINOR: latest
   script:
-    # Build from project root to include proto/ directory
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/backend.Dockerfile -t ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${BACKEND_IMAGE}:latest .
-    - docker push ${BACKEND_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - docker push ${BACKEND_IMAGE}:latest
+    - >-
+      bazel run --stamp
+      --workspace_status_command=build_defs/workspace_status.sh
+      //backend/cmd/server:image_push_corp
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - backend/**/*
         - proto/**/*
-        - ci/backend.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Build web image
 build-web:
+  <<: *bazel-push
   stage: build
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
+  variables:
+    IMAGE_VERSION: sha-${CI_COMMIT_SHORT_SHA}
+    IMAGE_MINOR: latest
   script:
-    - cd clients/web
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} -f ../../ci/web.Dockerfile -t ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_IMAGE}:latest .
-    - docker push ${WEB_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - docker push ${WEB_IMAGE}:latest
+    - >-
+      bazel run --stamp
+      --workspace_status_command=build_defs/workspace_status.sh
+      //clients/web:image_push_corp
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - clients/web/**/*
-        - ci/web.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Build web-admin image
 build-web-admin:
+  <<: *bazel-push
   stage: build
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
+  variables:
+    IMAGE_VERSION: sha-${CI_COMMIT_SHORT_SHA}
+    IMAGE_MINOR: latest
   script:
-    - cd clients/web-admin
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg NPM_REGISTRY=${NPM_REGISTRY} -f ../../ci/web-admin.Dockerfile -t ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${WEB_ADMIN_IMAGE}:latest .
-    - docker push ${WEB_ADMIN_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - docker push ${WEB_ADMIN_IMAGE}:latest
+    - >-
+      bazel run --stamp
+      --workspace_status_command=build_defs/workspace_status.sh
+      //clients/web-admin:image_push_corp
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - clients/web-admin/**/*
-        - ci/web-admin.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Build runner image
 build-runner:
+  <<: *bazel-push
   stage: build
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
+  variables:
+    IMAGE_VERSION: sha-${CI_COMMIT_SHORT_SHA}
+    IMAGE_MINOR: latest
   script:
-    # Build from project root to include proto/ directory
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/runner.Dockerfile -t ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RUNNER_IMAGE}:latest .
-    - docker push ${RUNNER_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - docker push ${RUNNER_IMAGE}:latest
+    - >-
+      bazel run --stamp
+      --workspace_status_command=build_defs/workspace_status.sh
+      //runner/cmd/runner:image_push_corp
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - runner/**/*
         - proto/**/*
-        - ci/runner.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Build relay image
 build-relay:
+  <<: *bazel-push
   stage: build
-  tags:
-    - x86
-    - docker
-  image: ${REGISTRY}/library/docker:latest
-  services:
-    - name: ${REGISTRY}/library/docker:dind
-      alias: docker
+  variables:
+    IMAGE_VERSION: sha-${CI_COMMIT_SHORT_SHA}
+    IMAGE_MINOR: latest
   script:
-    - docker build --build-arg REGISTRY_PREFIX=${REGISTRY_PREFIX} --build-arg GO_VERSION=${GO_VERSION} --build-arg GOPROXY=${GOPROXY} -f ci/relay.Dockerfile -t ${RELAY_IMAGE}:${CI_COMMIT_SHORT_SHA} -t ${RELAY_IMAGE}:latest .
-    - docker push ${RELAY_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - docker push ${RELAY_IMAGE}:latest
+    - >-
+      bazel run --stamp
+      --workspace_status_command=build_defs/workspace_status.sh
+      //relay/cmd/relay:image_push_corp
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - relay/**/*
-        - ci/relay.Dockerfile
+        - build_defs/**/*
+        - MODULE.bazel
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Deploy Stage - China Production (auto-deploy on main)
+# Deploy Stage — China Production (auto-deploy on main)
 # =============================================================================
-# China production deploys automatically after build succeeds on main branch.
-# DEPLOY_VERSION defaults to CI_COMMIT_SHORT_SHA but can be overridden for rollback.
+# DEPLOY_VERSION defaults to sha-${CI_COMMIT_SHORT_SHA} (matching the tag
+# that build-* pushed); override in manual re-runs for rollback.
 
-# Deploy Backend to China Production
 deploy:cn-prod:backend:
   stage: deploy
   needs:
@@ -431,7 +419,7 @@ deploy:cn-prod:backend:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://agentsmesh.cn
@@ -444,10 +432,8 @@ deploy:cn-prod:backend:
       changes:
         - backend/**/*
         - proto/**/*
-        - ci/backend.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Web to China Production
 deploy:cn-prod:web:
   stage: deploy
   needs:
@@ -456,7 +442,7 @@ deploy:cn-prod:web:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://agentsmesh.cn
@@ -468,10 +454,8 @@ deploy:cn-prod:web:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - clients/web/**/*
-        - ci/web.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Web-Admin to China Production
 deploy:cn-prod:web-admin:
   stage: deploy
   needs:
@@ -480,7 +464,7 @@ deploy:cn-prod:web-admin:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://admin.agentsmesh.cn
@@ -492,10 +476,8 @@ deploy:cn-prod:web-admin:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - clients/web-admin/**/*
-        - ci/web-admin.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Relay: cn-relay-01
 deploy:cn-prod:cn-relay-01:
   stage: deploy
   needs:
@@ -504,7 +486,7 @@ deploy:cn-prod:cn-relay-01:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: cn-production
     url: https://01.relay.agentsmesh.cn:8443
@@ -516,16 +498,12 @@ deploy:cn-prod:cn-relay-01:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - relay/**/*
-        - ci/relay.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Database Migration - China Production (auto after backend deploy)
+# Database Migration — China Production (auto after backend deploy)
 # =============================================================================
-# Runs automatically after backend deployment when migration files change.
-# Migration runs AFTER backend deploy to ensure the new binary is in place.
 
-# Database Migration for China Production
 migrate:cn-prod:
   stage: deploy
   needs:
@@ -550,10 +528,9 @@ migrate:cn-prod:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Deploy Stage - US West Production
+# Deploy Stage — US West Production
 # =============================================================================
 
-# Deploy Backend to US West Production
 deploy:uswest-prod:backend:
   stage: deploy
   needs:
@@ -562,7 +539,7 @@ deploy:uswest-prod:backend:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: uswest-production
     url: https://agentsmesh.ai
@@ -575,10 +552,8 @@ deploy:uswest-prod:backend:
       changes:
         - backend/**/*
         - proto/**/*
-        - ci/backend.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Web to US West Production
 deploy:uswest-prod:web:
   stage: deploy
   needs:
@@ -587,7 +562,7 @@ deploy:uswest-prod:web:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: uswest-production
     url: https://agentsmesh.ai
@@ -599,10 +574,8 @@ deploy:uswest-prod:web:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - clients/web/**/*
-        - ci/web.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Web-Admin to US West Production
 deploy:uswest-prod:web-admin:
   stage: deploy
   needs:
@@ -611,7 +584,7 @@ deploy:uswest-prod:web-admin:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: uswest-production
     url: https://admin.agentsmesh.ai
@@ -623,10 +596,8 @@ deploy:uswest-prod:web-admin:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - clients/web-admin/**/*
-        - ci/web-admin.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Relay: uswest-relay-01
 deploy:uswest-prod:uswest-relay-01:
   stage: deploy
   needs:
@@ -635,7 +606,7 @@ deploy:uswest-prod:uswest-relay-01:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: uswest-production
     url: https://01.relay.agentsmesh.ai:8443
@@ -647,10 +618,8 @@ deploy:uswest-prod:uswest-relay-01:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - relay/**/*
-        - ci/relay.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
-# Deploy Relay: uswest-relay-beijing-02 (Beijing accelerator for US West)
 deploy:uswest-prod:uswest-relay-beijing-02:
   stage: deploy
   needs:
@@ -659,7 +628,7 @@ deploy:uswest-prod:uswest-relay-beijing-02:
     - deploy
     - linux
   variables:
-    DEPLOY_VERSION: "${CI_COMMIT_SHORT_SHA}"
+    DEPLOY_VERSION: "sha-${CI_COMMIT_SHORT_SHA}"
   environment:
     name: uswest-production
     url: https://beijing-02.relay.agentsmesh.ai:8443
@@ -671,16 +640,12 @@ deploy:uswest-prod:uswest-relay-beijing-02:
     - if: $CI_COMMIT_BRANCH == "main"
       changes:
         - relay/**/*
-        - ci/relay.Dockerfile
     - if: $CI_PIPELINE_SOURCE == "web"
 
 # =============================================================================
-# Database Migration - US West Production (auto after backend deploy)
+# Database Migration — US West Production (auto after backend deploy)
 # =============================================================================
-# Runs automatically after backend deployment when migration files change.
-# Migration runs AFTER backend deploy to ensure the new binary is in place.
 
-# Database Migration for US West Production
 migrate:uswest-prod:
   stage: deploy
   needs:

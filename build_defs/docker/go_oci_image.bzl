@@ -25,7 +25,7 @@ Usage:
     #   :image_push_dockerhub    — oci_push to Docker Hub
     #   :image_push_agentsmesh   — oci_push to AgentsMesh registry
 
-Replaces: ci/backend.Dockerfile, ci/runner.Dockerfile, ci/relay.Dockerfile.
+Used by backend/runner/relay to produce distroless images.
 """
 
 load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")

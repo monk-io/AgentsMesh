@@ -47,16 +47,12 @@ jobs:
               - 'backend/**'
               - 'proto/**'
               - 'agentfile/**'
-              - 'ci/backend.Dockerfile'
             web:
               - 'clients/web/**'
-              - 'ci/web.Dockerfile'
             web-admin:
               - 'clients/web-admin/**'
-              - 'ci/web-admin.Dockerfile'
             relay:
               - 'relay/**'
-              - 'ci/relay.Dockerfile'
             migrations:
               - 'backend/migrations/**'
 

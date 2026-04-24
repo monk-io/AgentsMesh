@@ -19,13 +19,15 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-# Bazel replacement for `relay/Dockerfile` and `ci/relay.Dockerfile`.
+# Distroless OCI image for the relay daemon. See
+# //build_defs/docker:go_oci_image for the macro.
 go_oci_image(
     name = "image",
     binary = ":relay",
     exposed_ports = ["8090/tcp"],
     repositories = {
-        "dockerhub": "agentsmesh/relay",
         "agentsmesh": "registry.agentsmesh.ai/agentsmesh/relay",
+        "corp": "registry.corp.agentsmesh.ai/agentsmesh/relay",
+        "dockerhub": "agentsmesh/relay",
     },
 )
