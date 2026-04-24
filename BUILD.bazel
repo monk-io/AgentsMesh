@@ -6,6 +6,7 @@
 # targets: `buildifier` (formatter), `gazelle` (Go BUILD gen, Phase 1+).
 ###############################################################################
 
+load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
@@ -21,11 +22,23 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 # package.json + this target, every workspace TS BUILD fails analysis.
 npm_link_all_packages(name = "node_modules")
 
+# Copy root package.json into bazel-out so sub-packages (clients/web,
+# clients/web-admin) can reference it from their data deps. aspect_rules_js
+# / next_app expect data files to live within the caller's package or
+# come from a `copy_to_bin` wrapper; a bare `//:package.json` label in a
+# nested BUILD triggers the "move copy_to_bin target to //" error.
+copy_to_bin(
+    name = "package_json_bin",
+    srcs = ["package.json"],
+    visibility = ["//visibility:public"],
+)
+
 exports_files(
     [
         ".bazelrc",
         ".bazelignore",
         "go.work",
+        "package.json",
     ],
     visibility = ["//visibility:public"],
 )

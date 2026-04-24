@@ -50,7 +50,7 @@ def vitest_test(
             "--no-color",
         ],
         data = (data or []) + srcs + [config] + (deps or []) + [
-            ":node_modules/vitest",
+            "//:node_modules/vitest",
         ],
         env = merged_env,
         chdir = chdir or native.package_name(),

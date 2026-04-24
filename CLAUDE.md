@@ -103,24 +103,28 @@ go test -v ./internal/service/... -run TestAuth  # Run specific test
 
 ### Web (Next.js)
 
+web + web-admin 的依赖统一放在根 `package.json`（per-app package.json 已删），
+开发走 Bazel 或 `pnpm exec`：
+
 ```bash
-cd clients/web
-pnpm install                     # Install dependencies
-pnpm build                       # Production build
-pnpm lint                        # ESLint
-pnpm test                        # Run tests (Vitest)
-pnpm test:run                    # Run tests once
-pnpm test:coverage               # Test coverage
+pnpm install                              # Install at repo root (one-shot)
+bazel run //clients/web:next_dev          # Dev server (preferred)
+bazel build //clients/web:image           # Production OCI image
+bazel test //clients/web:unit             # Vitest (1510 tests)
+
+# Shell alternatives (CWD = app dir)
+(cd clients/web && pnpm exec next dev --turbopack)
+(cd clients/web && pnpm exec eslint .)
+(cd clients/web && pnpm exec tsc --noEmit)
 ```
 
 ### Web-Admin (Next.js)
 
 ```bash
-cd clients/web-admin
-pnpm install                     # Install dependencies
-pnpm build                       # Production build
-pnpm lint                        # ESLint
-pnpm dev                         # Start development server
+bazel run //clients/web-admin:next_dev
+bazel build //clients/web-admin:image
+(cd clients/web-admin && pnpm exec eslint .)
+(cd clients/web-admin && pnpm exec tsc --noEmit)
 ```
 
 ### Runner (Go)

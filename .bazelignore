@@ -11,9 +11,7 @@ clients/ios/DerivedData
 clients/ios/Packages/AgentsMeshCore/.build
 clients/ios/Packages/AgentsMeshFeatures/.build
 clients/web/.next
-clients/web/node_modules
 clients/web-admin/.next
-clients/web-admin/node_modules
 clients/desktop/dist
 clients/desktop/node_modules
 packages/electron-adapter/node_modules

@@ -373,10 +373,11 @@ npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
     pnpm_lock = "//:pnpm-lock.yaml",
-    # Public hoist is disabled — clients/web and clients/web-admin bring
-    # in different `eslint-config-next` versions, and the hoist picker
-    # can't disambiguate. Lint runs fine against each package's own
-    # node_modules, so we don't need a root-visible copy.
+    # Public hoist stays disabled while clients/desktop still has its
+    # own package.json (Electron / electron-builder tie-in). Once
+    # desktop migrates to the single-root model (Phase C in
+    # .claude/plans/snuggly-spinning-dewdrop.md), we can re-enable
+    # hoist for peer-dep convenience across all TS packages.
     verify_node_modules_ignored = "//:.bazelignore",
 )
 use_repo(npm, "npm")

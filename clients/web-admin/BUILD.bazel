@@ -1,11 +1,8 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@npm//clients/web-admin:next/package_json.bzl", next_bin = "bin")
+load("@npm//:next/package_json.bzl", next_bin = "bin")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:ts.bzl", "ts_project")
-
-npm_link_all_packages(name = "node_modules")
 
 # Per-importer Next.js binary — see clients/web/BUILD.bazel for the full
 # explanation. Same factory pattern, distinct target name so each
@@ -47,7 +44,7 @@ ts_project(
     ),
     declaration = True,
     tsconfig = "tsconfig.json",
-    deps = [":node_modules"],
+    deps = ["//:node_modules"],
 )
 
 next_app(
@@ -55,10 +52,10 @@ next_app(
     srcs = _SRC_FILES,
     data = [
         "next.config.ts",
-        "package.json",
         "postcss.config.mjs",
         "tsconfig.json",
-        ":node_modules",
+        "//:node_modules",
+        "//:package_json_bin",
     ],
     next_js_binary = ":next_js_binary",
 )

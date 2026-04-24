@@ -738,7 +738,7 @@ show_result() {
 # 启动本地前端
 start_frontend() {
     source "$ENV_FILE"
-    local web_dir="$SCRIPT_DIR/../../web"
+    local web_dir="$SCRIPT_DIR/../../clients/web"
     local web_port="${WEB_PORT:-3000}"
     local lock_file="$web_dir/.next/dev/lock"
     local stale_lock=false
@@ -771,17 +771,21 @@ start_frontend() {
         return 1
     fi
 
-    # 检查依赖（lockfile 变化时重新安装）
-    local lockfile="$web_dir/pnpm-lock.yaml"
-    local lockfile_hash_file="$web_dir/node_modules/.pnpm-lock-hash"
+    # 检查依赖（根目录 lockfile 变化时重新安装）
+    # web + web-admin 的依赖已 hoist 到根 package.json（see
+    # .claude/plans/snuggly-spinning-dewdrop.md Phase A），所以只查
+    # 根 pnpm-lock.yaml 的哈希，install 也在根执行。
+    local root_dir="$SCRIPT_DIR/../.."
+    local lockfile="$root_dir/pnpm-lock.yaml"
+    local lockfile_hash_file="$root_dir/node_modules/.pnpm-lock-hash"
     local current_hash=""
     local cached_hash=""
     [[ -f "$lockfile" ]] && current_hash=$(md5 -q "$lockfile" 2>/dev/null || md5sum "$lockfile" | cut -d' ' -f1)
     [[ -f "$lockfile_hash_file" ]] && cached_hash=$(cat "$lockfile_hash_file")
 
-    if [[ ! -d "$web_dir/node_modules" || "$current_hash" != "$cached_hash" ]]; then
-        info "安装前端依赖..."
-        (cd "$web_dir" && pnpm install --frozen-lockfile) || {
+    if [[ ! -d "$root_dir/node_modules" || "$current_hash" != "$cached_hash" ]]; then
+        info "安装前端依赖（根 workspace）..."
+        (cd "$root_dir" && pnpm install --frozen-lockfile) || {
             error "前端依赖安装失败"
             return 1
         }
@@ -799,7 +803,8 @@ start_frontend() {
     info "启动前端服务 (端口: $web_port)..."
     local saved_dir="$PWD"
     cd "$web_dir"
-    pnpm dev --turbopack --port "$web_port" > "$log_file" 2>&1 < /dev/null &
+    # `pnpm exec next` 从根 node_modules 找 next CLI，无需 per-package package.json。
+    pnpm exec next dev --turbopack --port "$web_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"
 
@@ -820,7 +825,7 @@ start_frontend() {
 # 启动本地 Admin Console 前端
 start_admin_frontend() {
     source "$ENV_FILE"
-    local web_admin_dir="$SCRIPT_DIR/../../web-admin"
+    local web_admin_dir="$SCRIPT_DIR/../../clients/web-admin"
     local web_admin_port="${WEB_ADMIN_PORT:-3001}"
     local lock_file="$web_admin_dir/.next/dev/lock"
     local stale_lock=false
@@ -848,16 +853,17 @@ start_admin_frontend() {
         return 0
     fi
 
-    # 检查依赖
-    local lockfile="$web_admin_dir/pnpm-lock.yaml"
-    local lockfile_hash_file="$web_admin_dir/node_modules/.pnpm-lock-hash"
+    # 检查依赖（根目录 lockfile，web-admin deps 已 hoist 到根）
+    local root_dir="$SCRIPT_DIR/../.."
+    local lockfile="$root_dir/pnpm-lock.yaml"
+    local lockfile_hash_file="$root_dir/node_modules/.pnpm-lock-hash"
     local current_hash="" cached_hash=""
     [[ -f "$lockfile" ]] && current_hash=$(md5 -q "$lockfile" 2>/dev/null || md5sum "$lockfile" | cut -d' ' -f1)
     [[ -f "$lockfile_hash_file" ]] && cached_hash=$(cat "$lockfile_hash_file")
 
-    if [[ ! -d "$web_admin_dir/node_modules" || "$current_hash" != "$cached_hash" ]]; then
-        info "安装 Admin Console 依赖..."
-        (cd "$web_admin_dir" && pnpm install --frozen-lockfile) || {
+    if [[ ! -d "$root_dir/node_modules" || "$current_hash" != "$cached_hash" ]]; then
+        info "安装 Admin Console 依赖（根 workspace）..."
+        (cd "$root_dir" && pnpm install --frozen-lockfile) || {
             error "Admin Console 依赖安装失败"
             return 0
         }
@@ -871,7 +877,7 @@ start_admin_frontend() {
     info "启动 Admin Console (端口: $web_admin_port)..."
     local saved_dir="$PWD"
     cd "$web_admin_dir"
-    pnpm dev --port "$web_admin_port" > "$log_file" 2>&1 < /dev/null &
+    pnpm exec next dev --port "$web_admin_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"
 

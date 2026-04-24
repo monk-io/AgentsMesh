@@ -1,16 +1,10 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
-load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@npm//clients/web:next/package_json.bzl", next_bin = "bin")
+load("@npm//:next/package_json.bzl", next_bin = "bin")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
 load("//build_defs/web:vitest.bzl", "vitest_test")
-
-# Pull every npm dep listed in package.json into a local `node_modules`
-# virtual tree that Bazel understands. aspect_rules_js reads the root
-# pnpm-lock and hydrates this target lazily.
-npm_link_all_packages(name = "node_modules")
 
 # aspect_rules_js 2.9 emits a per-importer `next/package_json.bzl` that
 # re-exports the `bin` factory from the versioned `@@aspect_rules_js++
@@ -43,7 +37,7 @@ ts_project(
     ),
     declaration = True,
     tsconfig = "tsconfig.json",
-    deps = [":node_modules"],
+    deps = ["//:node_modules"],
 )
 
 # Raw source bundle passed to `next build`. Next.js's own compiler
@@ -79,9 +73,9 @@ _SRC_FILES = glob(
 _NEXT_DATA = [
     "next.config.ts",
     "postcss.config.mjs",
-    "package.json",
     "tsconfig.json",
-    ":node_modules",
+    "//:node_modules",
+    "//:package_json_bin",
     "//clients/core/pkg",
 ]
 
@@ -119,9 +113,9 @@ vitest_test(
     ]),
     config = "vitest.config.ts",
     data = [
-        "package.json",
         "tsconfig.json",
-        ":node_modules",
+        "//:node_modules",
+        "//:package_json_bin",
     ] + glob(
         [
             "src/**/*.ts",
@@ -159,7 +153,7 @@ playwright_test(
     ),
     config = "playwright.config.ts",
     data = [
-        "package.json",
         "//:node_modules/@playwright/test",
+        "//:package_json_bin",
     ],
 )

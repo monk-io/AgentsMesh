@@ -1,6 +1,4 @@
 packages:
-  - clients/web
-  - clients/web-admin
   - clients/desktop
   - packages/*
   - clients/core/crates/node-bridge
