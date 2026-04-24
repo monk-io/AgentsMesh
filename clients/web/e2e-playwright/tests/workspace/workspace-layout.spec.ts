@@ -5,7 +5,6 @@ import { TEST_ORG_SLUG } from "../../helpers/env";
 
 /**
  * Workspace UI layout tests.
- * Maps to: e2e/workspace/TC-WS-001~004
  */
 test.describe("Workspace Layout", () => {
   /**

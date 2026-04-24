@@ -8,7 +8,6 @@ const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
 /**
  * Pod lifecycle scenario tests.
  * These require at least one runner to be online.
- * Maps to: e2e/pod/lifecycle/TC-POD-004~007
  */
 test.describe("Pod Lifecycle Scenarios", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });

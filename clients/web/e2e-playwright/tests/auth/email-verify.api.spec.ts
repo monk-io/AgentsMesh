@@ -8,7 +8,6 @@ test.describe("Email Verification", () => {
   });
   /**
    * TC-VERIFY-001: Verify email with valid token
-   * Maps to: e2e/account/auth/email-verify/TC-VERIFY-001-success.yaml
    */
   test("verify email with valid token succeeds", async ({ api, db }) => {
     const email = "verify-e2e@test.local";
@@ -40,7 +39,6 @@ test.describe("Email Verification", () => {
 
   /**
    * TC-VERIFY-002: Verify email with invalid token
-   * Maps to: e2e/account/auth/email-verify/TC-VERIFY-002-invalid-token.yaml
    */
   test("verify email with invalid token fails", async ({ api }) => {
     const res = await api.postPublic("/api/v1/auth/verify-email", {
@@ -58,7 +56,6 @@ test.describe("Email Verification", () => {
 
   /**
    * TC-VERIFY-003: Resend verification email
-   * Maps to: e2e/account/auth/email-verify/TC-VERIFY-003-resend.yaml
    */
   test("resend verification for valid email succeeds", async ({ api, db }) => {
     const email = "resend-e2e@test.local";

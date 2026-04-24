@@ -9,7 +9,6 @@ test.describe("Pod Create API", () => {
 
   /**
    * TC-POD-001: Create basic pod
-   * Maps to: e2e/pod/lifecycle/TC-POD-001-create-basic.yaml
    */
   test("create basic pod", async ({ api }) => {
     // Check available runners first
@@ -42,7 +41,6 @@ test.describe("Pod Create API", () => {
 
   /**
    * TC-POD-003: Terminate pod
-   * Maps to: e2e/pod/lifecycle/TC-POD-003-terminate-pod.yaml
    */
   test("terminate pod", async ({ api }) => {
     const runnersRes = await api.get(

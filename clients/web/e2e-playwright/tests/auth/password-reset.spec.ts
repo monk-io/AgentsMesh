@@ -8,7 +8,6 @@ test.describe("Password Reset Flow", () => {
   });
   /**
    * TC-PWRST-001: Request password reset
-   * Maps to: e2e/account/auth/password-reset/TC-PWRST-001-forgot-password.yaml
    */
   test("forgot password returns success for valid email", async ({ api }) => {
     const res = await api.postPublic("/api/v1/auth/forgot-password", {
@@ -31,7 +30,6 @@ test.describe("Password Reset Flow", () => {
 
   /**
    * TC-PWRST-002: Reset password with valid token
-   * Maps to: e2e/account/auth/password-reset/TC-PWRST-002-reset-success.yaml
    */
   test("reset password with valid token succeeds", async ({ api, db }) => {
     const email = "pwreset-e2e@test.local";
@@ -63,7 +61,6 @@ test.describe("Password Reset Flow", () => {
 
   /**
    * TC-PWRST-003: Reset password with invalid token
-   * Maps to: e2e/account/auth/password-reset/TC-PWRST-003-invalid-token.yaml
    */
   test("reset password with invalid token fails", async ({ api }) => {
     const res = await api.postPublic("/api/v1/auth/reset-password", {

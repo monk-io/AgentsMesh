@@ -5,7 +5,6 @@ import { clearAuthRateLimit } from "../../helpers/redis";
 /**
  * Runner registration token tests.
  * The registration tokens use the gRPC tokens API.
- * Maps to: e2e/runner/tokens/
  */
 
 const TOKENS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/runners/grpc/tokens`;

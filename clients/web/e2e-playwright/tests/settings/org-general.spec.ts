@@ -12,7 +12,6 @@ test.describe("Organization General Settings", () => {
 
   /**
    * TC-ORGSET-001: Get org details (API)
-   * Maps to: e2e/settings/org-general/TC-ORGSET-001-get-org.yaml
    */
   test("get org details via API", async ({ api }) => {
     const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}`);
@@ -24,7 +23,6 @@ test.describe("Organization General Settings", () => {
 
   /**
    * TC-ORGSET-002: Settings page elements
-   * Maps to: e2e/settings/org-general/TC-ORGSET-002-page-elements.yaml
    */
   test("settings page displays required elements", async () => {
     await expect(orgPage.nameInput).toBeVisible();
@@ -34,7 +32,6 @@ test.describe("Organization General Settings", () => {
 
   /**
    * TC-ORGSET-004: Slug is disabled
-   * Maps to: e2e/settings/org-general/TC-ORGSET-004-slug-disabled.yaml
    */
   test("org slug field is disabled", async () => {
     await expect(orgPage.slugInput).toBeDisabled();
@@ -44,7 +41,6 @@ test.describe("Organization General Settings", () => {
 
   /**
    * TC-ORGSET-003: Update org name
-   * Maps to: e2e/settings/org-general/TC-ORGSET-003-update-name.yaml
    */
   test("update org name and verify persistence", async ({ page, db }) => {
     // Save original name

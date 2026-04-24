@@ -4,7 +4,6 @@ import { clearAuthRateLimit } from "../../../helpers/redis";
 
 /**
  * SSO Admin API tests — require system admin auth.
- * Maps to: e2e/account/auth/sso/admin/TC-SSO-ADM-001~005
  */
 test.describe("SSO Admin API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });

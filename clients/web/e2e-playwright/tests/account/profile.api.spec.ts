@@ -5,7 +5,6 @@ import { CLEANUP } from "../../helpers/test-data";
 test.describe("User Profile API", () => {
   /**
    * TC-PROF-001: Get current user
-   * Maps to: e2e/account/profile/TC-PROF-001-get-current-user.yaml
    */
   test("get current user returns user info", async ({ api }) => {
     const res = await api.get("/api/v1/users/me");
@@ -23,7 +22,6 @@ test.describe("User Profile API", () => {
 
   /**
    * TC-PROF-002: Update user name
-   * Maps to: e2e/account/profile/TC-PROF-002-update-name.yaml
    */
   test("update user name", async ({ api, db }) => {
     const email = "profile-e2e@test.local";
@@ -47,7 +45,6 @@ test.describe("User Profile API", () => {
 
   /**
    * TC-PROF-003: Change password
-   * Maps to: e2e/account/profile/TC-PROF-003-change-password.yaml
    */
   test("change password with correct current password", async ({ api, db }) => {
     const email = "pwchange-e2e@test.local";
@@ -76,7 +73,6 @@ test.describe("User Profile API", () => {
 
   /**
    * TC-PROF-004: Change password with wrong current password
-   * Maps to: e2e/account/profile/TC-PROF-004-change-password-wrong.yaml
    */
   test("change password with wrong current password fails", async ({ api }) => {
     const res = await api.post("/api/v1/users/me/password", {
@@ -88,7 +84,6 @@ test.describe("User Profile API", () => {
 
   /**
    * TC-PROF-005: List organizations
-   * Maps to: e2e/account/profile/TC-PROF-005-list-organizations.yaml
    */
   test("list user organizations returns org list", async ({ api }) => {
     const res = await api.get("/api/v1/users/me/organizations");

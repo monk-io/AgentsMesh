@@ -15,7 +15,6 @@ test.describe("Login Flow", () => {
 
   /**
    * TC-LOGIN-004: Login page UI elements
-   * Maps to: e2e/account/auth/login/TC-LOGIN-004-ui-flow.yaml
    */
   test("login page displays all required elements", async () => {
     await expect(loginPage.emailInput).toBeVisible();
@@ -26,7 +25,6 @@ test.describe("Login Flow", () => {
 
   /**
    * TC-LOGIN-001: Successful login
-   * Maps to: e2e/account/auth/login/TC-LOGIN-001-success.yaml
    */
   test("successful login redirects to workspace", async ({ page }) => {
     await loginPage.login(TEST_USER.email, TEST_USER.password);
@@ -42,7 +40,6 @@ test.describe("Login Flow", () => {
 
   /**
    * TC-LOGIN-002: Invalid credentials
-   * Maps to: e2e/account/auth/login/TC-LOGIN-002-invalid-credentials.yaml
    */
   test("invalid credentials show error message", async ({ page }) => {
     await loginPage.login("wrong@example.com", "wrongpassword");
@@ -58,7 +55,6 @@ test.describe("Login Flow", () => {
 
   /**
    * TC-LOGIN-003: Empty form submission
-   * Maps to: e2e/account/auth/login/TC-LOGIN-003-empty-fields.yaml
    */
   test("empty form shows validation errors", async ({ page }) => {
     // Try to submit without filling anything — HTML5 validation should prevent

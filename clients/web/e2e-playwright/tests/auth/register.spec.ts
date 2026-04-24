@@ -12,7 +12,6 @@ test.describe("Registration Flow", () => {
 
   /**
    * TC-REG-004: Register page UI elements
-   * Maps to: e2e/account/auth/register/TC-REG-004-ui-flow.yaml
    */
   test("register page displays all required elements", async ({ page }) => {
     const registerPage = new RegisterPage(page);
@@ -28,7 +27,6 @@ test.describe("Registration Flow", () => {
 
   /**
    * TC-REG-001: Successful registration (API)
-   * Maps to: e2e/account/auth/register/TC-REG-001-success.yaml
    */
   test("successful registration creates user and returns token", async ({ api, db }) => {
     const email = "newuser-e2e@test.local";
@@ -48,7 +46,6 @@ test.describe("Registration Flow", () => {
 
   /**
    * TC-REG-002: Registration fails with existing email (API)
-   * Maps to: e2e/account/auth/register/TC-REG-002-email-exists.yaml
    */
   test("registration fails with existing email", async ({ api }) => {
     const res = await api.postPublic("/api/v1/auth/register", {
@@ -60,7 +57,6 @@ test.describe("Registration Flow", () => {
 
   /**
    * TC-REG-003: Registration fails with weak password (API)
-   * Maps to: e2e/account/auth/register/TC-REG-003-weak-password.yaml
    */
   test("registration fails with weak password", async ({ api }) => {
     const res = await api.postPublic("/api/v1/auth/register", {
@@ -72,7 +68,6 @@ test.describe("Registration Flow", () => {
 
   /**
    * TC-REG-004: Register page UI interaction flow
-   * Maps to: e2e/account/auth/register/TC-REG-004-ui-flow.yaml
    */
   test("register page UI flow", async ({ page, db }) => {
     const email = "uiregister@test.local";

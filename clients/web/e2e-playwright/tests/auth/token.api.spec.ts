@@ -8,7 +8,6 @@ test.describe("Token Management", () => {
   });
   /**
    * TC-TOKEN-001: Token refresh
-   * Maps to: e2e/account/auth/token/TC-TOKEN-001-refresh.yaml
    */
   test("refresh token returns new tokens", async ({ api }) => {
     const loginData = await api.login();
@@ -26,7 +25,6 @@ test.describe("Token Management", () => {
 
   /**
    * TC-TOKEN-002: Token refresh with invalid token
-   * Maps to: e2e/account/auth/token/TC-TOKEN-002-invalid-refresh.yaml
    */
   test("refresh with invalid token fails", async ({ api }) => {
     const res = await api.postPublic("/api/v1/auth/refresh", {
@@ -44,7 +42,6 @@ test.describe("Token Management", () => {
 
   /**
    * TC-TOKEN-003: Logout invalidates token
-   * Maps to: e2e/account/auth/token/TC-TOKEN-003-logout.yaml
    */
   test("logout invalidates access token", async ({ api }) => {
     const loginData = await api.login();
@@ -56,7 +53,6 @@ test.describe("Token Management", () => {
 
   /**
    * TC-TOKEN-004: Multi-device concurrent login
-   * Maps to: e2e/account/auth/token/TC-TOKEN-004-multi-device-login.yaml
    */
   test("multi-device login produces independent tokens", async ({ api }) => {
     // Login from three "devices" with delay to ensure different JWT iat claims

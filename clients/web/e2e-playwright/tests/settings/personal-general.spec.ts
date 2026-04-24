@@ -5,7 +5,6 @@ import { TEST_ORG_SLUG } from "../../helpers/env";
 test.describe("Personal General Settings", () => {
   /**
    * TC-LANG-001: Language settings page elements
-   * Maps to: e2e/settings/personal/TC-LANG-001-language-elements.yaml
    */
   test("language settings page shows language options", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
@@ -18,7 +17,6 @@ test.describe("Personal General Settings", () => {
 
   /**
    * TC-LANG-002: Switch language to English
-   * Maps to: e2e/settings/personal/TC-LANG-002-switch-english.yaml
    */
   test("switch language to English", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
@@ -38,7 +36,6 @@ test.describe("Personal General Settings", () => {
 
   /**
    * TC-LANG-003: Switch language to Chinese
-   * Maps to: e2e/settings/personal/TC-LANG-003-switch-chinese.yaml
    */
   test("switch language to Chinese", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);

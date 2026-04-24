@@ -4,7 +4,6 @@ import { clearAuthRateLimit } from "../../helpers/redis";
 
 /**
  * Runner admin tests — require system admin auth.
- * Maps to: e2e/runner/admin/TC-ADMIN-001~005
  */
 test.describe("Runner Admin API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });

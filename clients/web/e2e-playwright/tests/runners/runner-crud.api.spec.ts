@@ -7,7 +7,6 @@ test.describe("Runner API CRUD", () => {
 
   /**
    * TC-RUNNER-001: List runners
-   * Maps to: e2e/runner/list/TC-RUNNER-001-list-runners.yaml
    */
   test("list runners returns array", async ({ api }) => {
     const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners`);
@@ -25,7 +24,6 @@ test.describe("Runner API CRUD", () => {
 
   /**
    * TC-RUNNER-002: List available runners
-   * Maps to: e2e/runner/list/TC-RUNNER-002-list-available.yaml
    */
   test("list available runners", async ({ api }) => {
     const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
@@ -34,7 +32,6 @@ test.describe("Runner API CRUD", () => {
 
   /**
    * TC-RUNNER-003: Get single runner detail
-   * Maps to: e2e/runner/list/TC-RUNNER-003-get-runner.yaml
    */
   test("get runner by id", async ({ api, db }) => {
     const id = db.queryValue(
@@ -55,7 +52,6 @@ test.describe("Runner API CRUD", () => {
 
   /**
    * TC-CONFIG-001: Update runner config
-   * Maps to: e2e/runner/config/TC-CONFIG-001-update-runner.yaml
    */
   test("update runner description", async ({ api, db }) => {
     db.setup(`
@@ -83,7 +79,6 @@ test.describe("Runner API CRUD", () => {
 
   /**
    * TC-CONFIG-002: Disable and enable runner
-   * Maps to: e2e/runner/config/TC-CONFIG-002-disable-enable.yaml
    */
   test("disable and enable runner", async ({ api, db }) => {
     db.setup(`
@@ -123,7 +118,6 @@ test.describe("Runner API CRUD", () => {
 
   /**
    * TC-DELETE-001: Delete runner
-   * Maps to: e2e/runner/delete/TC-DELETE-001-delete-runner.yaml
    */
   test("delete runner", async ({ api, db }) => {
     db.setup(`

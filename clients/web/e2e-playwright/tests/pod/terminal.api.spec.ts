@@ -7,7 +7,6 @@ const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
 
 /**
  * Terminal connection test.
- * Maps to: e2e/pod/terminal/TC-TERM-001
  */
 test.describe("Terminal Connection", () => {
   test.beforeAll(async () => { await terminateAllPods(); });

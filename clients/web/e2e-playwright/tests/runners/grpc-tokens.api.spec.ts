@@ -9,7 +9,6 @@ test.describe("gRPC Registration Tokens", () => {
 
   /**
    * TC-GRPC-001: List gRPC tokens
-   * Maps to: e2e/runner/grpc-tokens/TC-GRPC-001-list-tokens.yaml
    */
   test("list gRPC tokens returns array", async ({ api }) => {
     const res = await api.get(GRPC_BASE);
@@ -20,7 +19,6 @@ test.describe("gRPC Registration Tokens", () => {
 
   /**
    * TC-GRPC-002: Create gRPC token
-   * Maps to: e2e/runner/grpc-tokens/TC-GRPC-002-create-token.yaml
    */
   test("create gRPC token returns token string", async ({ api, db }) => {
     const res = await api.post(GRPC_BASE, { name: "E2E gRPC test token" });
@@ -36,7 +34,6 @@ test.describe("gRPC Registration Tokens", () => {
 
   /**
    * TC-GRPC-003: Delete gRPC token
-   * Maps to: e2e/runner/grpc-tokens/TC-GRPC-003-delete-token.yaml
    */
   test("delete gRPC token", async ({ api }) => {
     // Create
@@ -61,7 +58,6 @@ test.describe("gRPC Registration Tokens", () => {
 
   /**
    * TC-GRPC-004: Full CRUD flow
-   * Maps to: e2e/runner/grpc-tokens/TC-GRPC-004-full-crud.yaml
    */
   test("gRPC tokens full CRUD flow", async ({ api }) => {
     const listRes1 = await api.get(GRPC_BASE);

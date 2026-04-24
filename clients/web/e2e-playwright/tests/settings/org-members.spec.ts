@@ -9,7 +9,6 @@ test.describe("Organization Members Settings", () => {
 
   /**
    * TC-MEMBER-001: List members API
-   * Maps to: e2e/settings/org-members/TC-MEMBER-001-list-members.yaml
    */
   test("list organization members returns array", async ({ api }) => {
     const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/members`);
@@ -21,7 +20,6 @@ test.describe("Organization Members Settings", () => {
 
   /**
    * TC-MEMBER-002: Members page elements
-   * Maps to: e2e/settings/org-members/TC-MEMBER-002-page-elements.yaml
    */
   test("members page displays required elements", async ({ page }) => {
     const membersPage = new OrgMembersPage(page, TEST_ORG_SLUG);
@@ -32,7 +30,6 @@ test.describe("Organization Members Settings", () => {
 
   /**
    * TC-MEMBER-003: Invite member dialog
-   * Maps to: e2e/settings/org-members/TC-MEMBER-003-invite-dialog.yaml
    */
   test("invite dialog opens with email and role fields", async ({ page }) => {
     const membersPage = new OrgMembersPage(page, TEST_ORG_SLUG);
@@ -44,7 +41,6 @@ test.describe("Organization Members Settings", () => {
 
   /**
    * TC-MEMBER-004: Send member invitation
-   * Maps to: e2e/settings/org-members/TC-MEMBER-004-send-invite.yaml
    */
   test("send member invitation", async ({ api, db }) => {
     // Pre-clean any existing invitation
@@ -63,7 +59,6 @@ test.describe("Organization Members Settings", () => {
 
   /**
    * TC-MEMBER-006: Remove member
-   * Maps to: e2e/settings/org-members/TC-MEMBER-006-remove-member.yaml
    */
   test("remove member from organization", async ({ api, db }) => {
     const email = "remove-test-e2e@test.local";

@@ -8,7 +8,6 @@ test.describe("Personal Agent Configuration", () => {
 
   /**
    * TC-AGENT-001: Agent config page navigation
-   * Maps to: e2e/settings/personal/TC-AGENT-001-navigation.yaml
    */
   test("agent config page shows agent types", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
@@ -21,7 +20,6 @@ test.describe("Personal Agent Configuration", () => {
 
   /**
    * TC-AGENT-002: Claude Code default config
-   * Maps to: e2e/settings/personal/TC-AGENT-002-claude-default.yaml
    */
   test("Claude Code config shows default sections", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
@@ -35,7 +33,6 @@ test.describe("Personal Agent Configuration", () => {
 
   /**
    * TC-AGENT-003: Add custom API credential
-   * Maps to: e2e/settings/personal/TC-AGENT-003-add-credential.yaml
    */
   test("add and delete custom API credential", async ({ api, db }) => {
     const res = await api.post("/api/v1/users/agent-credentials/agents/claude-code", {
@@ -52,7 +49,6 @@ test.describe("Personal Agent Configuration", () => {
 
   /**
    * TC-AGENT-008: Switch Claude model
-   * Maps to: e2e/settings/personal/TC-AGENT-008-switch-model.yaml
    */
   test("agent config page has model selection", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
@@ -65,7 +61,6 @@ test.describe("Personal Agent Configuration", () => {
 
   /**
    * TC-AGENT-015: Save runtime configuration
-   * Maps to: e2e/settings/personal/TC-AGENT-015-full-flow.yaml
    */
   test("agent config page shows runtime section or no-config message", async ({ page }) => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);

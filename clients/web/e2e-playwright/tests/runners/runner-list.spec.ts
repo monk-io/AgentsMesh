@@ -11,7 +11,6 @@ test.describe("Runner List Page", () => {
 
   /**
    * TC-UI-001: Runner list page loads
-   * Maps to: e2e/runner/ui/TC-UI-001-list-page.yaml
    *
    * Seed data includes a pre-registered 'dev-runner'.
    */

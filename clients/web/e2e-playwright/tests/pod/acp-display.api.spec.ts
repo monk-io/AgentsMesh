@@ -8,7 +8,6 @@ const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
  * ACP (Agent Control Protocol) display tests.
  * These verify ACP-related API behavior.
  * Full UI tests (Activity Stream, tool calls, permissions) require MCP Chrome DevTools.
- * Maps to: e2e/pod/acp/TC-ACP-001~007
  */
 test.describe("ACP Pod API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });

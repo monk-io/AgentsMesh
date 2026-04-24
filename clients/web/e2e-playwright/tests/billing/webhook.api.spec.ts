@@ -4,7 +4,6 @@ import { getApiBaseUrl } from "../../helpers/env";
 /**
  * Webhook endpoint tests.
  * Verifies webhook endpoints exist and respond (may be 503 if providers not configured).
- * Maps to: e2e/billing/webhook/TC-WEBHOOK-001~006
  */
 test.describe("Billing Webhooks", () => {
   const baseUrl = getApiBaseUrl();
