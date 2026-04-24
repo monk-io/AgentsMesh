@@ -68,7 +68,6 @@ next_oci_image(
     exposed_ports = ["3000/tcp"],
     repositories = {
         "agentsmesh": "registry.agentsmesh.ai/agentsmesh/web-admin",
-        "corp": "registry.corp.agentsmesh.ai/agentsmesh/web-admin",
         "dockerhub": "agentsmesh/web-admin",
     },
     start_binary = ":next_start_binary",

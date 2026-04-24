@@ -114,7 +114,6 @@ go_oci_image(
     ],
     repositories = {
         "agentsmesh": "registry.agentsmesh.ai/agentsmesh/backend",
-        "corp": "registry.corp.agentsmesh.ai/agentsmesh/backend",
         "dockerhub": "agentsmesh/backend",
     },
 )
