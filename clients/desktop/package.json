@@ -14,7 +14,7 @@
     "e2e:headed": "playwright test --headed",
     "e2e:debug": "playwright test --debug",
     "e2e:report": "playwright show-report",
-    "e2e:gen": "tsx ../../scripts/gen-ipc-tests.ts",
+    "e2e:gen": "tsx ./scripts/gen-ipc-tests.ts",
     "e2e:smoke": "playwright test e2e/tests/smoke",
     "e2e:auth": "playwright test e2e/tests/auth",
     "e2e:workspace": "playwright test e2e/tests/workspace",

@@ -412,8 +412,8 @@ swift_deps = use_extension(
     "swift_deps",
 )
 swift_deps.from_package(
-    resolved = "//ThirdLibraries/Swift:Package.resolved",
-    swift = "//ThirdLibraries/Swift:Package.swift",
+    resolved = "//third_party/swift:Package.resolved",
+    swift = "//third_party/swift:Package.swift",
 )
 use_repo(
     swift_deps,

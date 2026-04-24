@@ -7,7 +7,7 @@
 #   All services (backend / runner / relay / web / web-admin) build via
 #   Bazel rules_oci. Each target exposes `//<path>:image_push_dockerhub`
 #   and `:image_push_agentsmesh`; the tag list (latest + version +
-#   minor) is stamped from `ci/workspace_status.sh`, which reads the
+#   minor) is stamped from `build_defs/workspace_status.sh`, which reads the
 #   IMAGE_VERSION + IMAGE_MINOR env vars this workflow sets.
 
 name: Release
@@ -137,7 +137,7 @@ jobs:
       # rules_oci's oci_push reads ~/.docker/config.json for auth, so
       # the two `docker login` steps above already provisioned creds.
       # bazel run invokes the push action which tags via the stamped
-      # ci/workspace_status.sh keys.
+      # build_defs/workspace_status.sh keys.
       - name: Push to Docker Hub
         env:
           IMAGE_VERSION: ${{ needs.version.outputs.version }}
@@ -145,7 +145,7 @@ jobs:
         run: |
           bazel run \
             --stamp \
-            --workspace_status_command=ci/workspace_status.sh \
+            --workspace_status_command=build_defs/workspace_status.sh \
             ${{ matrix.target }}_push_dockerhub
 
       - name: Push to AgentsMesh Registry
@@ -155,7 +155,7 @@ jobs:
         run: |
           bazel run \
             --stamp \
-            --workspace_status_command=ci/workspace_status.sh \
+            --workspace_status_command=build_defs/workspace_status.sh \
             ${{ matrix.target }}_push_agentsmesh
 
   # ===========================================================================

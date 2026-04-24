@@ -2,7 +2,7 @@
 
 Produces an OCI image (distroless-based), a local `_tarball` for
 `docker load`, and one `_push_<key>` target per registry in
-`repositories`. Tag stamping plugs into `ci/workspace_status.sh` via
+`repositories`. Tag stamping plugs into `build_defs/workspace_status.sh` via
 Bazel's `--stamp --workspace_status_command=...` flags so the tag list
 comes from the CI environment, not the BUILD file.
 

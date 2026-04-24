@@ -188,4 +188,4 @@ clients/ios/Packages/AgentsMeshCore/Sources/AgentsMeshCoreFFI/AgentsMeshCore.xcf
 # =========================
 E2E_TEST_REPORT.md
 .loopal/worktrees/
-ThirdLibraries/Swift/.build/
+third_party/swift/.build/
