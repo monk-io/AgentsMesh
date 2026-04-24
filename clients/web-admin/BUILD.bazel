@@ -1,10 +1,37 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//clients/web-admin:next/package_json.bzl", next_bin = "bin")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:ts.bzl", "ts_project")
 
 npm_link_all_packages(name = "node_modules")
+
+# Per-importer Next.js binary — see clients/web/BUILD.bazel for the full
+# explanation. Same factory pattern, distinct target name so each
+# package's `next_app()` gets its own `js_binary` wrapper.
+next_bin.next_binary(
+    name = "next_js_binary",
+    visibility = ["//visibility:public"],
+)
+
+# Source glob — Next.js's bundler (SWC) compiles the TypeScript itself
+# at `next build` time, so the OCI image target feeds raw .ts/.tsx
+# through. `:src` below runs tsc as a type-check gate but is not used
+# as the build input.
+_SRC_FILES = glob(
+    [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.css",
+        "src/**/*.json",
+    ],
+    allow_empty = True,
+    exclude = [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ],
+)
 
 ts_project(
     name = "src",
@@ -25,7 +52,7 @@ ts_project(
 
 next_app(
     name = "next",
-    srcs = [":src"],
+    srcs = _SRC_FILES,
     data = [
         "next.config.ts",
         "package.json",
@@ -33,13 +60,16 @@ next_app(
         "tsconfig.json",
         ":node_modules",
     ],
-    next_js_binary = ":node_modules/next/package:next_bin",
+    next_js_binary = ":next_js_binary",
 )
 
 next_oci_image(
     name = "image",
     exposed_ports = ["3000/tcp"],
-    repository = "registry.corp.agentsmesh.ai/web-admin",
+    repositories = {
+        "agentsmesh": "registry.agentsmesh.ai/agentsmesh/web-admin",
+        "dockerhub": "agentsmesh/web-admin",
+    },
     start_binary = ":next_start_binary",
 )
 

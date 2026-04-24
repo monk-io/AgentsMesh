@@ -11,8 +11,29 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const here = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.resolve(here, "../..");
 
+// `output: 'standalone'` packages the server + its transitive
+// node_modules into `.next/standalone/` for a slim Docker image. The
+// Bazel OCI pipeline can't track the self-referential
+// `.next/standalone/node_modules/next` symlink that Next.js plants
+// during that flow (it points back into the pnpm virtual store,
+// outside the execroot). Gate standalone on `BAZEL_BUILD=standalone`
+// so the legacy docker/build-push-action path keeps the slim layout
+// and Bazel falls through to the default `.next/` output which the
+// image entrypoint (build_defs/web/next.bzl) launches via
+// `next start`.
+const enableStandalone = process.env.BAZEL_BUILD === "standalone";
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(enableStandalone ? { output: "standalone" as const } : {}),
+
+  // Workspace packages ship their raw .ts sources (see
+  // packages/service-runtime/BUILD.bazel for why). Tell Next.js to
+  // run SWC over them during `next build` instead of treating them as
+  // pre-compiled JS.
+  transpilePackages: [
+    "@agentsmesh/service-runtime",
+    "@agentsmesh/service-interface",
+  ],
 
   webpack: (config, { isServer }) => {
     config.experiments = {

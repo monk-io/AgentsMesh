@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
+// `output: 'standalone'` collapses the server + its transitive
+// node_modules into `.next/standalone/`. It's great for a hand-rolled
+// Dockerfile, but aspect_rules_js can't track the self-referential
+// `.next/standalone/node_modules/next` symlink that Next.js plants
+// during that pipeline (the link points back into the pnpm virtual
+// store, which lives outside the Bazel execroot). So leave standalone
+// off by default; the legacy Dockerfile flow can flip it back on via
+// `BAZEL_BUILD=standalone`.
+const enableStandalone = process.env.BAZEL_BUILD === "standalone";
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(enableStandalone ? { output: "standalone" as const } : {}),
 
   // =============================================================================
   // Unified Domain Configuration

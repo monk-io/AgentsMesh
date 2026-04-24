@@ -20,11 +20,15 @@ ts_project(
     deps = [":node_modules"],
 )
 
+# npm_package ships the raw .ts so downstream bundlers (Next.js) can
+# follow package.json's `main: src/index.ts` directly. The ts_project
+# above still runs as a type-check gate. See packages/service-runtime
+# for the analogous pattern.
 npm_package(
     name = "pkg",
-    srcs = [
-        "package.json",
-        ":service_interface",
-    ],
+    srcs = ["package.json"] + glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.test.ts"],
+    ),
     visibility = ["//visibility:public"],
 )

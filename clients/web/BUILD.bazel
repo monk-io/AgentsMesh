@@ -1,4 +1,8 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//clients/web:next/package_json.bzl", next_bin = "bin")
+load("//build_defs/web:next.bzl", "next_app")
+load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
 load("//build_defs/web:vitest.bzl", "vitest_test")
@@ -8,9 +12,23 @@ load("//build_defs/web:vitest.bzl", "vitest_test")
 # pnpm-lock and hydrates this target lazily.
 npm_link_all_packages(name = "node_modules")
 
+# aspect_rules_js 2.9 emits a per-importer `next/package_json.bzl` that
+# re-exports the `bin` factory from the versioned `@@aspect_rules_js++
+# npm+npm__next__*` repo. Declaring a local `js_binary` via this
+# factory gives `next_app()` a stable label it can feed into
+# `js_run_binary`/`js_run_devserver` without encoding the Next.js
+# version or hash into the BUILD file.
+next_bin.next_binary(
+    name = "next_js_binary",
+    visibility = ["//visibility:public"],
+)
+
 # TypeScript sources — everything under src/. tsc runs via the pinned
 # TypeScript from MODULE.bazel, not the one in node_modules, so builds
-# stay hermetic.
+# stay hermetic. `:src` is a type-check gate (legacy type errors
+# currently prevent it from building, tracked separately); the
+# Next.js build consumes raw .ts/.tsx via `_SRC_FILES` below so the
+# OCI image pipeline isn't blocked on the type-check cleanup.
 ts_project(
     name = "src",
     srcs = glob(
@@ -28,41 +46,67 @@ ts_project(
     deps = [":node_modules"],
 )
 
-# next_app() and next_oci_image() are TEMPORARILY DISABLED — the
-# next_js_binary label format (`:node_modules/next/package:next_bin`) is
-# stale with the current aspect_rules_js (2.9.2), which rejects labels
-# with more than one colon. Re-enable after resolving the real bin
-# target name (likely `:node_modules/next/package/next_bin`).
-#
-# Reference data bundle for when we turn the Next.js targets back on:
-#   _NEXT_DATA = [
-#       "next.config.ts",
-#       "postcss.config.mjs",
-#       "package.json",
-#       "tsconfig.json",
-#       ":node_modules",
-#       "//clients/core/crates/wasm:wasm_pkg",
-#   ]
-#
-# next_app(
-#     name = "next",
-#     srcs = [":src"],
-#     data = _NEXT_DATA,
-#     next_js_binary = ":node_modules/next/package:next_bin",
-# )
-#
-# next_oci_image(
-#     name = "image",
-#     exposed_ports = ["3000/tcp"],
-#     repository = "registry.corp.agentsmesh.ai/web",
-#     start_binary = ":next_start_binary",
-# )
-#
-# js_library(
-#     name = "web",
-#     srcs = [":next"],
-#     visibility = ["//visibility:public"],
-# )
+# Raw source bundle passed to `next build`. Next.js's own compiler
+# (SWC/webpack) handles the actual TypeScript, so tsc is not on the
+# critical path for image builds.
+_SRC_FILES = glob(
+    [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.css",
+        "src/**/*.json",
+        "src/**/*.md",
+        "src/**/*.mdx",
+    ],
+    allow_empty = True,
+    exclude = [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ],
+) + glob(
+    ["public/**/*"],
+    allow_empty = True,
+)
+
+# Runtime data bundle the Next.js build needs: config files, package
+# manifests, linked node_modules, and the wasm-pack output consumed via
+# `file:../../core/pkg` in package.json. The legacy wasm-pack pkg dir
+# is shipped through `//clients/core/pkg:pkg` (an `npm_package`); the
+# Bazel-native `//clients/core/crates/wasm:wasm_pkg` pipeline requires
+# a wasm32 rust toolchain, which we don't ship to the macOS dev host
+# yet. pnpm already pins the former via `file:../core/pkg` so the
+# build graph lines up either way.
+_NEXT_DATA = [
+    "next.config.ts",
+    "postcss.config.mjs",
+    "package.json",
+    "tsconfig.json",
+    ":node_modules",
+    "//clients/core/pkg",
+]
+
+next_app(
+    name = "next",
+    srcs = _SRC_FILES,
+    data = _NEXT_DATA,
+    next_js_binary = ":next_js_binary",
+)
+
+next_oci_image(
+    name = "image",
+    exposed_ports = ["3000/tcp"],
+    repositories = {
+        "agentsmesh": "registry.agentsmesh.ai/agentsmesh/web",
+        "dockerhub": "agentsmesh/web",
+    },
+    start_binary = ":next_start_binary",
+)
+
+js_library(
+    name = "web",
+    srcs = [":next"],
+    visibility = ["//visibility:public"],
+)
 
 # Vitest unit + component tests (132 files / 1510 tests as of last run).
 # `bazel test //clients/web:unit` is equivalent to `pnpm test:run`.

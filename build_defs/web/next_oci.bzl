@@ -12,11 +12,19 @@ Usage:
 
     next_oci_image(
         name = "image",
-        next_target = ":next",
         start_binary = ":next_start_binary",
         exposed_ports = ["3000/tcp"],
-        repository = "registry.corp.agentsmesh.ai/web",
+        repositories = {
+            "dockerhub":  "agentsmesh/web",
+            "agentsmesh": "registry.agentsmesh.ai/agentsmesh/web",
+        },
     )
+
+    # Produces:
+    #   :image                   — oci_image
+    #   :image_tarball           — oci_load (docker load)
+    #   :image_push_dockerhub    — oci_push to Docker Hub
+    #   :image_push_agentsmesh   — oci_push to AgentsMesh registry
 """
 
 load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
@@ -26,10 +34,11 @@ load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 def next_oci_image(
         name,
         start_binary,
-        base = "@node_slim",
+        base = "@distroless_nodejs",
         env = {},
         exposed_ports = ["3000/tcp"],
         labels = {},
+        repositories = {},
         repository = None,
         visibility = ["//visibility:public"]):
     """OCI image wrapping a Next.js production build.
@@ -37,26 +46,40 @@ def next_oci_image(
     Args:
         name: Target name.
         start_binary: Label of the `<name>_start_binary` from next_app.
-        base: Base image, defaults to Node 20-slim.
+        base: Base image, defaults to distroless Node 20.
         env: Env vars injected into the container.
         exposed_ports: Container ports to expose.
         labels: OCI labels.
-        repository: Remote registry (optional).
+        repositories: Dict mapping registry key → full repo URL. Every
+            entry becomes a `:name_push_<key>` target. `bazel run` one
+            of them with `--stamp --workspace_status_command=...` to
+            push with the CI-provided version tag.
+        repository: Back-compat single-registry form; equivalent to
+            `repositories = {"default": repository}`. Prefer the dict.
         visibility: Standard visibility.
     """
 
     # js_image_layer packages node_modules + the built .next/ tree
-    # into OCI-compatible layers with correct ownership.
+    # into OCI-compatible layers with correct ownership. The layer
+    # places the binary at `<root>/<package>/<name>` — mirror that here
+    # when wiring the container entrypoint. The workdir stays at `/app`
+    # (not the package subdir) because the binary's internal `chdir`
+    # env is resolved relative to `$PWD`, so running from /app lets the
+    # script cd into clients/<pkg>/ as the build-time `chdir` attr
+    # expects.
     js_image_layer(
         name = name + "_layer",
         binary = start_binary,
         root = "/app",
     )
 
+    binary_name = start_binary.split(":")[-1]
+    entrypoint_path = "/app/" + native.package_name() + "/" + binary_name
+
     oci_image(
         name = name,
         base = base,
-        entrypoint = ["/app/" + start_binary.split(":")[-1]],
+        entrypoint = [entrypoint_path],
         env = env,
         exposed_ports = exposed_ports,
         labels = labels,
@@ -72,18 +95,44 @@ def next_oci_image(
         visibility = visibility,
     )
 
-    if repository:
+    # Normalize single-repo back-compat form.
+    repos = dict(repositories)
+    if repository and not repos:
+        repos["default"] = repository
+
+    if repos:
+        # Tag list: always `latest`, plus the stamped version + minor.
+        # Duplicate values are harmless — oci_push de-dups tags and the
+        # registry just re-tags the manifest.
         expand_template(
             name = name + "_tags",
             out = name + "_tags.txt",
-            stamp_substitutions = {"0.0.0": "{{BUILD_EMBED_LABEL}}"},
-            template = ["latest", "0.0.0"],
+            template = [
+                "latest",
+                "STAMP_VERSION",
+                "STAMP_MINOR",
+            ],
+            stamp_substitutions = {
+                "STAMP_VERSION": "{{STABLE_IMAGE_VERSION}}",
+                "STAMP_MINOR": "{{STABLE_IMAGE_MINOR}}",
+            },
         )
 
-        oci_push(
+        for reg_key in sorted(repos.keys()):
+            oci_push(
+                name = "{}_push_{}".format(name, reg_key),
+                image = ":" + name,
+                remote_tags = ":" + name + "_tags",
+                repository = repos[reg_key],
+                visibility = visibility,
+            )
+
+        # Back-compat alias — first registry's push under the legacy
+        # `:name_push` name. Pick `default` if present, else the first
+        # alphabetical key.
+        back_compat_key = "default" if "default" in repos else sorted(repos.keys())[0]
+        native.alias(
             name = name + "_push",
-            image = ":" + name,
-            remote_tags = ":" + name + "_tags",
-            repository = repository,
+            actual = ":{}_push_{}".format(name, back_compat_key),
             visibility = visibility,
         )

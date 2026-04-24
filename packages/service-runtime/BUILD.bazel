@@ -29,11 +29,18 @@ ts_project(
 # npm_package creates the `:pkg` target that pnpm workspace link
 # (`@agentsmesh/service-runtime: workspace:*`) resolves to from
 # downstream packages (clients/web, clients/desktop).
+#
+# The npm_package ships the raw .ts sources (not the ts_project
+# outputs) because package.json's `main`/`exports` both point at
+# `src/index.ts`: Next.js's webpack/SWC pipeline compiles the TS
+# itself, so shipping .js would orphan the .ts entry point. The
+# :service_runtime ts_project still runs upstream as a type-check
+# gate; it just isn't what downstream consumers link against.
 npm_package(
     name = "pkg",
-    srcs = [
-        "package.json",
-        ":service_runtime",
-    ],
+    srcs = ["package.json"] + glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.test.ts"],
+    ),
     visibility = ["//visibility:public"],
 )

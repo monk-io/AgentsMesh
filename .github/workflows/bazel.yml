@@ -223,6 +223,10 @@ jobs:
             target: //runner/cmd/runner:image
           - service: relay
             target: //relay/cmd/relay:image
+          - service: web
+            target: //clients/web:image
+          - service: web-admin
+            target: //clients/web-admin:image
     steps:
       - uses: actions/checkout@v4
       - uses: bazel-contrib/setup-bazel@0.9.1
@@ -285,18 +289,8 @@ jobs:
   # currently uses shell/CLI because the Bazel target isn't ready:
   # =========================================================================
 
-  # next-build:
-  #   Blocked on: next_app() label format for `next_js_binary`.
-  #   Re-enable with `bazel build //clients/web //clients/web-admin`.
-
   # e2e-playwright:
   #   Playwright e2e targets (//clients/web:e2e,
   #   //clients/web/e2e-playwright:e2e, //clients/desktop:e2e) are
   #   green locally but need docker dev-stack setup in CI before
   #   enabling.
-
-  # oci-images:
-  #   rules_oci push targets //{backend,runner,relay}/cmd/*:image_push
-  #   exist; release.yml will wire them once dual-registry + semver
-  #   tag generation is ported (currently docker/metadata-action does
-  #   that).

@@ -73,6 +73,28 @@ use_repo(
     "distroless_static_linux_arm64_v8",
 )
 
+# Base image for Node.js services (Next.js web + web-admin). We pull
+# Debian-based `node:20-slim` instead of a distroless image here
+# because `js_image_layer` wraps the `js_binary` in a bash launcher
+# (to set BAZEL_BINDIR and resolve runfiles), and Google's
+# `distroless/nodejs20` ships neither bash nor sh. Multi-arch so the
+# Next.js images still release to both amd64 and arm64 hosts.
+oci.pull(
+    name = "distroless_nodejs",
+    image = "docker.io/library/node",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+    tag = "20-slim",
+)
+use_repo(
+    oci,
+    "distroless_nodejs",
+    "distroless_nodejs_linux_amd64",
+    "distroless_nodejs_linux_arm64_v8",
+)
+
 ###############################################################################
 # Phase 2 — Rust Core (preview: will replace Cargo workspace)
 ###############################################################################
