@@ -7,6 +7,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // `threads` (worker_threads) shares the Node module cache across
+    // parallel test files. Default `forks` spawns one process per file
+    // and each fresh process re-walks pnpm's virtual store, picking up
+    // a different `node_modules/.aspect_rules_js/.../node_modules/react`
+    // copy for every peer-dep that pulls react in — which trips the
+    // "Invalid hook call" rule across ~250 component tests under Bazel.
+    // Threads share the resolved React instance, so the dedupe is
+    // effectively automatic.
+    pool: 'threads',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
