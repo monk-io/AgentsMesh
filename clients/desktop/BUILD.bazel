@@ -1,5 +1,32 @@
+load("//build_defs/web:electron.bzl", "electron_vite_build")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
+
+# `bazel build //clients/desktop:out` — Bazel-native electron-vite
+# build. Produces `out/main/index.js`, `out/preload/index.js`,
+# `out/renderer/...` as a tree artifact. Consumed by electron-builder
+# downstream (still shell-invoked; rules_electron full-Bazel
+# packaging is a Phase B follow-up).
+#
+# Tagged `manual` because the renderer cross-imports clients/web/src
+# via electron-vite aliases — the build needs both desktop/src AND
+# clients/web/src in its sandbox. We wire that closure below.
+electron_vite_build(
+    name = "out",
+    srcs = glob(
+        [
+            "src/**/*",
+            "shims/**/*",
+        ],
+        allow_empty = True,
+        exclude = ["electron.vite.config.ts"],
+    ) + [
+        "electron.vite.config.ts",
+        "tsconfig.json",
+        "//clients/web:src",
+    ],
+    tags = ["manual"],
+)
 
 # Main-process TS (lives in `src/main/`). Produces a Node-loadable
 # bundle; electron-vite handles any esbuild tweaks we need.
