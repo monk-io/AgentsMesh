@@ -1,5 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:next/package_json.bzl", next_bin = "bin")
+load("//build_defs/web:eslint.bzl", "eslint_test")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:ts.bzl", "ts_project")
@@ -74,4 +75,20 @@ js_library(
     name = "web_admin",
     srcs = [":next"],
     visibility = ["//visibility:public"],
+)
+
+# `bazel test //clients/web-admin:lint` — see //build_defs/web:eslint.bzl.
+eslint_test(
+    name = "lint",
+    size = "medium",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.js",
+            "src/**/*.mjs",
+        ],
+        allow_empty = True,
+        exclude = ["src/**/*.d.ts"],
+    ),
 )

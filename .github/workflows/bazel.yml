@@ -168,9 +168,9 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-      # Lint + type-check stay on shell pnpm — no Bazel ESLint/tsc
-      # wrappers yet. //clients/web:src (ts_project) is currently a
-      # type-check gate that fails on pre-existing implicit-any sites.
+      # Lint + Vitest run via Bazel. Type-check stays on shell because
+      # `//clients/web:src` ts_project still fails on pre-existing
+      # implicit-any sites — not in scope for this PR.
       - uses: pnpm/action-setup@v5
         with:
           version: ${{ env.PNPM_VERSION }}
@@ -181,22 +181,11 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      # web/web-admin no longer have their own package.json — they're
-      # not pnpm workspace members anymore (Phase A migration moved
-      # all deps to root). `pnpm exec` from inside their dirs fails
-      # with ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE; invoke node directly
-      # against the binaries linked into root `node_modules` instead.
-      # Configs (eslint.config.mjs, tsconfig.json) still resolve from
-      # CWD.
-      - name: Lint
-        working-directory: clients/web
-        run: node ../../node_modules/eslint/bin/eslint.js .
       - name: Type check
         working-directory: clients/web
         run: node ../../node_modules/typescript/bin/tsc --noEmit
-      # Vitest runs under Bazel (//clients/web:unit wraps vitest_test).
-      - name: Vitest (Bazel)
-        run: bazel test //clients/web:unit
+      - name: Lint + Vitest (Bazel)
+        run: bazel test //clients/web:lint //clients/web:unit
 
   web-admin:
     name: Web-Admin (lint)
@@ -205,19 +194,13 @@ jobs:
     needs: smoke
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+      - uses: bazel-contrib/setup-bazel@0.9.1
         with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Lint
-        working-directory: clients/web-admin
-        run: node ../../node_modules/eslint/bin/eslint.js .
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      - name: Lint (Bazel)
+        run: bazel test //clients/web-admin:lint
       # `pnpm build` is covered by the docker-verify job
       # (`bazel build //clients/web-admin:image`) — no duplicate build here.
 

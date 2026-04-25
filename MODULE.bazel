@@ -373,11 +373,17 @@ npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
     pnpm_lock = "//:pnpm-lock.yaml",
-    # Public hoist stays disabled while clients/desktop still has its
-    # own package.json (Electron / electron-builder tie-in). Once
-    # desktop migrates to the single-root model (Phase C in
-    # .claude/plans/snuggly-spinning-dewdrop.md), we can re-enable
-    # hoist for peer-dep convenience across all TS packages.
+    # Hoist `next` and `eslint-config-next` so eslint-config-next's
+    # internal `require("next/dist/compiled/babel/eslint-parser")` can
+    # walk up to the root `node_modules/next/` symlink — without this
+    # the pnpm virtual store buries `next` peer-deep and ESLint fails
+    # under Bazel sandboxing. Phase A unified the version, so the
+    # hoist no longer collides with desktop (which still has its own
+    # package.json but uses the same versions).
+    public_hoist_packages = {
+        "next": [""],
+        "eslint-config-next": [""],
+    },
     verify_node_modules_ignored = "//:.bazelignore",
 )
 use_repo(npm, "npm")

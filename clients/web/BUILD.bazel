@@ -1,5 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:next/package_json.bzl", next_bin = "bin")
+load("//build_defs/web:eslint.bzl", "eslint_test")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:playwright.bzl", "playwright_test")
@@ -128,6 +129,29 @@ vitest_test(
             "src/**/*.test.ts",
             "src/**/*.test.tsx",
         ],
+    ),
+)
+
+# `bazel test //clients/web:lint` — equivalent to running ESLint at
+# the package root. ESLint v9 flat config is at clients/web/eslint.config.mjs;
+# `eslint_test` macro sets chdir = clients/web. The
+# public_hoist_packages declaration in MODULE.bazel surfaces `next`
+# at root node_modules so eslint-config-next's internal
+# `require("next/dist/...")` resolves.
+eslint_test(
+    name = "lint",
+    size = "large",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.js",
+            "src/**/*.mjs",
+            "e2e/**/*.ts",
+            "e2e-playwright/**/*.ts",
+        ],
+        allow_empty = True,
+        exclude = ["src/**/*.d.ts"],
     ),
 )
 
