@@ -46,9 +46,10 @@ ts_project(
         ],
     ),
     allow_js = True,
+    extends = "tsconfig.json",
     no_emit = True,
     resolve_json_module = True,
-    tsconfig = "tsconfig.json",
+    tsconfig = "tsconfig.bazel.json",
     deps = ["//:node_modules"],
 )
 
