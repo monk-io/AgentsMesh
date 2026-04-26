@@ -746,15 +746,13 @@ start_frontend() {
     # Kill any stale Next.js process holding the lock, then clear it
     if [[ -f "$lock_file" ]]; then
         warn "检测到残留的 Next.js 锁文件，清理中..."
-        pkill -f "next dev --turbopack" 2>/dev/null || true
+        pkill -f "next dev" 2>/dev/null || true
         # Also kill anything still holding the port (port may outlive the process briefly)
         lsof -ti :"$web_port" 2>/dev/null | xargs kill -9 2>/dev/null || true
         sleep 1
         rm -f "$lock_file"
-        # A stale lock means a previous crash — clear Turbopack cache to prevent
-        # corrupted SST database errors on restart
         rm -rf "$web_dir/.next/cache"
-        success "锁文件和 Turbopack 缓存已清理"
+        success "锁文件和缓存已清理"
         stale_lock=true
     fi
 
@@ -765,16 +763,17 @@ start_frontend() {
         return 0
     fi
 
-    # 检查 pnpm
+    # 检查 bazel + pnpm（Bazel-driven dev workflow，但仍需 pnpm 解析外部依赖）
+    if ! command -v bazel &>/dev/null; then
+        error "未找到 bazel"
+        return 1
+    fi
     if ! command -v pnpm &>/dev/null; then
         error "未找到 pnpm，请先安装: npm install -g pnpm"
         return 1
     fi
 
     # 检查依赖（根目录 lockfile 变化时重新安装）
-    # web + web-admin 的依赖已 hoist 到根 package.json（see
-    # .claude/plans/snuggly-spinning-dewdrop.md Phase A），所以只查
-    # 根 pnpm-lock.yaml 的哈希，install 也在根执行。
     local root_dir="$SCRIPT_DIR/../.."
     local lockfile="$root_dir/pnpm-lock.yaml"
     local lockfile_hash_file="$root_dir/node_modules/.pnpm-lock-hash"
@@ -790,28 +789,25 @@ start_frontend() {
             return 1
         }
         echo "$current_hash" > "$lockfile_hash_file"
-        # Clear Turbopack cache to prevent stale module resolution after package upgrades
         rm -rf "$web_dir/.next/cache"
         success "前端依赖安装完成"
     fi
 
     # 启动前端（后台运行，日志输出到文件）
-    # 关键：必须在主 shell 中 disown，而非在子 shell 中。
-    # 子 shell 中的 disown 无效 — 子 shell 退出后进程会被重新挂载为主 shell 的子进程，
-    # 导致 dev.sh 退出时 wait 该子进程，在 pipe 场景下（如 ./dev.sh | tail）永远挂起。
+    # 走 Bazel 的 next_dev devserver — 这样 @agentsmesh/* 的 internal
+    # packages 通过 //:node_modules/@agentsmesh/<name> 链接进 sandbox，
+    # Next.js 能正常解析。源码 pnpm node_modules 没有这些链接（pure
+    # Bazel 接管 internal packages 之后），不能直接 `next dev`。
     local log_file="$SCRIPT_DIR/web.log"
-    info "启动前端服务 (端口: $web_port)..."
+    info "启动前端服务 (端口: $web_port, Bazel devserver)..."
     local saved_dir="$PWD"
-    cd "$web_dir"
-    # web 不再是 pnpm workspace member（Phase A 迁移把 package.json 合到根），
-    # `pnpm exec` 从这里跑会报 ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE。
-    # 直接通过 root node_modules 里链接的 next 二进制启动。
-    node ../../node_modules/next/dist/bin/next dev --turbopack --port "$web_port" > "$log_file" 2>&1 < /dev/null &
+    cd "$root_dir"
+    bazel run //clients/web:next_dev -- --port "$web_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"
 
     # 等待前端启动
-    local max_wait=30
+    local max_wait=60
     for ((i=1; i<=max_wait; i++)); do
         if curl -s "http://localhost:$web_port" &>/dev/null; then
             success "前端服务已启动 (http://localhost:$web_port)"
@@ -874,17 +870,17 @@ start_admin_frontend() {
         success "Admin Console 依赖安装完成"
     fi
 
-    # 启动 Admin Console（后台运行）
+    # 启动 Admin Console（后台运行）— 走 Bazel devserver 同 web。
     local log_file="$SCRIPT_DIR/web-admin.log"
-    info "启动 Admin Console (端口: $web_admin_port)..."
+    info "启动 Admin Console (端口: $web_admin_port, Bazel devserver)..."
     local saved_dir="$PWD"
-    cd "$web_admin_dir"
-    node ../../node_modules/next/dist/bin/next dev --port "$web_admin_port" > "$log_file" 2>&1 < /dev/null &
+    cd "$root_dir"
+    bazel run //clients/web-admin:next_dev -- --port "$web_admin_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"
 
     # 等待启动
-    local max_wait=30
+    local max_wait=60
     for ((i=1; i<=max_wait; i++)); do
         if curl -s "http://localhost:$web_admin_port" &>/dev/null; then
             success "Admin Console 已启动 (http://localhost:$web_admin_port)"

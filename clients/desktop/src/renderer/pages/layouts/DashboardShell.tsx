@@ -1,6 +1,10 @@
 import React, { useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuthStore } from "@/stores/auth";
+import {
+  useAuthStore,
+  useAuthOrganizations,
+  useCurrentOrg,
+} from "@/stores/auth";
 import { ResponsiveShell } from "@/components/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { RealtimeProvider } from "@/providers/RealtimeProvider";
@@ -15,9 +19,14 @@ export function DashboardShell({
 }) {
   const router = useRouter();
   const params = useParams<{ org?: string }>();
-  const {
-    _hasHydrated, currentOrg, organizations, setCurrentOrg, isAuthenticated,
-  } = useAuthStore();
+  // Auth store migrated to Rust SSOT — `organizations` / `currentOrg`
+  // are no longer Zustand state. Use the dedicated hooks that read
+  // from Rust via _tick subscriptions.
+  const _hasHydrated = useAuthStore((s) => s._hasHydrated);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setCurrentOrg = useAuthStore((s) => s.setCurrentOrg);
+  const organizations = useAuthOrganizations();
+  const currentOrg = useCurrentOrg();
   const { permission, showNotification, requestPermission } = useBrowserNotification();
 
   useEffect(() => {

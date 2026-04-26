@@ -97,7 +97,15 @@ def next_app(
 
     js_run_devserver(
         name = "{}_dev".format(name),
-        args = ["dev"],
+        # Force webpack — Turbopack walks symlink chains looking for
+        # `next/package.json` and bombs out with "We couldn't find the
+        # Next.js package" inside the Bazel sandbox (the aspect_rules_js
+        # symlink tree exits the execroot prematurely). Same issue
+        # `next build` already mitigates with --webpack above.
+        args = [
+            "dev",
+            "--webpack",
+        ],
         chdir = native.package_name(),
         data = srcs + data,
         grant_sandbox_write_permissions = True,

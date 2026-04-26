@@ -37,6 +37,17 @@ export default defineConfig({
       "process.env": JSON.stringify({}),
     },
     resolve: {
+      // Force a single instance of these packages across the whole bundle.
+      // Without this, vite resolves `react-router-dom` separately for each
+      // import site (clients/desktop/src vs clients/web/src cross-imports),
+      // producing two NavigationContext instances → `useNavigate may be
+      // used only in the context of a <Router>` at runtime.
+      dedupe: [
+        "react",
+        "react-dom",
+        "react-router-dom",
+        "@tanstack/react-query",
+      ],
       alias: [
         { find: "react", replacement: resolve(rootModules, "react") },
         { find: "react-dom", replacement: resolve(rootModules, "react-dom") },
