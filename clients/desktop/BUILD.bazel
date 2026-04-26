@@ -1,4 +1,4 @@
-load("//build_defs/web:electron.bzl", "electron_vite_build")
+load("//build_defs/web:electron.bzl", "electron_builder_app", "electron_vite_build")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
 
@@ -35,6 +35,23 @@ electron_vite_build(
         "//packages/service-runtime:pkg",
     ],
     tags = ["manual"],
+)
+
+# `bazel build //clients/desktop:dist` — produces a tree artifact
+# containing platform installers (.dmg / .exe / .AppImage) under
+# `bazel-bin/clients/desktop/dist/`. Drives `electron-builder` over
+# the `:out` tree from a Bazel sandbox.
+#
+# `tags = ["manual", "electron_builder"]` (set by the macro) keeps
+# this target out of `bazel build //...` because cross-platform
+# packaging requires the matching host (macOS for `.dmg`, Windows
+# for `.exe`, etc.) and pulls in heavy native deps. CI matrix opts
+# in via `--build_tag_filters=electron_builder` per OS runner.
+electron_builder_app(
+    name = "dist",
+    out = ":out",
+    package_json = "package.json",
+    config = "electron-builder.yml",
 )
 
 # Main-process TS (lives in `src/main/`). Produces a Node-loadable
