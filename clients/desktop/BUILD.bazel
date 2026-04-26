@@ -25,7 +25,10 @@ electron_vite_build(
         "tsconfig.json",
         # Renderer cross-imports `clients/web/src/...` via electron-vite
         # path aliases — the sandbox needs the whole web src tree.
-        "//clients/web:src",
+        # `:src` is a `no_emit` ts_project (type-check only, no file
+        # provider); `:src_files` is the matching filegroup that
+        # actually exposes the raw .ts/.tsx/.css to vite.
+        "//clients/web:src_files",
         # Workspace packages whose raw .ts is consumed via `workspace:*`
         # protocol; vite needs the npm_package form (pkg) so the
         # `node_modules/@agentsmesh/<name>/src/index.ts` symlink in

@@ -46,6 +46,33 @@ ts_project(
     deps = ["//:node_modules"],
 )
 
+# Raw source files exposed for downstream bundlers (Desktop's
+# electron-vite renderer cross-imports `@/stores`, `@/lib`, etc.).
+# `:src` is a `no_emit` ts_project — type-check only, doesn't pass
+# the .ts/.tsx files through its DefaultInfo. This `js_library` gives
+# bundlers a cross-package label that resolves to the raw sources;
+# `filegroup` would fail aspect_rules_js's `copy_srcs_to_bin` check
+# when consumed from a different package.
+js_library(
+    name = "src_files",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+            "src/**/*.css",
+            "src/**/*.md",
+            "src/**/*.mdx",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+    visibility = ["//clients:__subpackages__"],
+)
+
 # Raw source bundle passed to `next build`. Next.js's own compiler
 # (SWC/webpack) handles the actual TypeScript, so tsc is not on the
 # critical path for image builds.
