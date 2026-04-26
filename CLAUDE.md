@@ -133,22 +133,22 @@ bazel build //clients/web-admin:src
 ### Desktop (Electron)
 
 Desktop 也走单根 `package.json`（thin shell 仅含 `name`/`version`/`main`，
-所有 deps 在根）。Build via electron-vite + electron-builder（暂时通过
-node binary 调用，rules_electron full Bazel 化是 follow-up）：
+所有 deps 在根）。Bazel-native build pipeline（自写 `electron_builder_app`
+macro，包住 electron-vite + electron-builder）：
 
 ```bash
-# Dev
+# Production build — main + preload + renderer bundles (Bazel)
+bazel build //clients/desktop:out
+
+# Package — .dmg / .zip / .app (macOS), .exe (Win), .AppImage (Linux)
+# `electron_builder` tag opts in to the heavy packaging targets that
+# `bazel build //...` skips. Output: bazel-bin/clients/desktop/dist/
+bazel build //clients/desktop:dist --build_tag_filters=electron_builder
+
+# Dev (electron-vite dev server still goes through node)
 (cd clients/desktop && node ../../node_modules/electron-vite/bin/electron-vite.js dev)
 
-# Production build (out/main, out/preload, out/renderer)
-(cd clients/desktop && node ../../node_modules/electron-vite/bin/electron-vite.js build)
-
-# Package (.dmg / .exe / .AppImage)
-(cd clients/desktop && \
-  node ../../node_modules/electron-vite/bin/electron-vite.js build && \
-  node ../../node_modules/electron-builder/cli.js)
-
-# E2E (requires `out/` already built)
+# E2E (requires `:out` already built)
 bazel test //clients/desktop:e2e --test_tag_filters=e2e
 ```
 

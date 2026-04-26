@@ -50,8 +50,8 @@ electron_vite_build(
 electron_builder_app(
     name = "dist",
     out = ":out",
-    package_json = "package.json",
     config = "electron-builder.yml",
+    package_json = "package.json",
 )
 
 # Main-process TS (lives in `src/main/`). Produces a Node-loadable

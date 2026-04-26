@@ -221,6 +221,31 @@ jobs:
       # to Docker Hub + registry.agentsmesh.ai on main.
       - run: bazel build ${{ matrix.target }}
 
+  desktop:
+    name: Desktop (electron-vite build)
+    runs-on: macos-14
+    timeout-minutes: 25
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      # `:out` runs the electron-vite pipeline (main + preload +
+      # renderer bundles) inside Bazel. Tagged `manual` because the
+      # renderer cross-imports clients/web/src via electron-vite path
+      # aliases — Bazel still tracks the dependency closure but `bazel
+      # build //...` skips it. Explicitly opt in here as the PR gate
+      # for desktop changes.
+      - name: Build :out
+        run: bazel build //clients/desktop:out
+      # `:dist` (electron-builder dmg/zip packaging) is heavy
+      # (~100MB electron download + ~3:30 wallclock from cold cache)
+      # and macOS-only. It's gated to release.yml; PRs only verify
+      # `:out` to keep the matrix fast.
+
   ios-xcframework:
     name: Build AgentsMeshCore.xcframework
     runs-on: macos-14  # arm64 runner with Xcode 15+

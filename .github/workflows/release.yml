@@ -313,3 +313,58 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_KEY_ISSUER_ID: ${{ secrets.APPLE_API_KEY_ISSUER_ID }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+
+  # ===========================================================================
+  # Build AgentsMesh Desktop installers (tag only)
+  # Per-OS matrix because electron-builder calls native packagers
+  # (`hdiutil` on macOS, `nsis` on Windows, AppImage on Linux). Output
+  # is uploaded as a Release asset alongside the Runner CLI.
+  # ===========================================================================
+
+  desktop-package:
+    name: Desktop ${{ matrix.os.label }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - label: macOS
+            runner: macos-14
+            artifact: AgentsMesh-*.dmg
+          - label: Windows
+            runner: windows-latest
+            artifact: AgentsMesh*.exe
+          - label: Linux
+            runner: ubuntu-latest
+            artifact: AgentsMesh-*.AppImage
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      # `:dist` runs the full electron-vite + electron-builder pipeline.
+      # Sandbox is bypassed for the action (hdiutil / nsis / AppImage
+      # need real filesystem access), but Bazel's input/output graph
+      # still tracks the closure. ~3:30 from cold cache, dominated by
+      # the 100MB electron download.
+      - name: Build :dist
+        shell: bash
+        run: bazel build //clients/desktop:dist --build_tag_filters=electron_builder
+        env:
+          # codesign / notarization plumbing — env-driven so secrets
+          # don't have to live in electron-builder.yml. Only set on
+          # macOS runner; ignored elsewhere.
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_API_KEY_ISSUER_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_API_KEY }}
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgentsMesh-Desktop-${{ matrix.os.label }}
+          path: bazel-bin/clients/desktop/dist/${{ matrix.os.artifact }}
+          retention-days: 30

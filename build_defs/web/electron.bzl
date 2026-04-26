@@ -41,7 +41,6 @@ load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 def electron_vite_build(
         name,
         srcs,
-        config = "electron.vite.config.ts",
         out_dir = "out",
         chdir = None,
         visibility = None,
@@ -57,8 +56,8 @@ def electron_vite_build(
         name: Target name. Output tree label is `:<name>`.
         srcs: All source files electron-vite needs (TS sources +
             config + tsconfig). Pass via `glob(["src/**/*", ...])`.
-        config: electron-vite config filename. Default
-            `electron.vite.config.ts`.
+            Must include `electron.vite.config.ts` — electron-vite
+            picks it up by convention from the package root.
         out_dir: Output directory name (default `out`). Bazel tree
             artifact created relative to bazel-bin/<package>/.
         chdir: CWD electron-vite runs in. Defaults to the calling
