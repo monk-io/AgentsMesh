@@ -1,12 +1,8 @@
 {
   "name": "agentsmesh-workspace-root",
   "private": true,
-  "description": "Workspace root for Bazel aspect_rules_js. All frontend deps (web + web-admin + desktop) hoisted here; per-app package.json removed (desktop keeps a thin shell with name/version/main only — required by Electron + electron-builder).",
+  "description": "Workspace root. All frontend dependencies live here. First-party @agentsmesh/* packages are NOT in this manifest — they are managed entirely by Bazel via `internal_npm_package` macro and linked at //:node_modules via `npm_link_package`. See build_defs/web/internal_package.bzl.",
   "dependencies": {
-    "@agentsmesh/electron-adapter": "workspace:*",
-    "@agentsmesh/node-bridge": "workspace:*",
-    "@agentsmesh/service-runtime": "workspace:*",
-    "agentsmesh-wasm": "file:clients/core/pkg",
     "@blocknote/core": "^0.47.3",
     "@blocknote/mantine": "^0.47.3",
     "@blocknote/react": "^0.47.3",

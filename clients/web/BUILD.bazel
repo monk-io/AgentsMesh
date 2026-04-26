@@ -101,13 +101,22 @@ _SRC_FILES = glob(
 # is shipped through `//clients/core/pkg:pkg` (an `npm_package`); the
 # Bazel-native `//clients/core/crates/wasm:wasm_pkg` pipeline requires
 # a wasm32 rust toolchain, which we don't ship to the macOS dev host
-# yet. pnpm already pins the former via `file:../core/pkg` so the
-# build graph lines up either way.
+# yet.
+#
+# First-party `@agentsmesh/*` packages are now Bazel-native (no
+# `workspace:*` in root package.json; see build_defs/web/internal_package.bzl).
+# We must list each `npm_link_package` link explicitly because
+# `//:node_modules` only aggregates pnpm-lock.yaml-derived externals.
 _NEXT_DATA = [
     "next.config.ts",
     "postcss.config.mjs",
     "tsconfig.json",
     "//:node_modules",
+    "//:node_modules/@agentsmesh/electron-adapter",
+    "//:node_modules/@agentsmesh/service-interface",
+    "//:node_modules/@agentsmesh/service-runtime",
+    "//:node_modules/@agentsmesh/node-bridge",
+    "//:node_modules/agentsmesh-wasm",
     "//:package_json_bin",
     "//clients/core/pkg",
 ]

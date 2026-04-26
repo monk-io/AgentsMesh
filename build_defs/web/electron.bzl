@@ -37,6 +37,7 @@ load("@aspect_rules_js//js:defs.bzl", "js_run_binary", "js_run_devserver")
 load("@npm//:electron-builder/package_json.bzl", electron_builder_bin = "bin")
 load("@npm//:electron-vite/package_json.bzl", electron_vite_bin = "bin")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load(":internal_package.bzl", "generated_package_json")
 
 def electron_vite_build(
         name,
@@ -84,7 +85,9 @@ def electron_vite_build(
 def electron_builder_app(
         name,
         out,
-        package_json,
+        package_name,
+        version = "0.1.0",
+        electron_main = "./out/main/index.js",
         config = "electron-builder.yml",
         extra_srcs = None,
         out_dir = "dist",
@@ -96,18 +99,29 @@ def electron_builder_app(
     """Run `electron-builder` over a pre-built `out/` tree as a Bazel action.
 
     Wraps the electron-builder CLI: stages the `out/` tree (produced by
-    `electron_vite_build`) plus the thin-shell `package.json` and an
+    `electron_vite_build`) plus a synthesised `package.json` and an
     electron-builder config file into a sandbox CWD, then runs
     `electron-builder` to produce platform-specific installers
     (`.dmg`, `.exe`, `.AppImage`, etc.) into a `dist_dir` tree artifact.
+
+    The `package.json` is generated from `package_name` / `version` /
+    `electron_main` — no source-tree thin-shell required. electron-
+    builder reads `name`/`version` for installer naming; Electron itself
+    reads `main` to find the bundled entry point.
 
     Args:
         name: Target name. Output tree label is `:<name>` (the `dist/`
             tree).
         out: Label of the `electron_vite_build` target whose tree
             artifact contains `main/` + `preload/` + `renderer/`.
-        package_json: Label of the thin-shell `package.json` (carries
-            `name`/`version`/`main`/`build`).
+        package_name: npm-style name for the synthesised package.json
+            (e.g. `desktop`). electron-builder uses it for installer
+            file names.
+        version: Semver string written into package.json's `version`.
+            Used by electron-builder for output naming.
+        electron_main: Path inside the staged tree to the main-process
+            entry. Defaults to `./out/main/index.js` (matches what
+            `electron_vite_build` produces).
         config: electron-builder config filename. Default
             `electron-builder.yml`.
         extra_srcs: Additional sources to ship into the staging
@@ -119,10 +133,11 @@ def electron_builder_app(
         chdir: CWD electron-builder runs in. Defaults to the calling
             package.
         visibility: Standard visibility.
-        tags: Bazel tags. Defaults to `["manual"]` because cross-platform
-            packaging requires the matching host (macOS for `.dmg`, etc.)
-            and pulls in heavy native deps; cluster CI opts in via
-            `--build_tag_filters=electron_builder`.
+        tags: Bazel tags. Defaults to `["manual", "electron_builder",
+            "no-sandbox", "local"]` because cross-platform packaging
+            requires the matching host (macOS for `.dmg`, etc.) and
+            calls native binaries (hdiutil/nsis/AppImage) the sandbox
+            can't accommodate.
         **kwargs: Forwarded to `js_run_binary`.
     """
     electron_builder_bin.electron_builder_binary(
@@ -138,7 +153,21 @@ def electron_builder_app(
         visibility = ["//visibility:private"],
     )
 
-    # Stage `:out` + thin-shell package.json + config into a hermetic
+    # Synthesise package.json from BUILD attrs — no source-tree thin
+    # shell. The output is `bazel-bin/<pkg>/package.json` named via
+    # `:<name>_pkg_json`; copy_to_directory below pulls it into staging.
+    pkg_json_target = name + "_pkg_json"
+    generated_package_json(
+        name = pkg_json_target,
+        package_name = package_name,
+        version = version,
+        main = electron_main,
+        extra = {
+            "description": "AgentsMesh Desktop — Electron-hosted client.",
+        },
+    )
+
+    # Stage `:out` + generated package.json + config into a hermetic
     # directory of real files (not aspect_rules_js symlink chains).
     # electron-builder's `appFileCopier.walk` uses `lstat` + `readlink`
     # recursively; the multi-hop pnpm/aspect symlinks tree under
@@ -148,7 +177,7 @@ def electron_builder_app(
     staging_name = name + "_staging"
     copy_to_directory(
         name = staging_name,
-        srcs = [out, package_json, config] + (extra_srcs or []),
+        srcs = [out, ":" + pkg_json_target, config] + (extra_srcs or []),
         # `out` carries `out/` prefix from electron_vite_build's
         # tree-artifact root; package.json + config land at top-level.
         root_paths = [native.package_name()],

@@ -7,6 +7,7 @@
 ###############################################################################
 
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
 load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
@@ -21,6 +22,42 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 # `.aspect_rules_js/node_modules/react@X.Y.Z` store. Without a root
 # package.json + this target, every workspace TS BUILD fails analysis.
 npm_link_all_packages(name = "node_modules")
+
+# First-party `@agentsmesh/*` packages — Bazel-native, no source-tree
+# package.json + no `workspace:*` entry in root package.json. The
+# `internal_npm_package` macro at each package's BUILD.bazel synthesises
+# the package.json from BUILD attrs; `npm_link_package` here mounts the
+# result at `//:node_modules/@agentsmesh/<name>` so import resolution
+# (Next.js, vite, ts_project) finds it through the same path Node uses.
+npm_link_package(
+    name = "node_modules/@agentsmesh/service-interface",
+    src = "//packages/service-interface:pkg",
+    root_package = "",
+)
+
+npm_link_package(
+    name = "node_modules/@agentsmesh/service-runtime",
+    src = "//packages/service-runtime:pkg",
+    root_package = "",
+)
+
+npm_link_package(
+    name = "node_modules/@agentsmesh/electron-adapter",
+    src = "//packages/electron-adapter:pkg",
+    root_package = "",
+)
+
+npm_link_package(
+    name = "node_modules/@agentsmesh/node-bridge",
+    src = "//clients/core/crates/node-bridge:pkg",
+    root_package = "",
+)
+
+npm_link_package(
+    name = "node_modules/agentsmesh-wasm",
+    src = "//clients/core/pkg",
+    root_package = "",
+)
 
 # Copy root package.json into bazel-out so sub-packages (clients/web,
 # clients/web-admin) can reference it from their data deps. aspect_rules_js

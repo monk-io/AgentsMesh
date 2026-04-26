@@ -56,11 +56,17 @@ ts_project(
 next_app(
     name = "next",
     srcs = _SRC_FILES,
+    # web-admin doesn't import @agentsmesh/* directly, but Next.js
+    # static analysis traverses the workspace's transitive imports.
+    # Listing the Bazel-managed links here keeps the graph closed.
     data = [
         "next.config.ts",
         "postcss.config.mjs",
         "tsconfig.json",
         "//:node_modules",
+        "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@agentsmesh/service-runtime",
+        "//:node_modules/agentsmesh-wasm",
         "//:package_json_bin",
     ],
     next_js_binary = ":next_js_binary",

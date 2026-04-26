@@ -29,13 +29,13 @@ electron_vite_build(
         # provider); `:src_files` is the matching filegroup that
         # actually exposes the raw .ts/.tsx/.css to vite.
         "//clients/web:src_files",
-        # Workspace packages whose raw .ts is consumed via `workspace:*`
-        # protocol; vite needs the npm_package form (pkg) so the
-        # `node_modules/@agentsmesh/<name>/src/index.ts` symlink in
-        # the sandbox resolves correctly.
-        "//packages/electron-adapter:pkg",
-        "//packages/service-interface:pkg",
-        "//packages/service-runtime:pkg",
+        # First-party `@agentsmesh/*` packages — Bazel-managed via
+        # `npm_link_package` in root BUILD.bazel. vite resolves them
+        # through `node_modules/@agentsmesh/<name>` walking up from
+        # the sandbox CWD.
+        "//:node_modules/@agentsmesh/electron-adapter",
+        "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@agentsmesh/service-runtime",
     ],
     tags = ["manual"],
 )
@@ -52,9 +52,11 @@ electron_vite_build(
 # in via `--build_tag_filters=electron_builder` per OS runner.
 electron_builder_app(
     name = "dist",
+    package_name = "desktop",
     out = ":out",
     config = "electron-builder.yml",
-    package_json = "package.json",
+    electron_main = "./out/main/index.js",
+    version = "0.1.0",
 )
 
 # Main-process TS (lives in `src/main/`). Produces a Node-loadable
@@ -118,7 +120,6 @@ playwright_test(
     ),
     config = "playwright.config.ts",
     data = [
-        "package.json",
         # Root-linked @playwright/test (single version across the repo
         # via pnpm overrides — see build_defs/web/playwright.bzl).
         "//:node_modules/@playwright/test",
