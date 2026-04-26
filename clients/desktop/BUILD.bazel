@@ -23,7 +23,16 @@ electron_vite_build(
     ) + [
         "electron.vite.config.ts",
         "tsconfig.json",
+        # Renderer cross-imports `clients/web/src/...` via electron-vite
+        # path aliases — the sandbox needs the whole web src tree.
         "//clients/web:src",
+        # Workspace packages whose raw .ts is consumed via `workspace:*`
+        # protocol; vite needs the npm_package form (pkg) so the
+        # `node_modules/@agentsmesh/<name>/src/index.ts` symlink in
+        # the sandbox resolves correctly.
+        "//packages/electron-adapter:pkg",
+        "//packages/service-interface:pkg",
+        "//packages/service-runtime:pkg",
     ],
     tags = ["manual"],
 )

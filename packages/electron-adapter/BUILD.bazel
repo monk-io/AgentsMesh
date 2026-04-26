@@ -23,6 +23,9 @@ npm_package(
     srcs = [
         "package.json",
         ":electron_adapter",
-    ],
+    ] + glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.test.ts"],
+    ),
     visibility = ["//visibility:public"],
 )

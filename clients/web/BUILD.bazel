@@ -42,6 +42,7 @@ ts_project(
     no_emit = True,
     resolve_json_module = True,
     tsconfig = "tsconfig.bazel.json",
+    visibility = ["//clients:__subpackages__"],
     deps = ["//:node_modules"],
 )
 
