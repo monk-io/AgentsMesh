@@ -5,7 +5,13 @@ import tailwindcss from "@tailwindcss/vite";
 
 const desktopSrc = resolve(__dirname, "src/renderer");
 const webSrc = resolve(__dirname, "../web/src");
-const desktopModules = resolve(__dirname, "node_modules");
+// All deps live in the workspace root after Phase C. The thin-shell
+// `clients/desktop/package.json` declares no `dependencies`, so
+// `clients/desktop/node_modules/` is empty in CI; pnpm's hoisting puts
+// React + everything else at the workspace root. Aliases below point
+// at the root tree so vite finds `react` regardless of which CWD it
+// was invoked from.
+const rootModules = resolve(__dirname, "../../node_modules");
 
 export default defineConfig({
   main: {
@@ -32,8 +38,8 @@ export default defineConfig({
     },
     resolve: {
       alias: [
-        { find: "react", replacement: resolve(desktopModules, "react") },
-        { find: "react-dom", replacement: resolve(desktopModules, "react-dom") },
+        { find: "react", replacement: resolve(rootModules, "react") },
+        { find: "react-dom", replacement: resolve(rootModules, "react-dom") },
         { find: /^@\/lib\/wasm-core$/, replacement: resolve(desktopSrc, "shims/service-shim") },
         { find: /^@\/lib\/wasm-getters$/, replacement: resolve(desktopSrc, "shims/service-shim") },
         { find: "@/stores", replacement: resolve(webSrc, "stores") },
