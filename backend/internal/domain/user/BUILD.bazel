@@ -7,6 +7,7 @@ go_library(
         "repository.go",
         "repository_provider.go",
         "user.go",
+        "validation.go",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/domain/user",
     visibility = ["//backend:__subpackages__"],
@@ -20,6 +21,9 @@ alias(
 
 go_test(
     name = "user_test",
-    srcs = ["user_test.go"],
+    srcs = [
+        "user_test.go",
+        "validation_test.go",
+    ],
     embed = [":user"],
 )
