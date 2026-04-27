@@ -412,14 +412,15 @@ jobs:
 
   desktop-e2e:
     name: E2E (Desktop — Electron)
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
     needs: smoke
-    # macos-15 (M1 arm64, with Apple Virtualization framework) is the
-    # only hosted runner where Colima's `vz` driver works without
-    # nested virt. macos-14 fails with `error starting vm: ... exit
-    # status 1` because the underlying VM nesting isn't enabled there.
-    # macos-13 (Intel) is deprecated.
+    # macos-26 is the only hosted macOS runner with nested virt enabled
+    # (M3+ Apple Silicon + macOS 26 host). Earlier labels — macos-13
+    # (Intel, deprecated), macos-14 (M1, no nested virt), macos-15 (mix
+    # of M1/M3) — all hit `error starting vm: HV_UNSUPPORTED` or
+    # equivalent when Colima tries to bring up the Docker VM.
+    # See actions/runner-images#9460, abiosoft/colima#970.
     steps:
       - uses: actions/checkout@v4
       - uses: bazel-contrib/setup-bazel@0.9.1
