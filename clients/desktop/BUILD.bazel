@@ -127,5 +127,8 @@ playwright_test(
         "//clients/web/e2e-playwright:shared_fixtures",
         # Bazel-built electron-vite bundle (out/main, out/preload, out/renderer).
         ":out",
-    ] + glob([".env*"], allow_empty = True),
+    ] + glob(
+        [".env*"],
+        allow_empty = True,
+    ),
 )
