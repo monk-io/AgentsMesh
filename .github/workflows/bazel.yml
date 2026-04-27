@@ -412,24 +412,13 @@ jobs:
 
   desktop-e2e:
     name: E2E (Desktop — Electron)
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Self-hosted M-series macmini-03. OrbStack provides Docker; Electron
+    # launches natively (no xvfb / chrome-sandbox dance). Hosted GHA
+    # macOS runners can't run Docker (no nested virt) and ubuntu's
+    # Electron-under-xvfb cold-launch is too flaky on shared CPU.
+    runs-on: [self-hosted, macmini-03]
+    timeout-minutes: 60
     needs: smoke
-    # Hosted runner pain matrix:
-    #   - macos-13 (Intel): deprecated.
-    #   - macos-14/15/26 (Apple Silicon): Docker via Colima fails —
-    #     GitHub doesn't enable nested virt on the hosted fleet even
-    #     where the silicon supports it. See actions/runner-images#9460,
-    #     abiosoft/colima#970.
-    #   - ubuntu-latest: Docker works fine but Electron-under-xvfb on
-    #     the shared-CPU runner consistently times out (cold launch
-    #     >120s, then `Process failed to launch!`).
-    # Until we have a real fix (self-hosted Mac, or `runs-on:
-    # macos-13-large` if/when GH brings nested virt), keep the job on
-    # ubuntu and mark it informational. Web e2e is the real coverage
-    # gate; this run still uploads traces so a regression in the
-    # Electron renderer is debuggable.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: bazel-contrib/setup-bazel@0.9.1
@@ -438,11 +427,10 @@ jobs:
           disk-cache: true
           repository-cache: true
 
-      - name: Install Electron headless deps + Xvfb
+      - name: Verify Docker (OrbStack)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
+          docker version
+          docker compose version
 
       - name: Bring up dev backend stack
         working-directory: deploy/dev
@@ -477,7 +465,7 @@ jobs:
           POSTGRES_PORT: ${{ steps.ports.outputs.POSTGRES_PORT }}
           COMPOSE_PROJECT_NAME: ${{ steps.ports.outputs.COMPOSE_PROJECT_NAME }}
         run: |
-          xvfb-run -a bazel test //clients/desktop:e2e \
+          bazel test //clients/desktop:e2e \
             --test_tag_filters=e2e \
             --test_output=errors \
             --test_env=HTTP_PORT \
@@ -501,6 +489,15 @@ jobs:
         run: |
           docker compose logs --tail=200 backend  || true
           docker compose logs --tail=200 runner   || true
+
+      - name: Tear down dev stack
+        # Self-hosted runner persists between jobs — leave the box
+        # clean for the next run. `down -v` drops volumes too so
+        # postgres state is fresh for migrations next time.
+        if: always()
+        working-directory: deploy/dev
+        run: |
+          docker compose down -v --remove-orphans || true
 
   # =========================================================================
   # TODO: Bazel-native replacements tracked below. Each jobs above
