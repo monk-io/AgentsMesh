@@ -78,6 +78,11 @@ clients/desktop/dist/
 clients/desktop/test-results/
 clients/desktop/playwright-report/
 
+# Playwright sometimes drops artifacts at the repo root when invoked
+# from a non-package CWD (e.g. a Bazel runfiles tree). Cover that too.
+/test-results/
+/playwright-report/
+
 # =========================
 # Backend (Go)
 # =========================

@@ -291,13 +291,209 @@ jobs:
           path: dist/AgentsMeshCore-xcframework.zip
           retention-days: 14
 
+  # ===========================================================================
+  # Playwright e2e — exercises the full stack (backend + runner + relay +
+  # web dev-server / electron renderer). Each job:
+  #   1. brings up Docker dev-stack via `dev.sh --backend-only`
+  #   2. starts the Web Next.js dev-server via `bazel run :next_dev` in
+  #      the background (Web only)
+  #   3. runs the Playwright suite via Bazel.
+  # The e2e-bazel invocation uses `--output_base=/tmp/bazel-e2e` so it
+  # spawns a SECOND Bazel server — without this, `bazel test` would tear
+  # down the running `bazel run :next_dev` (single-server constraint).
+  # ===========================================================================
+
+  web-e2e:
+    name: E2E (Web — Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      - name: Bring up dev backend stack
+        working-directory: deploy/dev
+        run: |
+          bash dev.sh --backend-only
+          # `dev.sh` exits 0 once compose is up and migrations + seed have
+          # run. The runner gRPC bidi stream needs a few extra seconds to
+          # register with the backend before pod-creation tests pass.
+          sleep 10
+
+      - name: Resolve worktree-allocated ports
+        id: ports
+        run: |
+          source deploy/dev/.env
+          echo "HTTP_PORT=$HTTP_PORT"           >> $GITHUB_OUTPUT
+          echo "WEB_PORT=$WEB_PORT"             >> $GITHUB_OUTPUT
+          echo "POSTGRES_PORT=$POSTGRES_PORT"   >> $GITHUB_OUTPUT
+          echo "COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..40}; do
+            if curl -sf "http://localhost:${{ steps.ports.outputs.HTTP_PORT }}/api/health" > /dev/null; then
+              echo "backend ready"; exit 0
+            fi
+            sleep 3
+          done
+          echo "backend never reported healthy"; exit 1
+
+      - name: Install Playwright chromium-headless-shell
+        run: |
+          # Resolve via Bazel-managed playwright (single-version pin).
+          PW_CLI=$(find $(bazel info output_base)/external -path '*playwright/cli.js' -type f 2>/dev/null | head -1)
+          if [ -z "$PW_CLI" ]; then
+            bazel build @npm//playwright
+            PW_CLI=$(find $(bazel info output_base)/external -path '*playwright/cli.js' -type f | head -1)
+          fi
+          node "$PW_CLI" install chromium-headless-shell
+
+      - name: Start Web dev-server (background)
+        env:
+          PORT: ${{ steps.ports.outputs.WEB_PORT }}
+          API_PROXY_TARGET: http://localhost:${{ steps.ports.outputs.HTTP_PORT }}
+        run: |
+          # Background bazel run; disown so the Bazel test step can run
+          # against a separate output_base without killing this server.
+          nohup bazel run //clients/web:next_dev > /tmp/web-dev.log 2>&1 &
+          disown
+          for i in {1..40}; do
+            if curl -sf "http://localhost:${{ steps.ports.outputs.WEB_PORT }}" -o /dev/null; then
+              echo "web dev ready"; exit 0
+            fi
+            sleep 3
+          done
+          echo "web dev never came up"; cat /tmp/web-dev.log; exit 1
+
+      - name: Run Web Playwright e2e
+        env:
+          HTTP_PORT: ${{ steps.ports.outputs.HTTP_PORT }}
+          WEB_PORT: ${{ steps.ports.outputs.WEB_PORT }}
+          POSTGRES_PORT: ${{ steps.ports.outputs.POSTGRES_PORT }}
+          COMPOSE_PROJECT_NAME: ${{ steps.ports.outputs.COMPOSE_PROJECT_NAME }}
+        run: |
+          bazel --output_base=/tmp/bazel-e2e test \
+            //clients/web/e2e-playwright:e2e \
+            --test_tag_filters=e2e \
+            --test_output=errors \
+            --test_env=HTTP_PORT \
+            --test_env=WEB_PORT \
+            --test_env=POSTGRES_PORT \
+            --test_env=COMPOSE_PROJECT_NAME
+
+      - name: Upload Web e2e artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-artifacts
+          path: |
+            /tmp/web-dev.log
+            test-results/
+            clients/web/e2e-playwright/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Dump backend logs on failure
+        if: failure()
+        working-directory: deploy/dev
+        run: |
+          docker compose logs --tail=200 backend  || true
+          docker compose logs --tail=200 runner   || true
+
+  desktop-e2e:
+    name: E2E (Desktop — Electron)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      - name: Install Electron headless deps + Xvfb
+        # Electron on Linux needs a virtual display + the libgtk/libnss
+        # cluster. Playwright's `_electron.launch` spawns the Electron
+        # binary directly so we wrap the test runner with `xvfb-run`.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb libgtk-3-0 libnss3 libxss1 libasound2 libgbm1
+
+      - name: Bring up dev backend stack
+        working-directory: deploy/dev
+        run: |
+          bash dev.sh --backend-only
+          sleep 10
+
+      - name: Resolve worktree-allocated ports
+        id: ports
+        run: |
+          source deploy/dev/.env
+          echo "HTTP_PORT=$HTTP_PORT"           >> $GITHUB_OUTPUT
+          echo "POSTGRES_PORT=$POSTGRES_PORT"   >> $GITHUB_OUTPUT
+          echo "COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..40}; do
+            if curl -sf "http://localhost:${{ steps.ports.outputs.HTTP_PORT }}/api/health" > /dev/null; then
+              echo "backend ready"; exit 0
+            fi
+            sleep 3
+          done
+          echo "backend never reported healthy"; exit 1
+
+      - name: Build desktop bundle
+        run: bazel build //clients/desktop:out
+
+      - name: Run Desktop Playwright e2e
+        env:
+          HTTP_PORT: ${{ steps.ports.outputs.HTTP_PORT }}
+          POSTGRES_PORT: ${{ steps.ports.outputs.POSTGRES_PORT }}
+          COMPOSE_PROJECT_NAME: ${{ steps.ports.outputs.COMPOSE_PROJECT_NAME }}
+        # `xvfb-run` provides a headless X display for Electron's
+        # browser-window. The Playwright test BUILD already wires
+        # `:out`, `@playwright/test`, `electron`, and `node-bridge` as
+        # data; no extra runfiles needed.
+        run: |
+          xvfb-run -a bazel test //clients/desktop:e2e \
+            --test_tag_filters=e2e \
+            --test_output=errors \
+            --test_env=HTTP_PORT \
+            --test_env=POSTGRES_PORT \
+            --test_env=COMPOSE_PROJECT_NAME
+
+      - name: Upload Desktop e2e artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-e2e-artifacts
+          path: |
+            test-results/
+            clients/desktop/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Dump backend logs on failure
+        if: failure()
+        working-directory: deploy/dev
+        run: |
+          docker compose logs --tail=200 backend  || true
+          docker compose logs --tail=200 runner   || true
+
   # =========================================================================
   # TODO: Bazel-native replacements tracked below. Each jobs above
   # currently uses shell/CLI because the Bazel target isn't ready:
   # =========================================================================
 
-  # e2e-playwright:
-  #   Playwright e2e targets (//clients/web:e2e,
-  #   //clients/web/e2e-playwright:e2e, //clients/desktop:e2e) are
-  #   green locally but need docker dev-stack setup in CI before
-  #   enabling.
+  # (e2e-playwright was the last shell-driven holdout — now wired above
+  # as `web-e2e` and `desktop-e2e`.)

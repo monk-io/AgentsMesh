@@ -910,12 +910,21 @@ main() {
         exit 0
     fi
 
+    # `--backend-only`: skip frontend startup (Web + Web-Admin). For CI
+    # e2e jobs that bring up the docker stack here and start the Web
+    # dev-server separately under Bazel.
+    local backend_only=false
+    if [[ "${1:-}" == "--backend-only" ]]; then
+        backend_only=true
+    fi
+
     # 显示帮助
     if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
         echo "用法: $0 [选项]"
         echo ""
         echo "选项:"
         echo "  无参数           一键启动完整开发环境（Docker 后端 + 本地前端）"
+        echo "  --backend-only   仅启动 Docker 后端服务（CI / 自定义前端启动场景）"
         echo "  --clean          停止并清理所有服务"
         echo "  --reset-runners  终止所有 runner 进程并重启 Docker runner/relay 容器"
         echo ""
@@ -983,10 +992,14 @@ main() {
     docker exec -u root "$runner_container" chown -R runner:runner /workspace 2>/dev/null || true
 
     # Step 11: 启动本地前端
-    start_frontend
+    if [[ "$backend_only" == "true" ]]; then
+        info "--backend-only: skipping frontend startup"
+    else
+        start_frontend
 
-    # Step 11.5: 启动本地 Admin Console
-    start_admin_frontend
+        # Step 11.5: 启动本地 Admin Console
+        start_admin_frontend
+    fi
 
     # 显示结果
     show_result
