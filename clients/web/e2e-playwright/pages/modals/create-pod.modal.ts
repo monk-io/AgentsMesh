@@ -16,6 +16,14 @@ export class CreatePodModal {
       .waitFor({ state: "visible" });
   }
 
+  /** Wait for the modal to disappear after a successful submit. */
+  async waitForClosed(timeoutMs = 15_000): Promise<void> {
+    await this.page
+      .locator('[role="dialog"]')
+      .first()
+      .waitFor({ state: "hidden", timeout: timeoutMs });
+  }
+
   /** Select an agent by matching text. */
   async selectAgent(agentName: string): Promise<void> {
     const agent = this.page.getByText(agentName, { exact: false }).first();
