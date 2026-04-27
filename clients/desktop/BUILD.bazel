@@ -94,20 +94,15 @@ ts_project(
 
 # Desktop Playwright e2e suite (Electron-hosted). Tagged `manual + e2e`
 # so `bazel test //...` skips it; run via:
-#   pnpm -C clients/desktop build          # build out/ first (electron-vite)
-#   pnpm exec playwright install chromium-headless-shell
 #   bazel test //clients/desktop:e2e --test_tag_filters=e2e
 #
-# Unlike Web, this target can't rebuild the Electron app itself — the
-# `electron-vite build` pipeline (napi addon + main/preload/renderer
-# bundles) happens outside Bazel. We ship the pre-built `out/` dir as
-# runfiles so Playwright's `_electron.launch()` can reach it.
+# Depends on `:out` so the Bazel-built electron-vite bundle is in the
+# runfiles tree. Playwright's `_electron.launch()` walks up from CWD
+# to find the bundle and the Electron binary.
 #
-# Note: we DO NOT depend on `:node_modules/@agentsmesh/node-bridge` —
-# that label pulls in the Rust napi target whose cdylib compile needs
-# Node headers the sandbox doesn't provide. Instead the pre-built
-# `.node` binary is packaged via the wildcard glob below, same as the
-# rest of the Electron runtime.
+# Note: we DO NOT depend on `:node_modules/@agentsmesh/node-bridge`
+# building from source — the prebuilt `.node` binary is packaged via
+# `:out` (vite copies it into the bundle).
 playwright_test(
     name = "e2e",
     srcs = glob(
@@ -130,12 +125,7 @@ playwright_test(
         "//:node_modules/@agentsmesh/node-bridge",
         # Shared helpers/fixtures from web/e2e-playwright.
         "//clients/web/e2e-playwright:shared_fixtures",
-    ] + glob(
-        [
-            # Pre-built Electron app (produced by electron-vite build).
-            "out/**",
-            ".env*",
-        ],
-        allow_empty = True,
-    ),
+        # Bazel-built electron-vite bundle (out/main, out/preload, out/renderer).
+        ":out",
+    ] + glob([".env*"], allow_empty = True),
 )

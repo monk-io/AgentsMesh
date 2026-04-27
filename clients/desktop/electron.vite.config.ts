@@ -42,11 +42,21 @@ export default defineConfig({
       // import site (clients/desktop/src vs clients/web/src cross-imports),
       // producing two NavigationContext instances → `useNavigate may be
       // used only in the context of a <Router>` at runtime.
+      //
+      // `@agentsmesh/service-runtime` is critical: it holds module-scoped
+      // `ready` + `i` state for getAuthManager() / markServiceReady().
+      // Two instances = platform-init registers in A, RootRedirect reads
+      // from B → B.ready=false → NOOP_PROXY returns `"[]"` for `_json`
+      // getters → user/org parse as empty arrays → router lands on
+      // `/undefined/workspace`.
       dedupe: [
         "react",
         "react-dom",
         "react-router-dom",
         "@tanstack/react-query",
+        "@agentsmesh/service-runtime",
+        "@agentsmesh/service-interface",
+        "@agentsmesh/electron-adapter",
       ],
       alias: [
         { find: "react", replacement: resolve(rootModules, "react") },
