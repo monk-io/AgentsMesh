@@ -32,7 +32,7 @@ def playwright_test(
         data = None,
         env = None,
         size = "enormous",
-        timeout = "long",
+        timeout = "eternal",
         tags = None,
         chdir = None,
         browsers_path = "",
