@@ -423,10 +423,13 @@ jobs:
         # Electron on Linux needs a virtual display + the libgtk/libnss
         # cluster. Playwright's `_electron.launch` spawns the Electron
         # binary directly so we wrap the test runner with `xvfb-run`.
+        # `libasound2t64` is the post-time_t-transition rename used by
+        # Ubuntu 24+ (the runner distro). Older Ubuntu fallback would
+        # be `libasound2`, but ubuntu-latest tracks 24+.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            xvfb libgtk-3-0 libnss3 libxss1 libasound2 libgbm1
+            xvfb libgtk-3-0 libnss3 libxss1 libasound2t64 libgbm1
 
       - name: Bring up dev backend stack
         working-directory: deploy/dev

@@ -963,7 +963,23 @@ main() {
 
     # Step 6: 启动 Docker 后端服务
     info "启动 Docker 服务 (首次可能需要几分钟)..."
-    docker compose up -d --build --quiet-pull 2>&1 | grep -v "^#" | grep -v "^\[" | grep -v "^$" || true
+    # Retry on Docker Hub 504/503 — base image pulls (golang, alpine, etc.)
+    # transiently fail in CI. Three attempts is enough; if the registry is
+    # genuinely down we want to fail fast rather than burn 30 minutes.
+    local up_attempt=0
+    local up_max=3
+    while [ $up_attempt -lt $up_max ]; do
+        up_attempt=$((up_attempt + 1))
+        if docker compose up -d --build --quiet-pull 2>&1 | grep -v "^#" | grep -v "^\[" | grep -v "^$"; then
+            break
+        fi
+        if [ $up_attempt -eq $up_max ]; then
+            error "Docker compose up failed after $up_max attempts"
+            exit 1
+        fi
+        warn "compose up failed (attempt $up_attempt/$up_max) — retrying in 10s"
+        sleep 10
+    done
     success "Docker 服务已启动"
 
     # Step 7: 等待 PostgreSQL
