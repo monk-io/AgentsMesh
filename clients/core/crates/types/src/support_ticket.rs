@@ -24,8 +24,19 @@ pub struct SupportTicketMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SupportTicketListResponse {
+    /// Backend returns `data` (gin paginated convention); the field is kept
+    /// public as `tickets` for ergonomics in Rust callers, but the wire name
+    /// stays `data` so both frontend types and the Go handler agree.
+    #[serde(rename = "data")]
     pub tickets: Vec<SupportTicket>,
+    #[serde(default)]
     pub total: Option<i64>,
+    #[serde(default)]
+    pub page: Option<i32>,
+    #[serde(default, rename = "page_size")]
+    pub page_size: Option<i32>,
+    #[serde(default, rename = "total_pages")]
+    pub total_pages: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
