@@ -573,6 +573,17 @@ jobs:
           docker version
           docker compose version
 
+      # Same dev.sh prereq as Web E2E. macmini-03 should already have
+      # bazel-watcher from the standard `brew install bazelisk
+      # bazel-watcher` dev setup, but install idempotently to avoid
+      # PATH drift between user / runner environments.
+      - name: Ensure ibazel installed
+        run: |
+          if ! command -v ibazel >/dev/null 2>&1; then
+            brew install bazel-watcher
+          fi
+          ibazel -h | head -3 || true
+
       - name: Bring up dev backend stack
         working-directory: deploy/dev
         run: |
