@@ -577,13 +577,21 @@ jobs:
       # runner — install the darwin-arm64 ibazel release directly (no
       # homebrew formula exists for `bazel-watcher`; the project ships
       # GitHub Release binaries instead).
+      #
+      # Writes to ~/.local/bin so the runner doesn't need sudo (which
+      # would require passwordless-sudo config on the self-hosted host).
+      # That dir is exported to PATH via $GITHUB_PATH for subsequent
+      # steps.
       - name: Ensure ibazel installed
         run: |
           if ! command -v ibazel >/dev/null 2>&1; then
             IBAZEL_VERSION="0.29.0"
+            mkdir -p "$HOME/.local/bin"
             curl -fsSL "https://github.com/bazelbuild/bazel-watcher/releases/download/v${IBAZEL_VERSION}/ibazel_darwin_arm64" \
-              -o /usr/local/bin/ibazel
-            chmod +x /usr/local/bin/ibazel
+              -o "$HOME/.local/bin/ibazel"
+            chmod +x "$HOME/.local/bin/ibazel"
+            echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.local/bin:$PATH"
           fi
           ibazel -h | head -3 || true
 
