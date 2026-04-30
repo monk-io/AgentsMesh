@@ -126,14 +126,25 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-      # `go test -race ./...` ported to Bazel. rules_go fetches its own
+      # `go test ./...` ported to Bazel. rules_go fetches its own
       # hermetic Go SDK (1.25 — pinned in MODULE.bazel), so we don't need
-      # actions/setup-go anymore. Race detector enabled via the rules_go
-      # build setting (forces CGO on, picks up MSVC from windows-latest).
+      # actions/setup-go anymore.
+      #
+      # `--build_tests_only` filters out non-test targets in `//runner/...`
+      # that have Linux/macOS-only toolchain deps (the `:image` OCI target
+      # pulls aspect_bazel_lib's zstd toolchain; the `:lint` sh_binary
+      # pulls @multitool's golangci-lint, which only has linux/macOS
+      # entries in multitool.lock.json).
+      #
+      # Race detector dropped on Windows: rules_go race instrumentation
+      # requires CGO + a configured C/C++ toolchain, which doesn't auto-
+      # resolve cleanly on windows-latest under Bazel sandboxing. The
+      # Linux Go test job (`go:` above) is the platform that exercises
+      # data-race coverage. This Windows job is platform-coverage smoke.
+      #
       # --flaky_test_attempts=3 replaces the bash retry loop that worked
-      # around TestPtyReaderForwardsOutput's PTY/TCP-timing flakiness;
-      # Bazel handles retry-on-fail natively.
-      - run: bazel test //runner/... --@rules_go//go/config:race --flaky_test_attempts=3
+      # around TestPtyReaderForwardsOutput's PTY/TCP-timing flakiness.
+      - run: bazel test //runner/... --build_tests_only --flaky_test_attempts=3
 
   release-smoke:
     name: Release Smoke (cross-build + archives + signing)
@@ -335,13 +346,31 @@ jobs:
 
   ios-xcframework:
     name: Build iOS XCFramework + app
-    runs-on: macos-14  # arm64 runner with Xcode 15+
+    # macos-26 ships Xcode 26 (Swift 6.2), needed by SwiftPM deps that
+    # declare `swift-tools-version: 6.2` (e.g., swift-collections,
+    # swift-composable-architecture). macos-14 only had Xcode 15.4 /
+    # Swift 5.10, which fails the SPM fetch with `package
+    # 'swift-collections' is using Swift tools version 6.2.0 but the
+    # installed version is 5.10.0`.
+    runs-on: macos-26
     timeout-minutes: 30
     needs: smoke
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+        # macos-26 ships Xcode 26 by default at /Applications/Xcode.app.
+        # Pin via xcode-select so any later image revisions stay
+        # deterministic, then echo versions to the build log.
+        run: |
+          for xc in /Applications/Xcode_26*.app; do
+            if [[ -d "$xc" ]]; then
+              sudo xcode-select -s "$xc"
+              break
+            fi
+          done
+          xcrun --version || sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          swift --version
       - uses: bazel-contrib/setup-bazel@0.9.1
         with:
           bazelisk-cache: true

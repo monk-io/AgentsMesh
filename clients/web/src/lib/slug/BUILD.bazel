@@ -1,9 +1,0 @@
-# Expose reserved.ts as a Bazel-visible source file so the
-# //backend/pkg/slugkit:slugkit_test cross-source sync check can pull it
-# in via runfiles. The TS module itself isn't a Bazel build target — it's
-# bundled by Next.js (clients/web).
-
-exports_files(
-    ["reserved.ts"],
-    visibility = ["//backend/pkg/slugkit:__pkg__"],
-)

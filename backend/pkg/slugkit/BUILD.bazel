@@ -30,7 +30,7 @@ go_test(
     # see them under Bazel sandbox.
     data = [
         "//backend/migrations:slug_reserved_migrations",
-        "//clients/web/src/lib/slug:reserved.ts",
+        "//clients/web:src/lib/slug/reserved.ts",
     ],
     embed = [":slugkit"],
 )

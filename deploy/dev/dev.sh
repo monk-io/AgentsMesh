@@ -250,12 +250,20 @@ _runtime_dir() { echo "$SCRIPT_DIR/runtime"; }
 check_ibazel_doctor() {
     local missing=()
     command -v bazel >/dev/null 2>&1 || missing+=("bazel (bazelisk)")
-    command -v ibazel >/dev/null 2>&1 || missing+=("ibazel (bazel-watcher)")
     if (( ${#missing[@]} > 0 )); then
         error "缺少必需工具：${missing[*]}"
-        echo "  macOS: brew install bazelisk bazel-watcher"
-        echo "  Linux: 见 https://github.com/bazelbuild/bazel-watcher/releases"
+        echo "  macOS: brew install bazelisk"
+        echo "  Linux: 见 https://github.com/bazelbuild/bazelisk/releases"
         exit 1
+    fi
+
+    # ibazel is *recommended* (provides hot reload) but not mandatory.
+    # CI runs dev.sh without ibazel and falls back to one-shot `bazel run`
+    # in `_launch_ibazel` (see HAS_IBAZEL detection there).
+    if ! command -v ibazel >/dev/null 2>&1; then
+        warn "ibazel 未安装，host service 将退化为单次 bazel run（无 hot reload）"
+        echo "  macOS: brew install bazel-watcher"
+        echo "  Linux: 见 https://github.com/bazelbuild/bazel-watcher/releases"
     fi
 
     # AI CLI tools are required by the runner. Warn (don't fail) so
@@ -357,8 +365,9 @@ _wait_http() {
     return 1
 }
 
-# Background-launch a service via ibazel. Args: name target [extra args...].
-# Writes pid + log under runtime/<name>/.
+# Background-launch a service. Uses ibazel (hot reload) when installed;
+# falls back to plain `bazel run` for CI / minimal-tooling environments.
+# Args: name target [extra args...]. Writes pid + log under runtime/<name>/.
 _launch_ibazel() {
     local name="$1" target="$2"; shift 2
     local rt_dir="$(_runtime_dir)/$name"
@@ -366,7 +375,7 @@ _launch_ibazel() {
     local pid_file="$rt_dir/$name.pid"
     local log_file="$rt_dir/$name.log"
 
-    # Reap any orphaned ibazel from a previous run.
+    # Reap any orphan from a previous run.
     if [[ -f "$pid_file" ]]; then
         local old=$(cat "$pid_file")
         if kill -0 "$old" 2>/dev/null; then
@@ -376,11 +385,17 @@ _launch_ibazel() {
         rm -f "$pid_file"
     fi
 
-    info "启动 host service: $name (target: $target)"
+    local launcher
+    if command -v ibazel >/dev/null 2>&1; then
+        launcher="ibazel"
+    else
+        launcher="bazel"
+    fi
+    info "启动 host service: $name (target: $target, launcher: $launcher)"
     local repo_root="$SCRIPT_DIR/../.."
     (
         cd "$repo_root"
-        nohup ibazel run "$target" "$@" > "$log_file" 2>&1 &
+        nohup $launcher run "$target" "$@" > "$log_file" 2>&1 &
         echo $! > "$pid_file"
         disown
     )
@@ -498,6 +513,9 @@ stop_host_services() {
     done
     pkill -f 'ibazel run //backend/cmd/server' 2>/dev/null || true
     pkill -f 'ibazel run //relay/cmd/relay' 2>/dev/null || true
+    # Plain `bazel run` fallback (CI mode without ibazel).
+    pkill -f 'bazel run //backend/cmd/server' 2>/dev/null || true
+    pkill -f 'bazel run //relay/cmd/relay' 2>/dev/null || true
 }
 
 

@@ -17,6 +17,17 @@ next_bin.next_binary(
     visibility = ["//visibility:public"],
 )
 
+# Cross-package exports: //backend/pkg/slugkit:slugkit_test pulls
+# `reserved.ts` into runfiles to verify the reserved-slug list stays in
+# sync with the Go SSOT. Done at the package root rather than via a
+# nested `clients/web/src/lib/slug/BUILD.bazel` so the `src/**` glob in
+# `:src_files` (consumed by desktop's electron-vite) doesn't get split
+# across a Bazel package boundary.
+exports_files(
+    ["src/lib/slug/reserved.ts"],
+    visibility = ["//backend/pkg/slugkit:__pkg__"],
+)
+
 # TypeScript sources — everything under src/. tsc runs via the pinned
 # TypeScript from MODULE.bazel, not the one in node_modules, so builds
 # stay hermetic. `:src` is a type-check gate (legacy type errors
