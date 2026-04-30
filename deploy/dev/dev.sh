@@ -425,7 +425,13 @@ start_backend_host() {
     export DEBUG=true
     export PRIMARY_DOMAIN="${PRIMARY_DOMAIN}"
     export USE_HTTPS="${USE_HTTPS:-false}"
-    export BLOCKSTORE_WEBHOOK_ALLOW_HOSTS="host.docker.internal,host.lan,localhost,127.0.0.1"
+    # Webhook allowlist for trigger-fire e2e: needs `localhost` so the
+    # test's local HTTP listener is reachable. Deliberately excludes
+    # `127.0.0.1` — security-guards e2e verifies that bare loopback IPs
+    # are rejected, and listing the IP literal would short-circuit that
+    # check (the allowlist is exact-match before the SSRF policy fires).
+    # `host.docker.internal` is kept for legacy/docker-backend mode.
+    export BLOCKSTORE_WEBHOOK_ALLOW_HOSTS="host.docker.internal,host.lan,localhost"
     export CORS_ALLOWED_ORIGINS="http://localhost:${HTTP_PORT},http://127.0.0.1:${HTTP_PORT},http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT},http://localhost:${WEB_ADMIN_PORT},http://127.0.0.1:${WEB_ADMIN_PORT}"
     export LOG_LEVEL=debug
     export LOG_FORMAT=text

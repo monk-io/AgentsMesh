@@ -6,7 +6,11 @@ import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
 // Tier 3 闭环 E2E: agent defines a trigger whose predicate matches when a
 // task transitions to status=done → creating such a task fires the webhook.
 // The test spins up a tiny HTTP listener on the host and points the trigger
-// at host.docker.internal so the backend container can actually reach it.
+// at `localhost` (the only loopback hostname the dev allowlist permits —
+// bare `127.0.0.1` is rejected so the security-guards SSRF test stays
+// meaningful). Backend reaches the listener directly because it now runs
+// on the host alongside the test process; `host.docker.internal` no longer
+// resolves once we left the docker-backend layout.
 // A failure pinpoints whether the trigger engine runs, loads defs, evaluates
 // predicates, or fires the POST — the four stages it has to cross.
 test("trigger.define → matching task.create fires the webhook", async ({
@@ -23,8 +27,9 @@ test("trigger.define → matching task.create fires the webhook", async ({
     const triggerName = `e2e-trigger-done-${Date.now()}`;
     // Write the trigger as a trigger_def block directly. SSRF guard lives
     // in the service layer (validateTriggerDefData) so private URLs are
-    // rejected here too — the dev compose env allows host.docker.internal
-    // via BLOCKSTORE_WEBHOOK_ALLOW_HOSTS.
+    // rejected here too — the dev env allows `localhost` via
+    // BLOCKSTORE_WEBHOOK_ALLOW_HOSTS (not the bare 127.0.0.1, since the
+    // security-guards e2e relies on that being rejected).
     await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
       workspace_id: workspaceID,
       ops: [
@@ -39,7 +44,7 @@ test("trigger.define → matching task.create fires the webhook", async ({
               predicate: '{status} == "done"',
               action: {
                 kind: "webhook",
-                url: `http://host.docker.internal:${port}/hook`,
+                url: `http://localhost:${port}/hook`,
               },
               enabled: true,
             },

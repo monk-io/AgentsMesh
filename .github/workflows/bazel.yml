@@ -407,9 +407,9 @@ jobs:
           # gives the exact, configuration-correct path on disk.
           mkdir -p dist
           xcframework_path=$(bazel cquery --output=files //clients/core/crates/ffi:AgentsMeshCore | head -1)
-          swift_glue_path=$(bazel cquery --output=files //clients/core/crates/ffi:AgentsMeshCore_bindings_out | head -1)
+          swift_glue_path=$(bazel cquery --output=files //clients/core/crates/ffi:AgentsMeshCore_bindings_swift | head -1)
           # cquery on a tree-artifact target returns the directory itself;
-          # for the bindings filegroup it returns one .swift file.
+          # for the bindings filegroup it returns the .swift file.
           ditto "$xcframework_path" dist/AgentsMeshCore.xcframework
           cp "$swift_glue_path" dist/AgentsMeshCore.swift
           cd dist && zip -r AgentsMeshCore-xcframework.zip \
