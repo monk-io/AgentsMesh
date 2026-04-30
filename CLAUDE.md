@@ -33,7 +33,9 @@ cd deploy/dev
 Prerequisites (one-time):
 
 ```bash
-brew install bazelisk bazel-watcher          # macOS
+brew install bazelisk                        # macOS (bazel)
+# ibazel is GitHub-Release-only (no homebrew formula); pick the
+# darwin-arm64 binary off https://github.com/bazelbuild/bazel-watcher/releases
 npm i -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli  # for runner pods
 ```
 

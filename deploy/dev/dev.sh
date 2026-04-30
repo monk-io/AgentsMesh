@@ -253,8 +253,9 @@ check_ibazel_doctor() {
     command -v ibazel >/dev/null 2>&1 || missing+=("ibazel (bazel-watcher)")
     if (( ${#missing[@]} > 0 )); then
         error "缺少必需工具：${missing[*]}"
-        echo "  macOS: brew install bazelisk bazel-watcher"
-        echo "  Linux: 见 https://github.com/bazelbuild/bazel-watcher/releases"
+        echo "  bazel:   brew install bazelisk (macOS) | bazelisk releases (Linux)"
+        echo "  ibazel:  https://github.com/bazelbuild/bazel-watcher/releases"
+        echo "           (no homebrew formula — grab the darwin-arm64 / linux-amd64 binary)"
         exit 1
     fi
 
