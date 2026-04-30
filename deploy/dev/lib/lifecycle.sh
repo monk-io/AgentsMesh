@@ -269,7 +269,11 @@ start_frontend() {
     info "启动前端服务 (端口: $web_port, Bazel devserver)..."
     local saved_dir="$PWD"
     cd "$root_dir"
-    bazel run //clients/web:next_dev -- --port "$web_port" > "$log_file" 2>&1 < /dev/null &
+    # API_PROXY_TARGET drives next.config.ts rewrites: /api/* → traefik
+    # → host backend. Without it, /api/auth/login 404s and the UI can't
+    # log in. HTTP_PORT is traefik's worktree-allocated entrypoint.
+    API_PROXY_TARGET="http://localhost:$HTTP_PORT" \
+        bazel run //clients/web:next_dev -- --port "$web_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"
 
@@ -305,7 +309,11 @@ start_admin_frontend() {
     info "启动 Admin Console (端口: $web_admin_port, Bazel devserver)..."
     local saved_dir="$PWD"
     cd "$root_dir"
-    bazel run //clients/web-admin:next_dev -- --port "$web_admin_port" > "$log_file" 2>&1 < /dev/null &
+    # web-admin's next.config rewrites use PRIMARY_DOMAIN to compute the
+    # backend URL (its fallback is the prod-only localhost:10000, which
+    # never matches a worktree). Pin it to traefik so /api/* proxies.
+    PRIMARY_DOMAIN="localhost:$HTTP_PORT" \
+        bazel run //clients/web-admin:next_dev -- --port "$web_admin_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"
 
