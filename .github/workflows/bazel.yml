@@ -446,6 +446,17 @@ jobs:
           disk-cache: true
           repository-cache: true
 
+      # dev.sh requires ibazel for hot reload of host backend / relay.
+      # Install the linux-amd64 release binary; the doctor check in dev.sh
+      # exits 1 if it isn't on PATH.
+      - name: Install ibazel
+        run: |
+          IBAZEL_VERSION="0.29.0"
+          curl -fsSL "https://github.com/bazelbuild/bazel-watcher/releases/download/v${IBAZEL_VERSION}/ibazel_linux_amd64" \
+            -o /usr/local/bin/ibazel
+          sudo chmod +x /usr/local/bin/ibazel
+          ibazel --version || ibazel -h | head -3
+
       - name: Bring up dev backend stack
         working-directory: deploy/dev
         run: |
