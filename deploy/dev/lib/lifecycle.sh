@@ -22,18 +22,18 @@ print_banner() {
 
 print_usage() {
     cat << 'EOF'
-用法: ./dev.sh [选项]
+用法:
+  bazel run //deploy/dev:up                 # 一键启动完整开发环境
+  bazel run //deploy/dev:backend_only       # 仅启动 docker + host backend/relay (CI)
+  bazel run //deploy/dev:rebuild_runner     # 重 build runner binary + 重启容器
+  bazel run //deploy/dev:reset_runners      # 重启 host runner+relay (backend 不动)
+  bazel run //deploy/dev:clean              # 停止并清理所有服务
 
-选项:
-  无参数             一键启动完整开发环境
-                       - docker: postgres/redis/minio/traefik/runner 等基础设施
-                       - host:   backend / relay / web / web-admin (ibazel + next dev)
-  --backend-only     仅启动 docker 基础设施 + host backend/relay (CI 用)
-  --rebuild-runner   重 build runner binary (bazel) + 重启 runner 容器
-  --clean            停止并清理所有服务
+  或直接调脚本（backward-compat）:
+  ./dev.sh [--backend-only|--rebuild-runner|--reset-runners|--clean|--help]
 
   改动 backend / relay 源码: ibazel 自动重 build (host)
-  改动 runner 源码:        ./dev.sh --rebuild-runner
+  改动 runner 源码:        bazel run //deploy/dev:rebuild_runner
 
 前端日志: tail -f deploy/dev/web.log
 EOF

@@ -424,7 +424,7 @@ jobs:
   # ===========================================================================
   # Playwright e2e — exercises the full stack (backend + runner + relay +
   # web dev-server / electron renderer). Each job:
-  #   1. brings up Docker dev-stack via `dev.sh --backend-only`
+  #   1. brings up Docker dev-stack via `bazel run //deploy/dev:backend_only`
   #   2. starts the Web Next.js dev-server via `bazel run :next_dev` in
   #      the background (Web only)
   #   3. runs the Playwright suite via Bazel.
@@ -458,9 +458,8 @@ jobs:
           ibazel --version || ibazel -h | head -3
 
       - name: Bring up dev backend stack
-        working-directory: deploy/dev
         run: |
-          bash dev.sh --backend-only
+          bazel run //deploy/dev:backend_only
           # `dev.sh` exits 0 once compose is up and migrations + seed have
           # run. The runner gRPC bidi stream needs a few extra seconds to
           # register with the backend before pod-creation tests pass.
@@ -596,9 +595,8 @@ jobs:
           ibazel -h | head -3 || true
 
       - name: Bring up dev backend stack
-        working-directory: deploy/dev
         run: |
-          bash dev.sh --backend-only
+          bazel run //deploy/dev:backend_only
           sleep 10
 
       - name: Resolve worktree-allocated ports

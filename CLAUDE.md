@@ -24,11 +24,15 @@ Dockerfile, no parallel compile path.
 ### Quick Start
 
 ```bash
-cd deploy/dev
-./dev.sh               # docker infra + host backend/relay/runner + host web/web-admin
-./dev.sh --clean       # stop everything, drop docker volumes, clear runtime/
-./dev.sh --reset-runners  # only restart host runner+relay (backend stays up)
+bazel run //deploy/dev:up                # docker infra + host backend/relay/runner + host web/web-admin
+bazel run //deploy/dev:clean             # stop everything, drop docker volumes, clear runtime/
+bazel run //deploy/dev:reset_runners     # only restart host runner+relay (backend stays up)
+bazel run //deploy/dev:rebuild_runner    # rebuild runner binary + restart container
+bazel run //deploy/dev:backend_only      # CI-style: skip frontends
 ```
+
+> Backward-compat: `cd deploy/dev && ./dev.sh [--clean|--reset-runners|...]`
+> still works — same flags, same behavior.
 
 Prerequisites (one-time):
 
@@ -39,7 +43,7 @@ brew install bazelisk                        # macOS (bazel)
 npm i -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli  # for runner pods
 ```
 
-`dev.sh` automatically:
+The dev pipeline automatically:
 1. Generates `.env` with worktree-isolated ports (3 host service ports added: BACKEND_HTTP_PORT / BACKEND_GRPC_PORT / RELAY_HTTP_PORT)
 2. Generates traefik dynamic configs that route `host.docker.internal:<host-port>`
 3. Starts the docker infra stack
@@ -247,8 +251,7 @@ Migrations are located in `backend/migrations/` using golang-migrate format.
 
 **Development** (via Docker):
 ```bash
-cd deploy/dev
-./dev.sh               # Automatically runs all migrations
+bazel run //deploy/dev:up    # automatically runs all migrations
 ```
 
 **Production** (via backend container):
@@ -432,7 +435,7 @@ runner/
 
 ## Configuration
 
-**Development** (Docker): Run `cd deploy/dev && ./dev.sh` - auto-generates all configs
+**Development** (Docker): Run `bazel run //deploy/dev:up` - auto-generates all configs
 
 **Runner**: `~/.agentsmesh/config.yaml` (created after `runner register`)
 
