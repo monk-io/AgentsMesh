@@ -20,6 +20,7 @@ import {
   KeyRound,
   Puzzle,
   BarChart3,
+  LifeBuoy,
 } from "lucide-react";
 
 interface SettingsSidebarContentProps {
@@ -105,6 +106,7 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
       })),
     },
     { id: "notifications", labelKey: "settings.personal.tabs.notifications", icon: Bell },
+    { id: "support", labelKey: "settings.personal.tabs.support", icon: LifeBuoy },
   ];
 
   const toggleSubSection = (sectionId: string) => {
@@ -177,7 +179,7 @@ export function SettingsSidebarContent({ className }: SettingsSidebarContentProp
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Scope Tabs — visible, replaces query-param-driven toggle */}
-      <div role="tablist" className="grid grid-cols-2 gap-1 p-2 border-b border-border">
+      <div role="tablist" className="flex items-center gap-1 p-2 border-b border-border">
         {(["personal", "organization"] as const).map((scope) => (
           <button
             key={scope}

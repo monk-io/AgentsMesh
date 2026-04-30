@@ -7,7 +7,7 @@ use crate::error::CoreError;
 /// Pod lifecycle — list/create/terminate/alias, plus relay connection info
 /// for terminal attach. Input/resize/signals go via the relay WebSocket
 /// (Swift side uses `relay_encode_*` + SwiftTerm delegate, not through FFI).
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     pub async fn list_pods(
         &self,

@@ -1,8 +1,9 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 # Swift façade over the Rust-backed XCFramework. Consumers import this
-# target (`@AgentsMeshCore`); the underlying XCFramework and uniffi-
-# generated Swift glue are transitive dependencies.
+# target (`@AgentsMeshCore`); the underlying Clang module + static lib
+# are exposed via `:AgentsMeshCore_cc` (a swift_clang_module wrapper that
+# provides CcInfo so swift_library can depend on it).
 swift_library(
     name = "AgentsMeshCore",
     srcs = glob(["Sources/AgentsMeshCore/*.swift"]) + [
@@ -11,6 +12,6 @@ swift_library(
     module_name = "AgentsMeshCore",
     visibility = ["//clients/ios:__subpackages__"],
     deps = [
-        "//clients/core/crates/ffi:AgentsMeshCore",
+        "//clients/core/crates/ffi:AgentsMeshCore_cc",
     ],
 )

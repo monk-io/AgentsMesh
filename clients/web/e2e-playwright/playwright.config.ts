@@ -43,7 +43,7 @@ export default defineConfig({
         storageState: ".auth/user.json",
       },
       dependencies: ["setup"],
-      testIgnore: /.*admin.*\.spec\.ts/,
+      testIgnore: [/.*admin.*\.spec\.ts/, /tests\/blockstore\/.*\.spec\.ts/],
     },
     {
       name: "admin",
@@ -53,6 +53,15 @@ export default defineConfig({
       },
       dependencies: ["admin-setup"],
       testMatch: /.*admin.*\.spec\.ts/,
+    },
+    // Blockstore specs use their own fixture (fixtures/blockstore.fixture.ts)
+    // that seeds JWT into localStorage at page boot — incompatible with the
+    // suite-wide storageState login. Run them as a separate project so the
+    // chromium project's `storageState` doesn't conflict with seedAuth.
+    {
+      name: "blockstore",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /tests\/blockstore\/.*\.spec\.ts/,
     },
   ],
 });

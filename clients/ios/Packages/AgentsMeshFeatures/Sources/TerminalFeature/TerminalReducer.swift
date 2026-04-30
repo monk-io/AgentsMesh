@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import AgentsMeshCore
+import CoreClient
 
 @Reducer
 public struct TerminalFeature {
@@ -59,12 +60,7 @@ public struct TerminalFeature {
                 let rows = state.rows
                 return .run { send in
                     do {
-                        try await relay.connect(
-                            info: info,
-                            podKey: podKey,
-                            initialCols: cols,
-                            initialRows: rows
-                        )
+                        try await relay.connect(info, podKey, cols, rows)
                         await send(.wsAttached)
                     } catch {
                         await send(.wsDetached(reason: error.localizedDescription))
@@ -95,7 +91,7 @@ public struct TerminalFeature {
                 state.cols = cols
                 state.rows = rows
                 return .run { _ in
-                    try? await relay.sendResize(cols: cols, rows: rows)
+                    try? await relay.sendResize(cols, rows)
                 }
 
             case .delegate:

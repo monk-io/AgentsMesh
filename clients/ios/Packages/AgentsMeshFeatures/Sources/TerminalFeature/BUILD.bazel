@@ -9,6 +9,7 @@ swift_library(
     visibility = ["//clients/ios:__subpackages__"],
     deps = [
         "//clients/ios/Packages/AgentsMeshCore",
+        "//clients/ios/Packages/AgentsMeshFeatures/Sources/CoreClient",
         "//clients/ios/Packages/AgentsMeshFeatures/Sources/DesignSystem",
         "@swiftpkg_swift_composable_architecture//:ComposableArchitecture",
         "@swiftpkg_swiftterm//:SwiftTerm",

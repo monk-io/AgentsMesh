@@ -26,7 +26,6 @@ import {
   Repeat,
   Blocks,
   Layers,
-  LifeBuoy,
   CircleHelp,
   type LucideIcon,
 } from "lucide-react";
@@ -74,7 +73,7 @@ export function ActivityBar({ className }: ActivityBarProps) {
       case "blocks":
         return `/${orgSlug}/blocks`;
       case "infra":
-        return `/${orgSlug}/infra`;
+        return `/${orgSlug}/infra?tab=runners`;
       case "repositories":
         return `/${orgSlug}/repositories`;
       case "runners":
@@ -106,16 +105,16 @@ export function ActivityBar({ className }: ActivityBarProps) {
     <TooltipProvider delayDuration={300}>
       <aside
         className={cn(
-          "w-[68px] bg-background border-r border-border flex flex-col",
+          "w-[136px] bg-background border-r border-border flex flex-col",
           className
         )}
       >
-        {/* Org switcher (replaces logo per design — design/pages/*.pastel activity_bar > org_switcher) */}
-        <div className="flex h-12 items-center justify-center border-b border-border">
+        {/* Org switcher (replaces logo per design — design/desktop/pages/*.pastel activity_bar > org_switcher) */}
+        <div className="flex h-12 items-center justify-start px-2 border-b border-border">
           <OrgSwitcher />
         </div>
 
-        <nav className="flex-1 flex flex-col items-center py-2 gap-0.5">
+        <nav className="flex-1 flex flex-col items-stretch py-2 gap-0.5 px-2">
           {mainActivities.map((activity, idx) => {
             const Icon = ICON_MAP[activity.icon] || Terminal;
             const isActive = activeActivity === activity.id;
@@ -128,14 +127,14 @@ export function ActivityBar({ className }: ActivityBarProps) {
             return (
               <React.Fragment key={activity.id}>
                 {showDivider && (
-                  <div className="my-1 h-px w-8 bg-border" aria-hidden="true" />
+                  <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
                 )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
                       href={getActivityRoute(activity.id)}
                       className={cn(
-                        "w-full px-1 py-1.5 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors relative",
+                        "w-full h-9 px-2 flex items-center gap-2 rounded-md transition-colors relative",
                         isActive
                           ? "text-foreground bg-muted"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
@@ -143,17 +142,17 @@ export function ActivityBar({ className }: ActivityBarProps) {
                       onClick={() => setActiveActivity(activity.id)}
                     >
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r" />
                       )}
-                      <div className="relative">
-                        <Icon className="w-5 h-5" />
+                      <div className="relative shrink-0">
+                        <Icon className="w-4 h-4" />
                         {showBadge && (
-                          <span className="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-0.5 text-[9px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center leading-none">
+                          <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-0.5 text-[9px] font-bold rounded-full bg-destructive text-destructive-foreground flex items-center justify-center leading-none">
                             {totalChannelUnread > 99 ? "99+" : totalChannelUnread}
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] leading-tight font-medium truncate max-w-full">
+                      <span className="text-xs leading-tight font-medium truncate">
                         {t(`ide.activities.${activity.id}`)}
                       </span>
                     </Link>
@@ -172,47 +171,17 @@ export function ActivityBar({ className }: ActivityBarProps) {
           })}
         </nav>
 
-        <nav className="flex flex-col items-center py-2 gap-0.5 border-t border-border">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                href="/support"
-                className={cn(
-                  "w-full px-1 py-1.5 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors relative",
-                  pathname.startsWith("/support")
-                    ? "text-foreground bg-muted"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                )}
-              >
-                {pathname.startsWith("/support") && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
-                )}
-                <LifeBuoy className="w-5 h-5" />
-                <span className="text-[10px] leading-tight font-medium truncate max-w-full">
-                  {t("support.title")}
-                </span>
-              </Link>
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent
-                side="right"
-                className="z-50 bg-popover text-popover-foreground px-2 py-1 text-sm rounded shadow-md border border-border"
-              >
-                {t("support.title")}
-              </TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
-
+        <nav className="flex flex-col items-stretch py-2 gap-0.5 px-2 border-t border-border">
           <Tooltip>
             <TooltipTrigger asChild>
               <a
                 href="https://discord.gg/3RcX7VBbH9"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full px-1 py-1.5 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                className="w-full h-9 px-2 flex items-center gap-2 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/60"
               >
-                <CircleHelp className="w-5 h-5" />
-                <span className="text-[10px] leading-tight font-medium truncate max-w-full">
+                <CircleHelp className="w-4 h-4 shrink-0" />
+                <span className="text-xs leading-tight font-medium truncate">
                   {t("ide.activities.help")}
                 </span>
               </a>
@@ -237,7 +206,7 @@ export function ActivityBar({ className }: ActivityBarProps) {
                   <Link
                     href={getActivityRoute(activity.id)}
                     className={cn(
-                      "w-full px-1 py-1.5 flex flex-col items-center justify-center gap-0.5 rounded-md transition-colors relative",
+                      "w-full h-9 px-2 flex items-center gap-2 rounded-md transition-colors relative",
                       isActive
                         ? "text-foreground bg-muted"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -245,10 +214,10 @@ export function ActivityBar({ className }: ActivityBarProps) {
                     onClick={() => setActiveActivity(activity.id)}
                   >
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r" />
                     )}
-                    <Icon className="w-5 h-5" />
-                    <span className="text-[10px] leading-tight font-medium truncate max-w-full">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="text-xs leading-tight font-medium truncate">
                       {t(`ide.activities.${activity.id}`)}
                     </span>
                   </Link>

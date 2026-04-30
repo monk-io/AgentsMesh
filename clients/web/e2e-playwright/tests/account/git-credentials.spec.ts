@@ -38,7 +38,12 @@ test.describe("Git Credentials API", () => {
    * TC-GITCRED-003: Update git credential
    */
   test("update git credential name", async ({ api, db }) => {
-    // Create first
+    // Drop any leftover from a previous failed run — the table has
+    // UNIQUE(user_id, name), so a stray row would make POST return
+    // ALREADY_EXISTS and the test would skip silently forever.
+    db.cleanup(
+      `DELETE FROM user_git_credentials WHERE name IN ('E2E Update Target', 'E2E Updated Name')`
+    );
     const createRes = await api.post("/api/v1/users/git-credentials", {
       name: "E2E Update Target",
       credential_type: "pat",
@@ -79,6 +84,9 @@ test.describe("Git Credentials API", () => {
    * TC-GITCRED-005: Set default credential
    */
   test("set and get default credential", async ({ api, db }) => {
+    db.cleanup(
+      `DELETE FROM user_git_credentials WHERE name = 'E2E Default Target'`
+    );
     const createRes = await api.post("/api/v1/users/git-credentials", {
       name: "E2E Default Target",
       credential_type: "pat",

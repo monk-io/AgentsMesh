@@ -17,6 +17,8 @@ const mockDisableUser = vi.fn();
 const mockEnableUser = vi.fn();
 const mockGrantAdmin = vi.fn();
 const mockRevokeAdmin = vi.fn();
+const mockVerifyUserEmail = vi.fn();
+const mockUnverifyUserEmail = vi.fn();
 
 vi.mock("@/lib/api/admin", () => ({
   listUsers: (...args: unknown[]) => mockListUsers(...args),
@@ -24,6 +26,8 @@ vi.mock("@/lib/api/admin", () => ({
   enableUser: (...args: unknown[]) => mockEnableUser(...args),
   grantAdmin: (...args: unknown[]) => mockGrantAdmin(...args),
   revokeAdmin: (...args: unknown[]) => mockRevokeAdmin(...args),
+  verifyUserEmail: (...args: unknown[]) => mockVerifyUserEmail(...args),
+  unverifyUserEmail: (...args: unknown[]) => mockUnverifyUserEmail(...args),
 }));
 
 import UsersPage from "../page";

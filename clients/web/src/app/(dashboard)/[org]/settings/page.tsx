@@ -5,6 +5,7 @@ import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { Button } from "@/components/ui/button";
 import { LanguageSettings, ThemeSettings, NotificationSettings, AgentCredentialsSettings, AgentConfigPage, GitSettingsContent } from "@/components/settings";
 import { GeneralSettings, MembersSettings, BillingSettings, APIKeysSettings, ExtensionsSettings, UsageSettings } from "@/components/settings/organization";
+import { SupportTicketsContent } from "@/components/support/SupportTicketsContent";
 import { useTranslations } from "next-intl";
 import { LogOut, User, Mail } from "lucide-react";
 
@@ -33,6 +34,8 @@ export default function SettingsPage() {
           return <PersonalAgentCredentialsSettings />;
         case "notifications":
           return <PersonalNotificationsSettings t={t} />;
+        case "support":
+          return <SupportTicketsContent variant="narrow" />;
         default:
           return <PersonalGeneralSettings />;
       }

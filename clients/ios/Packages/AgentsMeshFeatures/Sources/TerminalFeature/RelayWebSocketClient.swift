@@ -2,13 +2,16 @@ import ComposableArchitecture
 import Foundation
 import AgentsMeshCore
 
-/// Swift-owned Relay WebSocket client. Framing (Input/Resize/Ping/etc.)
-/// is computed in Rust via `relay_encode_*`; we just ship the resulting
-/// bytes over `URLSessionWebSocketTask`. Incoming binary messages are
-/// decoded via `relay_decode_message` and dispatched by `MsgType`:
-/// - `Output` (0x01) bytes → `PodOutputDispatcher.feed`
-/// - `Ping` (0x05) → silently ack
-/// - everything else → ignored for MVP
+/// Swift-owned Relay WebSocket client. The relay framing protocol is
+/// implemented inline since the prior `relay_encode_*` Rust FFI was
+/// removed in favor of a Swift-side implementation.
+///
+/// Protocol (see clients/core/crates/protocol):
+///   First byte = MsgType, then payload.
+///   - 0x00 Input    : payload = raw stdin bytes
+///   - 0x01 Output   : payload = raw stdout bytes (server → client)
+///   - 0x02 Resize   : payload = cols_be(2) + rows_be(2)
+///   - 0x05 Ping     : zero-length payload (server → client)
 public struct RelayWebSocketClient: Sendable {
     public var connect: @Sendable (
         _ info: PodConnectionInfoDto,
@@ -49,8 +52,30 @@ public extension DependencyValues {
     }
 }
 
-/// Owns the active URLSessionWebSocketTask + reader loop. `actor` gives
-/// us serialized access to mutable task state from TCA `.run` closures.
+private enum RelayMsgType: UInt8 {
+    case input = 0x00
+    case output = 0x01
+    case resize = 0x02
+    case ping = 0x05
+}
+
+private func encodeInput(_ data: Data) -> Data {
+    var out = Data(capacity: data.count + 1)
+    out.append(RelayMsgType.input.rawValue)
+    out.append(data)
+    return out
+}
+
+private func encodeResize(cols: UInt16, rows: UInt16) -> Data {
+    var out = Data(capacity: 5)
+    out.append(RelayMsgType.resize.rawValue)
+    out.append(UInt8((cols >> 8) & 0xFF))
+    out.append(UInt8(cols & 0xFF))
+    out.append(UInt8((rows >> 8) & 0xFF))
+    out.append(UInt8(rows & 0xFF))
+    return out
+}
+
 actor RelaySession {
     enum RelayError: Error {
         case notConnected
@@ -92,14 +117,12 @@ actor RelaySession {
 
     func sendInput(_ data: Data) async throws {
         guard let t = task else { throw RelayError.notConnected }
-        let framed = Data(relayEncodeInput(data: Array(data)))
-        try await t.send(.data(framed))
+        try await t.send(.data(encodeInput(data)))
     }
 
     func sendResize(cols: UInt16, rows: UInt16) async throws {
         guard let t = task else { throw RelayError.notConnected }
-        let framed = Data(relayEncodeResize(cols: cols, rows: rows))
-        try await t.send(.data(framed))
+        try await t.send(.data(encodeResize(cols: cols, rows: rows)))
     }
 
     func disconnect() async {
@@ -134,15 +157,14 @@ actor RelaySession {
     }
 
     private func handleIncoming(data: Data) async {
-        guard let decoded = try? relayDecodeMessage(data: Array(data)) else { return }
-        guard let key = podKey else { return }
-        // MsgType::Output = 0x01 per agentsmesh_protocol
-        switch decoded.kind {
-        case 0x01:
-            PodOutputDispatcher.shared.feed(podKey: key, data: Data(decoded.payload))
-        default:
-            break // ignore for MVP
+        guard data.count >= 1, let key = podKey else { return }
+        let kind = data[0]
+        let payload = data.dropFirst()
+        // MsgType::Output = 0x01
+        if kind == RelayMsgType.output.rawValue {
+            PodOutputDispatcher.shared.feed(podKey: key, data: Data(payload))
         }
+        // ignore other kinds for MVP
     }
 
     private func handleDisconnect(reason: String?) async {

@@ -7,7 +7,7 @@ use crate::dto::{
 };
 use crate::error::CoreError;
 
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     pub async fn list_repositories(&self) -> Result<RepositoryListResponseDto, CoreError> {
         let resp = self.api.list_repositories().await?;

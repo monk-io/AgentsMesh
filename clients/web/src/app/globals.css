@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Light Theme (default) — GitHub-hybrid palette, per design/tokens/colors.pastel */
+/* Light Theme (default) — GitHub-hybrid palette, per design/tokens/colors.pastel (shared across desktop+mobile) */
 :root {
   --background: #FFFFFF;
   --foreground: #1F2328;

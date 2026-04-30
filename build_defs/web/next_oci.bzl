@@ -27,9 +27,9 @@ Usage:
     #   :image_push_agentsmesh   — oci_push to AgentsMesh registry
 """
 
-load("@aspect_bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@aspect_rules_js//js:defs.bzl", "js_image_layer")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("//build_defs/docker:oci_push.bzl", "oci_push_targets")
 
 def next_oci_image(
         name,
@@ -95,44 +95,10 @@ def next_oci_image(
         visibility = visibility,
     )
 
-    # Normalize single-repo back-compat form.
-    repos = dict(repositories)
-    if repository and not repos:
-        repos["default"] = repository
-
-    if repos:
-        # Tag list: always `latest`, plus the stamped version + minor.
-        # Duplicate values are harmless — oci_push de-dups tags and the
-        # registry just re-tags the manifest.
-        expand_template(
-            name = name + "_tags",
-            out = name + "_tags.txt",
-            template = [
-                "latest",
-                "STAMP_VERSION",
-                "STAMP_MINOR",
-            ],
-            stamp_substitutions = {
-                "STAMP_VERSION": "{{STABLE_IMAGE_VERSION}}",
-                "STAMP_MINOR": "{{STABLE_IMAGE_MINOR}}",
-            },
-        )
-
-        for reg_key in sorted(repos.keys()):
-            oci_push(
-                name = "{}_push_{}".format(name, reg_key),
-                image = ":" + name,
-                remote_tags = ":" + name + "_tags",
-                repository = repos[reg_key],
-                visibility = visibility,
-            )
-
-        # Back-compat alias — first registry's push under the legacy
-        # `:name_push` name. Pick `default` if present, else the first
-        # alphabetical key.
-        back_compat_key = "default" if "default" in repos else sorted(repos.keys())[0]
-        native.alias(
-            name = name + "_push",
-            actual = ":{}_push_{}".format(name, back_compat_key),
-            visibility = visibility,
-        )
+    oci_push_targets(
+        name = name,
+        image = ":" + name,
+        repositories = repositories,
+        repository = repository,
+        visibility = visibility,
+    )

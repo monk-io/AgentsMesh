@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import AgentsMeshCore
+import CoreClient
 
 @Reducer
 public struct PodListFeature {
@@ -12,8 +13,9 @@ public struct PodListFeature {
         public var runners: [RunnerDto] = []
         public var isLoading: Bool = false
         public var errorMessage: String?
-        /// Pod selected for terminal attach. Parent navigates when set.
         public var selectedPodKey: String?
+        public var showingCompose: Bool = false
+        public var searchQuery: String = ""
 
         public init() {}
     }
@@ -26,11 +28,19 @@ public struct PodListFeature {
         case podTapped(String)
         case terminatePodRequested(String)
         case logoutTapped
+        case avatarTapped
+        case composeTapped
+        case setComposeVisible(Bool)
+        case searchQueryChanged(String)
+        case createPodRequested(CreatePodRequestDto)
+        case createPodSucceeded(PodDto)
+        case createPodFailed(String)
         case delegate(Delegate)
 
         public enum Delegate: Equatable, Sendable {
             case openTerminal(podKey: String)
             case didLogout
+            case requestDrawer
         }
     }
 
@@ -49,7 +59,7 @@ public struct PodListFeature {
                         let (p, r) = try await (pods, runners)
                         await send(.dataLoaded(pods: p.pods, runners: r.runners))
                     } catch let err as CoreError {
-                        await send(.loadFailed(LoginFeatureErrorDescription.describe(err)))
+                        await send(.loadFailed(CoreErrorDescription.describe(err)))
                     } catch {
                         await send(.loadFailed(error.localizedDescription))
                     }
@@ -86,14 +96,47 @@ public struct PodListFeature {
                     await send(.delegate(.didLogout))
                 }
 
+            case .avatarTapped:
+                return .send(.delegate(.requestDrawer))
+
+            case .composeTapped:
+                state.showingCompose = true
+                return .none
+
+            case .setComposeVisible(let visible):
+                state.showingCompose = visible
+                if !visible {
+                    return .send(.refreshRequested)
+                }
+                return .none
+
+            case .searchQueryChanged(let q):
+                state.searchQuery = q
+                return .none
+
+            case .createPodRequested(let req):
+                return .run { send in
+                    do {
+                        let pod = try await core.createPod(req)
+                        await send(.createPodSucceeded(pod))
+                    } catch let err as CoreError {
+                        await send(.createPodFailed(CoreErrorDescription.describe(err)))
+                    } catch {
+                        await send(.createPodFailed(error.localizedDescription))
+                    }
+                }
+
+            case .createPodSucceeded:
+                state.showingCompose = false
+                return .send(.refreshRequested)
+
+            case .createPodFailed(let msg):
+                state.errorMessage = msg
+                return .none
+
             case .delegate:
                 return .none
             }
         }
     }
-}
-
-/// Share the error-description helper with LoginFeature without exporting it.
-enum LoginFeatureErrorDescription {
-    static func describe(_ err: CoreError) -> String { LoginFeature.describe(err) }
 }

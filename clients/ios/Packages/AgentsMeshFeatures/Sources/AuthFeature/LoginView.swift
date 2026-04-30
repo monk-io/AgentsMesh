@@ -3,7 +3,7 @@ import SwiftUI
 import DesignSystem
 
 public struct LoginView: View {
-    @Bindable var store: StoreOf<LoginFeature>
+    @Perception.Bindable var store: StoreOf<LoginFeature>
 
     public init(store: StoreOf<LoginFeature>) {
         self.store = store
@@ -20,6 +20,7 @@ public struct LoginView: View {
                         Text(error)
                             .font(AMTypography.caption)
                             .foregroundStyle(AMColors.destructive)
+                            .accessibilityIdentifier("login-error")
                     }
                     submit
                     Spacer(minLength: AMSpacing.xxl)
@@ -48,11 +49,13 @@ public struct LoginView: View {
                 text: $store.email,
                 keyboard: .emailAddress
             )
+            .accessibilityIdentifier("login-email")
             AMTextField(
                 title: "Password",
                 text: $store.password,
                 isSecure: true
             )
+            .accessibilityIdentifier("login-password")
         }
     }
 
@@ -60,5 +63,6 @@ public struct LoginView: View {
         AMPrimaryButton("Sign in", isLoading: store.isSubmitting) {
             store.send(.submitTapped)
         }
+        .accessibilityIdentifier("login-submit")
     }
 }

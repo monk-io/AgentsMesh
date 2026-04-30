@@ -8,7 +8,7 @@ use crate::error::CoreError;
 /// OAuth / SAML flows are handled via `SSOAuthUrlParams` on the browser;
 /// iOS defers those to ASWebAuthenticationSession and does not need FFI
 /// support for the redirect leg.
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     /// Discover which SSO providers are configured for an email's domain.
     /// Returns an empty vec if no enterprise SSO is configured.

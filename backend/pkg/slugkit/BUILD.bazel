@@ -25,5 +25,12 @@ go_test(
         "reserved_sync_test.go",
         "slug_test.go",
     ],
+    # Cross-source sync test reads the frontend reserved.ts + the latest
+    # slug-reserved migration. They have to be in runfiles for the test to
+    # see them under Bazel sandbox.
+    data = [
+        "//clients/web/src/lib/slug:reserved.ts",
+        "//backend/migrations:slug_reserved_migrations",
+    ],
     embed = [":slugkit"],
 )

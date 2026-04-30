@@ -1,3 +1,4 @@
-# Placeholder — Rust macros land here in Phase 3.
+# Rust packaging macros. Loaded by clients/core/crates/wasm and
+# clients/core/crates/node-bridge.
 #   wasm.bzl  → rust_wasm_library  (Rust → wasm-bindgen ESM pkg)
 #   napi.bzl  → napi_rust_library  (Rust → Node N-API .node addon)

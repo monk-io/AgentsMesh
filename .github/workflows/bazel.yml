@@ -85,8 +85,9 @@ jobs:
       - run: bazel test --build_tests_only //clients/core/crates/...
 
   # ===========================================================================
-  # Shell fallback — the workflow drives pnpm / go / docker directly.
-  # Bazel equivalents tracked in the "TODO" block below.
+  # Mixed Bazel / shell — these jobs use Bazel under the hood (lint /
+  # cross-platform tests) but predate full Bazel-native rule coverage
+  # for the upstream tool.
   # ===========================================================================
 
   go-lint:
@@ -100,61 +101,145 @@ jobs:
         module: [backend, runner, relay]
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - uses: bazel-contrib/setup-bazel@0.9.1
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: ${{ matrix.module }}/go.sum
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          working-directory: ${{ matrix.module }}
-          install-mode: goinstall
-          version: latest
-          args: --timeout=5m
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      # golangci-lint binary fetched hermetically by rules_multitool
+      # (multitool.lock.json pins v2.11.4 across linux/macOS amd64+arm64).
+      # The macro is `sh_binary` not `sh_test` because golangci-lint
+      # walks the live Go module dep graph (vendored deps, GOMODCACHE)
+      # — putting that under Bazel's test sandbox would mean
+      # re-materializing every transitive Go file as runfiles.
+      - run: bazel run //${{ matrix.module }}:lint
 
   go-windows:
     name: Runner Tests (Windows)
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     needs: smoke
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
+      - uses: bazel-contrib/setup-bazel@0.9.1
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: runner/go.sum
-      - name: Download dependencies
-        working-directory: runner
-        run: go mod download
-      - name: Run tests
-        working-directory: runner
-        shell: bash
-        # Retry the flaky PTY/TCP-timing test (TestPtyReaderForwardsOutput)
-        # up to 3 times. `go test -count` doesn't retry-only-on-fail, so
-        # use a bash loop that re-runs the specific failing test on first
-        # pass failure.
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+      # `go test -race ./...` ported to Bazel. rules_go fetches its own
+      # hermetic Go SDK (1.25 — pinned in MODULE.bazel), so we don't need
+      # actions/setup-go anymore. Race detector enabled via the rules_go
+      # build setting (forces CGO on, picks up MSVC from windows-latest).
+      # --flaky_test_attempts=3 replaces the bash retry loop that worked
+      # around TestPtyReaderForwardsOutput's PTY/TCP-timing flakiness;
+      # Bazel handles retry-on-fail natively.
+      - run: bazel test //runner/... --@rules_go//go/config:race --flaky_test_attempts=3
+
+  release-smoke:
+    name: Release Smoke (cross-build + archives + signing)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: smoke
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      # Verify the Bazel-side of the release pipeline survives an ubuntu
+      # CI runner (where multitool fetches linux-amd64 binaries instead of
+      # darwin-arm64). Builds 6 cross-compiled archives + checksums.txt
+      # but stops short of `gh release create` — that's gated on a real
+      # tag in release.yml. This catches regressions in:
+      #   - rules_go cross-compilation (windows/arm64, darwin/arm64)
+      #   - rules_pkg pkg_tar / pkg_zip output naming
+      #   - the release_checksums genrule's sha256sum invocation
+      - name: Build release_assets
+        run: bazel build //runner/cmd/runner:release_assets
+
+      - name: Verify all 6 archives + checksums.txt exist
         run: |
-          set +e
-          go test -race -coverprofile=coverage.out ./...
-          rc=$?
-          if [ $rc -ne 0 ]; then
-            echo "::warning::Re-running runner tests (attempt 2/3)"
-            go test -race ./internal/poddaemon/...
-            rc=$?
-          fi
-          if [ $rc -ne 0 ]; then
-            echo "::warning::Re-running runner tests (attempt 3/3)"
-            go test -race ./internal/poddaemon/...
-            rc=$?
-          fi
-          exit $rc
-      - name: Upload coverage
-        uses: codecov/codecov-action@v5
-        with:
-          files: runner/coverage.out
-          flags: runner-windows
-          fail_ci_if_error: false
+          set -euo pipefail
+          cd bazel-bin/runner/cmd/runner
+          expected=(
+            agentsmesh-runner_linux_amd64.tar.gz
+            agentsmesh-runner_linux_arm64.tar.gz
+            agentsmesh-runner_darwin_amd64.tar.gz
+            agentsmesh-runner_darwin_arm64.tar.gz
+            agentsmesh-runner_windows_amd64.zip
+            agentsmesh-runner_windows_arm64.zip
+            checksums.txt
+          )
+          for f in "${expected[@]}"; do
+              if [[ ! -f "$f" ]]; then
+                  echo "::error::Missing release artifact: $f" >&2
+                  exit 1
+              fi
+              size=$(stat -c%s "$f")
+              if [[ "$size" -lt 100 ]]; then
+                  echo "::error::Suspiciously small artifact $f ($size bytes)" >&2
+                  exit 1
+              fi
+              echo "✓ $f ($size bytes)"
+          done
+          echo "--- checksums.txt ---"
+          cat checksums.txt
+
+      # Validate the release.yml staging+rename+sign+repack flow against
+      # a fake tag, exercising the bash plumbing (path joins, sed
+      # pattern, tar -C/-czf invocation) that release.yml depends on.
+      # Signing is skipped here (MACOS_CERTIFICATE secret isn't exposed
+      # to PR jobs by design); the rest of the flow runs end-to-end.
+      - name: Install rcodesign
+        run: |
+          RCODESIGN_VERSION="0.29.0"
+          cd /tmp
+          curl -fsSL "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/${RCODESIGN_VERSION}/apple-codesign-${RCODESIGN_VERSION}-x86_64-unknown-linux-musl.tar.gz" | tar xz
+          sudo cp ./apple-codesign-*/rcodesign /usr/local/bin/
+          rm -rf ./apple-codesign-*
+          rcodesign --version
+
+      - name: Dry-run staging (rename + skip-sign + repack + checksum)
+        env:
+          # MACOS_CERTIFICATE intentionally unset → sign-darwin.sh prints
+          # an error in CI mode. We catch + skip in the loop so the rest
+          # of the flow still validates.
+          ENTITLEMENTS: ${{ github.workspace }}/runner/build/darwin/entitlements.plist
+        run: |
+          set -euo pipefail
+          version="0.0.0-rc.smoke"
+          mkdir -p release-staging
+          sign_script="${GITHUB_WORKSPACE}/runner/build/scripts/sign-darwin.sh"
+
+          for arch in bazel-bin/runner/cmd/runner/agentsmesh-runner_*.tar.gz \
+                     bazel-bin/runner/cmd/runner/agentsmesh-runner_*.zip; do
+              base="$(basename "$arch")"
+              new_name="${base/agentsmesh-runner_/agentsmesh-runner_${version}_}"
+              dest="${GITHUB_WORKSPACE}/release-staging/${new_name}"
+
+              if [[ "$base" == *darwin*.tar.gz ]]; then
+                  tmp="$(mktemp -d)"
+                  tar -xzf "$arch" -C "$tmp"
+                  # In a real release, sign-darwin.sh runs here. PR smoke
+                  # has no cert secret, so we just exercise the unpack/repack.
+                  tar -C "$tmp" -czf "$dest" agentsmesh-runner README.md LICENSE
+                  rm -rf "$tmp"
+              else
+                  cp "$arch" "$dest"
+              fi
+          done
+
+          (
+              cd release-staging
+              sha256sum agentsmesh-runner_*.tar.gz agentsmesh-runner_*.zip > checksums.txt
+          )
+          ls -la release-staging/
+          # Sanity: each renamed file should round-trip through `sha256sum -c`.
+          (cd release-staging && sha256sum -c checksums.txt)
 
   web:
     name: Web (lint + type-check + vitest)
@@ -173,7 +258,7 @@ jobs:
         run: bazel test //clients/web:lint //clients/web:unit && bazel build //clients/web:src //clients/web-admin:src
 
   web-admin:
-    name: Web-Admin (lint)
+    name: Web-Admin (lint + vitest)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: smoke
@@ -184,8 +269,8 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
-      - name: Lint (Bazel)
-        run: bazel test //clients/web-admin:lint
+      - name: Lint + Vitest (Bazel)
+        run: bazel test //clients/web-admin:lint //clients/web-admin:unit
       # `pnpm build` is covered by the docker-verify job
       # (`bazel build //clients/web-admin:image`) — no duplicate build here.
 
@@ -222,7 +307,7 @@ jobs:
       - run: bazel build ${{ matrix.target }}
 
   desktop:
-    name: Desktop (electron-vite build)
+    name: Desktop (lint + electron-vite build)
     runs-on: macos-14
     timeout-minutes: 25
     needs: smoke
@@ -233,6 +318,8 @@ jobs:
           bazelisk-cache: true
           disk-cache: true
           repository-cache: true
+      - name: Lint
+        run: bazel test //clients/desktop:lint
       # `:out` runs the electron-vite pipeline (main + preload +
       # renderer bundles) inside Bazel. Tagged `manual` because the
       # renderer cross-imports clients/web/src via electron-vite path
@@ -247,7 +334,7 @@ jobs:
       # `:out` to keep the matrix fast.
 
   ios-xcframework:
-    name: Build AgentsMeshCore.xcframework
+    name: Build iOS XCFramework + app
     runs-on: macos-14  # arm64 runner with Xcode 15+
     timeout-minutes: 30
     needs: smoke
@@ -272,6 +359,11 @@ jobs:
         run: |
           ls -la bazel-bin/clients/core/crates/ffi/AgentsMeshCore.xcframework/
           wc -l bazel-bin/clients/core/crates/ffi/AgentsMeshCore_bindings_out/AgentsMeshCore.swift
+      # Build the full iOS app to gate Swift-side regressions (TCA
+      # reducers, SwiftUI views, CoreClient bindings against the FFI).
+      # Produces the signed `.ipa` consumed by simctl + xcodeproj.
+      - name: Build iOS app
+        run: bazel build //clients/ios:AgentsMesh
       - name: Package artifact
         run: |
           # Stage the bazel-built xcframework next to the Swift glue

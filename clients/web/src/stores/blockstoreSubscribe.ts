@@ -15,8 +15,18 @@ export function handleBlockstoreEvent(event: RealtimeEvent) {
   if (event.type !== "blockstore:op") return;
   const op = event.data as BlockOp;
   if (!(op.workspace_id in readLastOpIds())) return;
+  // Backend serialises `applied_at` as Unix ms (i64), but Rust's BlockOp
+  // type expects a string. Normalise to ISO-8601 before applying — same
+  // fix the Electron adapter does in `apply_remote_op`.
+  const normalized: BlockOp = {
+    ...op,
+    applied_at:
+      typeof op.applied_at === "number"
+        ? new Date(op.applied_at).toISOString()
+        : op.applied_at,
+  };
   try {
-    getBlockstoreService().apply_remote_op(JSON.stringify(op));
+    getBlockstoreService().apply_remote_op(JSON.stringify(normalized));
   } catch {
     return;
   }

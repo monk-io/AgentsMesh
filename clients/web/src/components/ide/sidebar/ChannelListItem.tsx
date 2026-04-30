@@ -14,7 +14,7 @@ interface ChannelListItemProps {
 }
 
 /**
- * Channel row in the sidebar list — matches design/pages/channels.pastel
+ * Channel row in the sidebar list — matches design/desktop/pages/channels.pastel
  * `channel_row` + `channel_row_active`: hash + name + last message preview +
  * short time + unread dot. Private channels use the lock icon in place of #.
  */

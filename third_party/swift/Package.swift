@@ -18,9 +18,20 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/pointfreeco/swift-composable-architecture",
-            from: "1.15.0"
+            exact: "1.15.2"
         ),
-        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0"),
+        // Pin to a version that does NOT pull in swift-sharing (introduced
+        // in 2.8.0). 2.7.x is the last 2.x that works without it.
+        .package(
+            url: "https://github.com/pointfreeco/swift-navigation",
+            exact: "2.7.0"
+        ),
+        // Pin SwiftTerm to 1.2.x — the 1.5.x release reshaped
+        // TerminalViewDelegate / UIViewRepresentable bindings.
+        .package(
+            url: "https://github.com/migueldeicaza/SwiftTerm",
+            exact: "1.2.5"
+        ),
     ],
     targets: []
 )

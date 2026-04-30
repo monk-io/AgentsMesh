@@ -68,6 +68,8 @@ export function PodListItem({ pod, isOpen, onClick, onTerminate, onRename, onSha
       onTogglePerpetual={onTogglePerpetual}
     >
       <div
+        data-testid="pod-list-item"
+        data-pod-key={pod.pod_key}
         className={cn(
           "group flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer",
           isOpen && "bg-muted/30"

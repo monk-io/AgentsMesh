@@ -4,7 +4,7 @@ use crate::core::AgentsMeshCore;
 use crate::dto::{AuthSessionDto, AuthTokensDto, OrganizationDto};
 use crate::error::CoreError;
 
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     pub async fn login(&self, email: String, password: String) -> Result<AuthSessionDto, CoreError> {
         let session = self.auth.login(&email, &password).await?;

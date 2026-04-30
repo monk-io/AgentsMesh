@@ -24,7 +24,7 @@ interface ChannelHeaderProps {
 }
 
 /**
- * Channel header — design/pages/channels.pastel `chan_header`. Left: `#` +
+ * Channel header — design/desktop/pages/channels.pastel `chan_header`. Left: `#` +
  * name + subtitle (pods · members · linked · repo). Right: 🔍 search plus
  * ⋯ "More" which opens/closes the right drawer (members are inside the
  * drawer, no duplicate pill on the header).

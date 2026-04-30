@@ -11,55 +11,78 @@ AgentsMesh is **The AI Agent Workforce Platform** — where teams scale beyond h
 - **Web-Admin**: Admin Console frontend (Next.js + Tailwind CSS) - internal management interface
 - **Runner**: Go daemon that executes AI agent tasks in isolated PTY environments
 
-## Development Environment (Docker)
+## Development Environment
 
-**Always use `deploy/dev` Docker environment for development and debugging.** This setup includes Traefik reverse proxy and mirrors production architecture, helping catch issues early.
+**Bazel host-side mode**: Go services (backend / runner / relay) and the
+Next.js apps (web / web-admin) all run on your host via `ibazel run` /
+`bazel run :next_dev`. Docker only hosts stateful infrastructure
+(PostgreSQL, Redis, MinIO, Traefik, Jaeger, Gitea, OTel collector,
+Adminer). This means **every Go binary the dev environment runs is the
+same artifact CI's `bazel build` produces** — no air, no per-service
+Dockerfile, no parallel compile path.
 
-### Quick Start (Recommended)
+### Quick Start
 
 ```bash
 cd deploy/dev
-./dev.sh               # One-click: starts Docker backend + local frontend
-./dev.sh --clean       # Stop and clean up everything
+./dev.sh               # docker infra + host backend/relay/runner + host web/web-admin
+./dev.sh --clean       # stop everything, drop docker volumes, clear runtime/
+./dev.sh --reset-runners  # only restart host runner+relay (backend stays up)
 ```
 
-This script automatically:
-1. Generates `.env` with worktree-isolated ports (supports multiple worktrees)
-2. Starts Docker backend services (PostgreSQL, Redis, MinIO, Backend, Traefik, Runner)
-3. Runs database migrations and seeds test data
-4. Starts local frontend (Next.js with Turbopack) for better performance
+Prerequisites (one-time):
 
-### Services & Ports (main worktree)
+```bash
+brew install bazelisk bazel-watcher          # macOS
+npm i -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli  # for runner pods
+```
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Next.js (local, Turbopack) |
-| **API** | http://localhost:80/api | Backend API via Traefik |
-| **Traefik Dashboard** | http://localhost:8080 | Traefik dashboard (dev only) |
-| **Adminer** | http://localhost:8081 | Database management UI |
-| **MinIO Console** | http://localhost:9001 | S3-compatible storage UI |
-| PostgreSQL | localhost:5432 | Database (user: agentsmesh, pass: agentsmesh_dev) |
-| Redis | localhost:6379 | Cache |
+`dev.sh` automatically:
+1. Generates `.env` with worktree-isolated ports (3 host service ports added: BACKEND_HTTP_PORT / BACKEND_GRPC_PORT / RELAY_HTTP_PORT)
+2. Generates traefik dynamic configs that route `host.docker.internal:<host-port>`
+3. Starts the docker infra stack
+4. Runs migrations via the `migrate/migrate` oneshot service (no backend container needed)
+5. Launches `ibazel run` for backend / relay / runner in the background, with isolated `$HOME` for the runner so its `~/.claude/*` writes don't touch your real configs
+6. Starts `bazel run //clients/web:next_dev` and `//clients/web-admin:next_dev`
+
+### Services & Ports (offset 0 / main worktree)
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| **Frontend** | http://localhost:10007 | Bazel `next_dev` (host) |
+| **Admin Console** | http://localhost:10011 | Bazel `next_dev` (host) |
+| **API** | http://localhost:10000/api | traefik → host backend :10015 |
+| **Relay** | ws://localhost:10000/relay | traefik → host relay :10017 |
+| **gRPC mTLS** | grpcs://localhost:10001 | traefik passthrough → host backend :10016 |
+| Postgres | localhost:10002 | docker |
+| Redis | localhost:10003 | docker |
+| MinIO API/Console | localhost:10004 / 10005 | docker |
+| Adminer | localhost:10006 | docker |
+| Traefik Dashboard | localhost:10008 | docker |
+| Gitea HTTP/SSH | localhost:10009 / 10010 | docker |
+| OTel gRPC/HTTP | localhost:10012 / 10013 | docker |
+| Jaeger UI | localhost:10014 | docker |
+
+Each worktree adds offset×50 to every slot.
 
 Test accounts:
 - **User**: dev@agentsmesh.local / devpass123
 - **Admin**: admin@agentsmesh.local / adminpass123
 
-> **Note**: All ports are dynamically allocated based on worktree. Check `deploy/dev/.env` for actual ports (e.g., WEB_PORT, HTTP_PORT).
-
 ### Logs
 
 ```bash
-tail -f deploy/dev/web.log       # Frontend logs
-docker compose logs -f backend   # Backend logs
-docker compose logs -f runner    # Runner logs
+tail -f deploy/dev/runtime/backend/backend.log   # ibazel + backend stdout
+tail -f deploy/dev/runtime/relay/relay.log
+tail -f deploy/dev/runtime/runner/runner.log
+tail -f deploy/dev/web.log                       # bazel next_dev (web)
+docker compose logs -f postgres                  # docker infra
 ```
 
 ### Hot Reload
 
-- **Frontend**: Next.js Turbopack fast refresh (local)
-- **Backend**: Go code auto-rebuild via Air (Docker)
-- **Runner**: Go code auto-rebuild (Docker)
+- **Frontend (web / web-admin)**: Next.js dev server fast refresh
+- **Go services (backend / runner / relay)**: `ibazel run //path:target` — watches Bazel's dependency graph and rebuilds incrementally on `.go` change. Same compile path as `bazel test //...`, no parallel toolchain.
 
 ## Build Commands (for CI/testing outside Docker)
 
@@ -155,12 +178,31 @@ bazel test //clients/desktop:e2e --test_tag_filters=e2e
 ### Runner (Go)
 
 ```bash
-cd runner
-make build                       # Build binary (no CGO required)
-make test                        # Run tests
-make lint                        # golangci-lint
-make build-all                   # Cross-platform builds
+bazel build //runner/cmd/runner:runner            # Native binary
+bazel test //runner/...                            # Run tests
+bazel build //runner/cmd/runner:image              # OCI image (distroless)
+bazel build //runner/cmd/runner:release_assets     # 6-platform tar.gz/zip + checksums
+bazel run //runner:lint                            # golangci-lint (hermetic v2.11.4)
 ```
+
+Release assets (`release_assets`) replace the previous GoReleaser
+pipeline: 6 cross-compiled binaries (linux/darwin/windows ×
+amd64/arm64) packaged as tar.gz/zip, plus `checksums.txt`. The
+release.yml workflow stamps version into the staged filenames and
+runs `rcodesign` over darwin binaries before `gh release create`.
+
+### Go Lint (backend / runner / relay)
+
+```bash
+bazel run //backend:lint    # golangci-lint over backend/
+bazel run //runner:lint     # golangci-lint over runner/
+bazel run //relay:lint      # golangci-lint over relay/
+```
+
+The golangci-lint binary is fetched hermetically by `rules_multitool`
+(`multitool.lock.json` pins v2.11.4 across linux/macOS amd64+arm64).
+Each module reads its own `.golangci.yml`. CI runs the same
+`bazel run //<module>:lint` commands — no parallel `golangci-lint-action`.
 
 ### iOS (SwiftUI + TCA, powered by Rust Core via UniFFI)
 
@@ -442,6 +484,7 @@ Or use an existing admin to grant privileges via the Admin Console UI.
 
 ## Principles
 * Architecture must conform to SOLID, GRASP, and YAGNI.
+* **代码即 SSOT — 不要解释 what，只解释 why。** 注释能删则删。可以写注释的场景：业务约束、跨模块契约、解决方案的非显然取舍 (workaround 原因)。绝不能写：复述函数名/类型名的注释、`// 创建 X` 之上紧跟 `CreateX()`、section banner、文档化签名的 JSDoc。代码不够自解释就改代码，不要靠注释补救。
 * **Hard limit: every file must stay under 200 lines** (excluding test files, which should stay under 400 lines). When a file approaches this limit, proactively split it by SRP — extract types, helpers, hooks, or sub-components into separate files. A 210-line file is acceptable if splitting would break cohesion; a 300+ line file is never acceptable and must be split before committing.
 * **Code is the single source of truth — comments that can be eliminated, must be eliminated.** Only comment to explain **why** something non-obvious exists (business constraints, cross-module contracts, workarounds). Never comment **what** code does — if the code isn't self-explanatory, rewrite the code. No JSDoc that restates the function signature, no `// Create X` above `CreateX()`, no section banners.
 * **File names must be specific and descriptive.** Never use generic names like `helpers`, `utils`, `common`, `misc`, `shared`. Name files after what they contain — e.g., `mesh-status-info.ts` not `mesh-helpers.ts`, `runner-display-info.ts` not `runner-utils.ts`. 

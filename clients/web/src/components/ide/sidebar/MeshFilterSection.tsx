@@ -17,7 +17,7 @@ interface MeshFilterSectionProps {
 }
 
 /**
- * Multi-select filter list matching design/pages/mesh.pastel sidebar pattern:
+ * Multi-select filter list matching design/desktop/pages/mesh.pastel sidebar pattern:
  *   ┌─ RUNNER ────────────┐
  *   │ [✓] ● dev-runner   3 │
  *   │ [ ] ● staging-2    1 │

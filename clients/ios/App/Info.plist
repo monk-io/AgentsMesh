@@ -20,5 +20,22 @@
 	<string>1</string>
 	<key>UILaunchStoryboardName</key>
 	<string></string>
+	<key>AGENTSMESH_API_URL</key>
+	<string>http://localhost:25350</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 </dict>
 </plist>

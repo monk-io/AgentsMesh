@@ -5,6 +5,11 @@ import { AppState } from "@agentsmesh/node-bridge";
 const apiUrl = process.env.AGENTSMESH_API_URL ?? "http://localhost:25350";
 const storageDir = path.join(app.getPath("userData"), "agentsmesh");
 
+// Headless flag for e2e: keeps the window invisible + drops the macOS
+// dock icon so the test process doesn't steal focus from the user's IDE.
+// `global.setup.ts` sets `NODE_ENV=test` on every Electron launch.
+const isHeadlessTest = process.env.NODE_ENV === "test";
+
 let appState: AppState;
 
 function createWindow() {
@@ -14,6 +19,11 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: "AgentsMesh",
+    show: !isHeadlessTest,
+    // Required when `show: false` — keeps the renderer painting so
+    // Playwright assertions (`expect(locator).toBeVisible`) still pass.
+    paintWhenInitiallyHidden: true,
+    skipTaskbar: isHeadlessTest,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -58,6 +68,11 @@ function registerIpcHandlers() {
 
 app.whenReady().then(() => {
   console.log(`[electron] Starting, API: ${apiUrl}, storage: ${storageDir}`);
+  // Drop the dock icon in headless e2e on macOS so the runner doesn't
+  // pull focus away from the user's editor mid-run.
+  if (isHeadlessTest && process.platform === "darwin") {
+    app.dock?.hide();
+  }
   appState = new AppState(apiUrl, storageDir);
   registerIpcHandlers();
   createWindow();

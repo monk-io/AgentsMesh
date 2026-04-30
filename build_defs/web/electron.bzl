@@ -12,9 +12,6 @@ electron-builder packaging into Bazel actions:
     artifact containing platform installers (`.dmg`, `.exe`,
     `.AppImage`, etc.).
 
-The legacy thin `electron_app` (just pkg_tar of pre-built artifacts)
-is retained for callers that still ship a manually-built `out/`.
-
 Usage:
     load("//build_defs/web:electron.bzl",
          "electron_vite_build", "electron_builder_app")
@@ -33,10 +30,9 @@ Usage:
 """
 
 load("@aspect_bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@aspect_rules_js//js:defs.bzl", "js_run_binary", "js_run_devserver")
+load("@aspect_rules_js//js:defs.bzl", "js_run_binary")
 load("@npm//:electron-builder/package_json.bzl", electron_builder_bin = "bin")
 load("@npm//:electron-vite/package_json.bzl", electron_vite_bin = "bin")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load(":internal_package.bzl", "generated_package_json")
 
 def electron_vite_build(
@@ -237,47 +233,5 @@ def electron_builder_app(
             "ELECTRON_BUILDER_CACHE": "$$(pwd)/.electron-builder-cache",
             "ELECTRON_CACHE": "$$(pwd)/.electron-cache",
         },
-        **kwargs
-    )
-
-def electron_app(
-        name,
-        main,
-        renderer,
-        napi_addon = None,
-        visibility = ["//visibility:public"],
-        **kwargs):
-    """Assemble an Electron app on-disk layout (legacy stub).
-
-    Bundles already-built artifacts via pkg_tar; for the Bazel-native
-    build pipeline use `electron_vite_build` instead.
-
-    Args:
-        name: Base target name.
-        main: Label producing the main-process bundle.
-        renderer: Label producing the renderer-process bundle.
-        napi_addon: Optional label for the N-API native addon.
-        visibility: Standard visibility.
-        **kwargs: Forwarded to underlying rules.
-    """
-    srcs = [main, renderer]
-    if napi_addon:
-        srcs.append(napi_addon)
-
-    pkg_tar(
-        name = "{}_app".format(name),
-        srcs = srcs,
-        extension = "tar",
-        package_dir = "/out",
-        visibility = visibility,
-    )
-
-    js_run_devserver(
-        name = "{}_dev".format(name),
-        args = [".", "--enable-logging"],
-        chdir = native.package_name(),
-        data = srcs,
-        tool = "//:node_modules/electron",
-        visibility = visibility,
         **kwargs
     )

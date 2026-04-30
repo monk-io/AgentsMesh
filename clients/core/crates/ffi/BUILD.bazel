@@ -11,6 +11,7 @@ _FFI_DEPS = [
     "//clients/core/crates/auth",
     "//clients/core/crates/protocol",
     "//clients/core/crates/services",
+    "//clients/core/crates/state",
     "//clients/core/crates/types",
     "@crates//:serde",
     "@crates//:serde_json",

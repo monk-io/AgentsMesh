@@ -13,7 +13,12 @@ test.describe("CRUD Supplements", () => {
    * TC-AGENTCRED-003: Update agent credential
    */
   test("update agent credential profile name", async ({ api, db }) => {
-    // Create
+    // user_agent_credential_profiles has UNIQUE(user_id, agent_slug, name);
+    // a residue from a prior failed run would make POST return
+    // ALREADY_EXISTS and silently skip. Pre-clean.
+    db.cleanup(
+      `DELETE FROM user_agent_credential_profiles WHERE name IN ('E2E Update Cred', 'E2E Updated Cred')`
+    );
     const createRes = await api.post(
       "/api/v1/users/agent-credentials/agents/claude-code",
       { name: "E2E Update Cred", credentials: { ANTHROPIC_API_KEY: "sk-test" } }
@@ -39,6 +44,9 @@ test.describe("CRUD Supplements", () => {
    * TC-AGENTCRED-005: Set default agent credential
    */
   test("set agent credential as default", async ({ api, db }) => {
+    db.cleanup(
+      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Default Cred'`
+    );
     const createRes = await api.post(
       "/api/v1/users/agent-credentials/agents/claude-code",
       { name: "E2E Default Cred", credentials: { ANTHROPIC_API_KEY: "sk-test" } }

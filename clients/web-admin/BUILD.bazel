@@ -4,6 +4,7 @@ load("//build_defs/web:eslint.bzl", "eslint_test")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
 load("//build_defs/web:ts.bzl", "ts_project")
+load("//build_defs/web:vitest.bzl", "vitest_test")
 
 # Per-importer Next.js binary — see clients/web/BUILD.bazel for the full
 # explanation. Same factory pattern, distinct target name so each
@@ -101,5 +102,34 @@ eslint_test(
         ],
         allow_empty = True,
         exclude = ["src/**/*.d.ts"],
+    ),
+)
+
+# Vitest unit + component tests (13 files as of last run).
+# `bazel test //clients/web-admin:unit` is equivalent to `pnpm --filter web-admin test`.
+vitest_test(
+    name = "unit",
+    size = "medium",
+    srcs = glob([
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ]),
+    config = "vitest.config.ts",
+    data = [
+        "tsconfig.json",
+        "//:node_modules",
+        "//:package_json_bin",
+    ] + glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+            "src/**/*.css",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
     ),
 )

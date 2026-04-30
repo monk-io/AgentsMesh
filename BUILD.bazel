@@ -76,6 +76,8 @@ exports_files(
         ".bazelignore",
         "go.work",
         "package.json",
+        "README.md",
+        "LICENSE",
     ],
     visibility = ["//visibility:public"],
 )

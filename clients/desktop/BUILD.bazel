@@ -1,4 +1,5 @@
 load("//build_defs/web:electron.bzl", "electron_builder_app", "electron_vite_build")
+load("//build_defs/web:eslint.bzl", "eslint_test")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
 
@@ -90,6 +91,26 @@ ts_project(
     tags = ["manual"],
     tsconfig = "tsconfig.json",
     deps = ["//:node_modules"],
+)
+
+# `bazel test //clients/desktop:lint` — ESLint over main + preload +
+# renderer + e2e sources. eslint.config.mjs reuses Next's preset since
+# the renderer is React + cross-imports clients/web/src.
+eslint_test(
+    name = "lint",
+    size = "medium",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "e2e/**/*.ts",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.d.ts",
+            "e2e/node_modules/**",
+        ],
+    ),
 )
 
 # Desktop Playwright e2e suite (Electron-hosted). Tagged `manual + e2e`

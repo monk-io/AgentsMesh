@@ -158,7 +158,9 @@
         "agentCredentials": "Agent Credentials",
         "agentCredentialsDesc": "API keys for AI agents",
         "notifications": "Notifications",
-        "notificationsDesc": "Push notification preferences"
+        "notificationsDesc": "Push notification preferences",
+        "support": "Support Tickets",
+        "supportDesc": "Submit and track support requests"
       },
       "general": {
         "title": "General Settings",

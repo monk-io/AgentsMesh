@@ -7,7 +7,7 @@ const mockPut = vi.fn();
 const mockPatch = vi.fn();
 const mockPostFormData = vi.fn();
 
-vi.mock("@/lib/api/base", () => ({
+vi.mock("../base", () => ({
   apiClient: {
     get: (...args: unknown[]) => mockGet(...args),
     post: (...args: unknown[]) => mockPost(...args),

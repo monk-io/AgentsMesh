@@ -23,12 +23,18 @@ export class SidebarPage {
   ) {}
 
   /**
-   * Activity bar links use the w-10 h-10 shell to distinguish from logo/header
-   * links with the same href.
+   * ActivityBar nav link. The bar renders inside `<aside class="w-[136px] …">`
+   * with one `<Link>` per `ACTIVITIES` entry; scoping by aside avoids the old
+   * Tailwind-class brittleness (specs used to pin `a.w-10.h-10` from the
+   * icon-square era — the bar is now a 136-wide label list).
+   *
+   * Use prefix match (`href^=`) because `/infra` rewrites to
+   * `/infra?tab=runners` in `getActivityRoute`. Other sections have no
+   * overlapping prefixes among NavSection so this stays unambiguous.
    */
   getNavLink(section: NavSection): Locator {
     return this.page.locator(
-      `a.w-10.h-10[href="/${this.orgSlug}/${section}"]`
+      `aside a[href^="/${this.orgSlug}/${section}"]`
     );
   }
 

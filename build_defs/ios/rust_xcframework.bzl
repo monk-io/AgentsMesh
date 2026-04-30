@@ -25,6 +25,7 @@ The rule that backs `crate` must be a `rust_static_library` emitting
 
 load("@aspect_bazel_lib//lib:transitions.bzl", "platform_transition_filegroup")
 load(":rust_xcframework_actions.bzl", "lipo_universal", "pick_static_lib", "uniffi_swift_bindings")
+load(":swift_clang_module.bzl", "swift_clang_module")
 load(":xcframework_assemble.bzl", "xcframework_assemble")
 
 def rust_xcframework(
@@ -165,5 +166,37 @@ def rust_xcframework(
         name = name + "_swift",
         actual = ":" + swift_fg,
         tags = ["manual"],
+        visibility = visibility,
+    )
+
+    # CcInfo-providing wrapper so `swift_library` can depend on it
+    # directly. Per-platform `_cc_device` and `_cc_sim` targets pair the
+    # Clang module (header + modulemap) with the matching .a slice; the
+    # public `_cc` alias selects the right one based on the target Apple
+    # platform so simulator builds get the simulator-universal lib and
+    # device builds get the device .a.
+    swift_clang_module(
+        name = name + "_cc_device",
+        header = ":" + header_fg,
+        modulemap = ":" + modulemap_fg,
+        static_lib = ":" + device_lib,
+        tags = tags,
+        visibility = ["//visibility:private"],
+    )
+    swift_clang_module(
+        name = name + "_cc_sim",
+        header = ":" + header_fg,
+        modulemap = ":" + modulemap_fg,
+        static_lib = ":" + sim_lib,
+        tags = tags,
+        visibility = ["//visibility:private"],
+    )
+    native.alias(
+        name = name + "_cc",
+        actual = select({
+            "@build_bazel_apple_support//constraints:simulator": ":" + name + "_cc_sim",
+            "@build_bazel_apple_support//constraints:device": ":" + name + "_cc_device",
+            "//conditions:default": ":" + name + "_cc_device",
+        }),
         visibility = visibility,
     )

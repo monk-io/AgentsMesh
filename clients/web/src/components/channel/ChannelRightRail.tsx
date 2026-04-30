@@ -17,7 +17,7 @@ interface ChannelRightRailProps {
 }
 
 /**
- * Right drawer — design/pages/channels.pastel `drawer_rail`. Four sections
+ * Right drawer — design/desktop/pages/channels.pastel `drawer_rail`. Four sections
  * in a fixed 280px column:
  *   PODS · N     → pod list + manager
  *   MEMBERS · N  → member manager

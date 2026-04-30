@@ -42,3 +42,8 @@ platform(
         "@build_bazel_apple_support//constraints:simulator",
     ],
 )
+
+# Helper script that an `ios_app` can wrap with `sh_binary` to install +
+# launch the bundled `.app` on a booted iOS Simulator. Exported so the
+# `ios_simulator_runner` macro in `ios_product.bzl` can reference it.
+exports_files(["sim_runner.sh"])

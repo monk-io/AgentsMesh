@@ -84,9 +84,13 @@ test.describe("Desktop pod realtime", () => {
     try {
       await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
 
-      // Sidebar should render the new pod entry. Pod display name is the
-      // pod_key prefix; PodListItem renders it inside the sidebar tree.
-      const sidebarPod = page.getByText(pod.pod_key, { exact: false }).first();
+      // Sidebar should render the new pod entry. PodListItem renders the
+      // display name through `getPodDisplayName`, which truncates pod_key
+      // to the first 8 chars (`getShortPodKey`) when no alias / ticket /
+      // loop / OSC title is set. Match on the prefix to track the actual
+      // UX and stay resilient to pod_key tweaks.
+      const podPrefix = pod.pod_key.slice(0, 8);
+      const sidebarPod = page.getByText(podPrefix, { exact: false }).first();
       await expect(sidebarPod, "new pod must appear in sidebar").toBeVisible({ timeout: 15_000 });
 
       // Click to open terminal pane. Pre-fix: the click made the pod

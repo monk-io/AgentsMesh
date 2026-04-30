@@ -19,5 +19,11 @@ packages/service-interface/node_modules
 packages/service-runtime/node_modules
 clients/web/e2e-playwright/node_modules
 clients/desktop/e2e/node_modules
+# Swift Package Manager checkout — `swift-syntax` ships its own
+# `//utils/bazel:...` references that don't resolve in this workspace,
+# breaking `bazel build //...` target expansion. SwiftPM deps are fed
+# into Bazel via `rules_swift_package_manager`, not by walking this
+# tree.
+third_party/swift/.build
 .git
 .claude

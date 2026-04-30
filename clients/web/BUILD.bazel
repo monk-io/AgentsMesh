@@ -3,7 +3,6 @@ load("@npm//:next/package_json.bzl", next_bin = "bin")
 load("//build_defs/web:eslint.bzl", "eslint_test")
 load("//build_defs/web:next.bzl", "next_app")
 load("//build_defs/web:next_oci.bzl", "next_oci_image")
-load("//build_defs/web:playwright.bzl", "playwright_test")
 load("//build_defs/web:ts.bzl", "ts_project")
 load("//build_defs/web:vitest.bzl", "vitest_test")
 
@@ -43,7 +42,17 @@ ts_project(
     resolve_json_module = True,
     tsconfig = "tsconfig.bazel.json",
     visibility = ["//clients:__subpackages__"],
-    deps = ["//:node_modules"],
+    deps = [
+        "//:node_modules",
+        # Bazel-managed first-party + wasm-pack packages aren't in the
+        # pnpm-derived `//:node_modules` aggregate; tsc needs explicit
+        # link targets to resolve them.
+        "//:node_modules/@agentsmesh/electron-adapter",
+        "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@agentsmesh/service-runtime",
+        "//:node_modules/@agentsmesh/node-bridge",
+        "//:node_modules/agentsmesh-wasm",
+    ],
 )
 
 # Raw source files exposed for downstream bundlers (Desktop's
@@ -194,7 +203,6 @@ eslint_test(
             "src/**/*.tsx",
             "src/**/*.js",
             "src/**/*.mjs",
-            "e2e/**/*.ts",
             "e2e-playwright/**/*.ts",
         ],
         allow_empty = True,
@@ -202,29 +210,7 @@ eslint_test(
     ),
 )
 
-# Playwright e2e targets are split into two:
-#   //clients/web:e2e                  — blockstore / rate-limit suite
-#                                        (config = clients/web/playwright.config.ts,
-#                                         specs live in clients/web/e2e/)
-#   //clients/web/e2e-playwright:e2e   — full browser e2e suite (413 tests)
-#
-# Both need Docker dev stack up. Install browsers once:
-#   pnpm exec playwright install chromium
-# Run:
-#   bazel test //clients/web:e2e //clients/web/e2e-playwright:e2e \
-#       --test_tag_filters=e2e
-playwright_test(
-    name = "e2e",
-    srcs = glob(
-        [
-            "e2e/**/*.spec.ts",
-            "e2e/**/*.ts",
-        ],
-        allow_empty = True,
-    ),
-    config = "playwright.config.ts",
-    data = [
-        "//:node_modules/@playwright/test",
-        "//:package_json_bin",
-    ],
-)
+# Playwright e2e suite lives at //clients/web/e2e-playwright:e2e (438 tests
+# including the blockstore subset under tests/blockstore/). Needs Docker dev
+# stack up. Install browsers once: `pnpm exec playwright install chromium`.
+# Run: `bazel test //clients/web/e2e-playwright:e2e`.

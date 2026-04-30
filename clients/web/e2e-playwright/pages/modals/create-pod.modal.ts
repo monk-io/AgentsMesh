@@ -24,10 +24,18 @@ export class CreatePodModal {
       .waitFor({ state: "hidden", timeout: timeoutMs });
   }
 
-  /** Select an agent by matching text. */
-  async selectAgent(agentName: string): Promise<void> {
-    const agent = this.page.getByText(agentName, { exact: false }).first();
-    if (await agent.isVisible()) await agent.click();
+  /**
+   * Select an agent. The form renders a native `<select id="agent-select">`
+   * (web/src/components/pod/CreatePodForm/AgentSelect.tsx) — `<option>` text
+   * is not in the visible DOM until the dropdown is opened, so the previous
+   * `getByText(...).click()` was a silent no-op and left the Create Pod
+   * button disabled.
+   */
+  async selectAgent(agentSlug: string): Promise<void> {
+    const select = this.page
+      .locator('[role="dialog"] select#agent-select')
+      .first();
+    await select.selectOption(agentSlug);
   }
 
   /** Fill the prompt text area. */

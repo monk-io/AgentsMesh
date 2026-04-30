@@ -24,7 +24,7 @@ import { useTranslations } from "next-intl";
  * search dispatches the same ⌘K shortcut the page already listens for, so
  * neither side needs prop-drilling.
  *
- * Layout follows `design/pages/blocks-document.pastel`:
+ * Layout follows `design/desktop/pages/blocks-document.pastel`:
  *   Search pill → PAGES tree → INDICATOR TYPES list → Triggers footer.
  */
 export function BlocksSidebar() {

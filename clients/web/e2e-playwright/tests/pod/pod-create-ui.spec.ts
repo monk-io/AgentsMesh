@@ -38,11 +38,15 @@ test.describe("CreatePod dialog UI", () => {
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
     await page.waitForLoadState("domcontentloaded");
 
-    // pod_key format: `<org_id>-(standalone|ticket|channel)-<8 hex>` —
-    // matches PodListItem display in the sidebar. Count before submit so
-    // the assertion can detect the +1 delta.
-    const podRowRegex = /^1-(standalone|ticket|channel)-[a-f0-9]{8}/;
-    const before = await page.getByText(podRowRegex).count();
+    // PodListItem renders with `data-testid="pod-list-item"` for each pod
+    // in the workspace sidebar. Count before submit so the assertion can
+    // detect the +1 delta. The previous text-regex approach was too brittle:
+    // pod_key is `<user_id>-<standalone|ticket_id>-<hex>` (not org_id, and
+    // never the literal "ticket"/"channel"), and `getPodDisplayName` may
+    // render `Agent Name (1-standa)` or `1-standa...` — neither matches a
+    // fixed pod_key regex.
+    const podRows = page.locator('[data-testid="pod-list-item"]');
+    const before = await podRows.count();
 
     // Trigger via "New Pod" — same handler whether shown in sidebar
     // (WorkspaceSidebarContent) or empty-state CTA (WorkspaceEmptyState).
@@ -62,7 +66,7 @@ test.describe("CreatePod dialog UI", () => {
 
     // Regression assertion #2: new pod appears in the sidebar.
     await expect
-      .poll(async () => page.getByText(podRowRegex).count(), { timeout: 10_000 })
+      .poll(async () => podRows.count(), { timeout: 10_000 })
       .toBeGreaterThan(before);
   });
 });

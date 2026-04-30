@@ -1,7 +1,7 @@
 use crate::core::AgentsMeshCore;
 use crate::error::CoreError;
 
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     pub async fn api_get(&self, endpoint: String) -> Result<String, CoreError> {
         let value: serde_json::Value = self.api.get(&endpoint).await?;

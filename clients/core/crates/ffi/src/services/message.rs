@@ -8,7 +8,7 @@ use crate::error::CoreError;
 /// Mesh direct-messaging (pod-to-pod): send/receive structured messages
 /// across pods within an org. Distinct from channel messaging — DM is
 /// addressed to a `receiver_pod`, no shared topic.
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     pub async fn send_mesh_message(
         &self,

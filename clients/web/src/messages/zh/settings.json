@@ -158,7 +158,9 @@
         "agentCredentials": "智能体凭据",
         "agentCredentialsDesc": "AI 智能体的 API 密钥",
         "notifications": "通知",
-        "notificationsDesc": "推送通知偏好"
+        "notificationsDesc": "推送通知偏好",
+        "support": "支持工单",
+        "supportDesc": "提交和跟踪支持请求"
       },
       "general": {
         "title": "通用设置",

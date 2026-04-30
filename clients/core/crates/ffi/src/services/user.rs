@@ -3,7 +3,7 @@ use crate::dto::UserDto;
 use crate::error::CoreError;
 
 /// Strongly-typed `User` API — hits the backend `/auth/me` endpoint.
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     /// Fetch the current authenticated user from the server. Useful after
     /// `restore_session` to confirm the token is still valid before routing

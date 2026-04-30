@@ -1,5 +1,6 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("//build_defs/docker:go_oci_image.bzl", "go_oci_image")
+load("//build_defs/release:release_bundle.bzl", "runner_release_bundle")
 
 go_library(
     name = "runner_lib",
@@ -52,4 +53,19 @@ go_oci_image(
         "agentsmesh": "registry.agentsmesh.ai/agentsmesh/runner",
         "dockerhub": "agentsmesh/runner",
     },
+)
+
+# Cross-compiled release bundle (replaces .goreleaser.yml). Builds 6
+# platform-specific binaries + archives + a checksums.txt manifest.
+# `:release_assets` is the filegroup the GitHub Release CI step
+# uploads via `gh release create`.
+runner_release_bundle(
+    name = "release",
+    archive_basename = "agentsmesh-runner",
+    binary_name = "agentsmesh-runner",
+    embed = [":runner_lib"],
+    extra_files = [
+        "//:README.md",
+        "//:LICENSE",
+    ],
 )

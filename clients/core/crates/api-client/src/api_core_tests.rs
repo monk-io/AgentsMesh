@@ -508,7 +508,7 @@ mod api_core_tests {
         let s = MockServer::start().await;
         Mock::given(method("GET")).and(path("/api/v1/support-tickets"))
             .and(query_param("status", "open")).and(query_param("page", "1"))
-            .respond_with(ok(json!({"tickets":[],"total":0})))
+            .respond_with(ok(json!({"data":[],"total":0})))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
         let _ = c.list_support_tickets(Some("open"), Some(1), None).await.unwrap();

@@ -50,8 +50,8 @@ private struct SwiftTermRepresentable: UIViewRepresentable {
     let onInput: (Data) -> Void
     let onResize: (Int, Int) -> Void
 
-    func makeUIView(context: Context) -> TerminalView {
-        let view = TerminalView()
+    func makeUIView(context: Context) -> SwiftTerm.TerminalView {
+        let view = SwiftTerm.TerminalView()
         view.backgroundColor = .black
         view.terminalDelegate = context.coordinator
 
@@ -62,19 +62,19 @@ private struct SwiftTermRepresentable: UIViewRepresentable {
         PodOutputDispatcher.shared.register(podKey: key) { [weak view] data in
             DispatchQueue.main.async {
                 // SwiftTerm's `feed` takes a Swift byte array.
-                view?.feed(byteArray: data.map { $0 })
+                view?.feed(byteArray: ArraySlice(Array(data)))
             }
         }
         context.coordinator.podKey = key
         return view
     }
 
-    func updateUIView(_ uiView: TerminalView, context: Context) {
+    func updateUIView(_ uiView: SwiftTerm.TerminalView, context: Context) {
         // Resize on layout change is driven by SwiftTerm's own size delegate
         // callback, not via SwiftUI updates.
     }
 
-    static func dismantleUIView(_ uiView: TerminalView, coordinator: Coordinator) {
+    static func dismantleUIView(_ uiView: SwiftTerm.TerminalView, coordinator: Coordinator) {
         if let key = coordinator.podKey {
             PodOutputDispatcher.shared.unregister(podKey: key)
         }
@@ -96,22 +96,22 @@ private struct SwiftTermRepresentable: UIViewRepresentable {
 
         // ── TerminalViewDelegate ──
 
-        func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
+        func sizeChanged(source: SwiftTerm.TerminalView, newCols: Int, newRows: Int) {
             onResize(newCols, newRows)
         }
 
-        func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        func send(source: SwiftTerm.TerminalView, data: ArraySlice<UInt8>) {
             onInput(Data(data))
         }
 
-        func setTerminalTitle(source: TerminalView, title: String) {}
-        func scrolled(source: TerminalView, position: Double) {}
-        func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
-        func clipboardCopy(source: TerminalView, content: Data) {}
-        func rangeChanged(source: TerminalView, startY: Int, endY: Int) {}
-        func requestOpenLink(source: TerminalView, link: String, params: [String: String]) {}
-        func bell(source: TerminalView) {}
-        func iTermContent(source: TerminalView, content: ArraySlice<UInt8>) {}
+        func setTerminalTitle(source: SwiftTerm.TerminalView, title: String) {}
+        func scrolled(source: SwiftTerm.TerminalView, position: Double) {}
+        func hostCurrentDirectoryUpdate(source: SwiftTerm.TerminalView, directory: String?) {}
+        func clipboardCopy(source: SwiftTerm.TerminalView, content: Data) {}
+        func rangeChanged(source: SwiftTerm.TerminalView, startY: Int, endY: Int) {}
+        func requestOpenLink(source: SwiftTerm.TerminalView, link: String, params: [String: String]) {}
+        func bell(source: SwiftTerm.TerminalView) {}
+        func iTermContent(source: SwiftTerm.TerminalView, content: ArraySlice<UInt8>) {}
     }
 }
 

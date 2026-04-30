@@ -5,7 +5,7 @@ use crate::dto::{
 };
 use crate::error::CoreError;
 
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     // ── Invitations ───────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import SwiftUI
 import AuthFeature
-import WorkspaceFeature
-import TerminalFeature
+import CoreClient
+import DashboardFeature
 import AgentsMeshCore
 
 /// Root reducer — three phases: (1) loading while we try to restore a
@@ -35,6 +35,9 @@ public struct AppFeature {
             case .onLaunch:
                 return .run { send in
                     let restored = (try? core.restoreSession()) ?? false
+                    if restored {
+                        _ = try? await core.fetchOrganizations()
+                    }
                     await send(.sessionRestored(restored))
                 }
 
@@ -50,7 +53,7 @@ public struct AppFeature {
                 state = .dashboard(DashboardFeature.State())
                 return .none
 
-            case .dashboard(.workspace(.delegate(.didLogout))):
+            case .dashboard(.delegate(.didSignOut)):
                 state = .login(LoginFeature.State())
                 return .none
 

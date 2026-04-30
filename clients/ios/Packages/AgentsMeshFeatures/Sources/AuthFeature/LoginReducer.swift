@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import AgentsMeshCore
+import CoreClient
 
 @Reducer
 public struct LoginFeature {
@@ -52,6 +53,7 @@ public struct LoginFeature {
                 return .run { send in
                     do {
                         let session = try await core.login(email, password)
+                        _ = try? await core.fetchOrganizations()
                         await send(.loginSucceeded(session))
                     } catch let err as CoreError {
                         await send(.loginFailed(Self.describe(err)))
@@ -76,15 +78,7 @@ public struct LoginFeature {
         }
     }
 
-    static func describe(_ err: CoreError) -> String {
-        switch err {
-        case .authExpired: return "Session expired"
-        case .http(_, _, let message): return message
-        case .network(let message): return "Network: \(message)"
-        case .invalidJson(let message): return "Invalid response: \(message)"
-        case .notFound(let resource, _): return "\(resource) not found"
-        case .notConnected: return "Not connected"
-        case .unknown(let message): return message
-        }
+    public static func describe(_ err: CoreError) -> String {
+        CoreErrorDescription.describe(err)
     }
 }

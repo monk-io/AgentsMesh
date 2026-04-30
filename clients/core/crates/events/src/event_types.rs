@@ -84,6 +84,12 @@ pub enum EventType {
     #[serde(rename = "loop_run:warning")]
     LoopRunWarning,
 
+    // Blockstore events — fan-out of every accepted op so other connected
+    // clients can apply it to their cache without polling. See
+    // backend/internal/infra/blockstore/op_publisher.go.
+    #[serde(rename = "blockstore:op")]
+    BlockstoreOp,
+
     // Notification events
     #[serde(rename = "notification")]
     Notification,
@@ -137,6 +143,7 @@ impl EventType {
             Self::LoopRunCompleted => "loop_run:completed",
             Self::LoopRunFailed => "loop_run:failed",
             Self::LoopRunWarning => "loop_run:warning",
+            Self::BlockstoreOp => "blockstore:op",
             Self::Notification => "notification",
             Self::SystemMaintenance => "system:maintenance",
             Self::Connected => "connected",

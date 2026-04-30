@@ -1,8 +1,9 @@
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("//build_defs/web:playwright.bzl", "playwright_test")
 
-# E2E Playwright suite — separate from clients/web's legacy `e2e/` dir
-# (which is the block-store tests suite with its own config).
+# E2E Playwright suite — sole web e2e target. Tests live under tests/, with
+# tests/blockstore/ holding the block-store specs that need an isolated
+# workspace + JWT-in-localStorage seeding (see fixtures/blockstore.fixture.ts).
 #
 # Runs the full browser-level E2E against the docker-dev stack.
 # Browsers are NOT fetched through rules_playwright (0.5.3's Chromium

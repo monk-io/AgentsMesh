@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_auth::AuthManager;
+use agentsmesh_services::BlockstoreService;
+use agentsmesh_state::blockstore_state::BlockstoreState;
 
 use crate::callbacks::StorageCallback;
 use crate::dto::{OrganizationDto, UserDto};
@@ -12,6 +14,12 @@ use crate::storage_bridge::StorageBridge;
 pub struct AgentsMeshCore {
     pub(crate) auth: Arc<AuthManager>,
     pub(crate) api: Arc<ApiClient>,
+    /// Local SSOT for the blockstore — mirrors what desktop/web have.
+    /// Mutations + load_subtree go through this; sync flat-map readers
+    /// (`blocks_json`, `refs_json`, ...) read from its in-process state
+    /// without a backend round-trip, which is what the WebView-embedded
+    /// React DocumentView expects.
+    pub(crate) blockstore: Arc<BlockstoreService>,
 }
 
 #[uniffi::export]
@@ -21,7 +29,8 @@ impl AgentsMeshCore {
         let bridge = Arc::new(StorageBridge::new(Arc::from(storage)));
         let auth = Arc::new(AuthManager::new(base_url.clone(), bridge));
         let api = Arc::new(ApiClient::new(base_url, auth.clone()));
-        Self { auth, api }
+        let blockstore = Arc::new(BlockstoreService::new(api.clone(), BlockstoreState::new()));
+        Self { auth, api, blockstore }
     }
 
     pub fn is_authenticated(&self) -> bool {
