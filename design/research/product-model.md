@@ -1,6 +1,6 @@
 # AgentsMesh 产品调研笔记
 
-基于深度代码调研（backend domain + services + runner + web/src），总结产品的**真正业务模型**。本文档是后续 IA、flow、页面设计的依据。
+基于深度代码调研（backend domain + services + runner + clients/web/src），总结产品的**真正业务模型**。本文档是后续 IA、flow、页面设计的依据。
 
 ## 一句话定位
 
