@@ -130,14 +130,22 @@ start_backend_host() {
     export OTEL_TRACES_SAMPLER_ARG=1.0
 
     info "构建 backend 二进制 (bazel build)..."
-    (cd "$repo_root" && bazel build //backend/cmd/server:server) || {
+    # Include the go_proto_library so protoc + protoc-gen-go-grpc C++
+    # tool-chain compilation lands in the disk cache before ibazel takes
+    # over. Without this, ibazel's first `bazel run` starts the protoc
+    # build (5+ min on cold CI) while the health check is already
+    # ticking, causing 90s timeouts.
+    (cd "$repo_root" && bazel build //backend/cmd/server:server //proto/runner/v1:runner_go_proto) || {
         error "Backend 构建失败"
         return 1
     }
 
     _launch_ibazel backend //backend/cmd/server:server
 
-    if ! _wait_http "http://localhost:${BACKEND_HTTP_PORT}/health" backend 90; then
+    # 180s budget tolerates the second tool-chain analysis pass ibazel
+    # runs on top of the prebuild — see comment above. Warm cache lands
+    # in <10s so this is purely cold-CI headroom.
+    if ! _wait_http "http://localhost:${BACKEND_HTTP_PORT}/health" backend 180; then
         error "Backend 启动失败，查看日志: $(_runtime_dir)/backend/backend.log"
         echo "--- backend.log (last 80 lines) ---" >&2
         tail -80 "$(_runtime_dir)/backend/backend.log" >&2 || true
