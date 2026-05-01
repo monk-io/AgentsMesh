@@ -142,10 +142,13 @@ start_backend_host() {
 
     _launch_ibazel backend //backend/cmd/server:server
 
-    # 180s budget tolerates the second tool-chain analysis pass ibazel
-    # runs on top of the prebuild — see comment above. Warm cache lands
-    # in <10s so this is purely cold-CI headroom.
-    if ! _wait_http "http://localhost:${BACKEND_HTTP_PORT}/health" backend 180; then
+    # 480s budget covers cold-CI's first protoc + protoc-gen-go-grpc C++
+    # toolchain compile (~6 min, 1252 actions). Once GHA's bazel disk
+    # cache warms up after one successful run, subsequent invocations
+    # land in <10 s. Pre-build (above) does *not* warm this for ibazel
+    # because rules_go's `bazel run` invocation walks an analysis path
+    # whose action keys differ from `bazel build :runner_go_proto`'s.
+    if ! _wait_http "http://localhost:${BACKEND_HTTP_PORT}/health" backend 480; then
         error "Backend 启动失败，查看日志: $(_runtime_dir)/backend/backend.log"
         echo "--- backend.log (last 80 lines) ---" >&2
         tail -80 "$(_runtime_dir)/backend/backend.log" >&2 || true
