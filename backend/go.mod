@@ -2,12 +2,15 @@ module github.com/anthropics/agentsmesh/backend
 
 go 1.25.0
 
+replace github.com/anthropics/agentsmesh/proto => ../proto
+
 replace github.com/anthropics/agentsmesh/agentfile => ../agentfile
 
 require (
 	github.com/NdoleStudio/lemonsqueezy-go v1.3.1
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/anthropics/agentsmesh/agentfile v0.0.0
+	github.com/anthropics/agentsmesh/proto v0.0.0
 	github.com/aws/aws-sdk-go-v2 v1.41.3
 	github.com/aws/aws-sdk-go-v2/config v1.32.8
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
