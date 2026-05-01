@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ApiError } from "../base";
+import { ApiError } from "../api-types";
 import {
   getApiErrorCode,
   getErrorSuggestion,
@@ -88,9 +88,14 @@ describe("getLocalizedErrorMessage", () => {
     expect(getLocalizedErrorMessage(err, tIdentity, fallback)).toBe("server msg");
   });
 
-  it("falls back to fallback when no code, no server message", () => {
+  it("falls back to ApiError default message when no code, no server message", () => {
+    // ApiError extends Error with `super(\`API Error: ${status} ${statusText}\`)`,
+    // so `error instanceof Error` always wins before the explicit `fallback`.
+    // Caller-supplied fallback only kicks in for non-Error values (next case).
     const err = apiErr({});
-    expect(getLocalizedErrorMessage(err, tIdentity, fallback)).toBe(fallback);
+    expect(getLocalizedErrorMessage(err, tIdentity, fallback)).toBe(
+      "API Error: 400 Bad Request",
+    );
   });
 
   it("returns Error.message for plain Error instances", () => {
