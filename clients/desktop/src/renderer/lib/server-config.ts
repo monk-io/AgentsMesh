@@ -33,16 +33,6 @@ const BUILTIN_SERVERS: Server[] = [
     url: "https://app.agentsmesh.ai",
     readonly: true,
   },
-  {
-    id: "builtin-localhost",
-    // Match deploy/dev/.env's HTTP_PORT default. Power users with
-    // worktree-offset ports edit this entry by adding a second one
-    // pointing at their actual port — the built-in stays as a sane
-    // first-time default.
-    label: "Localhost (dev)",
-    url: "http://localhost:10000",
-    readonly: true,
-  },
 ];
 
 function readRaw(): ServerConfig | null {

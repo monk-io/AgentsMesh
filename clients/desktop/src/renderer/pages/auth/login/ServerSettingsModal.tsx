@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter,
@@ -28,9 +28,24 @@ export function ServerSettingsModal({ open, onOpenChange }: {
   const servers = listServers();
   void version;
   const selectedId = getSelectedId();
+  const hasUserEntries = servers.some((s) => !s.readonly);
 
   const [draft, setDraft] = useState<{ id?: string; label: string; url: string } | null>(null);
   const [error, setError] = useState("");
+
+  // First time the dialog opens (and nothing custom is configured yet),
+  // surface the URL input directly so the user doesn't have to hunt
+  // for the "Add server" button. Once they have at least one custom
+  // entry, the dialog defaults back to the picker view.
+  useEffect(() => {
+    if (open && !draft && !hasUserEntries) {
+      setDraft({ label: "", url: "https://" });
+    }
+    if (!open) {
+      setDraft(null);
+      setError("");
+    }
+  }, [open, hasUserEntries, draft]);
 
   const startAdd = () => { setDraft({ label: "", url: "https://" }); setError(""); };
   const startEdit = (s: Server) => { setDraft({ id: s.id, label: s.label, url: s.url }); setError(""); };
@@ -95,7 +110,7 @@ export function ServerSettingsModal({ open, onOpenChange }: {
                 onChange={(e) => setDraft({ ...draft, label: e.target.value })}
               />
               <Input
-                placeholder={t("auth.loginPage.serverUrl")}
+                placeholder={t("auth.loginPage.serverUrlPlaceholder")}
                 value={draft.url}
                 onChange={(e) => setDraft({ ...draft, url: e.target.value })}
               />
