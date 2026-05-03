@@ -372,7 +372,16 @@ jobs:
           # launch — a runtime crash CI never catches because the build
           # itself succeeds.
           unpacked="mac-arm64/AgentsMesh.app/Contents/Resources/app.asar.unpacked/node_modules/@agentsmesh/node-bridge"
-          [[ -d "$unpacked" ]] || { echo "::error::node-bridge not unpacked at $unpacked"; exit 1; }
+          if [[ ! -d "$unpacked" ]]; then
+            echo "::error::node-bridge not unpacked at $unpacked"
+            echo "--- actual Resources/ ---"
+            ls -la mac-arm64/AgentsMesh.app/Contents/Resources/ 2>&1 || true
+            echo "--- app.asar.unpacked tree (if any) ---"
+            find mac-arm64/AgentsMesh.app/Contents/Resources/app.asar.unpacked -maxdepth 4 2>&1 || true
+            echo "--- *.node files anywhere in .app ---"
+            find mac-arm64/AgentsMesh.app -name "*.node" 2>&1 | head -10 || true
+            exit 1
+          fi
           ls "$unpacked"/*.node >/dev/null 2>&1 || { echo "::error::no .node binary in $unpacked"; exit 1; }
           echo "✓ $dmgs dmg + $zips zip + latest-mac.yml + node-bridge .node"
 
