@@ -86,6 +86,7 @@ def electron_builder_app(
         electron_main = "./out/main/index.js",
         config = "electron-builder.yml",
         extra_srcs = None,
+        dependencies = None,
         out_dir = "dist",
         platform = None,
         chdir = None,
@@ -118,6 +119,14 @@ def electron_builder_app(
         electron_main: Path inside the staged tree to the main-process
             entry. Defaults to `./out/main/index.js` (matches what
             `electron_vite_build` produces).
+        dependencies: Dict of runtime-required npm package names → version
+            specs (use `*` for first-party). electron-builder walks this
+            to decide which `node_modules/<pkg>/` subtrees ship inside
+            `app.asar`. Native modules listed in electron-vite's
+            `rollupOptions.external` MUST appear here, otherwise main-
+            process `require('<pkg>')` throws "Cannot find module" at
+            runtime — the file is in node_modules on disk but never
+            made it into the packaged app.
         config: electron-builder config filename. Default
             `electron-builder.yml`.
         extra_srcs: Additional sources to ship into the staging
@@ -158,6 +167,7 @@ def electron_builder_app(
         package_name = package_name,
         version = version,
         main = electron_main,
+        dependencies = dependencies,
         extra = {
             "description": "AgentsMesh Desktop — Electron-hosted client.",
         },

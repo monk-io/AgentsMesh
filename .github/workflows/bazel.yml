@@ -364,7 +364,17 @@ jobs:
           [[ -f latest-mac.yml ]] || { echo "::error::missing latest-mac.yml"; exit 1; }
           [[ "$dmgs" -ge 2 ]] || { echo "::error::expected ≥2 dmg, got $dmgs"; exit 1; }
           [[ "$zips" -ge 2 ]] || { echo "::error::expected ≥2 zip, got $zips"; exit 1; }
-          echo "✓ $dmgs dmg + $zips zip + latest-mac.yml"
+          # Native NAPI module must land in app.asar.unpacked, not just on
+          # disk in node_modules. Without this guard a regression that
+          # drops `@agentsmesh/node-bridge` from the synth package.json's
+          # dependencies (clients/desktop/BUILD.bazel) silently produces
+          # a broken installer that throws "Cannot find module" on first
+          # launch — a runtime crash CI never catches because the build
+          # itself succeeds.
+          unpacked="mac-arm64/AgentsMesh.app/Contents/Resources/app.asar.unpacked/node_modules/@agentsmesh/node-bridge"
+          [[ -d "$unpacked" ]] || { echo "::error::node-bridge not unpacked at $unpacked"; exit 1; }
+          ls "$unpacked"/*.node >/dev/null 2>&1 || { echo "::error::no .node binary in $unpacked"; exit 1; }
+          echo "✓ $dmgs dmg + $zips zip + latest-mac.yml + node-bridge .node"
 
   ios-xcframework:
     name: Build iOS XCFramework + app
