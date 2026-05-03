@@ -213,6 +213,21 @@ def electron_builder_app(
         "//:node_modules",
     ]
 
+    # First-party deps declared in synth package.json must be reachable
+    # under the staging tree's node_modules walk, otherwise electron-
+    # builder's app-builder skips them (they're not in the pnpm workspace
+    # closure that `//:node_modules` materialises). For each entry in
+    # `dependencies`, attach the matching `//:node_modules/<pkg>` target
+    # so Bazel stages the linked package alongside the action.
+    #
+    # Without this the builder produces a smaller asar (~13MB vs ~37MB)
+    # with no app.asar.unpacked tree, the .node binary never lands in
+    # Resources/, and the packaged app throws "Cannot find module" at
+    # runtime — invisible to a clean build that re-uses cached actions
+    # from an earlier state where the link still happened to exist.
+    for pkg_name in (dependencies or {}).keys():
+        srcs.append("//:node_modules/" + pkg_name)
+
     # Default tags include `no-sandbox`/`local` because macOS dmg creation
     # invokes `hdiutil`, which needs real filesystem operations and a
     # `/private` mount the darwin-sandbox forbids. Linux AppImage
