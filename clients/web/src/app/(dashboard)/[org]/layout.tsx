@@ -7,8 +7,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { getDefaultRoute } from "@/lib/default-route";
 
 /**
- * Organization-scoped layout
- * Ensures the organization from URL matches the current organization in state
+ * Org-scoped layout. Single owner of the URL → auth-state sync, and
+ * gate that blocks child routes from mounting until `currentOrg.slug`
+ * matches the URL slug — so every page's mount-time fetch sees the
+ * correct slug.
  */
 export default function OrgLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -27,9 +29,8 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
     const targetOrg = organizations.find((org) => org.slug === orgSlug);
 
     if (targetOrg) {
-      // If found and different from current, update currentOrg
       if (currentOrg?.slug !== targetOrg.slug) {
-        setCurrentOrg(targetOrg);
+        void setCurrentOrg(targetOrg);
       }
     } else if (organizations.length > 0) {
       // Organization not found, redirect to first available org
@@ -46,6 +47,14 @@ export default function OrgLayout({ children }: { children: React.ReactNode }) {
   // If org from URL doesn't match any known org and we have orgs, show loading
   const orgExists = organizations.some((org) => org.slug === orgSlug);
   if (!orgExists && organizations.length > 0) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (orgExists && currentOrg?.slug !== orgSlug) {
     return (
       <div className="flex h-full items-center justify-center">
         <Spinner />

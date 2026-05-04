@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useLoopStore, useLoops } from "@/stores/loop";
+import { useCurrentOrg } from "@/stores/auth";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export default function LoopsIndexPage() {
   const router = useRouter();
   const params = useParams();
   const orgSlug = params.org as string;
+  const currentOrg = useCurrentOrg();
   const loops = useLoops();
   const loading = useLoopStore((s) => s.loading);
   const error = useLoopStore((s) => s.error);
@@ -24,8 +26,8 @@ export default function LoopsIndexPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
-    fetchLoops();
-  }, [fetchLoops]);
+    if (currentOrg) fetchLoops();
+  }, [currentOrg, fetchLoops]);
 
   // If there are loops, auto-redirect to the first enabled one (master-detail master view).
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useCurrentOrg, useAuthOrganizations, useAuthStore } from "@/stores/auth";
+import { useCurrentOrg, useAuthOrganizations } from "@/stores/auth";
 import { useIDEStore } from "@/stores/ide";
 import { Check, Plus, Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -13,7 +13,6 @@ export function OrgSwitcher() {
   const t = useTranslations();
   const currentOrg = useCurrentOrg();
   const organizations = useAuthOrganizations();
-  const setCurrentOrg = useAuthStore((s) => s.setCurrentOrg);
   const activeActivity = useIDEStore((s) => s.activeActivity);
 
   const [open, setOpen] = useState(false);
@@ -34,12 +33,11 @@ export function OrgSwitcher() {
     (slug: string) => {
       const next = organizations.find((o) => o.slug === slug);
       if (!next) return;
-      setCurrentOrg(next);
       setOpen(false);
       const dest = activeActivity ?? "workspace";
       router.push(`/${next.slug}/${dest}`);
     },
-    [organizations, setCurrentOrg, activeActivity, router],
+    [organizations, activeActivity, router],
   );
 
   const initial = currentOrg?.name?.charAt(0)?.toUpperCase() ?? "?";

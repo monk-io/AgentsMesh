@@ -7,6 +7,7 @@ import { useAuthStore } from "./auth";
 import { getCache, updateCache } from "./channelMessageTypes";
 import type { ChannelMessageState } from "./channelMessageTypes";
 import type { ChannelMessage, MessageContent } from "@/lib/api/channel";
+import { registerOrgScopedReset } from "@/lib/org-scope/registry";
 
 export { EMPTY_CACHE, type ChannelMessageCache } from "./channelMessageTypes";
 
@@ -206,3 +207,13 @@ export function useTotalUnreadCount(): number {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => svc().total_unread_count(), [tick]);
 }
+
+registerOrgScopedReset(() => {
+  const ch = svc() as unknown as { set_unread_counts?: (json: string) => void };
+  ch.set_unread_counts?.("{}");
+  useChannelMessageStore.setState((s) => ({
+    cache: {},
+    _messagesTick: s._messagesTick + 1,
+    _unreadTick: s._unreadTick + 1,
+  }));
+});

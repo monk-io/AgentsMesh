@@ -446,7 +446,11 @@ impl ChannelState {
     }
 
     pub fn total_unread_count(&self) -> u32 {
-        self.unread_counts.values().sum()
+        let scope: std::collections::HashSet<i64> = self.channels.iter().map(|c| c.id).collect();
+        self.unread_counts
+            .iter()
+            .filter_map(|(id, n)| if scope.contains(id) { Some(*n) } else { None })
+            .sum()
     }
 
     /// Return all unread counts at once (eliminates N per-channel WASM calls).
@@ -469,7 +473,11 @@ impl ChannelState {
     }
 
     pub fn total_mention_count(&self) -> u32 {
-        self.mention_counts.values().sum()
+        let scope: std::collections::HashSet<i64> = self.channels.iter().map(|c| c.id).collect();
+        self.mention_counts
+            .iter()
+            .filter_map(|(id, n)| if scope.contains(id) { Some(*n) } else { None })
+            .sum()
     }
 
     /// Return all mention counts at once.

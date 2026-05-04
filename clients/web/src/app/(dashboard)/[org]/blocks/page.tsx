@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { blockstoreApi } from "@/lib/api/blockstoreApi";
 import type { Workspace } from "@/lib/api/blockstoreTypes";
 import { useBlocks, useBlockstoreStore } from "@/stores/blockstore";
+import { useCurrentOrg } from "@/stores/auth";
 import "@/stores/blockstoreSubscribe";
 
 function pageMeta(block: { data?: { title?: unknown; icon?: unknown }; text?: string | null } | undefined) {
@@ -27,6 +28,7 @@ export default function BlockstorePage() {
   const searchParams = useSearchParams();
   const wsParam = searchParams.get("ws");
   const pageParam = searchParams.get("page");
+  const currentOrg = useCurrentOrg();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -41,6 +43,7 @@ export default function BlockstorePage() {
 
   useEffect(() => {
     let cancelled = false;
+    setWorkspace(null);
     (async () => {
       try {
         let ws: Workspace | null = null;
@@ -60,7 +63,7 @@ export default function BlockstorePage() {
     return () => {
       cancelled = true;
     };
-  }, [t, wsParam]);
+  }, [t, wsParam, currentOrg]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

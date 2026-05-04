@@ -4,12 +4,14 @@ import { useEffect, useMemo } from "react";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { MeshTopology } from "@/components/mesh";
 import { useMeshStore, useTopology, type MeshNode } from "@/stores/mesh";
+import { useCurrentOrg } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { RefreshCw, Minus, Plus, Maximize2 } from "lucide-react";
 
 export default function MeshPage() {
   const t = useTranslations();
+  const currentOrg = useCurrentOrg();
   const topology = useTopology();
   const loading = useMeshStore((s) => s.loading);
   const error = useMeshStore((s) => s.error);
@@ -17,8 +19,8 @@ export default function MeshPage() {
   const clearError = useMeshStore((s) => s.clearError);
 
   useEffect(() => {
-    fetchTopology();
-  }, [fetchTopology]);
+    if (currentOrg) fetchTopology();
+  }, [currentOrg, fetchTopology]);
 
   const activePodCount = useMemo(
     () =>

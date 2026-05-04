@@ -3,6 +3,7 @@
 import React, { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
+import { useChannelMessageStore } from "@/stores/channelMessageStore";
 import { ResponsiveShell } from "@/components/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { RealtimeProvider } from "@/providers/RealtimeProvider";
@@ -69,6 +70,13 @@ export default function DashboardShell({
       return () => clearTimeout(timer);
     }
   }, [wasmReady, user, permission, requestPermission]);
+
+  // Cross-cutting org-scoped state (e.g. ActivityBar's channels-unread
+  // badge sits outside the org layout's gate) — refresh on org change.
+  useEffect(() => {
+    if (!wasmReady || !currentOrg) return;
+    void useChannelMessageStore.getState().fetchUnreadCounts();
+  }, [wasmReady, currentOrg]);
 
   const handleEvent = useCallback(
     (event: RealtimeEvent) => {

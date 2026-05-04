@@ -56,12 +56,24 @@ export class ChannelLocalState {
 
   total_unread_count(): number {
     const counts = JSON.parse(this._unreadCountsCache) as Record<string, number>;
-    return Object.values(counts).reduce((a, b) => a + b, 0);
+    const channels = JSON.parse(this._channelsCache) as { id: number }[];
+    const orgIds = new Set(channels.map((c) => c.id));
+    let sum = 0;
+    for (const [k, v] of Object.entries(counts)) {
+      if (orgIds.has(Number(k))) sum += v;
+    }
+    return sum;
   }
 
   total_mention_count(): number {
     const counts = JSON.parse(this._mentionCountsCache) as Record<string, number>;
-    return Object.values(counts).reduce((a, b) => a + b, 0);
+    const channels = JSON.parse(this._channelsCache) as { id: number }[];
+    const orgIds = new Set(channels.map((c) => c.id));
+    let sum = 0;
+    for (const [k, v] of Object.entries(counts)) {
+      if (orgIds.has(Number(k))) sum += v;
+    }
+    return sum;
   }
 
   filter_channels_json(_query: string, _includeArchived: boolean): string {

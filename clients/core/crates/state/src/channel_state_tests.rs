@@ -287,6 +287,7 @@ fn mention_count_tracking() {
 #[test]
 fn total_unread_and_mention_counts() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "a"), ch(2, "b"), ch(3, "c")]);
     s.increment_unread(1);
     s.increment_unread(1);
     s.increment_unread(2);
@@ -300,6 +301,7 @@ fn total_unread_and_mention_counts() {
 #[test]
 fn set_mention_counts() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "a"), ch(2, "b")]);
     let mut c = HashMap::new();
     c.insert(1, 3);
     c.insert(2, 7);
@@ -307,6 +309,19 @@ fn set_mention_counts() {
     assert_eq!(s.get_mention_count(1), 3);
     assert_eq!(s.get_mention_count(2), 7);
     assert_eq!(s.total_mention_count(), 10);
+}
+
+#[test]
+fn total_counts_scoped_to_loaded_channels() {
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "in-org")]);
+    s.increment_unread(1);
+    s.increment_unread(2);
+    s.increment_mention(1);
+    s.increment_mention(2);
+    // Channel 2 isn't in the loaded set — total skips it.
+    assert_eq!(s.total_unread_count(), 1);
+    assert_eq!(s.total_mention_count(), 1);
 }
 
 // ── Current user ──

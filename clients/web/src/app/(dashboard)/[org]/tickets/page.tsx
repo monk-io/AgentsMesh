@@ -32,11 +32,10 @@ export default function TicketsPage() {
   // State for auto-triggered create pod modal (when dragging ticket to in_progress)
   const [createPodTicket, setCreatePodTicket] = useState<Ticket | null>(null);
 
-  // Load tickets on mount and when view mode changes
   useEffect(() => {
     const load = viewMode === "board" ? fetchBoard() : fetchTickets();
     load.finally(() => setLoading(false));
-  }, [fetchTickets, fetchBoard, viewMode]);
+  }, [currentOrg, fetchTickets, fetchBoard, viewMode]);
 
   const handleStatusChange = useCallback(async (slug: string, newStatus: TicketStatus) => {
     try {

@@ -10,6 +10,7 @@ import { FolderGit2, Server, Plus } from "lucide-react";
 import { getRepositoryService } from "@/lib/wasm-core";
 import type { RepositoryData } from "@/lib/api/repositoryTypes";
 import { useRunners, useRunnerStore } from "@/stores/runner";
+import { useCurrentOrg } from "@/stores/auth";
 import { InfraRepositoryDetail } from "@/components/infra/InfraRepositoryDetail";
 import { InfraRunnerDetail } from "@/components/infra/InfraRunnerDetail";
 
@@ -74,20 +75,25 @@ function RepoSection({
   t: (k: string) => string;
 }) {
   const router = useRouter();
+  const currentOrg = useCurrentOrg();
   const [loading, setLoading] = useState(true);
   const [firstId, setFirstId] = useState<number | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
         const raw = await getRepositoryService().list();
+        if (cancelled) return;
         const parsed = JSON.parse(raw) as { repositories?: RepositoryData[] };
         setFirstId(parsed.repositories?.[0]?.id ?? null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [currentOrg]);
 
   useEffect(() => {
     if (!idMissing || loading || firstId == null) return;
@@ -131,13 +137,14 @@ function RunnerSection({
   t: (k: string) => string;
 }) {
   const router = useRouter();
+  const currentOrg = useCurrentOrg();
   const runners = useRunners();
   const loading = useRunnerStore((s) => s.loading);
   const fetchRunners = useRunnerStore((s) => s.fetchRunners);
 
   useEffect(() => {
-    fetchRunners();
-  }, [fetchRunners]);
+    if (currentOrg) fetchRunners();
+  }, [currentOrg, fetchRunners]);
 
   const firstId = runners[0]?.id ?? null;
 

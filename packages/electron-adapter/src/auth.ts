@@ -100,8 +100,9 @@ export class ElectronAuthService implements IAuthManager {
     this._organizationsCache = orgsJson;
   }
 
-  set_current_org(orgJson: string): void {
+  async set_current_org(orgJson: string): Promise<void> {
     this._currentOrgCache = orgJson;
+    await invoke("authSetCurrentOrg", orgJson);
   }
 
   clear_session(): void {

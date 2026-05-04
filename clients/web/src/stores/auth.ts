@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { useMemo } from "react";
 import { initWasmCore, getAuthManager, getApiClient } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
+import { useWorkspaceStore } from "./workspace";
+import { resetOrgScopedServices } from "@/lib/org-scope/registry";
 
 interface User {
   id: number;
@@ -35,7 +37,7 @@ interface AuthState {
 
   setAuth: (token: string, user: User, refreshToken?: string) => void;
   setOrganizations: (orgs: Organization[]) => void;
-  setCurrentOrg: (org: Organization) => void;
+  setCurrentOrg: (org: Organization) => Promise<void>;
   logout: () => void;
   isAuthenticated: () => boolean;
   setHasHydrated: (state: boolean) => void;
@@ -167,9 +169,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     bump();
   },
 
-  setCurrentOrg: (org) => {
-    try { mgr().set_current_org(JSON.stringify(org)); } catch { /* noop */ }
+  setCurrentOrg: async (org) => {
+    try { await mgr().set_current_org(JSON.stringify(org)); } catch { /* noop */ }
     try { client().set_org_slug(org.slug); } catch { /* noop */ }
+    try {
+      useWorkspaceStore.getState().clearAllPanes();
+      useWorkspaceStore.persist.clearStorage?.();
+    } catch { /* noop */ }
+    resetOrgScopedServices();
     bump();
   },
 
