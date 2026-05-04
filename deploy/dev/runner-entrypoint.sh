@@ -79,10 +79,10 @@ generate_runner_cert() {
     fi
     echo "生成 Runner 客户端证书..."
     openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 \
-        -out "$CERTS_DIR/runner.key" 2>/dev/null
+        -out "$CERTS_DIR/runner.key"
     openssl req -new -key "$CERTS_DIR/runner.key" \
         -out "$CERTS_DIR/runner.csr" \
-        -subj "/CN=${RUNNER_NODE_ID}/O=${RUNNER_ORG_SLUG}/OU=Runner" 2>/dev/null
+        -subj "/CN=${RUNNER_NODE_ID}/O=${RUNNER_ORG_SLUG}/OU=Runner"
     cat > "$CERTS_DIR/runner_ext.cnf" << 'EOF'
 authorityKeyIdentifier=keyid,issuer
 basicConstraints=CA:FALSE
@@ -94,7 +94,7 @@ EOF
         -CA "$SSL_DIR/ca.crt" -CAkey "$SSL_DIR/ca.key" \
         -CAserial "$CERTS_DIR/ca.srl" -CAcreateserial \
         -out "$CERTS_DIR/runner.crt" \
-        -extfile "$CERTS_DIR/runner_ext.cnf" 2>/dev/null
+        -extfile "$CERTS_DIR/runner_ext.cnf"
     cp "$SSL_DIR/ca.crt" "$CERTS_DIR/ca.crt"
     rm -f "$CERTS_DIR/runner.csr" "$CERTS_DIR/runner_ext.cnf"
     chmod 600 "$CERTS_DIR/runner.key"
