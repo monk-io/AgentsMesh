@@ -13,6 +13,7 @@
 # COPYed into the image. There's no go toolchain inside the container.
 
 set -e
+trap 'echo "✗ entrypoint failed at line $LINENO (exit=$?)" >&2' ERR
 
 BACKEND_URL="${BACKEND_URL:-http://traefik:80}"
 GRPC_ENDPOINT="${GRPC_ENDPOINT:-traefik:9443}"
@@ -57,13 +58,16 @@ wait_for_backend() {
 }
 
 generate_runner_cert() {
+    echo "▶ generate_runner_cert: CERTS_DIR=$CERTS_DIR SSL_DIR=$SSL_DIR"
     mkdir -p "$CERTS_DIR"
+    ls -la "$CERTS_DIR" >&2 || true
     if [[ -f "$CERTS_DIR/runner.crt" && -f "$CERTS_DIR/runner.key" ]]; then
         echo "✓ Runner 证书已存在"
         return 0
     fi
     if [[ ! -f "$SSL_DIR/ca.crt" || ! -f "$SSL_DIR/ca.key" ]]; then
         echo "✗ CA 证书未找到: $SSL_DIR" >&2
+        ls -la "$SSL_DIR" >&2 || true
         exit 1
     fi
     echo "生成 Runner 客户端证书..."
