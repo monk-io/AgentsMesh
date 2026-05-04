@@ -38,10 +38,15 @@ func registerPodRoutes(rg *gin.RouterGroup, svc *Services) {
 	// Relay connection endpoint
 	if svc.RelayManager != nil && svc.RelayTokenGenerator != nil {
 		var commandSender runner.RunnerCommandSender
+		var stateReader runner.RunnerStateReader
 		if svc.PodCoordinator != nil {
-			commandSender = svc.PodCoordinator.GetCommandSender()
+			cs := svc.PodCoordinator.GetCommandSender()
+			commandSender = cs
+			if sr, ok := cs.(runner.RunnerStateReader); ok {
+				stateReader = sr
+			}
 		}
-		RegisterPodConnectRoutes(rg, svc.Pod, svc.RelayManager, svc.RelayTokenGenerator, commandSender, svc.GeoResolver, svc.Grant)
+		RegisterPodConnectRoutes(rg, svc.Pod, svc.RelayManager, svc.RelayTokenGenerator, commandSender, stateReader, svc.GeoResolver, svc.Grant)
 	}
 
 	// AutopilotControllers

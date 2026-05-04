@@ -210,6 +210,19 @@ export declare class AppState {
   invitationGetByToken(token: string): Promise<string>
   invitationAccept(token: string): Promise<void>
   invitationListPending(): Promise<string>
+  localRunnerBinaryPath(): Promise<string>
+  localRunnerHostTarget(): Promise<string | null>
+  localRunnerIsInstalled(): Promise<boolean>
+  localRunnerInstalledVersion(): Promise<string | null>
+  localRunnerInstallBinary(releaseUrl: string, expectedSha256?: string | undefined | null): Promise<void>
+  localRunnerIsRegistered(): Promise<boolean>
+  localRunnerLocalNodeId(): Promise<string | null>
+  localRunnerRegister(token: string): Promise<void>
+  localRunnerServiceInstall(): Promise<void>
+  localRunnerServiceUninstall(): Promise<void>
+  localRunnerServiceStart(): Promise<void>
+  localRunnerServiceStop(): Promise<void>
+  localRunnerServiceStatus(): Promise<string>
   loopSvcLoopsJson(): Promise<string>
   loopSvcCurrentLoopJson(): Promise<string>
   loopSvcRunsJson(): Promise<string>
@@ -395,4 +408,6 @@ export declare class AppState {
   userCredentialSetDefaultRepoProvider(id: number): Promise<void>
   userCredentialTestRepoProvider(id: number): Promise<void>
   userCredentialListProviderRepositories(id: number, page?: number | undefined | null, perPage?: number | undefined | null, search?: string | undefined | null): Promise<string>
+  ssoDiscover(email: string): Promise<string>
+  ssoLdapAuth(domain: string, json: string): Promise<string>
 }

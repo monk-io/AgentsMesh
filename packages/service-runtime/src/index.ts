@@ -15,6 +15,7 @@ export {
   getChannelState, getLoopState, getAcpManager, getOrgState,
   getUserState, getGitProviderState, getRepoState,
   getAutopilotState, getRelayManager, getBlockstoreService,
+  getLocalRunnerService,
 } from "./service-getters";
 
 export { setPlatformInit, ensurePlatformReady } from "./platform-init";

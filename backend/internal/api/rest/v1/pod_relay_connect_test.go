@@ -75,7 +75,7 @@ func TestGetPodConnection_Success(t *testing.T) {
 	}
 	sender := &mockRelayCommandSender{}
 
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -99,7 +99,7 @@ func TestGetPodConnection_RelayNotConfigured(t *testing.T) {
 	podSvc := &mockRelayPodService{}
 
 	// nil relayManager means relay is not configured
-	handler := NewPodConnectHandler(podSvc, nil, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, nil, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -122,7 +122,7 @@ func TestGetPodConnection_NoHealthyRelays(t *testing.T) {
 	tokenGen := relay.NewTokenGenerator("test-secret-key-32bytes!!", "test-issuer")
 	podSvc := &mockRelayPodService{}
 
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -142,7 +142,7 @@ func TestGetPodConnection_PodNotFound(t *testing.T) {
 			return nil, errors.New("not found")
 		},
 	}
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/nonexistent/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "nonexistent"}}
@@ -172,7 +172,7 @@ func TestGetPodConnection_PodNotActive(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -201,7 +201,7 @@ func TestGetPodConnection_Unauthorized(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -226,7 +226,7 @@ func TestGetPodConnection_NoTenant(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -252,7 +252,7 @@ func TestGetPodConnection_NoUserID(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -286,7 +286,7 @@ func TestGetPodConnection_MemberForbiddenOthersPod(t *testing.T) {
 			}, nil
 		},
 	}
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}

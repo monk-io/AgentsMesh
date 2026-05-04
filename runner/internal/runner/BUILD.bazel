@@ -41,6 +41,8 @@ go_library(
         "pod_relay.go",
         "pod_relay_acp.go",
         "pod_relay_pty.go",
+        "pod_relay_pty_fanout.go",
+        "pod_relay_pty_handlers.go",
         "pod_state_detector.go",
         "pod_store.go",
         "pod_token_refresh.go",

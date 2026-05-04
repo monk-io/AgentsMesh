@@ -26,6 +26,7 @@ import { ElectronPromoCodeService } from './promocode';
 import { ElectronAuthApiService } from './auth_api';
 import { ElectronAuthService } from './auth';
 import { ElectronBlockstoreService } from './blockstore';
+import { ElectronLocalRunnerService } from './local_runner';
 import { invoke } from './invoke';
 import {
   ElectronOrgState, ElectronUserState, ElectronGitProviderState, ElectronRepoState,
@@ -112,6 +113,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     promoCodeService: new ElectronPromoCodeService(),
     authApiService: new ElectronAuthApiService(),
     blockstoreService: new ElectronBlockstoreService(),
+    localRunnerService: new ElectronLocalRunnerService(),
     // State facets — share the Service instance, not a separate stub.
     podState: podService,
     runnerState: runnerService,

@@ -1,19 +1,9 @@
-/**
- * Relay WebSocket connection management.
- *
- * Architecture:
- * - Browser connects to Relay (not Backend) for terminal + ACP data
- * - Control flow: Browser -> Backend (REST) -> Runner (gRPC)
- * - Data flow: Browser <-> Relay <-> Runner (WebSocket)
- *
- * Transport is abstracted via IRelayBackend (see relayBackend.ts).
- * TODO(wasm): Swap TsRelayBackend → WasmRelayBackend when relay crate is WASM-ready.
- */
-
 import { MsgType, encodeMessage, encodeJsonMessage } from "./relayProtocol";
 import { getPodService } from "@/lib/wasm-core";
+import { getLocalRunnerService } from "@agentsmesh/service-runtime";
 import type { RelayConnection, ConnectionHandle, StatusListener } from "./relayConnectionTypes";
 import { createNewConnection, doSendResize, type PoolContext } from "./relayConnectionWebSocket";
+import { probeRelayOpen } from "./relayProbe";
 
 export { MsgType, encodeMessage } from "./relayProtocol";
 export type { ConnectionStatus, RelayConnection, ConnectionHandle, RelayStatusInfo } from "./relayConnectionTypes";
@@ -105,6 +95,12 @@ class RelayConnectionPool {
 
     const createPromise = (async () => {
       const relayInfo = JSON.parse(await getPodService().get_pod_connection(podKey));
+      if (relayInfo.local_relay_url && relayInfo.local_token && await isSameHostRunner(relayInfo.local_relay_node_id)) {
+        const ok = await probeRelayOpen(relayInfo.local_relay_url, relayInfo.local_token, 1000);
+        if (ok) {
+          return createNewConnection(this.ctx, podKey, relayInfo.local_relay_url, relayInfo.local_token, subscriptionId, onMessage);
+        }
+      }
       return createNewConnection(this.ctx, podKey, relayInfo.relay_url, relayInfo.token, subscriptionId, onMessage);
     })();
     this.pendingSubscriptions.set(podKey, createPromise);
@@ -210,6 +206,43 @@ function getOrCreatePool(): RelayConnectionPool {
   const pool = new RelayConnectionPool();
   (globalThis as Record<string, unknown>)[key] = pool;
   return pool;
+}
+
+// isSameHostRunner gates the local-relay probe to runners whose advertised
+// node_id matches this host's local-runner node_id. Without the gate, web
+// users (or desktop users sitting on a different host than the runner) would
+// burn a 1s probe timeout on every subscribe before falling back to cloud
+// relay. When the backend omits the hint we keep the legacy "always probe"
+// behavior for backward compatibility.
+//
+// The local node_id is module-cached so reconnect storms don't re-traverse
+// IPC + yaml read for every retry. Cache only holds resolved non-empty IDs
+// so a pre-onboarding null doesn't pin the renderer to "different host".
+let cachedNodeIdPromise: Promise<string | null> | null = null;
+
+async function resolveLocalNodeId(): Promise<string | null> {
+  const svc = getLocalRunnerService();
+  if (!svc) return null;
+  if (!cachedNodeIdPromise) {
+    cachedNodeIdPromise = svc.local_node_id().then(
+      (id) => {
+        if (!id) cachedNodeIdPromise = null;
+        return id;
+      },
+      () => {
+        cachedNodeIdPromise = null;
+        return null;
+      },
+    );
+  }
+  return cachedNodeIdPromise;
+}
+
+async function isSameHostRunner(advertisedNodeID: string | undefined): Promise<boolean> {
+  if (!advertisedNodeID) return true;
+  if (!getLocalRunnerService()) return false;
+  const myNodeID = await resolveLocalNodeId();
+  return myNodeID !== null && myNodeID === advertisedNodeID;
 }
 
 export const relayPool = getOrCreatePool();

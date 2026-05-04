@@ -15,6 +15,7 @@ members = [
     "crates/transport",
     "crates/node-bridge",
     "crates/uniffi-bindgen",
+    "crates/local-runner",
 ]
 
 [workspace.package]
@@ -80,3 +81,4 @@ agentsmesh-state = { path = "crates/state" }
 agentsmesh-persistence = { path = "crates/persistence" }
 agentsmesh-services = { path = "crates/services" }
 agentsmesh-transport = { path = "crates/transport" }
+agentsmesh-local-runner = { path = "crates/local-runner" }

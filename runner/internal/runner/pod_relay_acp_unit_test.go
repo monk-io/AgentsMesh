@@ -16,7 +16,7 @@ func TestACPPodRelay_SetupHandlers_Command(t *testing.T) {
 	var receivedPayload []byte
 	r := NewACPPodRelay("pod-1", nil, func(payload []byte) {
 		receivedPayload = payload
-	})
+	}, nil)
 	r.SetupHandlers(mc)
 
 	// Simulate browser sending ACP command.
@@ -33,7 +33,7 @@ func TestACPPodRelay_SendSnapshot_NilClient(t *testing.T) {
 	mc.SetConnected(true)
 
 	// No ACP client — should not panic.
-	r := NewACPPodRelay("pod-1", nil, nil)
+	r := NewACPPodRelay("pod-1", nil, nil, nil)
 	r.SendSnapshot(mc)
 
 	if mc.CountSentByType(relay.MsgTypeAcpSnapshot) != 0 {
@@ -45,7 +45,7 @@ func TestACPPodRelay_SetupHandlers_SnapshotRequest(t *testing.T) {
 	mc := relay.NewMockClient("wss://relay.example.com")
 	mc.SetConnected(true)
 
-	r := NewACPPodRelay("pod-1", nil, nil)
+	r := NewACPPodRelay("pod-1", nil, nil, nil)
 	r.SetupHandlers(mc)
 
 	mc.SimulateMessage(relay.MsgTypeSnapshotRequest, nil)
@@ -57,13 +57,13 @@ func TestACPPodRelay_SetupHandlers_SnapshotRequest(t *testing.T) {
 
 func TestACPPodRelay_OnRelayConnected_NoPanic(t *testing.T) {
 	mc := relay.NewMockClient("wss://relay.example.com")
-	r := NewACPPodRelay("pod-1", nil, nil)
+	r := NewACPPodRelay("pod-1", nil, nil, nil)
 	// No-op — should not panic.
 	r.OnRelayConnected(mc)
 }
 
 func TestACPPodRelay_OnRelayDisconnected_NoPanic(t *testing.T) {
-	r := NewACPPodRelay("pod-1", nil, nil)
+	r := NewACPPodRelay("pod-1", nil, nil, nil)
 	// No-op — should not panic.
 	r.OnRelayDisconnected()
 }
@@ -91,6 +91,7 @@ func TestSendAcpViaRelay_NotConnected(t *testing.T) {
 
 func TestSendAcpViaRelay_Success(t *testing.T) {
 	pod := &Pod{PodKey: "pod-acp-3"}
+	pod.Relay = NewACPPodRelay("pod-acp-3", nil, nil, nil)
 	mc := relay.NewMockClient("wss://relay.example.com")
 	mc.SetConnected(true)
 	pod.SetRelayClient(mc)

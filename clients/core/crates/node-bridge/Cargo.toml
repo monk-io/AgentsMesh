@@ -18,6 +18,7 @@ agentsmesh-auth = { path = "../auth" }
 agentsmesh-api-client = { path = "../api-client" }
 agentsmesh-state = { path = "../state" }
 agentsmesh-types = { path = "../types" }
+agentsmesh-local-runner = { path = "../local-runner" }
 dirs = "6"
 
 [build-dependencies]

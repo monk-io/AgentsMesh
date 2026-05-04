@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "path";
 import { AppState } from "@agentsmesh/node-bridge";
+import { createLocalRunnerStubs, type LocalRunnerStubMap } from "./local_runner_stubs";
 
 const apiUrl = process.env.AGENTSMESH_API_URL ?? "http://localhost:25350";
 const storageDir = path.join(app.getPath("userData"), "agentsmesh");
@@ -11,6 +12,7 @@ const storageDir = path.join(app.getPath("userData"), "agentsmesh");
 const isHeadlessTest = process.env.NODE_ENV === "test";
 
 let appState: AppState;
+let stubs: LocalRunnerStubMap | null = null;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -57,6 +59,9 @@ function registerIpcHandlers() {
   for (const m of methodNames) {
     ipcMain.handle(m, async (_e, ...args: unknown[]) => {
       try {
+        if (stubs && m in stubs) {
+          return await stubs[m](...args);
+        }
         return await (appState as any)[m](...args);
       } catch (err) {
         throw typeof err === "string" ? new Error(err) : err;
@@ -74,6 +79,9 @@ app.whenReady().then(() => {
     app.dock?.hide();
   }
   appState = new AppState(apiUrl, storageDir);
+  if (isHeadlessTest) {
+    stubs = createLocalRunnerStubs();
+  }
   registerIpcHandlers();
   createWindow();
 

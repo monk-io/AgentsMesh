@@ -263,7 +263,6 @@
     "noTerminalsOpen": "暂无打开的终端",
     "noTerminalsDescription": "点击侧边栏中的 Pod 打开其终端，或创建新的 Pod 开始使用。",
     "createNewPod": "新建 Pod",
-    "browseAgents": "浏览 Agent",
     "emptyHeroTitle": "启动你的第一个 Pod",
     "emptyHeroDescription": "Pod 是一个隔离的终端，AI 代理在其中处理你的代码。你可以观察、介入，或让它自动运行。",
     "recipesHeading": "或从这些模板开始",
@@ -290,8 +289,7 @@
     },
     "hints": {
       "search": "搜索",
-      "createPod": "新建 Pod",
-      "cli": "偏好命令行？agentsmesh pod new →"
+      "createPod": "新建 Pod"
     },
     "podCreated": "Pod 已创建！等待启动中...",
     "podOpened": "Pod 已打开",

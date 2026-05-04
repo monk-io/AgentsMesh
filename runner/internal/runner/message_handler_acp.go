@@ -13,19 +13,14 @@ import (
 	"github.com/anthropics/agentsmesh/runner/internal/relay"
 )
 
-// sendAcpViaRelay sends an ACP event via the Relay WebSocket.
-// If Relay is unavailable, the event is silently dropped (consistent with
-// PTY output which also only flows through Relay).
-//
-// The payload is flat JSON: {"type":"...","session_id":"...","text":"...",...}
-// Data struct fields are merged into the top level (not nested under "data").
+// sendAcpViaRelay broadcasts an ACP event to all connected sinks (cloud + local
+// browsers). Drops silently when no listener is connected. Payload is flat JSON
+// {"type":..,"sessionId":..,...} with the data struct merged into the top level.
 func sendAcpViaRelay(pod *Pod, eventType, sessionID string, data any) {
-	rc := pod.GetRelayClient()
-	if rc == nil || !rc.IsConnected() {
+	if pod.Relay == nil {
 		return
 	}
 
-	// Marshal data struct to JSON, then merge into top-level map.
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return
@@ -41,15 +36,8 @@ func sendAcpViaRelay(pod *Pod, eventType, sessionID string, data any) {
 	if err != nil {
 		return
 	}
-	if err := rc.Send(relay.MsgTypeAcpEvent, payload); err != nil {
-		// Log critical events that should not be silently lost.
-		// Permission requests cause agent to hang if the user never sees them;
-		// tool call results leave the UI spinner stuck forever.
-		if eventType == "permissionRequest" || eventType == "toolCallResult" || eventType == "log" {
-			logger.Pod().Warn("Failed to send critical ACP event via relay",
-				"pod_key", pod.PodKey, "event_type", eventType, "error", err)
-		}
-	}
+
+	pod.Relay.BroadcastEvent(pod.GetRelayClient(), relay.MsgTypeAcpEvent, payload)
 }
 
 // wireAndStartACPPod creates the ACPClient with Relay-forwarding callbacks,
@@ -117,7 +105,7 @@ func (h *RunnerMessageHandler) wireAndStartACPPod(pod *Pod, cmd *runnerv1.Create
 	pod.IO = NewACPPodIO(acpClient, podKey)
 	pod.Relay = NewACPPodRelay(podKey, acpClient, func(payload []byte) {
 		h.handleAcpRelayCommand(pod, payload)
-	})
+	}, h.runner.GetLocalRelayServer())
 
 	// Start the ACP client (launches subprocess, performs initialize handshake)
 	if err := acpClient.Start(); err != nil {

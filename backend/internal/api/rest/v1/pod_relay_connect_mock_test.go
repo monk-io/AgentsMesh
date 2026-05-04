@@ -52,7 +52,7 @@ func (m *mockRelayCommandSender) SendPodInput(context.Context, int64, string, []
 func (m *mockRelayCommandSender) SendPrompt(context.Context, int64, string, string) error {
 	return nil
 }
-func (m *mockRelayCommandSender) SendSubscribePod(context.Context, int64, string, string, string, bool, int32) error {
+func (m *mockRelayCommandSender) SendSubscribePod(context.Context, int64, string, string, string, string, bool, int32) error {
 	return nil
 }
 func (m *mockRelayCommandSender) SendUnsubscribePod(context.Context, int64, string) error {
@@ -73,7 +73,7 @@ func (m *mockRelayCommandSender) SendUpdatePodPerpetual(context.Context, int64, 
 
 // mockRelayCommandSenderConfigurable allows configuring individual method behaviors.
 type mockRelayCommandSenderConfigurable struct {
-	sendSubscribePodFn func(context.Context, int64, string, string, string, bool, int32) error
+	sendSubscribePodFn func(context.Context, int64, string, string, string, string, bool, int32) error
 }
 
 func (m *mockRelayCommandSenderConfigurable) SendCreatePod(context.Context, int64, *runnerv1.CreatePodCommand) error {
@@ -88,9 +88,9 @@ func (m *mockRelayCommandSenderConfigurable) SendPodInput(context.Context, int64
 func (m *mockRelayCommandSenderConfigurable) SendPrompt(context.Context, int64, string, string) error {
 	return nil
 }
-func (m *mockRelayCommandSenderConfigurable) SendSubscribePod(ctx context.Context, runnerID int64, podKey, relayURL, token string, snapshot bool, lines int32) error {
+func (m *mockRelayCommandSenderConfigurable) SendSubscribePod(ctx context.Context, runnerID int64, podKey, relayURL, token, localToken string, snapshot bool, lines int32) error {
 	if m.sendSubscribePodFn != nil {
-		return m.sendSubscribePodFn(ctx, runnerID, podKey, relayURL, token, snapshot, lines)
+		return m.sendSubscribePodFn(ctx, runnerID, podKey, relayURL, token, localToken, snapshot, lines)
 	}
 	return nil
 }
@@ -108,6 +108,26 @@ func (m *mockRelayCommandSenderConfigurable) SendAutopilotControl(int64, *runner
 }
 func (m *mockRelayCommandSenderConfigurable) SendUpdatePodPerpetual(context.Context, int64, string, bool) error {
 	return nil
+}
+
+// mockRelayStateReader implements runner.RunnerStateReader for relay connect tests.
+type mockRelayStateReader struct {
+	getRunnerLocalRelayFn func(runnerID int64) string
+	getRunnerNodeIDFn     func(runnerID int64) string
+}
+
+func (m *mockRelayStateReader) GetRunnerLocalRelayURL(runnerID int64) string {
+	if m.getRunnerLocalRelayFn != nil {
+		return m.getRunnerLocalRelayFn(runnerID)
+	}
+	return ""
+}
+
+func (m *mockRelayStateReader) GetRunnerNodeID(runnerID int64) string {
+	if m.getRunnerNodeIDFn != nil {
+		return m.getRunnerNodeIDFn(runnerID)
+	}
+	return ""
 }
 
 // mockGeoResolver implements geo.Resolver for testing.

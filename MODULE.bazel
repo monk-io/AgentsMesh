@@ -236,6 +236,29 @@ crate.spec(
     version = "6",
 )
 
+crate.spec(
+    package = "sha2",
+    version = "0.10",
+)
+crate.spec(
+    package = "hex",
+    version = "0.4",
+)
+crate.spec(
+    package = "flate2",
+    version = "1",
+)
+crate.spec(
+    package = "tar",
+    version = "0.4",
+)
+crate.spec(
+    default_features = False,
+    features = ["deflate"],
+    package = "zip",
+    version = "5",
+)
+
 # Base futures crate (distinct from futures-util — needed by api-client SSE).
 crate.spec(
     package = "futures",

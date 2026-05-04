@@ -25,10 +25,33 @@ Known limits:
   - Cross-compilation is handled by `--platforms` (e.g. `linux/amd64`
     vs `darwin/arm64`); this macro simply packages whatever slice the
     current configuration produces.
+
+Linker note:
+  N-API symbols (`napi_*`, `_napi_wrap`, etc.) are resolved by the
+  hosting Node/Electron process at `require()` time, not at link
+  time of the addon itself. The default rustc cdylib link line on
+  macOS errors with `Undefined symbols: _napi_wrap` because nothing
+  on disk defines them. We pass `-undefined dynamic_lookup` (macOS)
+  or `--unresolved-symbols=ignore-all` (linux) so the cdylib links
+  with those symbols deliberately unresolved, deferring binding to
+  the runtime loader. Mirrors what `@napi-rs/cli` does on the
+  outside.
 """
 
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@rules_rust//rust:defs.bzl", "rust_shared_library")
+
+_NAPI_LINKER_FLAGS = select({
+    "@platforms//os:macos": [
+        "-C", "link-arg=-undefined",
+        "-C", "link-arg=dynamic_lookup",
+    ],
+    "@platforms//os:linux": [
+        "-C", "link-arg=-Wl,--unresolved-symbols=ignore-all",
+    ],
+    "@platforms//os:windows": [],
+    "//conditions:default": [],
+})
 
 def napi_rust_library(
         name,
@@ -38,11 +61,18 @@ def napi_rust_library(
         crate_name = None,
         edition = "2021",
         ts_declaration = None,
+        binary_name = None,
         visibility = None):
     """Produce a Node-loadable `.node` file from a Rust source set.
 
+    The output is named `<binary_name>.<platform-triple>.node` (e.g.
+    `agentsmesh-node-bridge.darwin-arm64.node`) so the napi-rs-generated
+    `index.js` loader (which `require()`s a fixed per-platform filename)
+    can pick it up unchanged. If `binary_name` is omitted the output
+    falls back to plain `<name>.node`.
+
     Args:
-        name: Package name (becomes the `.node` filename).
+        name: Bazel target name (becomes the filegroup label).
         srcs: Rust source files for the crate.
         deps: Rust library dependencies.
         proc_macro_deps: Rust proc-macro deps (e.g. napi-derive).
@@ -51,6 +81,8 @@ def napi_rust_library(
         ts_declaration: Optional label pointing at a hand-written `.d.ts`
             file to copy next to the `.node`. If absent, the package
             exports the addon only.
+        binary_name: Filename stem to emit (e.g. `agentsmesh-node-bridge`).
+            The platform triple suffix is appended automatically.
         visibility: Standard visibility attribute.
     """
     rust_shared_library(
@@ -60,17 +92,38 @@ def napi_rust_library(
         proc_macro_deps = proc_macro_deps or [],
         crate_name = crate_name or name,
         edition = edition,
+        rustc_flags = _NAPI_LINKER_FLAGS,
     )
 
-    # Rename the platform-specific suffix (dylib/so/dll) → .node. Node's
-    # loader resolves require() paths by extension so this is the minimum
-    # friction: no JS wrapper needed on the consumer side.
-    native.genrule(
-        name = "_{}_rename".format(name),
-        srcs = [":_{}_cdylib".format(name)],
-        outs = ["{}.node".format(name)],
-        cmd = "cp $(SRCS) $@",
-    )
+    # Emit one rename genrule per supported platform, then expose them
+    # behind a single `alias` selected on the host config. Each genrule's
+    # `outs` list is static (Bazel forbids `select` on outs), so the
+    # per-platform names are spelled out below; the `alias` ensures
+    # consumers see only the slice that matches the current build.
+    if binary_name:
+        for plat_label, suffix in _PLATFORM_SUFFIXES.items():
+            out_name = "{}.{}.node".format(binary_name, suffix)
+            native.genrule(
+                name = "_{}_rename_{}".format(name, suffix.replace("-", "_")),
+                srcs = [":_{}_cdylib".format(name)],
+                outs = [out_name],
+                cmd = "cp $(SRCS) $@",
+                tags = ["manual"],
+            )
+        native.alias(
+            name = "_{}_rename".format(name),
+            actual = select({
+                plat: "_{}_rename_{}".format(name, suffix.replace("-", "_"))
+                for plat, suffix in _PLATFORM_SUFFIXES.items()
+            }),
+        )
+    else:
+        native.genrule(
+            name = "_{}_rename".format(name),
+            srcs = [":_{}_cdylib".format(name)],
+            outs = ["{}.node".format(name)],
+            cmd = "cp $(SRCS) $@",
+        )
 
     data = [":_{}_rename".format(name)]
     if ts_declaration:
@@ -85,3 +138,11 @@ def napi_rust_library(
         srcs = data,
         visibility = visibility or ["//visibility:public"],
     )
+
+# Maps Bazel platform constraint labels to the napi-rs convention
+# `<os>-<cpu>` triple that the generated index.js loader looks for.
+# Only the slices we currently ship are listed; add more as we gain
+# per-platform CI coverage.
+_PLATFORM_SUFFIXES = {
+    "@platforms//cpu:arm64": "darwin-arm64",  # default macOS dev target
+}

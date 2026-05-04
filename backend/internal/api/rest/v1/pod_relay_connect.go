@@ -24,6 +24,7 @@ type PodConnectHandler struct {
 	relayManager   *relay.Manager
 	tokenGenerator *relay.TokenGenerator
 	commandSender  runner.RunnerCommandSender
+	stateReader    runner.RunnerStateReader
 	geoResolver    geo.Resolver
 	grantService   *grantservice.Service
 }
@@ -34,6 +35,7 @@ func NewPodConnectHandler(
 	relayManager *relay.Manager,
 	tokenGenerator *relay.TokenGenerator,
 	commandSender runner.RunnerCommandSender,
+	stateReader runner.RunnerStateReader,
 	geoResolver geo.Resolver,
 	grantSvc ...*grantservice.Service,
 ) *PodConnectHandler {
@@ -42,6 +44,7 @@ func NewPodConnectHandler(
 		relayManager:   relayManager,
 		tokenGenerator: tokenGenerator,
 		commandSender:  commandSender,
+		stateReader:    stateReader,
 		geoResolver:    geoResolver,
 	}
 	if len(grantSvc) > 0 {
@@ -67,6 +70,13 @@ type PodConnectResponse struct {
 	RelayURL string `json:"relay_url"`
 	Token    string `json:"token"`
 	PodKey   string `json:"pod_key"`
+
+	// LocalRelayURL is the runner's local WS server URL (e.g. ws://127.0.0.1:38421)
+	// when the runner advertises one and the caller can use it. Empty otherwise.
+	// Clients SHOULD prefer LocalRelayURL when set, with cloud RelayURL as fallback.
+	LocalRelayURL    string `json:"local_relay_url,omitempty"`
+	LocalToken       string `json:"local_token,omitempty"`
+	LocalRelayNodeID string `json:"local_relay_node_id,omitempty"` // Runner's node_id; renderer skips probe when this != its own host node_id.
 }
 
 // GetPodConnection returns Relay connection info for a pod
@@ -136,6 +146,7 @@ func (h *PodConnectHandler) GetPodConnection(c *gin.Context) {
 
 	// Always notify runner to connect to relay
 	// Runner handles idempotency - if already connected to same relay, it just updates the token
+	var localRelayURL, localToken, localRelayNodeID string
 	if h.commandSender != nil && pod.RunnerID > 0 {
 		// Generate runner token for authentication
 		// userID=0 indicates this is a runner token (not a browser token)
@@ -151,12 +162,33 @@ func (h *PodConnectHandler) GetPodConnection(c *gin.Context) {
 			return
 		}
 
+		if h.stateReader != nil {
+			localRelayURL = h.stateReader.GetRunnerLocalRelayURL(pod.RunnerID)
+		}
+		if localRelayURL != "" {
+			localToken, err = h.tokenGenerator.GenerateToken(
+				podKey,
+				pod.RunnerID,
+				userID,
+				tenant.OrganizationID,
+				time.Hour,
+			)
+			if err != nil {
+				slog.WarnContext(c.Request.Context(), "failed to generate local token, falling back to cloud relay only",
+					"pod_key", podKey, "runner_id", pod.RunnerID, "error", err)
+				localRelayURL = ""
+			} else if h.stateReader != nil {
+				localRelayNodeID = h.stateReader.GetRunnerNodeID(pod.RunnerID)
+			}
+		}
+
 		if err := h.commandSender.SendSubscribePod(
 			c.Request.Context(),
 			pod.RunnerID,
 			podKey,
 			relayInfo.URL, // Public URL via reverse proxy — all runners use this single URL
 			runnerToken,
+			localToken,
 			true, // include snapshot
 			1000, // snapshot history lines
 		); err != nil {
@@ -184,9 +216,12 @@ func (h *PodConnectHandler) GetPodConnection(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, PodConnectResponse{
-		RelayURL: relayInfo.URL,
-		Token:    token,
-		PodKey:   podKey,
+		RelayURL:         relayInfo.URL,
+		Token:            token,
+		PodKey:           podKey,
+		LocalRelayURL:    localRelayURL,
+		LocalToken:       localToken,
+		LocalRelayNodeID: localRelayNodeID,
 	})
 }
 
@@ -197,9 +232,10 @@ func RegisterPodConnectRoutes(
 	relayManager *relay.Manager,
 	tokenGenerator *relay.TokenGenerator,
 	commandSender runner.RunnerCommandSender,
+	stateReader runner.RunnerStateReader,
 	geoResolver geo.Resolver,
 	grantSvc *grantservice.Service,
 ) {
-	handler := NewPodConnectHandler(podService, relayManager, tokenGenerator, commandSender, geoResolver, grantSvc)
+	handler := NewPodConnectHandler(podService, relayManager, tokenGenerator, commandSender, stateReader, geoResolver, grantSvc)
 	router.GET("/pods/:key/relay/connect", handler.GetPodConnection)
 }

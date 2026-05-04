@@ -114,6 +114,7 @@ go_library(
         "runners_grpc_types.go",
         "runners_logs.go",
         "runners_query.go",
+        "runners_release.go",
         "runners_upgrade.go",
         "support_tickets.go",
         "ticket_assignees.go",

@@ -167,6 +167,12 @@ clients/core/crates/*/*/*/pkg/
 clients/core/core/pkg/
 # Keep clients/core/pkg/ — it's the canonical wasm-pack output referenced by clients/web/package.json
 
+# napi `.node` addons — built by Bazel via napi_rust_library, never
+# committed. The tree-relative names exist briefly in dev workflows
+# (e.g. when running napi-cli outside Bazel for debugging) but the
+# canonical build path is `bazel build //clients/core/crates/node-bridge`.
+clients/core/crates/node-bridge/*.node
+
 # iOS build outputs — the XCFramework is produced by
 # //clients/core/crates/ffi:AgentsMeshCore (pure Bazel). Local dev
 # wires bazel-bin/ outputs into the SPM tree via `clients/ios/Makefile

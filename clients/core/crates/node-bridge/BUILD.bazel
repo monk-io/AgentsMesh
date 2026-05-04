@@ -18,6 +18,7 @@ rust_library(
     deps = [
         "//clients/core/crates/api-client:api_client",
         "//clients/core/crates/auth",
+        "//clients/core/crates/local-runner:local_runner",
         "//clients/core/crates/services",
         "//clients/core/crates/state",
         "//clients/core/crates/types",
@@ -38,6 +39,7 @@ rust_test(
 napi_rust_library(
     name = "node_bridge",
     srcs = glob(["src/**/*.rs"]),
+    binary_name = "agentsmesh-node-bridge",
     crate_name = "agentsmesh_node_bridge",
     proc_macro_deps = [
         "@crates//:napi-derive",
@@ -46,6 +48,7 @@ napi_rust_library(
     deps = [
         "//clients/core/crates/api-client:api_client",
         "//clients/core/crates/auth",
+        "//clients/core/crates/local-runner:local_runner",
         "//clients/core/crates/services",
         "//clients/core/crates/state",
         "//clients/core/crates/types",
@@ -60,23 +63,21 @@ napi_rust_library(
 # npm package wrapping the .node addon. package.json is synthesised
 # from BUILD.bazel attrs (no source-tree package.json). napi-cli
 # metadata (binaryName, targets) is preserved via `extra` so external
-# `napi build` invocations can still find platform configurations.
+# napi build tools can still find platform configurations.
 #
-# Uses the pre-built `.node` binary (from `pnpm exec napi build`)
-# instead of the Bazel-side `:node_bridge` target, because compiling
-# the Rust cdylib inside the sandbox requires Node/napi headers that
-# we haven't plumbed through. Downstream targets (clients/desktop
-# Electron e2e) import this via `:node_modules/@agentsmesh/node-bridge`.
+# The `.node` binary is now produced by the Bazel-side `:node_bridge`
+# napi_rust_library target — no pre-committed binary needed. Downstream
+# targets (clients/desktop Electron, e2e) consume this via
+# `:node_modules/@agentsmesh/node-bridge` and pick up Rust source
+# changes on the next `bazel build`.
 internal_npm_package(
     name = "pkg",
     package_name = "@agentsmesh/node-bridge",
     srcs = [
         "index.d.ts",
         "index.js",
-    ] + glob(
-        ["*.node"],
-        allow_empty = True,
-    ),
+        ":node_bridge",
+    ],
     dev_dependencies = {
         "@napi-rs/cli": "^3",
     },
@@ -105,19 +106,15 @@ internal_npm_package(
 )
 
 # Prebuilt napi artifacts — shipped as Bazel data so downstream targets
-# (e.g. Electron e2e) can consume them without triggering a Bazel-side
-# `rust_shared_library` compile that needs Node headers the sandbox
-# doesn't have. The `.node` binary is produced by `napi build` outside
-# Bazel (via `pnpm exec napi build`).
+# (e.g. Electron e2e) can consume them. The `.node` binary is produced
+# by the Bazel-side `:node_bridge` napi_rust_library target.
 js_library(
     name = "prebuilt_addon",
     srcs = [
         "index.d.ts",
         "index.js",
+        ":node_bridge",
         ":pkg_pkg_json",
-    ] + glob(
-        ["*.node"],
-        allow_empty = True,
-    ),
+    ],
     visibility = ["//visibility:public"],
 )

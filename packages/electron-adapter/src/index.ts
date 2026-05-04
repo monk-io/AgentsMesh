@@ -25,4 +25,5 @@ export { ElectronTokenUsageService } from './token_usage';
 export { ElectronPromoCodeService } from './promocode';
 export { ElectronAuthApiService } from './auth_api';
 export { ElectronAuthService } from './auth';
+export { ElectronLocalRunnerService } from './local_runner';
 export { createElectronServiceProvider } from './provider';

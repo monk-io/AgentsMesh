@@ -339,6 +339,24 @@ export interface IInvitationService {
   revoke(id: bigint): Promise<void>;
 }
 
+export type LocalRunnerStatus = "running" | "stopped" | "unknown" | "not_installed";
+
+export interface ILocalRunnerService {
+  binary_path(): Promise<string>;
+  host_target(): Promise<string | null>;
+  is_installed(): Promise<boolean>;
+  installed_version(): Promise<string | null>;
+  install_binary(release_url: string, expected_sha256?: string | null): Promise<void>;
+  is_registered(): Promise<boolean>;
+  local_node_id(): Promise<string | null>;
+  register(token: string): Promise<void>;
+  service_install(): Promise<void>;
+  service_uninstall(): Promise<void>;
+  service_start(): Promise<void>;
+  service_stop(): Promise<void>;
+  service_status(): Promise<LocalRunnerStatus>;
+}
+
 export interface ILoopService {
   add_run(json: string): void;
   append_runs(json: string): void;

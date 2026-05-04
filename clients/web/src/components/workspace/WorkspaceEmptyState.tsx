@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
+import { RegisterLocalRunnerCard } from "@/components/onboarding/RegisterLocalRunnerCard";
 
 interface RecipeCardProps {
   emoji: string;
@@ -45,6 +46,20 @@ export function WorkspaceEmptyState({ onCreatePod }: WorkspaceEmptyStateProps) {
   const t = useTranslations();
   const [showBanner, setShowBanner] = useState(true);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+        e.preventDefault();
+        onCreatePod();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCreatePod]);
+
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Top new-user hint banner — per design 'hint_banner' */}
@@ -69,6 +84,9 @@ export function WorkspaceEmptyState({ onCreatePod }: WorkspaceEmptyStateProps) {
 
       {/* Centered empty state */}
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-10">
+        <div className="flex w-[520px] max-w-full">
+          <RegisterLocalRunnerCard />
+        </div>
         {/* Hero */}
         <div className="flex w-[520px] max-w-full flex-col items-center gap-4 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/40 bg-accent">
@@ -88,12 +106,6 @@ export function WorkspaceEmptyState({ onCreatePod }: WorkspaceEmptyStateProps) {
             >
               <span className="text-base leading-none">+</span>
               {t("workspace.createNewPod")}
-            </button>
-            <button
-              type="button"
-              className="flex h-10 items-center rounded-lg border border-border bg-background px-[18px] text-sm font-medium text-foreground hover:bg-muted"
-            >
-              {t("workspace.browseAgents")}
             </button>
           </div>
         </div>
@@ -138,7 +150,6 @@ export function WorkspaceEmptyState({ onCreatePod }: WorkspaceEmptyStateProps) {
           <span>⌘K  {t("workspace.hints.search")}</span>
           <span>⌘N  {t("workspace.hints.createPod")}</span>
         </div>
-        <span className="text-xs text-primary">{t("workspace.hints.cli")}</span>
       </div>
     </div>
   );

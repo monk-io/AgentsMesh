@@ -5,6 +5,7 @@ use napi_derive::napi;
 
 use agentsmesh_api_client::{ApiClient, AuthTokenStore};
 use agentsmesh_auth::{AuthManager, storage::PersistentStorage};
+use agentsmesh_local_runner::LocalRunnerManager;
 use agentsmesh_services::*;
 use agentsmesh_state::*;
 
@@ -44,6 +45,8 @@ pub struct AppState {
     token_usage: Arc<Mutex<TokenUsageService>>,
     auth_api: Arc<Mutex<AuthApiService>>,
     blockstore: Arc<Mutex<BlockstoreService>>,
+    sso: Arc<Mutex<SSOService>>,
+    local_runner: Arc<LocalRunnerManager>,
     client: Arc<ApiClient>,
 }
 
@@ -56,6 +59,7 @@ impl AppState {
         let storage: Arc<dyn PersistentStorage> = Arc::new(FileStorage::new(dir));
         let auth = Arc::new(AuthManager::new(base_url.clone(), storage));
         let _ = auth.restore_session();
+        let local_runner = Arc::new(LocalRunnerManager::from_default_home(base_url.clone()));
         let client = Arc::new(ApiClient::new(base_url, auth.clone()));
         let c = client.clone();
         Ok(Self {
@@ -89,6 +93,8 @@ impl AppState {
                 c.clone(),
                 blockstore_state::BlockstoreState::new(),
             ))),
+            sso: Arc::new(Mutex::new(SSOService::new(c.clone()))),
+            local_runner,
             client: c,
         })
     }

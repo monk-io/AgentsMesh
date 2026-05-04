@@ -222,7 +222,8 @@
       "timeline": "Timeline",
       "spawnPod": "Spawn Pod",
       "markDone": "Mark Done",
-      "lastUsedAgent": "claude-code (last used)","started": "Started",
+      "lastUsedAgent": "claude-code (last used)",
+      "started": "Started",
       "completed": "Completed",
       "viewFullDetails": "View Full Details",
       "comments": "Comments",
@@ -273,7 +274,6 @@
     "noTerminalsOpen": "No terminals open",
     "noTerminalsDescription": "Click on a pod in the sidebar to open its terminal, or create a new pod to get started.",
     "createNewPod": "New Pod",
-    "browseAgents": "Browse agents",
     "emptyHeroTitle": "Spawn your first Pod",
     "emptyHeroDescription": "A Pod is an isolated terminal where an AI agent works on your code. You can watch, intervene, or let it run on autopilot.",
     "recipesHeading": "Or start from a recipe",
@@ -300,8 +300,7 @@
     },
     "hints": {
       "search": "to search",
-      "createPod": "to create pod",
-      "cli": "Prefer the CLI? agentsmesh pod new →"
+      "createPod": "to create pod"
     },
     "podCreated": "Pod created! Waiting for it to start...",
     "podOpened": "Pod opened",

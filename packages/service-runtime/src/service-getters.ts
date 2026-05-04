@@ -72,3 +72,12 @@ export const getRepoState = () => g<any>("repoState");
 export const getAutopilotState = () => g<any>("autopilotState");
 export const getRelayManager = () => g<any>("relayManager");
 export const getBlockstoreService = () => g<any>("blockstoreService");
+
+/**
+ * Optional getter — returns undefined when no provider has registered a
+ * local-runner service (web/iOS builds, where the desktop adapter is absent).
+ * Renderer UI uses this to feature-detect and hide onboarding cards on
+ * platforms that can't host a local runner.
+ */
+export const getLocalRunnerService = () =>
+  ready ? (i["localRunnerService"] as any | undefined) : undefined;

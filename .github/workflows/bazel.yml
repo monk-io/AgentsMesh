@@ -43,6 +43,17 @@ jobs:
           repository-cache: true
       - run: bazel info workspace
       - run: bazel run //:buildifier_check
+      - name: Verify desktop-only crate isolation
+        run: |
+          set -euo pipefail
+          for target in //clients/core/crates/wasm:wasm_lib //clients/core/crates/ffi:ffi; do
+            path=$(bazel query "somepath($target, //clients/core/crates/local-runner:local_runner)" 2>/dev/null)
+            if [[ -n "$path" ]]; then
+              echo "::error::$target depends on local-runner — desktop-only crate must not leak into web/iOS bundles"
+              echo "$path"
+              exit 1
+            fi
+          done
 
   go:
     name: Go (tests)
