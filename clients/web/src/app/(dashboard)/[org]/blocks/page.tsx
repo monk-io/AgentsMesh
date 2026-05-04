@@ -43,8 +43,8 @@ export default function BlockstorePage() {
 
   useEffect(() => {
     let cancelled = false;
-    setWorkspace(null);
     (async () => {
+      setWorkspace(null);
       try {
         let ws: Workspace | null = null;
         if (wsParam) {

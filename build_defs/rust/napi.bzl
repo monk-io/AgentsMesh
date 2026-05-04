@@ -113,12 +113,23 @@ def napi_rust_library(
                 cmd = "cp $(SRCS) $@",
                 tags = ["manual"],
             )
+
+        # Map every supported platform to its renamed slice. The default
+        # branch falls back to darwin-arm64 — this addon is desktop-only
+        # and never loaded on linux image builds, but the alias still has
+        # to resolve so unrelated targets (e.g. //clients/web:image) can
+        # parse the configuration graph on linux x86_64 CI runners.
+        actual_map = {
+            plat: "_{}_rename_{}".format(name, suffix.replace("-", "_"))
+            for plat, suffix in _PLATFORM_SUFFIXES.items()
+        }
+        actual_map["//conditions:default"] = "_{}_rename_{}".format(
+            name,
+            _PLATFORM_SUFFIXES["@platforms//cpu:arm64"].replace("-", "_"),
+        )
         native.alias(
             name = "_{}_rename".format(name),
-            actual = select({
-                plat: "_{}_rename_{}".format(name, suffix.replace("-", "_"))
-                for plat, suffix in _PLATFORM_SUFFIXES.items()
-            }),
+            actual = select(actual_map),
         )
     else:
         native.genrule(
