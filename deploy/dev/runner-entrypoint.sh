@@ -40,12 +40,16 @@ echo ""
 wait_for_backend() {
     echo "等待 Backend 服务就绪..."
     local health_url="${BACKEND_URL}/health"
-    for ((i=1; i<=30; i++)); do
+    # Cold CI runs build the backend Bazel binary on first invocation
+    # (~4min for protoc + Go compile). Bumping the bound to 240×2s = 8min
+    # so a freshly-cached image doesn't lose the race against runner's
+    # restart loop.
+    for ((i=1; i<=240; i++)); do
         if wget -q -O /dev/null "$health_url" 2>/dev/null; then
             echo "✓ Backend 服务就绪"
             return 0
         fi
-        echo "  等待 Backend... ($i/30)"
+        echo "  等待 Backend... ($i/240)"
         sleep 2
     done
     echo "✗ Backend 服务启动超时" >&2
