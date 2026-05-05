@@ -559,7 +559,11 @@ jobs:
           # against a separate output_base without killing this server.
           nohup bazel run //clients/web:next_dev > /tmp/web-dev.log 2>&1 &
           disown
-          for i in {1..40}; do
+          # Cold-cache `bazel run :next_dev` first compiles Rust deps + extracts
+          # npm packages (>5min on a fresh CI runner) before next-server starts
+          # listening. 200×3s = 10min upper bound — warm runs hit on the first
+          # iteration anyway.
+          for i in {1..200}; do
             if curl -sf "http://localhost:${{ steps.ports.outputs.WEB_PORT }}" -o /dev/null; then
               echo "web dev ready"; exit 0
             fi
