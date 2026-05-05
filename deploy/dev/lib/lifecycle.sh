@@ -48,7 +48,11 @@ docker_compose_up() {
     local up_max=3
     while [ $up_attempt -lt $up_max ]; do
         up_attempt=$((up_attempt + 1))
-        if docker compose up -d --build --quiet-pull 2>&1 | grep -v "^#" | grep -v "^\[" | grep -v "^$"; then
+        # set -o pipefail so docker compose's non-zero exit (auth.docker.io
+        # token timeouts, build failures) actually fails the pipe — without
+        # it grep returns 0 even if compose crashed and the loop exits
+        # success'fully' while postgres is missing.
+        if (set -o pipefail; docker compose up -d --build --quiet-pull 2>&1 | grep -v "^#" | grep -v "^\[" | grep -v "^$"); then
             break
         fi
         if [ $up_attempt -eq $up_max ]; then
