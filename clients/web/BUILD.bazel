@@ -1,0 +1,227 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@npm//:next/package_json.bzl", next_bin = "bin")
+load("//build_defs/web:eslint.bzl", "eslint_test")
+load("//build_defs/web:next.bzl", "next_app")
+load("//build_defs/web:next_oci.bzl", "next_oci_image")
+load("//build_defs/web:ts.bzl", "ts_project")
+load("//build_defs/web:vitest.bzl", "vitest_test")
+
+# aspect_rules_js 2.9 emits a per-importer `next/package_json.bzl` that
+# re-exports the `bin` factory from the versioned `@@aspect_rules_js++
+# npm+npm__next__*` repo. Declaring a local `js_binary` via this
+# factory gives `next_app()` a stable label it can feed into
+# `js_run_binary`/`js_run_devserver` without encoding the Next.js
+# version or hash into the BUILD file.
+next_bin.next_binary(
+    name = "next_js_binary",
+    visibility = ["//visibility:public"],
+)
+
+# Cross-package exports: //backend/pkg/slugkit:slugkit_test pulls
+# `reserved.ts` into runfiles to verify the reserved-slug list stays in
+# sync with the Go SSOT. Done at the package root rather than via a
+# nested `clients/web/src/lib/slug/BUILD.bazel` so the `src/**` glob in
+# `:src_files` (consumed by desktop's electron-vite) doesn't get split
+# across a Bazel package boundary.
+exports_files(
+    ["src/lib/slug/reserved.ts"],
+    visibility = ["//backend/pkg/slugkit:__pkg__"],
+)
+
+# TypeScript sources — everything under src/. tsc runs via the pinned
+# TypeScript from MODULE.bazel, not the one in node_modules, so builds
+# stay hermetic. `:src` is a type-check gate (legacy type errors
+# currently prevent it from building, tracked separately); the
+# Next.js build consumes raw .ts/.tsx via `_SRC_FILES` below so the
+# OCI image pipeline isn't blocked on the type-check cleanup.
+ts_project(
+    name = "src",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+        ],
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+    allow_js = True,
+    extends = "tsconfig.json",
+    no_emit = True,
+    resolve_json_module = True,
+    tsconfig = "tsconfig.bazel.json",
+    visibility = ["//clients:__subpackages__"],
+    deps = [
+        "//:node_modules",
+        # Bazel-managed first-party + wasm-pack packages aren't in the
+        # pnpm-derived `//:node_modules` aggregate; tsc needs explicit
+        # link targets to resolve them.
+        "//:node_modules/@agentsmesh/electron-adapter",
+        "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@agentsmesh/service-runtime",
+        "//:node_modules/@agentsmesh/node-bridge",
+        "//:node_modules/agentsmesh-wasm",
+    ],
+)
+
+# Raw source files exposed for downstream bundlers (Desktop's
+# electron-vite renderer cross-imports `@/stores`, `@/lib`, etc.).
+# `:src` is a `no_emit` ts_project — type-check only, doesn't pass
+# the .ts/.tsx files through its DefaultInfo. This `js_library` gives
+# bundlers a cross-package label that resolves to the raw sources;
+# `filegroup` would fail aspect_rules_js's `copy_srcs_to_bin` check
+# when consumed from a different package.
+js_library(
+    name = "src_files",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+            "src/**/*.css",
+            "src/**/*.md",
+            "src/**/*.mdx",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+    visibility = ["//clients:__subpackages__"],
+)
+
+# Raw source bundle passed to `next build`. Next.js's own compiler
+# (SWC/webpack) handles the actual TypeScript, so tsc is not on the
+# critical path for image builds.
+_SRC_FILES = glob(
+    [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.css",
+        "src/**/*.json",
+        "src/**/*.md",
+        "src/**/*.mdx",
+    ],
+    allow_empty = True,
+    exclude = [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ],
+) + glob(
+    ["public/**/*"],
+    allow_empty = True,
+)
+
+# Runtime data bundle the Next.js build needs: config files, package
+# manifests, linked node_modules, and the wasm-pack output consumed via
+# `file:../../core/pkg` in package.json. The legacy wasm-pack pkg dir
+# is shipped through `//clients/core/pkg:pkg` (an `npm_package`); the
+# Bazel-native `//clients/core/crates/wasm:wasm_pkg` pipeline requires
+# a wasm32 rust toolchain, which we don't ship to the macOS dev host
+# yet.
+#
+# First-party `@agentsmesh/*` packages are now Bazel-native (no
+# `workspace:*` in root package.json; see build_defs/web/internal_package.bzl).
+# We must list each `npm_link_package` link explicitly because
+# `//:node_modules` only aggregates pnpm-lock.yaml-derived externals.
+_NEXT_DATA = [
+    "next.config.ts",
+    "postcss.config.mjs",
+    "tsconfig.json",
+    "//:node_modules",
+    "//:node_modules/@agentsmesh/electron-adapter",
+    "//:node_modules/@agentsmesh/service-interface",
+    "//:node_modules/@agentsmesh/service-runtime",
+    "//:node_modules/@agentsmesh/node-bridge",
+    "//:node_modules/agentsmesh-wasm",
+    "//:package_json_bin",
+    "//clients/core/pkg",
+]
+
+next_app(
+    name = "next",
+    srcs = _SRC_FILES,
+    data = _NEXT_DATA,
+    next_js_binary = ":next_js_binary",
+)
+
+next_oci_image(
+    name = "image",
+    exposed_ports = ["3000/tcp"],
+    repositories = {
+        "agentsmesh": "registry.agentsmesh.ai/agentsmesh/web",
+        "dockerhub": "agentsmesh/web",
+    },
+    start_binary = ":next_start_binary",
+)
+
+js_library(
+    name = "web",
+    srcs = [":next"],
+    visibility = ["//visibility:public"],
+)
+
+# Vitest unit + component tests (132 files / 1510 tests as of last run).
+# `bazel test //clients/web:unit` is equivalent to `pnpm test:run`.
+vitest_test(
+    name = "unit",
+    size = "large",
+    srcs = glob([
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ]),
+    config = "vitest.config.ts",
+    data = [
+        "tsconfig.json",
+        "//:node_modules",
+        # First-party Bazel-managed links that vitest needs to resolve
+        # at runtime via Node's `node_modules/<name>` walk.
+        "//:node_modules/@agentsmesh/electron-adapter",
+        "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@agentsmesh/service-runtime",
+        "//:node_modules/agentsmesh-wasm",
+        "//:package_json_bin",
+    ] + glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+            "src/**/*.css",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+)
+
+# `bazel test //clients/web:lint` — equivalent to running ESLint at
+# the package root. ESLint v9 flat config is at clients/web/eslint.config.mjs;
+# `eslint_test` macro sets chdir = clients/web. The
+# public_hoist_packages declaration in MODULE.bazel surfaces `next`
+# at root node_modules so eslint-config-next's internal
+# `require("next/dist/...")` resolves.
+eslint_test(
+    name = "lint",
+    size = "large",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.js",
+            "src/**/*.mjs",
+            "e2e-playwright/**/*.ts",
+        ],
+        allow_empty = True,
+        exclude = ["src/**/*.d.ts"],
+    ),
+)
+
+# Playwright e2e suite lives at //clients/web/e2e-playwright:e2e (438 tests
+# including the blockstore subset under tests/blockstore/). Needs Docker dev
+# stack up. Install browsers once: `pnpm exec playwright install chromium`.
+# Run: `bazel test //clients/web/e2e-playwright:e2e`.

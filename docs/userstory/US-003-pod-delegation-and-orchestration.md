@@ -336,7 +336,7 @@ Worker 贡献:
 建议 Review 重点:
 1. JWT 过期时间配置 (backend/internal/config/auth.go:25)
 2. 密码强度验证规则 (backend/internal/service/auth.go:78)
-3. 前端表单验证逻辑 (web/src/components/LoginForm.tsx:45)
+3. 前端表单验证逻辑 (clients/web/src/components/LoginForm.tsx:45)
 
 ═══════════════════════════════════════════════════════════════
 ```

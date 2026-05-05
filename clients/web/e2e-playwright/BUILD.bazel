@@ -1,0 +1,55 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("//build_defs/web:playwright.bzl", "playwright_test")
+
+# E2E Playwright suite — sole web e2e target. Tests live under tests/, with
+# tests/blockstore/ holding the block-store specs that need an isolated
+# workspace + JWT-in-localStorage seeding (see fixtures/blockstore.fixture.ts).
+#
+# Runs the full browser-level E2E against the docker-dev stack.
+# Browsers are NOT fetched through rules_playwright (0.5.3's Chromium
+# CDN layout lags the Playwright 1.59 Chrome-for-Testing move, and
+# Playwright 1.59 triggers module-identity checks under
+# aspect_rules_js — we pin to 1.50.1 repo-wide via pnpm overrides).
+#
+# Install browsers once:
+#   pnpm exec playwright install chromium
+# Run:
+#   bazel test //clients/web/e2e-playwright:e2e --test_tag_filters=e2e
+playwright_test(
+    name = "e2e",
+    srcs = glob(
+        [
+            "tests/**/*.spec.ts",
+            "tests/**/*.ts",
+            "helpers/**/*.ts",
+            "fixtures/**/*.ts",
+            "pages/**/*.ts",
+        ],
+        allow_empty = True,
+        exclude = ["node_modules/**"],
+    ),
+    config = "playwright.config.ts",
+    data = [
+        # Pull @playwright/test from the root node_modules link — the
+        # e2e-playwright directory is not a pnpm importer (no
+        # package.json), so node resolves up the tree to
+        # `<runfiles>/_main/node_modules/`.
+        "//:node_modules/@playwright/test",
+    ],
+)
+
+# Shared helpers/fixtures consumed by clients/desktop e2e via relative
+# imports (../../../web/e2e-playwright/helpers/env etc.). Expose as a
+# js_library so downstream targets add it to their `data` without
+# re-globbing the same files.
+js_library(
+    name = "shared_fixtures",
+    srcs = glob(
+        [
+            "helpers/**/*.ts",
+            "fixtures/**/*.ts",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)

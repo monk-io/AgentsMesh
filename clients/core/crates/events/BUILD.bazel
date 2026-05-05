@@ -1,0 +1,26 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+# Entity events WebSocket client. Depends on transport for the connection
+# layer and types for the event schema.
+rust_library(
+    name = "events",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_events",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/transport",
+        "//clients/core/crates/types",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:thiserror",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "events_test",
+    crate = ":events",
+    edition = "2021",
+)

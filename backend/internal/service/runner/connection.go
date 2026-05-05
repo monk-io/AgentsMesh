@@ -41,6 +41,11 @@ type GRPCConnection struct {
 	initialized     bool
 	availableAgents []string
 
+	// localRelayURL is the runner's optional local WS server URL (ws://127.0.0.1:<port>),
+	// advertised via heartbeat. Empty when the runner has no local relay (e.g. cloud runner).
+	// In-memory only — disappears with the connection.
+	localRelayURL string
+
 	// Online event deduplication: true after the first "runner online" event
 	// has been published for this connection, preventing repeated DB queries.
 	onlineEventSent atomic.Bool
@@ -98,6 +103,20 @@ func (c *GRPCConnection) GetAvailableAgents() []string {
 	result := make([]string, len(c.availableAgents))
 	copy(result, c.availableAgents)
 	return result
+}
+
+// SetLocalRelayURL records the local relay URL advertised in the runner's heartbeat.
+func (c *GRPCConnection) SetLocalRelayURL(url string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.localRelayURL = url
+}
+
+// GetLocalRelayURL returns the runner's local relay URL ("" when not advertised).
+func (c *GRPCConnection) GetLocalRelayURL() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.localRelayURL
 }
 
 // UpdateLastPing updates the last ping time.

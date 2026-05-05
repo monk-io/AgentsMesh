@@ -30,7 +30,10 @@ type RunnerCommandSender interface {
 
 	// SendSubscribePod sends a subscribe pod command to a runner.
 	// relayURL is the public URL via reverse proxy (e.g. wss://example.com/relay).
-	SendSubscribePod(ctx context.Context, runnerID int64, podKey, relayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error
+	// localToken is the per-pod token shared with the browser when the runner has
+	// a local relay; runner validates incoming local WS by exact-match. Pass "" when
+	// no local relay is in play.
+	SendSubscribePod(ctx context.Context, runnerID int64, podKey, relayURL, runnerToken, localToken string, includeSnapshot bool, snapshotHistory int32) error
 
 	// SendUnsubscribePod sends an unsubscribe pod command to a runner.
 	// This notifies the runner to disconnect from Relay when all browsers have disconnected.
@@ -48,6 +51,21 @@ type RunnerCommandSender interface {
 
 	// SendUpdatePodPerpetual notifies a runner to update the perpetual flag for a running pod.
 	SendUpdatePodPerpetual(ctx context.Context, runnerID int64, podKey string, perpetual bool) error
+}
+
+// RunnerStateReader exposes per-runner runtime state (live in-memory, not DB).
+// Split out of RunnerCommandSender so callers that only read state don't pull
+// in the full command surface (ISP).
+type RunnerStateReader interface {
+	// GetRunnerLocalRelayURL returns the runner's advertised local relay URL
+	// ("" when the runner is not connected or has no local relay).
+	GetRunnerLocalRelayURL(runnerID int64) string
+
+	// GetRunnerNodeID returns the runner's advertised node_id ("" when the
+	// runner is not connected). Lets renderers tell whether a runner sits on
+	// the same host so they can skip the local-relay probe when it can't
+	// possibly succeed.
+	GetRunnerNodeID(runnerID int64) string
 }
 
 // NoOpCommandSender is a fallback implementation that logs warnings.
@@ -85,7 +103,7 @@ func (n *NoOpCommandSender) SendPrompt(ctx context.Context, runnerID int64, podK
 	return ErrCommandSenderNotSet
 }
 
-func (n *NoOpCommandSender) SendSubscribePod(ctx context.Context, runnerID int64, podKey, relayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error {
+func (n *NoOpCommandSender) SendSubscribePod(ctx context.Context, runnerID int64, podKey, relayURL, runnerToken, localToken string, includeSnapshot bool, snapshotHistory int32) error {
 	n.logger.Warn("command sender not configured, cannot send subscribe pod",
 		"runner_id", runnerID, "pod_key", podKey)
 	return ErrCommandSenderNotSet

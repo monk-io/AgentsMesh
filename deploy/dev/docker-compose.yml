@@ -1,22 +1,20 @@
 # Docker Compose for AgentsMesh Development
 #
-# 多 Worktree 支持：
-# 每个 worktree 可以独立运行，通过以下方式隔离：
-# 1. COMPOSE_PROJECT_NAME - 自动为容器、网络、卷添加前缀
-# 2. 端口环境变量 - 避免端口冲突
+# Backend / relay run on the developer host via `dev.sh` using
+# `ibazel run //path:target` (hot reload for the services developers
+# touch most). Runner stays in docker — the AI agent processes it spawns
+# need a sandbox boundary, so we trade hot reload for isolation. The
+# runner binary is still produced by Bazel (`//runner/cmd/runner:runner`,
+# linux/amd64 cross-compiled by dev.sh) and COPYed into the dev image
+# at `docker compose build` time.
 #
-# 快速开始：
-#   ./dev.sh  # 自动生成 .env 配置
-#   docker compose up -d
-#
-# 手动配置：
-#   cp .env.example .env
-#   # 编辑 .env 设置 COMPOSE_PROJECT_NAME 和端口
+# Traefik proxies the host-side backend / relay via `host.docker.internal`
+# (extra_hosts on Linux maps to host-gateway).
 
 services:
   # PostgreSQL database
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: agentsmesh
@@ -54,7 +52,6 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      # CORS: allow browser direct uploads from any local dev origin
       MINIO_API_CORS_ALLOW_ORIGIN: "*"
     command: server /data --console-address ":9001"
     volumes:
@@ -73,19 +70,14 @@ services:
     image: gitea/gitea:1.22
     restart: unless-stopped
     environment:
-      # Skip installation wizard
       - GITEA__security__INSTALL_LOCK=true
-      # Internal URL (Docker network)
       - GITEA__server__ROOT_URL=http://gitea:3000/
       - GITEA__server__SSH_DOMAIN=gitea
       - GITEA__server__SSH_PORT=22
       - GITEA__server__DISABLE_SSH=false
-      # Use SQLite for simplicity
       - GITEA__database__DB_TYPE=sqlite3
-      # Disable registration (admin creates users via CLI)
       - GITEA__service__DISABLE_REGISTRATION=true
       - GITEA__service__REQUIRE_SIGNIN_VIEW=false
-      # Disable email
       - GITEA__mailer__ENABLED=false
     volumes:
       - gitea_data:/data
@@ -108,312 +100,74 @@ services:
     depends_on:
       - postgres
 
-  # Backend API server with hot reload
-  backend:
-    build:
-      context: ../..
-      dockerfile: deploy/dev/backend.Dockerfile
-    restart: unless-stopped
+  # Migration runner — one-shot, invoked by dev.sh via `docker compose run`.
+  # Replaces the old "exec into backend container" approach now that
+  # backend runs on the host. profiles=["tools"] keeps it out of
+  # `docker compose up`.
+  migrate:
+    image: migrate/migrate:v4.18.1
+    profiles: ["tools"]
+    volumes:
+      - ../../backend/migrations:/migrations:ro
+    entrypoint: ["migrate", "-path=/migrations"]
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      # =============================================================================
-      # Unified Domain Configuration - Single source of truth
-      # All URLs (OAuth callbacks, webhooks, etc.) are derived from PRIMARY_DOMAIN
-      # =============================================================================
-      - PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-localhost:10000}
-      - USE_HTTPS=${USE_HTTPS:-false}
-      # =============================================================================
-      # Database
-      # =============================================================================
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=agentsmesh
-      - DB_PASSWORD=${POSTGRES_PASSWORD:-agentsmesh_dev}
-      - DB_NAME=agentsmesh
-      - DB_SSLMODE=disable
-      # =============================================================================
-      # Redis
-      # =============================================================================
-      - REDIS_URL=redis://redis:6379
-      # =============================================================================
-      # Auth
-      # =============================================================================
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
-      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-dev-internal-secret}
-      # =============================================================================
-      # Server
-      # =============================================================================
-      - SERVER_ADDRESS=:8080
-      - DEBUG=true
-      - CORS_ALLOWED_ORIGINS=http://localhost:${HTTP_PORT:-10000},http://127.0.0.1:${HTTP_PORT:-10000},http://localhost:${WEB_PORT:-10007},http://127.0.0.1:${WEB_PORT:-10007},http://localhost:${WEB_ADMIN_PORT:-10011},http://127.0.0.1:${WEB_ADMIN_PORT:-10011},http://localhost:3001,http://localhost,http://127.0.0.1${EXTRA_CORS_ORIGINS:+,${EXTRA_CORS_ORIGINS}}
-      # =============================================================================
-      # Logging
-      # =============================================================================
-      - LOG_LEVEL=debug
-      - LOG_FORMAT=text
-      - LOG_FILE=/app/logs/agentsmesh.log
-      # =============================================================================
-      # Email
-      # =============================================================================
-      - EMAIL_PROVIDER=console
-      # Note: BaseURL is derived from PRIMARY_DOMAIN
-      # =============================================================================
-      # OAuth (ClientID/Secret only - RedirectURLs derived from PRIMARY_DOMAIN)
-      # =============================================================================
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      # =============================================================================
-      # Storage (MinIO/S3)
-      # =============================================================================
-      - STORAGE_ENDPOINT=minio:9000
-      - STORAGE_PUBLIC_ENDPOINT=localhost:${MINIO_API_PORT:-9000}
-      - STORAGE_REGION=us-east-1
-      - STORAGE_BUCKET=agentsmesh
-      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
-      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
-      - STORAGE_USE_SSL=false
-      - STORAGE_USE_PATH_STYLE=true
-      - STORAGE_MAX_FILE_SIZE=10
-      - STORAGE_ALLOWED_TYPES=image/jpeg,image/png,image/gif,image/webp,application/pdf
-      # =============================================================================
-      # Payment (NotifyURLs/ReturnURLs derived from PRIMARY_DOMAIN)
-      # =============================================================================
-      - DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE:-global}
-      - PAYMENT_MOCK=${PAYMENT_MOCK:-false}
-      # Stripe
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
-      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY:-}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
-      # Alipay (NotifyURL/ReturnURL derived from PRIMARY_DOMAIN)
-      - ALIPAY_APP_ID=${ALIPAY_APP_ID:-}
-      - ALIPAY_PRIVATE_KEY=${ALIPAY_PRIVATE_KEY:-}
-      - ALIPAY_PUBLIC_KEY=${ALIPAY_PUBLIC_KEY:-}
-      - ALIPAY_SANDBOX=${ALIPAY_SANDBOX:-true}
-      # WeChat Pay (NotifyURL derived from PRIMARY_DOMAIN)
-      - WECHAT_APP_ID=${WECHAT_APP_ID:-}
-      - WECHAT_MCH_ID=${WECHAT_MCH_ID:-}
-      - WECHAT_API_KEY=${WECHAT_API_KEY:-}
-      - WECHAT_APIV3_KEY=${WECHAT_APIV3_KEY:-}
-      - WECHAT_SANDBOX=${WECHAT_SANDBOX:-true}
-      # LemonSqueezy (Global)
-      - LEMONSQUEEZY_API_KEY=${LEMONSQUEEZY_API_KEY:-}
-      - LEMONSQUEEZY_STORE_ID=${LEMONSQUEEZY_STORE_ID:-}
-      - LEMONSQUEEZY_WEBHOOK_SECRET=${LEMONSQUEEZY_WEBHOOK_SECRET:-}
-      # License (OnPremise)
-      - LICENSE_PUBLIC_KEY_PATH=${LICENSE_PUBLIC_KEY_PATH:-}
-      - LICENSE_FILE_PATH=${LICENSE_FILE_PATH:-}
-      # =============================================================================
-      # PKI for gRPC + mTLS Runner communication
-      # =============================================================================
-      - PKI_CA_CERT_FILE=/app/ssl/ca.crt
-      - PKI_CA_KEY_FILE=/app/ssl/ca.key
-      - PKI_VALIDITY_DAYS=365
-      - GRPC_ADDRESS=:9090
-      - GRPC_PUBLIC_ENDPOINT=grpcs://127.0.0.1:${GRPC_PORT:-10001}
-      # =============================================================================
-      # GeoIP for geo-aware relay selection
-      # =============================================================================
-      - GEO_MMDB_PATH=/opt/geoip/geoip.mmdb
-      # =============================================================================
-      # OpenTelemetry
-      # =============================================================================
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=agentsmesh-backend
-      - OTEL_TRACES_SAMPLER_ARG=1.0
-    volumes:
-      # Mount source code for hot reload
-      - ../../backend:/app
-      # Mount proto module (required by go.mod replace directive)
-      - ../../proto:/proto
-      # Mount agentfile module (required by go.mod replace directive)
-      - ../../agentfile:/agentfile
-      # Persist Go modules cache
-      - go-mod-cache:/go/pkg/mod
-      # Persist build cache
-      - go-build-cache:/root/.cache/go-build
-      # Persist logs
-      - ../../backend/logs:/app/logs
-      # SSL certificates for PKI (CA cert/key for signing Runner certificates)
-      - ./ssl:/app/ssl:ro
-    # No external port - accessed via traefik
-    # Traefik labels for automatic HTTP routing
-    # 使用 COMPOSE_PROJECT_NAME 作为 router/service 名称前缀，确保多 worktree 隔离
-    labels:
-      - "traefik.enable=true"
-      # HTTP API routing - router 名称包含项目名以避免跨 worktree 冲突
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.rule=PathPrefix(`/api`) || PathPrefix(`/health`)"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.entrypoints=web"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.service=${COMPOSE_PROJECT_NAME:-agentsmesh}-api"
-      - "traefik.http.services.${COMPOSE_PROJECT_NAME:-agentsmesh}-api.loadbalancer.server.port=8080"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 30s
+    network_mode: "service:postgres"
 
-  # Note: web and web-admin run locally (not in Docker) for better performance
-  # Start with: cd web && pnpm dev --turbopack
-  # dev.sh automatically starts the local frontend
-
-  # Runner with hot reload (runs as non-root user for Claude Code compatibility)
+  # Runner — sandboxes AI agent (Claude Code / Codex / Gemini) processes
+  # away from the developer host. Binary built by Bazel
+  # (//runner/cmd/runner:runner, linux/amd64); image only adds the AI
+  # CLI overlay. Hot reload off — rebuild via `./dev.sh --rebuild-runner`.
   runner:
     build:
-      context: ../..
-      dockerfile: deploy/dev/runner.Dockerfile
+      context: .
+      dockerfile: runner.Dockerfile
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      traefik:
+        condition: service_started
     user: "1000:1000"
     environment:
-      # Backend connection (for REST API calls)
-      - BACKEND_URL=http://backend:8080
-      # gRPC + mTLS endpoint (traefik passthrough to backend)
+      # Reach backend via traefik (host.docker.internal:HTTP_PORT). The
+      # traefik service has `extra_hosts: host.docker.internal:host-gateway`,
+      # so this resolves whether you're on macOS or Linux.
+      - BACKEND_URL=http://traefik:80
       - GRPC_ENDPOINT=traefik:9443
-      # Relay connection override: Runner inside Docker cannot reach the external
-      # PRIMARY_DOMAIN (localhost:...), so rewrite relay URL origin to use Traefik internally.
       - RELAY_BASE_URL=ws://traefik:80
-      # Runner identification (matches seed data in deploy/dev/seed/seed.sql)
       - RUNNER_NODE_ID=dev-runner
       - RUNNER_ORG_SLUG=dev-org
-      # Capacity
       - MAX_CONCURRENT_PODS=10
-      # Workspace
       - WORKSPACE=/workspace
-      # SSL certificates directory
       - SSL_DIR=/app/ssl
-      # Debug mode
       - DEBUG=true
       - HOME=/home/runner
-      # ============================================
-      # AI CLI API Keys (for headless/non-interactive mode)
-      # These allow AI CLI tools to authenticate without interactive login
-      # ============================================
-      # Claude Code - Anthropic API (supports custom gateway)
+      # AI CLI keys passed through from .env
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
       - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN:-}
-      # OpenAI Codex CLI - OpenAI API Key
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      # Gemini CLI - Google AI API Key (or use GOOGLE_API_KEY for Vertex AI)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
-      # =============================================================================
-      # OpenTelemetry
-      # =============================================================================
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=agentsmesh-runner
       - OTEL_TRACES_SAMPLER_ARG=1.0
     volumes:
-      # Mount source code for hot reload
-      - ../../runner:/app
-      # Mount proto module (required by go.mod replace directive)
-      - ../../proto:/proto
-      # Mount agentfile module (required by go.mod replace directive)
-      - ../../agentfile:/agentfile
-      - ./runner-entrypoint.sh:/usr/local/bin/runner-entrypoint.sh:ro
-      # SSL certificates for generating runner client cert
+      # SSL CA cert/key for the entrypoint to sign a runner client cert
       - ./ssl:/app/ssl:ro
-      # Persist Go modules cache (for non-root user)
-      - runner-go-mod-cache:/go/pkg/mod
-      # Persist build cache (for non-root user)
-      - runner-go-build-cache:/home/runner/.cache/go-build
-      # Workspace for sandboxes
+      - ./runner-entrypoint.sh:/usr/local/bin/runner-entrypoint.sh:ro
+      # SSH keys for git operations (gitea deploy key)
+      - ./runner-ssh:/home/runner/.ssh:ro
+      # Workspace for sandboxed pod scratch space
       - runner_workspace:/workspace
-      # AgentsMesh config directory (note: .agentsmesh with 's')
+      # AgentsMesh + AI CLI configs (persist across container restarts)
       - runner_config:/home/runner/.agentsmesh
-      # ============================================
-      # AI CLI config directories (persist across restarts)
-      # ============================================
-      # Claude Code: ~/.claude/ (settings + .claude.json will be created by entrypoint)
       - runner_claude_config:/home/runner/.claude
       - runner_codex_config:/home/runner/.codex
       - runner_gemini_config:/home/runner/.gemini
-      # ============================================
-      # SSH keys for Git operations (deploy keys)
-      # ============================================
-      - ./runner-ssh:/home/runner/.ssh:ro
-    # LAN access: map friendly hostname to host machine, use socat on Mac for port forwarding
-    # Usage: socat TCP-LISTEN:<port>,bind=0.0.0.0,fork TCP:<lan-ip>:<port>
     extra_hosts:
       - "host.lan:host-gateway"
-    # Use entrypoint script for auto-configuration
     entrypoint: ["/usr/local/bin/runner-entrypoint.sh"]
-    # Runner communicates with backend via gRPC through traefik (TLS passthrough)
-
-  # Relay server for terminal data streaming (Browser <-> Relay <-> Runner)
-  # Separates control flow (Backend) from data flow (Relay) for scalability
-  relay:
-    build:
-      context: ../..
-      dockerfile: deploy/dev/relay.Dockerfile
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      # Server configuration
-      - SERVER_ADDRESS=:8090
-      - WS_READ_BUFFER_SIZE=4096
-      - WS_WRITE_BUFFER_SIZE=4096
-      # JWT secret for token verification (must match backend)
-      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
-      # Backend communication for registration and notifications
-      - BACKEND_URL=http://backend:8080
-      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-dev-internal-secret}
-      # Relay identification
-      - RELAY_ID=dev-relay-1
-      - RELAY_REGION=local
-      - RELAY_CAPACITY=1000
-      # =============================================================================
-      # Unified Domain Configuration - RELAY_URL is derived from PRIMARY_DOMAIN
-      # Public URL for browsers: ws(s)://{PRIMARY_DOMAIN}/relay
-      # =============================================================================
-      - PRIMARY_DOMAIN=${PRIMARY_DOMAIN:-localhost:10000}
-      - USE_HTTPS=${USE_HTTPS:-false}
-      # Session management
-      - SESSION_KEEP_ALIVE_DURATION=30s
-      - DEBUG=true
-      # =============================================================================
-      # OpenTelemetry
-      # =============================================================================
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=agentsmesh-relay
-      - OTEL_TRACES_SAMPLER_ARG=1.0
-    volumes:
-      # Mount source code for hot reload
-      - ../../relay:/app
-      # Mount proto module (if needed)
-      - ../../proto:/proto
-      # Persist Go modules cache
-      - relay-go-mod-cache:/go/pkg/mod
-      # Persist build cache
-      - relay-go-build-cache:/root/.cache/go-build
-    # No external port - accessed via Traefik path routing (/relay/*)
-    # Traefik labels for automatic WebSocket routing
-    labels:
-      - "traefik.enable=true"
-      # WebSocket routing for relay with path stripping
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.rule=PathPrefix(`/relay`)"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.entrypoints=web"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.service=${COMPOSE_PROJECT_NAME:-agentsmesh}-relay"
-      - "traefik.http.routers.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.middlewares=${COMPOSE_PROJECT_NAME:-agentsmesh}-relay-strip"
-      # Strip /relay prefix before forwarding to relay service
-      - "traefik.http.middlewares.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay-strip.stripprefix.prefixes=/relay"
-      - "traefik.http.services.${COMPOSE_PROJECT_NAME:-agentsmesh}-relay.loadbalancer.server.port=8090"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
 
   # Traefik reverse proxy (unified entry point)
   traefik:
@@ -425,13 +179,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "${HTTP_PORT:-80}:80"
-      # gRPC + mTLS port for Runner connections (passthrough to backend)
+      # gRPC + mTLS port for Runner connections (TLS passthrough → host backend)
       - "${GRPC_PORT:-9443}:9443"
       # Traefik Dashboard (dev only)
       - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
-    depends_on:
-      - backend
-    # Note: web/web-admin run locally, not in Docker
+    # `host.docker.internal` resolves to the host machine. macOS Docker
+    # Desktop provides this automatically; Linux needs the extra_hosts
+    # mapping to host-gateway (Docker 20.10+).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # OpenTelemetry Collector (receives OTLP from all services)
   otel-collector:
@@ -469,16 +225,8 @@ volumes:
   redis_data:
   minio_data:
   gitea_data:
-  go-mod-cache:
-  go-build-cache:
-  runner-go-mod-cache:
-  runner-go-build-cache:
   runner_workspace:
   runner_config:
-  # AI CLI config volumes (persist authentication across restarts)
   runner_claude_config:
   runner_codex_config:
   runner_gemini_config:
-  # Relay volumes
-  relay-go-mod-cache:
-  relay-go-build-cache:

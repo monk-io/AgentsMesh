@@ -55,6 +55,7 @@ func (h *GRPCRunnerHandler) GenerateGRPCToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
+		"id":         resp.ID,
 		"token":      resp.Token,
 		"expires_at": resp.ExpiresAt,
 		"command":    resp.Command,

@@ -48,6 +48,19 @@ func (s *HTTPServer) registerTools() {
 		// Loop tools
 		s.createListLoopsTool(),
 		s.createTriggerLoopTool(),
+
+		// Block Store tools — structured collaboration substrate (notes,
+		// tasks, views, indicators, triggers). See http_tools_block.go.
+		s.createBlockCreateTool(),
+		s.createBlockUpdateTool(),
+		s.createBlockDeleteTool(),
+		s.createBlockAddRefTool(),
+		s.createBlockRemoveRefTool(),
+		s.createBlockUpdateRefTool(),
+		s.createIndicatorDefineTool(),
+		s.createTriggerDefineTool(),
+		s.createMemoryRetrieveTool(),
+		s.createBlockListTypesTool(),
 	}
 }
 

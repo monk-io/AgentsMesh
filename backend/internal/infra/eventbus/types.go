@@ -71,6 +71,9 @@ const (
 	// Channel membership events
 	EventChannelMemberAdded   EventType = "channel:member_added"
 	EventChannelMemberRemoved EventType = "channel:member_removed"
+
+	// Blockstore events
+	EventBlockstoreOp EventType = "blockstore:op"
 )
 
 // ===== System Events (Category: system) =====

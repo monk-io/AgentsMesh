@@ -1,0 +1,4 @@
+# Generated .pb.go stubs. Built by `bazel build //proto/runner/v1:runner_go_proto`
+# (synced into this tree by build_defs/go/golangci_lint_runner.sh before lint
+# runs, so golangci-lint's typecheck pass can resolve the proto module).
+gen/

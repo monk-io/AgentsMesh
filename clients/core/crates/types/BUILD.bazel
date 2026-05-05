@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+# Foundational domain types shared across every crate in `clients/core`.
+# No network / no serde_json::Value at the public API layer — just plain
+# `#[derive(Serialize, Deserialize)]` structs and enums.
+rust_library(
+    name = "types",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_types",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
+
+# `cargo test`-equivalent. The types crate has no dev-only deps.
+rust_test(
+    name = "types_test",
+    crate = ":types",
+    edition = "2021",
+)

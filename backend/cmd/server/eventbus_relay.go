@@ -76,13 +76,15 @@ func setupRelayTokenRefreshCallback(
 			return
 		}
 
-		// Send SubscribePod command with new token back to runner
+		// Send SubscribePod command with new token back to runner.
+		// localToken is "" here: this path only refreshes the cloud-relay runner token.
 		if err := commandSender.SendSubscribePod(
 			context.Background(),
 			runnerID,
 			data.PodKey,
 			data.RelayUrl,
 			newToken,
+			"",   // localToken: cloud-relay refresh doesn't touch local relay
 			true, // include snapshot (runner will resend after reconnect)
 			1000, // snapshot history lines
 		); err != nil {

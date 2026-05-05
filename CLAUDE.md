@@ -4,64 +4,131 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AgentsMesh is **The AI Agent Workforce Platform** — where teams scale beyond headcount. It supports Claude Code, Codex CLI, Gemini CLI, Aider, and more. It consists of four main components:
+AgentsMesh is **The AI Agent Workforce Platform** — where teams scale beyond headcount. It supports Claude Code, Codex CLI, Gemini CLI, Aider, and more.
 
-- **Backend**: Go API server (Gin + GORM)
-- **Web**: Next.js frontend (App Router + TypeScript + Tailwind CSS)
-- **Web-Admin**: Admin Console frontend (Next.js + Tailwind CSS) - internal management interface
-- **Runner**: Go daemon that executes AI agent tasks in isolated PTY environments
+### Components
 
-## Development Environment (Docker)
+Server-side (Go):
+- **Backend** (`backend/`): API server (Gin + GORM). REST for clients, gRPC + mTLS to Runner. Owns auth, org/team/user, pod lifecycle, ticket/channel, billing, PKI for runner certs. PostgreSQL + Redis.
+- **Relay** (`relay/`): WebSocket relay for the terminal data plane. Browser / Desktop / iOS ↔ Relay ↔ Runner (binary protocol). Backend never touches PTY bytes.
+- **Runner** (`runner/`): Self-hosted daemon. Connects to Backend via gRPC bidi stream. Spawns isolated PTY pods that run the actual AI agents (Claude Code / Codex / Aider / …).
 
-**Always use `deploy/dev` Docker environment for development and debugging.** This setup includes Traefik reverse proxy and mirrors production architecture, helping catch issues early.
+Client-side:
+- **Rust Core** (`clients/core/`): **Business-logic SSOT.** 10 crates compiled to WASM (Web / Desktop) + native dylib via UniFFI (iOS XCFramework). Owns the authoritative cache, DTOs, and services — auth, blockstore, channels, tickets, mesh, autopilot. Front-ends are thin views over it. **Modify state in Rust, not in Zustand / TCA / etc.**
+- **Web** (`clients/web/`): Next.js (App Router + TS + Tailwind). Loads `agentsmesh-wasm` at boot; UI state mirrors Rust selectors via `_tick` triggers.
+- **Web-Admin** (`clients/web-admin/`): Next.js admin console mounted at `/admin`. Internal-only — gated on `is_system_admin`.
+- **Desktop** (`clients/desktop/`): Electron + electron-vite. Renderer reuses `clients/web` source; main-process node-bridge proxies IPC to the same Rust Core (native NAPI build).
+- **iOS** (`clients/ios/`): SwiftUI + TCA. Consumes the Rust Core via UniFFI-generated Swift bindings. Same DTOs, same services, ~zero duplicated business logic.
 
-### Quick Start (Recommended)
+## Development Environment
+
+**Bazel host-side mode**: Go services (backend / runner / relay) and the
+Next.js apps (web / web-admin) all run on your host via `ibazel run` /
+`bazel run :next_dev`. Docker only hosts stateful infrastructure
+(PostgreSQL, Redis, MinIO, Traefik, Jaeger, Gitea, OTel collector,
+Adminer). This means **every Go binary the dev environment runs is the
+same artifact CI's `bazel build` produces** — no air, no per-service
+Dockerfile, no parallel compile path.
+
+### Quick Start
 
 ```bash
-cd deploy/dev
-./dev.sh               # One-click: starts Docker backend + local frontend
-./dev.sh --clean       # Stop and clean up everything
+bazel run //deploy/dev:up                # docker infra + host backend/relay/runner + host web/web-admin
+bazel run //deploy/dev:clean             # stop everything, drop docker volumes, clear runtime/
+bazel run //deploy/dev:reset_runners     # only restart host runner+relay (backend stays up)
+bazel run //deploy/dev:rebuild_runner    # rebuild runner binary + restart container
+bazel run //deploy/dev:backend_only      # CI-style: skip frontends
 ```
 
-This script automatically:
-1. Generates `.env` with worktree-isolated ports (supports multiple worktrees)
-2. Starts Docker backend services (PostgreSQL, Redis, MinIO, Backend, Traefik, Runner)
-3. Runs database migrations and seeds test data
-4. Starts local frontend (Next.js with Turbopack) for better performance
+> Backward-compat: `cd deploy/dev && ./dev.sh [--clean|--reset-runners|...]`
+> still works — same flags, same behavior.
 
-### Services & Ports (main worktree)
+Prerequisites (one-time):
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Next.js (local, Turbopack) |
-| **API** | http://localhost:80/api | Backend API via Traefik |
-| **Traefik Dashboard** | http://localhost:8080 | Traefik dashboard (dev only) |
-| **Adminer** | http://localhost:8081 | Database management UI |
-| **MinIO Console** | http://localhost:9001 | S3-compatible storage UI |
-| PostgreSQL | localhost:5432 | Database (user: agentsmesh, pass: agentsmesh_dev) |
-| Redis | localhost:6379 | Cache |
+```bash
+brew install bazelisk                        # macOS (bazel)
+# ibazel is GitHub-Release-only (no homebrew formula); pick the
+# darwin-arm64 binary off https://github.com/bazelbuild/bazel-watcher/releases
+npm i -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli  # for runner pods
+```
+
+The dev pipeline automatically:
+1. Generates `.env` with worktree-isolated ports (3 host service ports added: BACKEND_HTTP_PORT / BACKEND_GRPC_PORT / RELAY_HTTP_PORT)
+2. Generates traefik dynamic configs that route `host.docker.internal:<host-port>`
+3. Starts the docker infra stack
+4. Runs migrations via the `migrate/migrate` oneshot service (no backend container needed)
+5. Launches `ibazel run` for backend / relay / runner in the background, with isolated `$HOME` for the runner so its `~/.claude/*` writes don't touch your real configs
+6. Starts `bazel run //clients/web:next_dev` and `//clients/web-admin:next_dev`
+
+### Services & Ports (offset 0 / main worktree)
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| **Frontend** | http://localhost:10007 | Bazel `next_dev` (host) |
+| **Admin Console** | http://localhost:10011 | Bazel `next_dev` (host) |
+| **API** | http://localhost:10000/api | traefik → host backend :10015 |
+| **Relay** | ws://localhost:10000/relay | traefik → host relay :10017 |
+| **gRPC mTLS** | grpcs://localhost:10001 | traefik passthrough → host backend :10016 |
+| Postgres | localhost:10002 | docker |
+| Redis | localhost:10003 | docker |
+| MinIO API/Console | localhost:10004 / 10005 | docker |
+| Adminer | localhost:10006 | docker |
+| Traefik Dashboard | localhost:10008 | docker |
+| Gitea HTTP/SSH | localhost:10009 / 10010 | docker |
+| OTel gRPC/HTTP | localhost:10012 / 10013 | docker |
+| Jaeger UI | localhost:10014 | docker |
+
+Each worktree adds offset×50 to every slot.
 
 Test accounts:
 - **User**: dev@agentsmesh.local / devpass123
 - **Admin**: admin@agentsmesh.local / adminpass123
 
-> **Note**: All ports are dynamically allocated based on worktree. Check `deploy/dev/.env` for actual ports (e.g., WEB_PORT, HTTP_PORT).
-
 ### Logs
 
 ```bash
-tail -f deploy/dev/web.log       # Frontend logs
-docker compose logs -f backend   # Backend logs
-docker compose logs -f runner    # Runner logs
+tail -f deploy/dev/runtime/backend/backend.log   # ibazel + backend stdout
+tail -f deploy/dev/runtime/relay/relay.log
+tail -f deploy/dev/runtime/runner/runner.log
+tail -f deploy/dev/web.log                       # bazel next_dev (web)
+docker compose logs -f postgres                  # docker infra
 ```
 
 ### Hot Reload
 
-- **Frontend**: Next.js Turbopack fast refresh (local)
-- **Backend**: Go code auto-rebuild via Air (Docker)
-- **Runner**: Go code auto-rebuild (Docker)
+- **Frontend (web / web-admin)**: Next.js dev server fast refresh
+- **Go services (backend / runner / relay)**: `ibazel run //path:target` — watches Bazel's dependency graph and rebuilds incrementally on `.go` change. Same compile path as `bazel test //...`, no parallel toolchain.
 
 ## Build Commands (for CI/testing outside Docker)
+
+> **Note — Bazel migration in progress.** The Bazel-based build system
+> (see `.claude/plans/snuggly-spinning-dewdrop.md`) is landing
+> incrementally. Until it's complete the **legacy commands below stay
+> authoritative**; Bazel targets listed under "Bazel (migration)" are
+> opt-in and verified in CI on `bazel.yml` only.
+
+### Bazel (migration in progress)
+
+```bash
+# One-shot validation that the workspace still parses
+bazel info workspace
+bazel run //:buildifier_check
+
+# Regenerate Go BUILD.bazel files after editing imports / adding packages
+bazel run //:gazelle
+
+# Build a Go binary + its OCI image
+bazel build //backend/cmd/server:server
+bazel build //backend/cmd/server:image
+bazel run //backend/cmd/server:image_tarball   # → docker load
+
+# Build the Rust → XCFramework chain (once Phase 3b is live)
+bazel build //clients/core/crates/ffi:AgentsMeshCore
+
+# Build the iOS app (once Phase 5 is live)
+bazel build //clients/ios:AgentsMesh
+bazel run //clients/ios:AgentsMesh_xcodeproj   # → Xcode project
+```
 
 ### Backend (Go)
 
@@ -74,35 +141,118 @@ go test -v ./internal/service/... -run TestAuth  # Run specific test
 
 ### Web (Next.js)
 
+所有前端的依赖（web / web-admin / desktop）统一放在根 `package.json`。
+Per-app `package.json` 已删（desktop 仅留 thin shell 满足 electron-builder
+读 `name`/`version`/`main` 的需求）。Lint / type-check / 单测全部走 Bazel：
+
 ```bash
-cd web
-pnpm install                     # Install dependencies
-pnpm build                       # Production build
-pnpm lint                        # ESLint
-pnpm test                        # Run tests (Vitest)
-pnpm test:run                    # Run tests once
-pnpm test:coverage               # Test coverage
+pnpm install                              # Install at repo root (one-shot)
+bazel run //clients/web:next_dev          # Dev server (preferred)
+bazel build //clients/web:image           # Production OCI image
+bazel test //clients/web:unit             # Vitest (1510 tests)
+bazel test //clients/web:lint             # ESLint
+bazel build //clients/web:src             # tsc --noEmit (type check)
+bazel test //clients/web-admin:lint       # ESLint web-admin
+bazel build //clients/web-admin:src       # tsc --noEmit web-admin
+
+# Dev server shell alternative (for IDE / non-Bazel workflows)
+(cd clients/web && node ../../node_modules/next/dist/bin/next dev --turbopack)
 ```
 
 ### Web-Admin (Next.js)
 
 ```bash
-cd web-admin
-pnpm install                     # Install dependencies
-pnpm build                       # Production build
-pnpm lint                        # ESLint
-pnpm dev                         # Start development server
+bazel run //clients/web-admin:next_dev
+bazel build //clients/web-admin:image
+bazel test //clients/web-admin:lint
+bazel build //clients/web-admin:src
+```
+
+### Desktop (Electron)
+
+Desktop 也走单根 `package.json`（thin shell 仅含 `name`/`version`/`main`，
+所有 deps 在根）。Bazel-native build pipeline（自写 `electron_builder_app`
+macro，包住 electron-vite + electron-builder）：
+
+```bash
+# Production build — main + preload + renderer bundles (Bazel)
+bazel build //clients/desktop:out
+
+# Package — .dmg / .zip / .app (macOS), .exe (Win), .AppImage (Linux)
+# `electron_builder` tag opts in to the heavy packaging targets that
+# `bazel build //...` skips. Output: bazel-bin/clients/desktop/dist/
+bazel build //clients/desktop:dist --build_tag_filters=electron_builder
+
+# Dev (electron-vite dev server still goes through node)
+(cd clients/desktop && node ../../node_modules/electron-vite/bin/electron-vite.js dev)
+
+# E2E (requires `:out` already built)
+bazel test //clients/desktop:e2e --test_tag_filters=e2e
 ```
 
 ### Runner (Go)
 
 ```bash
-cd runner
-make build                       # Build binary (no CGO required)
-make test                        # Run tests
-make lint                        # golangci-lint
-make build-all                   # Cross-platform builds
+bazel build //runner/cmd/runner:runner            # Native binary
+bazel test //runner/...                            # Run tests
+bazel build //runner/cmd/runner:image              # OCI image (distroless)
+bazel build //runner/cmd/runner:release_assets     # 6-platform tar.gz/zip + checksums
+bazel run //runner:lint                            # golangci-lint (hermetic v2.11.4)
 ```
+
+Release assets (`release_assets`) replace the previous GoReleaser
+pipeline: 6 cross-compiled binaries (linux/darwin/windows ×
+amd64/arm64) packaged as tar.gz/zip, plus `checksums.txt`. The
+release.yml workflow stamps version into the staged filenames and
+runs `rcodesign` over darwin binaries before `gh release create`.
+
+### Go Lint (backend / runner / relay)
+
+```bash
+bazel run //backend:lint    # golangci-lint over backend/
+bazel run //runner:lint     # golangci-lint over runner/
+bazel run //relay:lint      # golangci-lint over relay/
+```
+
+The golangci-lint binary is fetched hermetically by `rules_multitool`
+(`multitool.lock.json` pins v2.11.4 across linux/macOS amd64+arm64).
+Each module reads its own `.golangci.yml`. CI runs the same
+`bazel run //<module>:lint` commands — no parallel `golangci-lint-action`.
+
+### iOS (SwiftUI + TCA, powered by Rust Core via UniFFI)
+
+```bash
+# One-time setup
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+brew install xcodegen        # generates AgentsMesh.xcodeproj
+
+# Build AgentsMeshCore.xcframework (consumed by clients/ios SPM package)
+bazel build //clients/core/crates/ffi:AgentsMeshCore
+
+# Or one-shot (xcframework + symlink into SPM + xcodegen):
+cd clients/ios && make ios-setup
+
+# Then open in Xcode:
+open AgentsMesh.xcodeproj
+```
+
+Bazel tree artifact:
+- `bazel-bin/clients/core/crates/ffi/AgentsMeshCore.xcframework/` — device + universal-sim slices + `Info.plist`
+- `bazel-bin/clients/core/crates/ffi/AgentsMeshCore_bindings_out/AgentsMeshCore.swift` — Swift glue (~18k lines)
+
+`make link-core` symlinks those two into the SPM tree at
+`clients/ios/Packages/AgentsMeshCore/Sources/AgentsMeshCoreFFI/` and
+`.../AgentsMeshCore/Generated/` respectively.
+
+Layout:
+- `clients/ios/Packages/AgentsMeshCore/` — SPM facade: CoreBridge (singleton),
+  KeychainStorage (StorageCallback impl), EventStream, PodOutputDispatcher
+- `clients/ios/Packages/AgentsMeshFeatures/` — TCA reducers + SwiftUI views:
+  AppFeature (root), AuthFeature (login), WorkspaceFeature (pod list),
+  TerminalFeature (SwiftTerm + Relay WS), DesignSystem (tokens + primitives)
+- `clients/ios/App/` — Xcode App target (@main entry, Info.plist)
+
+Requirements: macOS with Xcode 15+. CI: `.github/workflows/ios.yml` (macOS runner).
 
 ### Database Migrations
 
@@ -110,8 +260,7 @@ Migrations are located in `backend/migrations/` using golang-migrate format.
 
 **Development** (via Docker):
 ```bash
-cd deploy/dev
-./dev.sh               # Automatically runs all migrations
+bazel run //deploy/dev:up    # automatically runs all migrations
 ```
 
 **Production** (via backend container):
@@ -210,7 +359,7 @@ backend/
 ## Web Structure
 
 ```
-web/src/
+clients/web/src/
 ├── app/                  # Next.js App Router
 │   ├── (auth)/           # Auth pages (login, register)
 │   ├── (dashboard)/      # Dashboard pages
@@ -226,7 +375,7 @@ web/src/
 ## Web-Admin Structure (Admin Console)
 
 ```
-web-admin/src/
+clients/web-admin/src/
 ├── app/                  # Next.js App Router (basePath: /admin)
 │   ├── login/            # GitLab SSO login page
 │   ├── auth/callback/    # OAuth callback handler
@@ -295,7 +444,7 @@ runner/
 
 ## Configuration
 
-**Development** (Docker): Run `cd deploy/dev && ./dev.sh` - auto-generates all configs
+**Development** (Docker): Run `bazel run //deploy/dev:up` - auto-generates all configs
 
 **Runner**: `~/.agentsmesh/config.yaml` (created after `runner register`)
 
@@ -349,6 +498,7 @@ Or use an existing admin to grant privileges via the Admin Console UI.
 
 ## Principles
 * Architecture must conform to SOLID, GRASP, and YAGNI.
+* **代码即 SSOT — 不要解释 what，只解释 why。** 注释能删则删。可以写注释的场景：业务约束、跨模块契约、解决方案的非显然取舍 (workaround 原因)。绝不能写：复述函数名/类型名的注释、`// 创建 X` 之上紧跟 `CreateX()`、section banner、文档化签名的 JSDoc。代码不够自解释就改代码，不要靠注释补救。
 * **Hard limit: every file must stay under 200 lines** (excluding test files, which should stay under 400 lines). When a file approaches this limit, proactively split it by SRP — extract types, helpers, hooks, or sub-components into separate files. A 210-line file is acceptable if splitting would break cohesion; a 300+ line file is never acceptable and must be split before committing.
 * **Code is the single source of truth — comments that can be eliminated, must be eliminated.** Only comment to explain **why** something non-obvious exists (business constraints, cross-module contracts, workarounds). Never comment **what** code does — if the code isn't self-explanatory, rewrite the code. No JSDoc that restates the function signature, no `// Create X` above `CreateX()`, no section banners.
 * **File names must be specific and descriptive.** Never use generic names like `helpers`, `utils`, `common`, `misc`, `shared`. Name files after what they contain — e.g., `mesh-status-info.ts` not `mesh-helpers.ts`, `runner-display-info.ts` not `runner-utils.ts`. 

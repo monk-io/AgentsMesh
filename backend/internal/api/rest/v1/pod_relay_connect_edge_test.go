@@ -32,12 +32,12 @@ func TestGetPodConnection_SubscribePodError_StillSucceeds(t *testing.T) {
 		},
 	}
 	sender := &mockRelayCommandSenderConfigurable{
-		sendSubscribePodFn: func(context.Context, int64, string, string, string, bool, int32) error {
+		sendSubscribePodFn: func(context.Context, int64, string, string, string, string, bool, int32) error {
 			return errors.New("runner disconnected")
 		},
 	}
 
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -71,7 +71,7 @@ func TestGetPodConnection_NilCommandSender_SkipsSubscribe(t *testing.T) {
 	}
 
 	// nil commandSender — should skip the subscribe block entirely
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, nil, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -104,13 +104,13 @@ func TestGetPodConnection_ZeroRunnerID_SkipsSubscribe(t *testing.T) {
 	}
 	subscribeCalled := false
 	sender := &mockRelayCommandSenderConfigurable{
-		sendSubscribePodFn: func(context.Context, int64, string, string, string, bool, int32) error {
+		sendSubscribePodFn: func(context.Context, int64, string, string, string, string, bool, int32) error {
 			subscribeCalled = true
 			return nil
 		},
 	}
 
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil, nil)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -149,7 +149,7 @@ func TestGetPodConnection_WithGeoResolver(t *testing.T) {
 		},
 	}
 
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, resolver)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil, resolver)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}
@@ -189,7 +189,7 @@ func TestGetPodConnection_GeoResolverReturnsNil(t *testing.T) {
 		},
 	}
 
-	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, resolver)
+	handler := NewPodConnectHandler(podSvc, mgr, tokenGen, sender, nil, resolver)
 
 	c, w := newRelayConnectContext(http.MethodGet, "/pods/pod-abc/relay/connect")
 	c.Params = gin.Params{{Key: "key", Value: "pod-abc"}}

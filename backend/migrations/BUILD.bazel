@@ -1,0 +1,10 @@
+# Expose slug-reserved migration files for cross-source sync verification
+# (//backend/pkg/slugkit:slugkit_test). Migration .sql files aren't built
+# by Bazel — they're applied by golang-migrate at deploy time — so this
+# package only needs an exports_files entry.
+
+filegroup(
+    name = "slug_reserved_migrations",
+    srcs = glob(["*slug_reserved*.up.sql"]),
+    visibility = ["//backend/pkg/slugkit:__pkg__"],
+)

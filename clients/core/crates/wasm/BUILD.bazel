@@ -1,0 +1,49 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//build_defs/rust:wasm.bzl", "rust_wasm_library")
+
+# WASM layer — re-exports the services/state surface through wasm-bindgen
+# for browser consumption. Compiled as a cdylib; the rust_wasm_library
+# macro below wraps it with wasm-bindgen CLI to produce the ESM package
+# that `clients/web` imports.
+rust_library(
+    name = "wasm_lib",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_wasm",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/api-client:api_client",
+        "//clients/core/crates/auth",
+        "//clients/core/crates/events",
+        "//clients/core/crates/persistence",
+        "//clients/core/crates/protocol",
+        "//clients/core/crates/relay",
+        "//clients/core/crates/services",
+        "//clients/core/crates/state",
+        "//clients/core/crates/transport",
+        "//clients/core/crates/types",
+        "@crates//:console_error_panic_hook",
+        "@crates//:js-sys",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:wasm-bindgen",
+        "@crates//:wasm-bindgen-futures",
+        "@crates//:web-sys",
+    ],
+)
+
+rust_test(
+    name = "wasm_lib_test",
+    crate = ":wasm_lib",
+    edition = "2021",
+)
+
+# Phase 3a — produce the ESM `pkg/` directory consumed by
+# `clients/web:web` via `npm_link_package`.
+rust_wasm_library(
+    name = "wasm_pkg",
+    crate = ":wasm_lib",
+    target = "web",
+    visibility = ["//clients/web:__subpackages__"],
+)

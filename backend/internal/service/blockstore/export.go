@@ -1,0 +1,87 @@
+package blockstoreservice
+
+import (
+	"context"
+
+	"github.com/anthropics/agentsmesh/backend/internal/domain/blockstore"
+	"github.com/google/uuid"
+)
+
+// WorkspaceExport is the wire shape returned by ExportWorkspace. It embeds
+// everything needed to reconstruct a workspace offline: the workspace row,
+// all non-deleted blocks, every ref, and the full op log (oldest first).
+type WorkspaceExport struct {
+	Workspace *blockstore.BlockWorkspace `json:"workspace"`
+	Blocks    []*blockstore.Block        `json:"blocks"`
+	Refs      []*blockstore.BlockRef     `json:"refs"`
+	Ops       []*blockstore.BlockOp      `json:"ops"`
+	ExportedAt string                    `json:"exported_at"`
+}
+
+// ExportWorkspace dumps the caller's workspace in a form suitable for backup,
+// manual inspection, or reimport on another instance. Phase 4 MVP returns
+// everything in one JSON document — streaming + paging is future work if the
+// dump grows past a few MB.
+func (s *Service) ExportWorkspace(
+	ctx context.Context,
+	actor ActorContext,
+	wsID uuid.UUID,
+) (*WorkspaceExport, error) {
+	ws, err := s.repo.GetWorkspace(ctx, wsID)
+	if err != nil {
+		return nil, err
+	}
+	if ws.OrganizationID != actor.OrgID {
+		return nil, blockstore.ErrOrgMismatch
+	}
+
+	blocks, _, err := s.repo.ListBlocks(ctx, blockstore.BlockFilter{
+		WorkspaceID:    wsID,
+		IncludeDeleted: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	refs, err := s.repo.ListRefs(ctx, blockstore.RefFilter{
+		WorkspaceID: wsID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var ops []*blockstore.BlockOp
+	// Page through the op stream with a large batch size until drained.
+	after := int64(0)
+	for {
+		page, err := s.repo.StreamOps(ctx, blockstore.OpStreamFilter{
+			WorkspaceID: wsID, AfterID: after, Limit: 1000,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(page) == 0 {
+			break
+		}
+		ops = append(ops, page...)
+		after = page[len(page)-1].ID
+	}
+
+	return &WorkspaceExport{
+		Workspace:  ws,
+		Blocks:     blocks,
+		Refs:       refs,
+		Ops:        ops,
+		ExportedAt: nowISO(),
+	}, nil
+}
+
+// nowISO indirection keeps tests patchable without pulling in time.Now directly.
+func nowISO() string { return currentTimeProvider() }
+
+// Var so tests can override.
+var currentTimeProvider = defaultTimeProvider
+
+func defaultTimeProvider() string {
+	return timeNowUTC().Format("2006-01-02T15:04:05Z07:00")
+}

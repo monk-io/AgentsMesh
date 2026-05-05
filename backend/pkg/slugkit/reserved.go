@@ -2,12 +2,12 @@ package slugkit
 
 // reserved enumerates slug values that conflict with built-in routes,
 // public marketing pages, or system endpoints. Both the Go and TypeScript
-// reserved sets MUST stay in sync — see web/src/lib/slug/reserved.ts.
+// reserved sets MUST stay in sync — see clients/web/src/lib/slug/reserved.ts.
 //
 // Categories:
 //   - Auth flows: auth, login, logout, register, verify-email, ...
 //   - Dashboard chrome: settings, support, dashboard, billing
-//   - Marketing pages (web/src/app/*): about, blog, careers, ...
+//   - Marketing pages (clients/web/src/app/*): about, blog, careers, ...
 //   - API/system paths: api, www, app
 //   - Onboarding/special endpoints: onboarding, personal, invite
 //   - Polite booby-traps that look like literals: me, new, null, true, false, undefined

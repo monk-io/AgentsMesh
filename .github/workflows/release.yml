@@ -1,3 +1,15 @@
+# Production release pipeline — triggered by main branch pushes and
+# version tags. Separate from bazel.yml (PR gate) because this workflow
+# runs against self-hosted deploy runners and coordinates dual-region
+# rollout (US West + CN) plus GoReleaser for the runner CLI.
+#
+# Image build strategy:
+#   All services (backend / runner / relay / web / web-admin) build via
+#   Bazel rules_oci. Each target exposes `//<path>:image_push_dockerhub`
+#   and `:image_push_agentsmesh`; the tag list (latest + version +
+#   minor) is stamped from `build_defs/workspace_status.sh`, which reads the
+#   IMAGE_VERSION + IMAGE_MINOR env vars this workflow sets.
+
 name: Release
 
 on:
@@ -7,10 +19,8 @@ on:
       - "v*"
 
 env:
-  REGISTRY: registry.agentsmesh.ai
-  DOCKERHUB_NAMESPACE: agentsmesh
-  GO_VERSION: "1.25"
-  REGISTRY_PREFIX: "registry.agentsmesh.ai/library/"
+  DOCKERHUB_REGISTRY: docker.io
+  AGENTSMESH_REGISTRY: registry.agentsmesh.ai
 
 jobs:
   # ===========================================================================
@@ -37,103 +47,112 @@ jobs:
               - 'backend/**'
               - 'proto/**'
               - 'agentfile/**'
-              - 'ci/backend.Dockerfile'
             web:
-              - 'web/**'
-              - 'ci/web.Dockerfile'
+              - 'clients/web/**'
             web-admin:
-              - 'web-admin/**'
-              - 'ci/web-admin.Dockerfile'
+              - 'clients/web-admin/**'
             relay:
               - 'relay/**'
-              - 'ci/relay.Dockerfile'
             migrations:
               - 'backend/migrations/**'
 
   # ===========================================================================
-  # Build and push Docker images (only changed services)
+  # Compute version tag once — shared by every build-images matrix shard.
+  # ===========================================================================
+
+  version:
+    name: Compute Version Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.compute.outputs.version }}
+      minor: ${{ steps.compute.outputs.minor }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: compute
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            # v1.2.3 → version=1.2.3, minor=1.2
+            full="${GITHUB_REF#refs/tags/v}"
+            minor="${full%.*}"
+          else
+            # main push → version=sha-abc1234, minor=latest (deduplicates
+            # against the always-on 'latest' tag but harmless)
+            full="sha-${GITHUB_SHA::7}"
+            minor="latest"
+          fi
+          echo "version=${full}" >> "$GITHUB_OUTPUT"
+          echo "minor=${minor}" >> "$GITHUB_OUTPUT"
+
+  # ===========================================================================
+  # Build + push Docker images via Bazel rules_oci (dual-registry).
   # ===========================================================================
 
   build-images:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs: version
     strategy:
       fail-fast: false
       matrix:
         include:
           - service: backend
-            dockerfile: ci/backend.Dockerfile
-            context: .
-            use_ecr: true
-          - service: web
-            dockerfile: ci/web.Dockerfile
-            context: ./web
-            use_ecr: true
-          - service: web-admin
-            dockerfile: ci/web-admin.Dockerfile
-            context: ./web-admin
-            use_ecr: true
+            target: //backend/cmd/server:image
+          - service: runner
+            target: //runner/cmd/runner:image
           - service: relay
-            dockerfile: ci/relay.Dockerfile
-            context: .
-            use_ecr: true
+            target: //relay/cmd/relay:image
+          - service: web
+            target: //clients/web:image
+          - service: web-admin
+            target: //clients/web-admin:image
     outputs:
-      version: ${{ steps.version.outputs.tag }}
+      version: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v6
-
-      - name: Set version tag
-        id: version
-        run: echo "tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
+          registry: ${{ env.DOCKERHUB_REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Log in to AgentsMesh Registry
         uses: docker/login-action@v4
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.AGENTSMESH_REGISTRY }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-        with:
-          driver-opts: |
-            image=registry.agentsmesh.ai/library/buildkit:buildx-stable-1
+      # rules_oci's oci_push reads ~/.docker/config.json for auth, so
+      # the two `docker login` steps above already provisioned creds.
+      # bazel run invokes the push action which tags via the stamped
+      # build_defs/workspace_status.sh keys.
+      - name: Push to Docker Hub
+        env:
+          IMAGE_VERSION: ${{ needs.version.outputs.version }}
+          IMAGE_MINOR: ${{ needs.version.outputs.minor }}
+        run: |
+          bazel run \
+            --stamp \
+            --workspace_status_command=build_defs/workspace_status.sh \
+            ${{ matrix.target }}_push_dockerhub
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: |
-            ${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.service }}
-            ${{ env.REGISTRY }}/agentsmesh/${{ matrix.service }}
-          tags: |
-            # main branch: short sha + latest
-            type=sha,enable={{is_default_branch}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            # version tags: v1.0.0, v1.0
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
-      - name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            GO_VERSION=${{ env.GO_VERSION }}
-            REGISTRY_PREFIX=${{ matrix.use_ecr && env.REGISTRY_PREFIX || '' }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
-          platforms: linux/amd64
+      - name: Push to AgentsMesh Registry
+        env:
+          IMAGE_VERSION: ${{ needs.version.outputs.version }}
+          IMAGE_MINOR: ${{ needs.version.outputs.minor }}
+        run: |
+          bazel run \
+            --stamp \
+            --workspace_status_command=build_defs/workspace_status.sh \
+            ${{ matrix.target }}_push_agentsmesh
 
   # ===========================================================================
   # Deploy US West production (independent parallel jobs, changes-based)
@@ -264,14 +283,24 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - uses: bazel-contrib/setup-bazel@0.9.1
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: runner/go.sum
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
 
-      - name: Install rcodesign (macOS code signing)
+      # Bazel cross-compiles 6 platform binaries (linux/darwin/windows ×
+      # amd64/arm64), packs each into tar.gz/zip, and emits checksums.txt.
+      # The hermetic Go SDK + rules_pkg replace the goreleaser-action that
+      # previously did the same job via `go build` + nfpm. See
+      # build_defs/release/release_bundle.bzl.
+      - name: Build release assets
+        run: bazel build //runner/cmd/runner:release_assets
+
+      # Install rcodesign — cross-platform Apple code signing tool. Runs on
+      # ubuntu-latest because rcodesign signs Mach-O binaries from any host
+      # OS (signing is byte-level patching, not a macOS-only API).
+      - name: Install rcodesign
         run: |
           RCODESIGN_VERSION="0.29.0"
           cd /tmp
@@ -279,18 +308,292 @@ jobs:
           sudo cp ./apple-codesign-*/rcodesign /usr/local/bin/
           rm -rf ./apple-codesign-*
 
-      - name: Release with GoReleaser
-        uses: goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
-          workdir: runner
+      # Bazel can't include stamp data in output filenames (analysis-time
+      # constraint), so we copy + rename to insert the version segment
+      # before uploading. Final names: `agentsmesh-runner_<TAG>_<goos>_<goarch>.{tar.gz,zip}`.
+      # macOS archives get re-packed after rcodesign signs the binary in place.
+      - name: Stage + sign release artifacts
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_KEY_ISSUER_ID: ${{ secrets.APPLE_API_KEY_ISSUER_ID }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          ENTITLEMENTS: ${{ github.workspace }}/runner/build/darwin/entitlements.plist
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF#refs/tags/v}"
+          mkdir -p release-staging
+          sign_script="${GITHUB_WORKSPACE}/runner/build/scripts/sign-darwin.sh"
+
+          for arch in bazel-bin/runner/cmd/runner/agentsmesh-runner_*.tar.gz \
+                     bazel-bin/runner/cmd/runner/agentsmesh-runner_*.zip; do
+              base="$(basename "$arch")"
+              new_name="${base/agentsmesh-runner_/agentsmesh-runner_${version}_}"
+              dest="${GITHUB_WORKSPACE}/release-staging/${new_name}"
+
+              # macOS binaries need rcodesign before being repacked. Linux /
+              # Windows archives pass through unchanged.
+              if [[ "$base" == *darwin*.tar.gz ]]; then
+                  tmp="$(mktemp -d)"
+                  tar -xzf "$arch" -C "$tmp"
+                  (cd "$tmp" && "$sign_script" agentsmesh-runner)
+                  tar -C "$tmp" -czf "$dest" agentsmesh-runner README.md LICENSE
+                  rm -rf "$tmp"
+              else
+                  cp "$arch" "$dest"
+              fi
+          done
+
+          # Recompute checksums.txt against the FINAL staged archives. The
+          # Bazel-emitted checksums.txt is invalid for darwin entries
+          # (re-packed after signing) and uses the pre-rename names.
+          # `sha256sum` (GNU coreutils) is preinstalled on ubuntu-latest;
+          # macOS runners don't run this job, so no `shasum` fallback needed.
+          (
+              cd release-staging
+              sha256sum agentsmesh-runner_*.tar.gz agentsmesh-runner_*.zip > checksums.txt
+          )
+          ls -la release-staging/
+          cat release-staging/checksums.txt
+
+      # Generate the release notes from `git log` between the previous
+      # tag and this one. Replaces GoReleaser's `changelog:` block —
+      # same conventional-commit grouping, no extra tooling.
+      - name: Generate changelog
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF#refs/tags/v}"
+          previous_tag="$(git describe --tags --abbrev=0 "${GITHUB_REF}^" 2>/dev/null || echo "")"
+          {
+            echo "## AgentsMesh Runner v${version}"
+            echo ""
+            echo "AgentsMesh Runner is an AI Agent task executor that connects to the AgentsMesh server and executes AI agent tasks in isolated terminal environments."
+            echo ""
+            echo "### Quick Install"
+            echo ""
+            echo '**macOS / Linux (one-line):**'
+            echo '```bash'
+            echo 'curl -fsSL https://agentsmesh.ai/install.sh | sh'
+            echo '```'
+            echo ""
+            echo '**Windows (PowerShell):**'
+            echo '```powershell'
+            echo 'irm https://agentsmesh.ai/install.ps1 | iex'
+            echo '```'
+            echo ""
+            if [[ -n "$previous_tag" ]]; then
+              echo "### Changes since ${previous_tag}"
+              echo ""
+              # Conventional-commit groups, mirroring the old goreleaser config.
+              for prefix in "feat" "fix" "perf"; do
+                title=""
+                case "$prefix" in
+                  feat) title="### New Features" ;;
+                  fix) title="### Bug Fixes" ;;
+                  perf) title="### Performance" ;;
+                esac
+                entries="$(git log "${previous_tag}..${GITHUB_REF}" --pretty=format:'- %s' | grep -E "^- ${prefix}(\(.+\))?!?:" || true)"
+                if [[ -n "$entries" ]]; then
+                  echo "$title"
+                  echo ""
+                  echo "$entries"
+                  echo ""
+                fi
+              done
+            fi
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF#refs/tags/v}"
+          # `gh release create` is idempotent on tag re-runs (returns 0 + a
+          # warning if the release already exists). Pre-release detection
+          # mirrors goreleaser's `prerelease: auto` (anything with a `-`).
+          prerelease_flag=""
+          if [[ "$version" == *-* ]]; then
+              prerelease_flag="--prerelease"
+          fi
+          gh release create "${GITHUB_REF#refs/tags/}" \
+              --title "AgentsMesh Runner v${version}" \
+              --notes-file release-notes.md \
+              $prerelease_flag \
+              release-staging/*
+
+  # ===========================================================================
+  # Build AgentsMesh Desktop installers (tag only)
+  # Per-OS matrix because electron-builder calls native packagers
+  # (`hdiutil` on macOS, `nsis` on Windows, AppImage on Linux). Output
+  # is uploaded as a Release asset alongside the Runner CLI.
+  #
+  # `needs: [release]` because we attach desktop installers to the same
+  # GitHub Release the runner CLI created — `gh release upload` requires
+  # the release to already exist. `--clobber` makes it idempotent on
+  # rerun.
+  # ===========================================================================
+
+  desktop-package:
+    name: Desktop ${{ matrix.os.label }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [release]
+    runs-on: ${{ matrix.os.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - label: macOS
+            runner: macos-14
+            # `latest-mac.yml` ships next to the dmg/zip so electron-
+            # updater can poll the release for new versions.
+            installers: |
+              AgentsMesh-*.dmg
+              AgentsMesh-*.zip
+              latest-mac.yml
+          - label: Windows
+            runner: windows-latest
+            installers: |
+              AgentsMesh*.exe
+              latest.yml
+          - label: Linux
+            runner: ubuntu-latest
+            installers: |
+              AgentsMesh-*.AppImage
+              agentsmesh*.deb
+              latest-linux.yml
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      # `electron_builder_app(version = ...)` writes into the synthesised
+      # package.json that electron-builder consumes for installer file
+      # names. Bazel's `write_file` can't read `--stamp` STABLE_* keys,
+      # so we patch the literal at workflow time. The `DESKTOP_VERSION_STAMP`
+      # marker in BUILD.bazel keys the sed to the next `version = "..."`
+      # line, so bumping the dev placeholder doesn't drift the regex.
+      - name: Stamp desktop version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF#refs/tags/v}"
+          # `sed -E /marker/{n;s/.../.../}` — match marker, advance one
+          # line (the `version =` line), substitute. Works on both BSD
+          # (macOS runner) and GNU sed.
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+              sed -i '' -E '/DESKTOP_VERSION_STAMP/{n;s/version = "[^"]+"/version = "'"$version"'"/;}' clients/desktop/BUILD.bazel
+          else
+              sed -i -E '/DESKTOP_VERSION_STAMP/{n;s/version = "[^"]+"/version = "'"$version"'"/;}' clients/desktop/BUILD.bazel
+          fi
+          grep -A1 DESKTOP_VERSION_STAMP clients/desktop/BUILD.bazel
+
+      # `:dist` runs the full electron-vite + electron-builder pipeline.
+      # Sandbox is bypassed for the action (hdiutil / nsis / AppImage
+      # need real filesystem access), but Bazel's input/output graph
+      # still tracks the closure. ~3:30 from cold cache, dominated by
+      # the 100MB electron download.
+      #
+      # Signing matrix:
+      #   macOS  — CSC_LINK from MACOS_CERTIFICATE; notarization via
+      #            APPLE_API_KEY (path to .p8 decoded below) +
+      #            APPLE_API_KEY_ID + APPLE_API_ISSUER. We use the
+      #            App Store Connect API key path because the .p8 secret
+      #            already exists for the Runner CLI rcodesign flow.
+      #   Windows — CSC_LINK from WIN_CSC_LINK (Authenticode .pfx) +
+      #             WIN_CSC_KEY_PASSWORD. electron-builder reuses the
+      #             same env names cross-platform.
+      #   Linux  — unsigned (AppImage GPG + .deb signing not wired).
+      #
+      # Bazel's exec sandbox strips arbitrary host env from actions; the
+      # `--action_env` flags below allowlist the signing vars so they
+      # reach the electron-builder subprocess inside the action.
+      - name: Stage macOS notarization API key
+        if: matrix.os.runner == 'macos-14'
+        shell: bash
+        env:
+          APPLE_API_KEY_B64: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${APPLE_API_KEY_B64:-}" ]]; then
+            echo "WARN: APPLE_API_KEY secret not set — notarization will be skipped." >&2
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/apple"
+          # @electron/notarize (electron-builder's notarization driver)
+          # accepts APPLE_API_KEY as a file path, not the .p8 contents.
+          # Decode here, then expose the path via $GITHUB_ENV for the
+          # build step that follows.
+          echo "$APPLE_API_KEY_B64" | base64 --decode > "$RUNNER_TEMP/apple/AuthKey.p8"
+          chmod 0600 "$RUNNER_TEMP/apple/AuthKey.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/apple/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Build :dist (macOS)
+        if: matrix.os.runner == 'macos-14'
+        shell: bash
+        run: |
+          bazel build //clients/desktop:dist \
+            --build_tag_filters=electron_builder \
+            --action_env=CSC_LINK \
+            --action_env=CSC_KEY_PASSWORD \
+            --action_env=APPLE_API_KEY \
+            --action_env=APPLE_API_KEY_ID \
+            --action_env=APPLE_API_ISSUER
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_KEY_ISSUER_ID }}
+          # APPLE_API_KEY is exported to $GITHUB_ENV by the previous
+          # step (path to the decoded .p8 file).
+
+      - name: Build :dist (Windows)
+        if: matrix.os.runner == 'windows-latest'
+        shell: bash
+        run: |
+          bazel build //clients/desktop:dist \
+            --build_tag_filters=electron_builder \
+            --action_env=CSC_LINK \
+            --action_env=CSC_KEY_PASSWORD
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Build :dist (Linux)
+        if: matrix.os.runner == 'ubuntu-latest'
+        shell: bash
+        run: bazel build //clients/desktop:dist --build_tag_filters=electron_builder
+
+      # Attach installers + electron-updater metadata to the GitHub
+      # Release the `release` job created. Single matrix shard's worth
+      # per call; `--clobber` lets reruns overwrite without erroring.
+      - name: Upload installers to Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: bazel-bin/clients/desktop/dist
+        run: |
+          set -euo pipefail
+          ls -la
+          tag="${GITHUB_REF#refs/tags/}"
+          files=()
+          while IFS= read -r pattern; do
+              [ -z "$pattern" ] && continue
+              for f in $pattern; do
+                  [ -f "$f" ] && files+=("$f")
+              done
+          done <<< "${{ matrix.os.installers }}"
+          if [ ${#files[@]} -eq 0 ]; then
+              echo "ERROR: no installers matched any pattern; refusing to noop." >&2
+              exit 1
+          fi
+          echo "Uploading: ${files[*]}"
+          gh release upload "$tag" --clobber "${files[@]}"

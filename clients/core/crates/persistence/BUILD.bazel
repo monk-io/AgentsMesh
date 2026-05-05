@@ -1,0 +1,26 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+# Persistence layer — Repository pattern over sqlite (native). On wasm32,
+# IndexedDB is used via a separate backend module gated by `cfg`.
+rust_library(
+    name = "persistence",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_persistence",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/types",
+        "@crates//:rusqlite",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:thiserror",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "persistence_test",
+    crate = ":persistence",
+    edition = "2021",
+)

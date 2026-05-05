@@ -67,6 +67,7 @@ func waitForShutdown(
 	loopScheduler LoopSchedulerStopper,
 	orgAwareness *instance.OrgAwarenessService,
 	relayManager *relay.Manager,
+	services *serviceContainer,
 	db *gorm.DB,
 	redisClient *redis.Client,
 ) {
@@ -112,6 +113,12 @@ func waitForShutdown(
 	// Stop relay manager (terminates health check goroutine)
 	if relayManager != nil {
 		relayManager.Stop()
+	}
+
+	// Close service-owned background workers (e.g. blockstore embedding worker)
+	// before the EventBus so any last enqueued op-publish can still fan out.
+	if services != nil {
+		services.Close()
 	}
 
 	// Close EventBus

@@ -1,0 +1,32 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+# Transport — thin abstraction around WebSocket clients. Native uses
+# tokio-tungstenite; wasm32 uses web-sys's WebSocket. The crate internally
+# dispatches via `cfg(target_arch = "wasm32")`.
+rust_library(
+    name = "transport",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "agentsmesh_transport",
+    edition = "2021",
+    visibility = ["//clients/core:__subpackages__"],
+    deps = [
+        "//clients/core/crates/protocol",
+        "//clients/core/crates/types",
+        "@crates//:futures-channel",
+        "@crates//:futures-util",
+        "@crates//:js-sys",
+        "@crates//:thiserror",
+        "@crates//:tokio",
+        "@crates//:tokio-tungstenite",
+        "@crates//:tracing",
+        "@crates//:wasm-bindgen",
+        "@crates//:wasm-bindgen-futures",
+        "@crates//:web-sys",
+    ],
+)
+
+rust_test(
+    name = "transport_test",
+    crate = ":transport",
+    edition = "2021",
+)

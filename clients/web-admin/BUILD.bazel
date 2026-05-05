@@ -1,0 +1,135 @@
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@npm//:next/package_json.bzl", next_bin = "bin")
+load("//build_defs/web:eslint.bzl", "eslint_test")
+load("//build_defs/web:next.bzl", "next_app")
+load("//build_defs/web:next_oci.bzl", "next_oci_image")
+load("//build_defs/web:ts.bzl", "ts_project")
+load("//build_defs/web:vitest.bzl", "vitest_test")
+
+# Per-importer Next.js binary — see clients/web/BUILD.bazel for the full
+# explanation. Same factory pattern, distinct target name so each
+# package's `next_app()` gets its own `js_binary` wrapper.
+next_bin.next_binary(
+    name = "next_js_binary",
+    visibility = ["//visibility:public"],
+)
+
+# Source glob — Next.js's bundler (SWC) compiles the TypeScript itself
+# at `next build` time, so the OCI image target feeds raw .ts/.tsx
+# through. `:src` below runs tsc as a type-check gate but is not used
+# as the build input.
+_SRC_FILES = glob(
+    [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.css",
+        "src/**/*.json",
+    ],
+    allow_empty = True,
+    exclude = [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ],
+)
+
+ts_project(
+    name = "src",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+    allow_js = True,
+    extends = "tsconfig.json",
+    no_emit = True,
+    resolve_json_module = True,
+    tsconfig = "tsconfig.bazel.json",
+    deps = ["//:node_modules"],
+)
+
+next_app(
+    name = "next",
+    srcs = _SRC_FILES,
+    # web-admin doesn't import @agentsmesh/* directly, but Next.js
+    # static analysis traverses the workspace's transitive imports.
+    # Listing the Bazel-managed links here keeps the graph closed.
+    data = [
+        "next.config.ts",
+        "postcss.config.mjs",
+        "tsconfig.json",
+        "//:node_modules",
+        "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@agentsmesh/service-runtime",
+        "//:node_modules/agentsmesh-wasm",
+        "//:package_json_bin",
+    ],
+    next_js_binary = ":next_js_binary",
+)
+
+next_oci_image(
+    name = "image",
+    exposed_ports = ["3000/tcp"],
+    repositories = {
+        "agentsmesh": "registry.agentsmesh.ai/agentsmesh/web-admin",
+        "dockerhub": "agentsmesh/web-admin",
+    },
+    start_binary = ":next_start_binary",
+)
+
+js_library(
+    name = "web_admin",
+    srcs = [":next"],
+    visibility = ["//visibility:public"],
+)
+
+# `bazel test //clients/web-admin:lint` — see //build_defs/web:eslint.bzl.
+eslint_test(
+    name = "lint",
+    size = "medium",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.js",
+            "src/**/*.mjs",
+        ],
+        allow_empty = True,
+        exclude = ["src/**/*.d.ts"],
+    ),
+)
+
+# Vitest unit + component tests (13 files as of last run).
+# `bazel test //clients/web-admin:unit` is equivalent to `pnpm --filter web-admin test`.
+vitest_test(
+    name = "unit",
+    size = "medium",
+    srcs = glob([
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+    ]),
+    config = "vitest.config.ts",
+    data = [
+        "tsconfig.json",
+        "//:node_modules",
+        "//:package_json_bin",
+    ] + glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.json",
+            "src/**/*.css",
+        ],
+        allow_empty = True,
+        exclude = [
+            "src/**/*.test.ts",
+            "src/**/*.test.tsx",
+        ],
+    ),
+)

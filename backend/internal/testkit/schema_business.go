@@ -17,8 +17,13 @@ func channelTableDDLs() []string {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			channel_id INTEGER NOT NULL,
 			sender_pod TEXT, sender_user_id INTEGER,
-			message_type TEXT NOT NULL, content TEXT NOT NULL,
-			metadata TEXT, edited_at DATETIME,
+			message_type TEXT NOT NULL DEFAULT 'text',
+			body TEXT NOT NULL,
+			content TEXT,
+			mentions TEXT DEFAULT '{}',
+			reply_to INTEGER,
+			schema_version INTEGER NOT NULL DEFAULT 1,
+			edited_at DATETIME,
 			is_deleted INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -36,6 +41,15 @@ func channelTableDDLs() []string {
 			last_read_message_id INTEGER,
 			last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(channel_id, user_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS channel_message_edits (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			message_id INTEGER NOT NULL,
+			editor_user_id INTEGER,
+			editor_pod TEXT,
+			previous_body TEXT NOT NULL,
+			previous_content TEXT,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS channel_pods (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +84,7 @@ func ticketTableDDLs() []string {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			organization_id INTEGER NOT NULL DEFAULT 0, number INTEGER NOT NULL,
 			slug TEXT NOT NULL, title TEXT NOT NULL, content TEXT,
+			content_block_id TEXT,
 			status TEXT NOT NULL DEFAULT 'backlog',
 			priority TEXT NOT NULL DEFAULT 'none', severity TEXT,
 			estimate INTEGER, due_date DATETIME, started_at DATETIME, completed_at DATETIME,

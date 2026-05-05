@@ -60,6 +60,24 @@ type LoopClient interface {
 	TriggerLoop(ctx context.Context, loopSlug string, variables map[string]interface{}) (*LoopTriggerResult, error)
 }
 
+// BlockStoreClient exposes Block Store agent tools. Each method maps 1:1 to
+// a gRPC MCP method name routed through runner_adapter_mcp.go's dispatch
+// switch. Args are passed through as free-form JSON maps because the tool
+// schemas are large and variant per op; the backend is the single source of
+// shape validation (blockstoreservice.ApplyOps).
+type BlockStoreClient interface {
+	BlockCreate(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	BlockUpdate(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	BlockDelete(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	BlockAddRef(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	BlockRemoveRef(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	BlockUpdateRef(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	IndicatorDefine(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	TriggerDefine(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	MemoryRetrieve(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+	BlockListTypes(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
+}
+
 // CollaborationClient combines all collaboration interfaces.
 type CollaborationClient interface {
 	PodInteractionClient
@@ -69,6 +87,7 @@ type CollaborationClient interface {
 	TicketClient
 	PodClient
 	LoopClient
+	BlockStoreClient
 
 	// GetPodKey returns the current pod's key.
 	GetPodKey() string

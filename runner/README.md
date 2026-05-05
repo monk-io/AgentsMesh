@@ -113,14 +113,21 @@ Features:
 ```bash
 # Clone the repository
 git clone https://github.com/anthropics/agentsmesh.git
-cd agentsmesh/runner
+cd agentsmesh
 
-# Build (no CGO required)
-make build
+# Build native binary (Bazel handles toolchain + caching)
+bazel build //runner/cmd/runner:runner
+# Result: bazel-bin/runner/cmd/runner/runner_/runner
 
-# Build for all platforms
-make build-all
+# Run tests
+bazel test //runner/...
+
+# Build OCI image (distroless)
+bazel build //runner/cmd/runner:image
 ```
+
+Cross-platform binaries are produced by the release pipeline; see
+`.github/workflows/release.yml`.
 
 ## Release
 

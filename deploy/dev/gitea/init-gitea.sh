@@ -131,6 +131,13 @@ create_and_push_repo() {
 
     (
         cd "$tmp_dir"
+        # Ensure git can author a commit even when global identity isn't
+        # configured (CI runners, fresh devboxes). Using env vars avoids
+        # mutating the user's `~/.gitconfig`.
+        export GIT_AUTHOR_NAME="AgentsMesh Dev Seed"
+        export GIT_AUTHOR_EMAIL="dev-seed@agentsmesh.local"
+        export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+        export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
         git init -b main > /dev/null 2>&1
         git add . > /dev/null 2>&1
         git commit -m "Initial commit: seed project" > /dev/null 2>&1

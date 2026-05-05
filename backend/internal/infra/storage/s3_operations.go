@@ -58,27 +58,24 @@ func (s *S3Storage) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// GetURL returns a URL for accessing the file.
-// If publicEndpoint differs from internal endpoint, returns a simple public URL.
-// Otherwise, returns a pre-signed URL.
+// GetURL returns a pre-signed URL for accessing the file.
+// When a public endpoint is configured, signs through the public presign client
+// so browsers can reach MinIO/S3 via localhost while still carrying a valid
+// signature — falling back to an unsigned public URL only works for buckets
+// with anonymous read policy, which is unsafe outside of demo setups.
 func (s *S3Storage) GetURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
-	if s.publicEndpoint != "" && s.endpoint != "" && s.publicEndpoint != s.endpoint {
-		return s.buildPublicURL(key), nil
+	presigner := s.presign
+	if s.publicPresign != nil {
+		presigner = s.publicPresign
 	}
-
-	return s.presignGetURL(ctx, key, expiry)
-}
-
-// buildPublicURL constructs a direct public URL for the file.
-func (s *S3Storage) buildPublicURL(key string) string {
-	scheme := "http"
-	if s.useSSL {
-		scheme = "https"
+	request, err := presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(expiry))
+	if err != nil {
+		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
-	if s.usePathStyle {
-		return fmt.Sprintf("%s://%s/%s/%s", scheme, s.publicEndpointHost, s.bucket, key)
-	}
-	return fmt.Sprintf("%s://%s.%s/%s", scheme, s.bucket, s.publicEndpointHost, key)
+	return request.URL, nil
 }
 
 // presignGetURL generates a presigned GET URL using the internal presign client.

@@ -10,6 +10,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 	notifDomain "github.com/anthropics/agentsmesh/backend/internal/domain/notification"
 	"github.com/anthropics/agentsmesh/backend/internal/infra"
+	blockstoreinfra "github.com/anthropics/agentsmesh/backend/internal/infra/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/logger"
 	otelinit "github.com/anthropics/agentsmesh/backend/internal/infra/otel"
@@ -80,6 +81,7 @@ func main() {
 	services.pod.SetEventPublisher(podEventPublisher)
 	services.channel.SetEventBus(eventBus)
 	services.channel.SetPodCreatorResolver(services.pod)
+	services.blockstore.SetPublisher(blockstoreinfra.NewOpPublisher(eventBus))
 
 	// Create notification relay (Hub + Redis cross-instance push)
 	notifRelay := websocket.NewNotificationRelay(hub, redisClient, appLogger.Logger)
@@ -199,7 +201,7 @@ func main() {
 	// Build services container for REST handlers
 	svc := buildServicesContainer(services, runnerConnMgr, podCoordinator, podOrchestrator, hub, eventBus,
 		grpcResult, sandboxQuerySvc, logUploadSvc, relayManager, relayTokenGenerator, relayDNSService,
-		relayACMEManager, geoResolver, versionChecker, loopOrchestrator, loopScheduler)
+		relayACMEManager, geoResolver, versionChecker, loopOrchestrator, loopScheduler, redisClient)
 
 	// Initialize router
 	router := rest.NewRouter(cfg, svc, db, appLogger.Logger, redisClient)
@@ -215,7 +217,7 @@ func main() {
 	srv := startHTTPServer(cfg, router)
 
 	// Graceful shutdown
-	waitForShutdown(srv, grpcResult.server, eventBus, heartbeatBatcher, subscriptionScheduler, loopScheduler, orgAwareness, relayManager, db, redisClient)
+	waitForShutdown(srv, grpcResult.server, eventBus, heartbeatBatcher, subscriptionScheduler, loopScheduler, orgAwareness, relayManager, services, db, redisClient)
 }
 
 // Build trigger: 20260119003527

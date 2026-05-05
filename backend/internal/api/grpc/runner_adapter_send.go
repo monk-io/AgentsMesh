@@ -86,7 +86,7 @@ func (a *GRPCRunnerAdapter) SendPrompt(runnerID int64, podKey, prompt string) er
 
 // SendSubscribePod sends a subscribe pod command to a pod.
 // This notifies the runner that a browser wants to observe the pod via Relay.
-func (a *GRPCRunnerAdapter) SendSubscribePod(runnerID int64, podKey, relayURL, runnerToken string, includeSnapshot bool, snapshotHistory int32) error {
+func (a *GRPCRunnerAdapter) SendSubscribePod(runnerID int64, podKey, relayURL, runnerToken, localToken string, includeSnapshot bool, snapshotHistory int32) error {
 	conn := a.connManager.GetConnection(runnerID)
 	if conn == nil {
 		return status.Errorf(codes.NotFound, "runner %d not connected", runnerID)
@@ -98,6 +98,7 @@ func (a *GRPCRunnerAdapter) SendSubscribePod(runnerID int64, podKey, relayURL, r
 				PodKey:          podKey,
 				RelayUrl:        relayURL,
 				RunnerToken:     runnerToken,
+				LocalToken:      localToken,
 				IncludeSnapshot: includeSnapshot,
 				SnapshotHistory: snapshotHistory,
 			},

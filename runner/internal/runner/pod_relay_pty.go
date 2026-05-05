@@ -1,8 +1,6 @@
 package runner
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -16,81 +14,36 @@ type PTYPodRelay struct {
 	podKey         string
 	io             PodIO
 	components     *PTYComponents
+	localServer    LocalRelayBroker
 	lastSnapshotMu sync.Mutex
 	lastSnapshot   []byte
 }
 
-// NewPTYPodRelay creates a PodRelay for PTY mode.
-func NewPTYPodRelay(podKey string, io PodIO, comps *PTYComponents) *PTYPodRelay {
-	return &PTYPodRelay{podKey: podKey, io: io, components: comps}
+// NewPTYPodRelay constructs a PodRelay for PTY mode.
+// localServer == nil disables local-side fanout (e.g. when 127.0.0.1 binding failed).
+func NewPTYPodRelay(podKey string, io PodIO, comps *PTYComponents, localServer LocalRelayBroker) *PTYPodRelay {
+	return &PTYPodRelay{podKey: podKey, io: io, components: comps, localServer: localServer}
 }
 
 func (r *PTYPodRelay) SetupHandlers(rc relay.RelayClient) {
-	log := logger.Pod()
-	podKey := r.podKey
-	io := r.io
-
-	rc.SetMessageHandler(relay.MsgTypeInput, func(payload []byte) {
-		if io != nil {
-			if err := io.SendInput(string(payload)); err != nil {
-				log.Error("Failed to write relay input to pod", "pod_key", podKey, "error", err)
-			}
-		}
-	})
-
-	rc.SetMessageHandler(relay.MsgTypeResize, func(payload []byte) {
-		if len(payload) < 4 {
-			log.Error("Failed to decode resize from relay", "pod_key", podKey, "error", "payload too short")
-			return
-		}
-		cols := binary.BigEndian.Uint16(payload[0:2])
-		rows := binary.BigEndian.Uint16(payload[2:4])
-		log.Info("Received resize from relay", "pod_key", podKey, "cols", cols, "rows", rows)
-		if ta, ok := io.(TerminalAccess); ok {
-			if _, err := ta.Resize(int(cols), int(rows)); err != nil {
-				log.Error("Failed to resize from relay", "pod_key", podKey, "error", err)
-			}
-		}
-	})
-
+	rc.SetMessageHandler(relay.MsgTypeInput, r.inputHandler())
+	rc.SetMessageHandler(relay.MsgTypeResize, r.resizeHandler())
 	rc.SetMessageHandler(relay.MsgTypeSnapshotRequest, func(_ []byte) {
 		r.SendSnapshot(rc)
 	})
+	r.installLocalHandlers()
 }
 
 func (r *PTYPodRelay) SendSnapshot(rc relay.RelayClient) {
 	log := logger.Pod()
-
-	vt := r.components.VirtualTerminal
-	if vt == nil {
-		log.Warn("SendSnapshot: VT is nil", "pod_key", r.podKey)
+	data := r.materializeSnapshot()
+	if data == nil {
+		log.Warn("SendSnapshot: no snapshot available", "pod_key", r.podKey)
 		return
 	}
-	snapshot := vt.GetSnapshot()
-	if snapshot == nil {
-		log.Warn("SendSnapshot: GetSnapshot returned nil", "pod_key", r.podKey)
-		return
-	}
-
-	hasContent := len(snapshot.SerializedContent) > 20
-
-	data, err := json.Marshal(snapshot)
-	if err != nil {
-		log.Error("Failed to marshal VT snapshot", "pod_key", r.podKey, "error", err)
-		return
-	}
-
-	r.lastSnapshotMu.Lock()
-	if hasContent {
-		r.lastSnapshot = data
-	} else if r.lastSnapshot != nil {
-		data = r.lastSnapshot
-	}
-	r.lastSnapshotMu.Unlock()
-
 	_ = rc.Send(relay.MsgTypeSnapshot, data)
 
-	// Trigger TUI redraw if in alt-screen mode
+	vt := r.components.VirtualTerminal
 	term := r.components.Terminal
 	if vt != nil && vt.IsAltScreen() && term != nil {
 		safego.Go("relay-snapshot-redraw", func() {
@@ -104,9 +57,14 @@ func (r *PTYPodRelay) SendSnapshot(rc relay.RelayClient) {
 }
 
 func (r *PTYPodRelay) OnRelayConnected(rc relay.RelayClient) {
-	if r.components.Aggregator != nil {
-		r.components.Aggregator.SetRelayClient(&relayOutputAdapter{rc: rc})
+	if r.components.Aggregator == nil {
+		return
 	}
+	r.components.Aggregator.SetRelayClient(&fanoutRelayWriter{
+		cloud:       rc,
+		localServer: r.localServer,
+		podKey:      r.podKey,
+	})
 }
 
 func (r *PTYPodRelay) OnRelayDisconnected() {
@@ -115,18 +73,8 @@ func (r *PTYPodRelay) OnRelayDisconnected() {
 	}
 }
 
-// relayOutputAdapter bridges relay.RelayClient → aggregator.RelayWriter.
-type relayOutputAdapter struct {
-	rc relay.RelayClient
-}
+// BroadcastEvent is a no-op for PTY pods; PTY output flows through the
+// aggregator's fanoutRelayWriter, not via discrete events.
+func (r *PTYPodRelay) BroadcastEvent(_ relay.RelayClient, _ byte, _ []byte) {}
 
-func (a *relayOutputAdapter) SendOutput(data []byte) error {
-	return a.rc.Send(relay.MsgTypeOutput, data)
-}
-
-func (a *relayOutputAdapter) IsConnected() bool {
-	return a.rc.IsConnected()
-}
-
-// Compile-time interface check.
 var _ PodRelay = (*PTYPodRelay)(nil)
