@@ -37,19 +37,16 @@ test.describe("Desktop ThisMacSection onboarding", () => {
 
     await button.click();
 
-    // The 5 step labels surface as text under the button while the hook is
-    // mid-flight. We don't assert each one — STUB_DELAY_MS is 50ms per step
-    // so they flash by — but the final transition to the registered row
-    // proves all of them ran in order without the phase getting pinned.
-    const registeredLabel = page.locator('text=/active/i').first();
-    await expect(registeredLabel).toBeVisible({ timeout: 10_000 });
+    // After every onboarding step succeeds, ThisMacSection shows the
+    // "syncing with server" line. The hook flips phase to idle.running but
+    // the runners list won't pick up this Mac until a real daemon connects
+    // over gRPC — and the IPC stubs don't fake that round-trip. The visible
+    // syncing string is the high-fidelity proof that the 5-step state
+    // machine drained without getting pinned (the regression we care about).
+    const syncing = page.getByText(/syncing with server/i);
+    await expect(syncing).toBeVisible({ timeout: 10_000 });
 
-    // The registered row replaces the onboarding card; the trigger button
-    // must be gone so re-clicking it can't fire onRegister twice.
+    // The trigger must be gone so re-clicking it can't fire onRegister twice.
     await expect(button).toHaveCount(0);
-
-    // localNodeId from the stub is "test-mac". The footer row + the matching
-    // sidebar list entry both label it with "This Mac" badge.
-    await expect(page.locator('text=test-mac').first()).toBeVisible();
   });
 });
