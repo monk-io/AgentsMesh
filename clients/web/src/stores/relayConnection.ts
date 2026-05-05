@@ -197,11 +197,18 @@ class RelayConnectionPool {
 }
 
 // Singleton instance — survive HMR rebuilds without leaking old pool state.
+// In production the module evaluates once and we keep whatever pool already
+// exists; the dev-only branch handles HMR rebuilds where the module evaluates
+// fresh while real WebSocket connections are still live.
 function getOrCreatePool(): RelayConnectionPool {
   const key = "__relayPool" as keyof typeof globalThis;
   const existing = globalThis[key] as RelayConnectionPool | undefined;
   if (existing) {
-    existing.disconnectAll();
+    if (process.env.NODE_ENV === "development") {
+      existing.disconnectAll();
+    } else {
+      return existing;
+    }
   }
   const pool = new RelayConnectionPool();
   (globalThis as Record<string, unknown>)[key] = pool;

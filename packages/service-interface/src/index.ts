@@ -344,6 +344,7 @@ export type LocalRunnerStatus = "running" | "stopped" | "unknown" | "not_install
 export interface ILocalRunnerService {
   binary_path(): Promise<string>;
   host_target(): Promise<string | null>;
+  fallback_version(): Promise<string>;
   is_installed(): Promise<boolean>;
   installed_version(): Promise<string | null>;
   install_binary(release_url: string, expected_sha256?: string | null): Promise<void>;

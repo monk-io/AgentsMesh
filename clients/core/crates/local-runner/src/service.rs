@@ -31,8 +31,14 @@ pub async fn stop(paths: &InstallPaths) -> Result<()> {
 /// Maps the `Service Status: <token>` line emitted by the runner CLI to the
 /// strongly-typed enum. A non-zero exit (service not installed) is mapped to
 /// `NotInstalled` rather than an error so callers can treat the four-state
-/// model uniformly.
+/// model uniformly. The same applies when the runner binary itself is
+/// missing — semantically that's still "not installed", not a programming
+/// error, and the renderer wants a clean enum value, not an exception that
+/// surfaces as an unhandled promise rejection in DevTools.
 pub async fn status(paths: &InstallPaths) -> Result<ServiceStatus> {
+    if !crate::install::is_installed(paths).await {
+        return Ok(ServiceStatus::NotInstalled);
+    }
     let output = run_runner_cli(paths, &["service", "status"]).await?;
     if output.status != 0 {
         return Ok(ServiceStatus::NotInstalled);
@@ -80,5 +86,18 @@ mod tests {
             parse_status("hello world").unwrap_err(),
             LocalRunnerError::UnexpectedOutput(_)
         ));
+    }
+
+    // Regression: when the runner binary doesn't exist on disk, status() must
+    // return ServiceStatus::NotInstalled, not propagate a BinaryNotFound error.
+    // The four-state enum is the IPC contract — surfacing the error as a
+    // promise rejection on the renderer side caused unhandled rejections in
+    // DevTools and pinned the onboarding card in "Checking…".
+    #[test]
+    fn status_returns_not_installed_when_binary_missing() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let paths = InstallPaths::new("/nonexistent-home-for-tests");
+        let result = rt.block_on(status(&paths)).expect("must not error");
+        assert_eq!(result, ServiceStatus::NotInstalled);
     }
 }

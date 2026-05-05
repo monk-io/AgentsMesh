@@ -21,6 +21,14 @@ pub use error::{LocalRunnerError, Result};
 pub use paths::InstallPaths;
 pub use service::ServiceStatus;
 
+/// Bundled runner version used when the backend's `latest-release` endpoint
+/// is unreachable. Single source of truth — bumped per desktop release in
+/// lockstep with `backend/internal/api/rest/v1/runners_release.go`. The
+/// renderer reads this via napi rather than embedding its own const, so the
+/// fallback used in production never drifts from the crate the desktop
+/// shipped with. Source: latest tag at github.com/AgentsMesh/AgentsMesh.
+pub const FALLBACK_RUNNER_VERSION: &str = "0.29.0";
+
 use std::path::PathBuf;
 
 /// Top-level façade exposing all local-runner orchestration to host

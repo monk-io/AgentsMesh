@@ -43,6 +43,10 @@ type localPodLane struct {
 const (
 	localReadTimeout  = 60 * time.Second
 	localWriteTimeout = 10 * time.Second
+	// Browser-side payloads are PTY input + ACP control messages; 1MiB is
+	// well above any legitimate frame and bounds memory if an authenticated
+	// peer tries to OOM the runner with a giant message.
+	localReadLimitBytes = 1 << 20
 )
 
 var localUpgrader = websocket.Upgrader{

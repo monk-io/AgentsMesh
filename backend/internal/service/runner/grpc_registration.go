@@ -48,6 +48,7 @@ type GenerateGRPCRegistrationTokenRequest struct {
 
 // GenerateGRPCRegistrationTokenResponse represents the generated token response.
 type GenerateGRPCRegistrationTokenResponse struct {
+	ID        int64     `json:"id"`
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Command   string    `json:"command"` // Example CLI command

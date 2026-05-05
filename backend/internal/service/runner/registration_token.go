@@ -65,6 +65,7 @@ func (s *Service) GenerateGRPCRegistrationToken(ctx context.Context, orgID, user
 	slog.InfoContext(ctx, "registration token generated", "org_id", orgID, "user_id", userID)
 
 	return &GenerateGRPCRegistrationTokenResponse{
+		ID:        regToken.ID,
 		Token:     token,
 		ExpiresAt: expiresAt,
 		Command:   fmt.Sprintf("runner register --server %s --token %s", serverURL, token),

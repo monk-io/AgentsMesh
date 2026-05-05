@@ -18,6 +18,7 @@ export function createLocalRunnerStubs(): LocalRunnerStubMap {
   return {
     localRunnerBinaryPath: async () => "/tmp/test/.agentsmesh/bin/agentsmesh-runner",
     localRunnerHostTarget: async () => "darwin_arm64",
+    localRunnerFallbackVersion: async () => "0.0.0-test",
     localRunnerIsInstalled: async () => state.installed,
     localRunnerInstalledVersion: async () => (state.installed ? "0.0.0-test" : null),
     localRunnerInstallBinary: async (..._args: unknown[]) => {

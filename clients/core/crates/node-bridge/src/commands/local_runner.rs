@@ -18,6 +18,13 @@ impl AppState {
         self.local_runner.host_target()
     }
 
+    /// Bundled fallback version used when backend's `latest-release` endpoint
+    /// is unreachable. Single source of truth lives in the local-runner crate.
+    #[napi]
+    pub async fn local_runner_fallback_version(&self) -> String {
+        agentsmesh_local_runner::FALLBACK_RUNNER_VERSION.to_string()
+    }
+
     #[napi]
     pub async fn local_runner_is_installed(&self) -> bool {
         self.local_runner.is_installed().await

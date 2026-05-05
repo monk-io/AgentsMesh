@@ -20,6 +20,10 @@ export class ElectronLocalRunnerService implements ILocalRunnerService {
     return invoke<string | null>("localRunnerHostTarget");
   }
 
+  fallback_version(): Promise<string> {
+    return invoke<string>("localRunnerFallbackVersion");
+  }
+
   is_installed(): Promise<boolean> {
     return invoke<boolean>("localRunnerIsInstalled");
   }

@@ -29,11 +29,21 @@ func TestGenerateGRPCRegistrationToken(t *testing.T) {
 		assert.NotZero(t, resp.ExpiresAt)
 		assert.Contains(t, resp.Command, "runner register")
 
+		// Regression: response must expose the DB-generated token ID. The
+		// Rust client side deserialises the REST response into
+		// `GRPCRegistrationToken` which has `pub id: i64` as a *required*
+		// field — omitting `id` made `register --token` fail at the
+		// "Minting registration token" step with `missing field 'id' at
+		// line 1 column N` and pinned the desktop onboarding card on the
+		// token step.
+		assert.NotZero(t, resp.ID, "response must include the persisted token ID")
+
 		// Verify token was created in database
 		var token runner.GRPCRegistrationToken
 		tokenHash := hashToken(resp.Token)
 		err = db.Where("token_hash = ?", tokenHash).First(&token).Error
 		require.NoError(t, err)
+		assert.Equal(t, token.ID, resp.ID, "response ID must match persisted record")
 	})
 
 	t.Run("generates single-use token explicitly", func(t *testing.T) {

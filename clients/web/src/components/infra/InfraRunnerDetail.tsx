@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -9,6 +10,7 @@ import {
   CheckCircle, Activity, AlertCircle, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getLocalRunnerService } from "@agentsmesh/service-runtime";
 import {
   RunnerOverviewTab,
   RunnerPodsTab,
@@ -34,6 +36,15 @@ function statusIcon(status: string) {
 export function InfraRunnerDetail({ runnerId, onBack }: Props) {
   const t = useTranslations();
   const state = useRunnerDetail(t, runnerId);
+  const [localNodeId, setLocalNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const svc = getLocalRunnerService();
+    if (!svc) return;
+    let cancelled = false;
+    void svc.local_node_id().then((id) => { if (!cancelled) setLocalNodeId(id); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   if (state.loading) return <CenteredSpinner className="h-64" />;
 
@@ -57,7 +68,14 @@ export function InfraRunnerDetail({ runnerId, onBack }: Props) {
         <div className="flex items-center space-x-3">
           <Server className="h-8 w-8 text-muted-foreground" />
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{runner.node_id}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-foreground">{runner.node_id}</h1>
+              {localNodeId && runner.node_id === localNodeId && (
+                <span className="rounded bg-blue-500/15 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                  This Mac
+                </span>
+              )}
+            </div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               {statusIcon(runner.status)}
               <span className="capitalize">{runner.status}</span>

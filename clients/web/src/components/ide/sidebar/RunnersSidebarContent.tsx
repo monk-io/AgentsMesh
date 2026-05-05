@@ -16,6 +16,8 @@ import {
   Activity,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ThisMacSection } from "@/components/infra/ThisMacSection";
+import { getLocalRunnerService } from "@agentsmesh/service-runtime";
 
 interface RunnersSidebarContentProps {
   className?: string;
@@ -39,6 +41,15 @@ export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebar
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RunnerStatus>("all");
+  const [localNodeId, setLocalNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const svc = getLocalRunnerService();
+    if (!svc) return;
+    let cancelled = false;
+    void svc.local_node_id().then((id) => { if (!cancelled) setLocalNodeId(id); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const selectedRunnerId = useMemo(() => {
     const raw = searchParams.get("id");
@@ -240,6 +251,11 @@ export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebar
                       <p className="text-sm truncate font-medium">
                         {runner.node_id}
                       </p>
+                      {localNodeId && runner.node_id === localNodeId && (
+                        <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                          This Mac
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{runner.current_pods}/{runner.max_concurrent_pods} pods</span>
@@ -264,6 +280,10 @@ export function RunnersSidebarContent({ className, onAddRunner }: RunnersSidebar
           </div>
         )}
       </div>
+
+      {/* This Mac (footer): onboarding card or registered-row jump-link.
+          Renders nothing on web — the local-runner service is desktop-only. */}
+      <ThisMacSection />
     </div>
   );
 }

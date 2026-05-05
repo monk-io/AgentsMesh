@@ -139,6 +139,7 @@ func (s *LocalServer) handleBrowser(w http.ResponseWriter, r *http.Request) {
 		s.logger.Warn("Local relay upgrade failed", "pod_key", podKey, "error", err)
 		return
 	}
+	conn.SetReadLimit(localReadLimitBytes)
 	_ = conn.SetReadDeadline(time.Now().Add(localReadTimeout))
 	conn.SetPongHandler(func(string) error {
 		return conn.SetReadDeadline(time.Now().Add(localReadTimeout))
