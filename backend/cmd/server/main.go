@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"log/slog"
+	"os"
 
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 	notifDomain "github.com/anthropics/agentsmesh/backend/internal/domain/notification"
@@ -27,6 +28,16 @@ import (
 )
 
 func main() {
+	// `agentsmesh-backend migrate …` short-circuits the entire server
+	// boot path. Used at deploy time by /opt/agentsmesh/migrate.sh
+	// (`docker exec backend /app/server migrate up`) so the binary is
+	// the migration toolchain — no separate CLI, no /app/migrations
+	// mount.
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		runMigrate(os.Args[2:])
+		return
+	}
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
