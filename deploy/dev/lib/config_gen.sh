@@ -212,6 +212,27 @@ generate_env() {
             export RELAY_HTTP_PORT="$relay_http"
             info "补充 host service 端口: backend=$backend_http grpc=$backend_grpc relay=$relay_http"
         fi
+        # Backfill runner MCP port for legacy .env files generated before
+        # tests/mcp-e2e/ existed.
+        if ! grep -q "RUNNER_MCP_PORT" "$ENV_FILE"; then
+            local runner_mcp=$((10018 + PORT_OFFSET * 50))
+            local runner2_mcp=$((10019 + PORT_OFFSET * 50))
+            {
+                echo ""
+                echo "# Runner MCP HTTP port (exposed from runner container for tests/mcp-e2e/)"
+                echo "RUNNER_MCP_PORT=$runner_mcp"
+                echo "RUNNER_2_MCP_PORT=$runner2_mcp"
+            } >> "$ENV_FILE"
+            export RUNNER_MCP_PORT="$runner_mcp"
+            export RUNNER_2_MCP_PORT="$runner2_mcp"
+            info "补充 runner MCP 端口: runner=$runner_mcp runner-2=$runner2_mcp"
+        fi
+        # Older .env files may have RUNNER_MCP_PORT but not RUNNER_2_MCP_PORT.
+        if ! grep -q "RUNNER_2_MCP_PORT" "$ENV_FILE"; then
+            local runner2_mcp=$((10019 + PORT_OFFSET * 50))
+            echo "RUNNER_2_MCP_PORT=$runner2_mcp" >> "$ENV_FILE"
+            export RUNNER_2_MCP_PORT="$runner2_mcp"
+        fi
         success "保留现有端口配置 (worktree: $worktree_name, PRIMARY_DOMAIN: localhost:$HTTP_PORT)"
         return 0
     fi
@@ -262,6 +283,16 @@ JAEGER_UI_PORT=$((10014 + offset * 50))
 BACKEND_HTTP_PORT=$((10015 + offset * 50))
 BACKEND_GRPC_PORT=$((10016 + offset * 50))
 RELAY_HTTP_PORT=$((10017 + offset * 50))
+
+# Runner MCP HTTP port — exposed from the runner docker container so
+# tests/mcp-e2e/ (running on the host) can drive the agent-facing MCP
+# JSON-RPC surface. Always 10018 within a worktree's port slot.
+RUNNER_MCP_PORT=$((10018 + offset * 50))
+
+# Second runner's MCP HTTP port — only the cross-runner pod_interaction
+# spec needs direct host access here, but exposing it lets future specs
+# target runner-2 without touching compose.
+RUNNER_2_MCP_PORT=$((10019 + offset * 50))
 
 # =============================================================================
 # Credentials

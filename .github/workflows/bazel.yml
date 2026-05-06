@@ -606,6 +606,104 @@ jobs:
           docker compose logs --tail=200 backend  || true
           docker compose logs --tail=200 runner   || true
 
+  mcp-e2e:
+    name: E2E (MCP — agent protocol)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.1
+        with:
+          bazelisk-cache: true
+          disk-cache: true
+          repository-cache: true
+
+      # Same ibazel dependency as web-e2e: dev.sh refuses to start without it
+      # because the host backend / runner / relay are launched via `ibazel run`.
+      - name: Install ibazel
+        run: |
+          IBAZEL_VERSION="0.29.0"
+          curl -fsSL "https://github.com/bazelbuild/bazel-watcher/releases/download/v${IBAZEL_VERSION}/ibazel_linux_amd64" \
+            -o /usr/local/bin/ibazel
+          sudo chmod +x /usr/local/bin/ibazel
+
+      - name: Bring up dev backend stack
+        run: |
+          bazel run //deploy/dev:backend_only
+          # Two runner containers (dev-runner + dev-runner-2 for cross-runner
+          # spec) need ~10s each to register their gRPC streams. Wait long
+          # enough that DiscoverRunnerByNode("dev-runner-2") succeeds.
+          sleep 20
+
+      - name: Resolve worktree-allocated ports
+        id: ports
+        run: |
+          source deploy/dev/.env
+          echo "HTTP_PORT=$HTTP_PORT"                       >> $GITHUB_OUTPUT
+          echo "BACKEND_HTTP_PORT=$BACKEND_HTTP_PORT"       >> $GITHUB_OUTPUT
+          echo "POSTGRES_PORT=$POSTGRES_PORT"               >> $GITHUB_OUTPUT
+          echo "RUNNER_MCP_PORT=$RUNNER_MCP_PORT"           >> $GITHUB_OUTPUT
+          echo "RUNNER_2_MCP_PORT=$RUNNER_2_MCP_PORT"       >> $GITHUB_OUTPUT
+          echo "COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..40}; do
+            if curl -sf "http://localhost:${{ steps.ports.outputs.HTTP_PORT }}/health" > /dev/null; then
+              echo "backend ready"; exit 0
+            fi
+            sleep 3
+          done
+          echo "backend never reported healthy"; exit 1
+
+      # MCP_PORT (host-exposed) is worktree-scoped via RUNNER_MCP_PORT — at
+      # offset=0 that's 10018, NOT the runner's internal listen port 19000.
+      # Cross-runner spec also needs RUNNER_2_MCP_PORT to reach the second
+      # runner's exposed port.
+      - name: Run MCP E2E suites
+        env:
+          MCP_PORT: ${{ steps.ports.outputs.RUNNER_MCP_PORT }}
+          RUNNER_2_MCP_PORT: ${{ steps.ports.outputs.RUNNER_2_MCP_PORT }}
+          BACKEND_HTTP_PORT: ${{ steps.ports.outputs.BACKEND_HTTP_PORT }}
+          POSTGRES_PORT: ${{ steps.ports.outputs.POSTGRES_PORT }}
+          POSTGRES_USER: agentsmesh
+          POSTGRES_PASSWORD: agentsmesh_dev
+          POSTGRES_DB: agentsmesh
+        run: |
+          bazel --output_base=/tmp/bazel-mcp-e2e test \
+            //tests/mcp-e2e/suites:e2e \
+            --test_tag_filters=e2e \
+            --test_output=errors \
+            --test_env=MCP_PORT \
+            --test_env=RUNNER_2_MCP_PORT \
+            --test_env=BACKEND_HTTP_PORT \
+            --test_env=POSTGRES_PORT \
+            --test_env=POSTGRES_USER \
+            --test_env=POSTGRES_PASSWORD \
+            --test_env=POSTGRES_DB
+
+      - name: Dump runner / backend logs on failure
+        if: failure()
+        working-directory: deploy/dev
+        run: |
+          docker compose logs --tail=300 backend  || true
+          docker compose logs --tail=300 runner   || true
+          tail -n 300 runtime/runner/runner.log   || true
+          tail -n 300 runtime/backend/backend.log || true
+
+      - name: Upload MCP e2e logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-e2e-logs
+          path: |
+            deploy/dev/runtime/runner/runner.log
+            deploy/dev/runtime/backend/backend.log
+            deploy/dev/runtime/relay/relay.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   desktop-e2e:
     name: E2E (Desktop — Electron)
     # Self-hosted M-series macmini-03. OrbStack provides Docker; Electron

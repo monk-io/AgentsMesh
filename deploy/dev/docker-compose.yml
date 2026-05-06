@@ -142,6 +142,11 @@ services:
       - SSL_DIR=/app/ssl
       - DEBUG=true
       - HOME=/home/runner
+      # Bind MCP HTTP server on all interfaces inside the container so the
+      # `ports:` mapping below can forward host:RUNNER_MCP_PORT → 19000.
+      # Without this the server only listens on 127.0.0.1, invisible to
+      # docker's NAT layer.
+      - AGENTSMESH_MCP_BIND=0.0.0.0
       # AI CLI keys passed through from .env
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
@@ -165,6 +170,67 @@ services:
       - runner_claude_config:/home/runner/.claude
       - runner_codex_config:/home/runner/.codex
       - runner_gemini_config:/home/runner/.gemini
+    ports:
+      # Expose the runner's MCP HTTP server to the host so tests/mcp-e2e/
+      # can drive it. Container always listens on 19000; host port is
+      # worktree-scoped via RUNNER_MCP_PORT to avoid collisions.
+      - "${RUNNER_MCP_PORT:-19000}:19000"
+    extra_hosts:
+      - "host.lan:host-gateway"
+    entrypoint: ["/usr/local/bin/runner-entrypoint.sh"]
+
+  # Runner #2 — used exclusively by tests/mcp-e2e/ to exercise the
+  # cross-runner pod_interaction path. When pod_A on runner_1 asks for
+  # snapshot of pod_B on runner_2, runner_1's LocalPodProvider misses, the
+  # MCP tool falls back to the Backend API, and backend dispatches to
+  # runner_2 via gRPC. This wiring stays dormant until specs explicitly
+  # create pods on `dev-runner-2`. Same image as the primary runner; only
+  # node_id, volumes, and MCP host port differ.
+  runner-2:
+    build:
+      context: .
+      dockerfile: runner.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_started
+    user: "1000:1000"
+    environment:
+      - BACKEND_URL=http://traefik:80
+      - GRPC_ENDPOINT=traefik:9443
+      - RELAY_BASE_URL=ws://traefik:80
+      - RUNNER_NODE_ID=dev-runner-2
+      - RUNNER_ORG_SLUG=dev-org
+      - MAX_CONCURRENT_PODS=10
+      - WORKSPACE=/workspace
+      - SSL_DIR=/app/ssl
+      - DEBUG=true
+      - HOME=/home/runner
+      - AGENTSMESH_MCP_BIND=0.0.0.0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-https://api.anthropic.com}
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=agentsmesh-runner
+      - OTEL_TRACES_SAMPLER_ARG=1.0
+    volumes:
+      - ./ssl:/app/ssl:ro
+      - ./runner-entrypoint.sh:/usr/local/bin/runner-entrypoint.sh:ro
+      - ./runner-ssh:/home/runner/.ssh:ro
+      - runner2_workspace:/workspace
+      - runner2_config:/home/runner/.agentsmesh
+      - runner2_claude_config:/home/runner/.claude
+      - runner2_codex_config:/home/runner/.codex
+      - runner2_gemini_config:/home/runner/.gemini
+    ports:
+      # Worktree-scoped host port for runner-2's MCP server. Specs that
+      # need to drive runner-2 directly (rather than via runner-1's fallback
+      # path) connect here; the cross-runner spec only uses runner-1's MCP
+      # but having this exposed lets future specs target runner-2 directly.
+      - "${RUNNER_2_MCP_PORT:-19001}:19000"
     extra_hosts:
       - "host.lan:host-gateway"
     entrypoint: ["/usr/local/bin/runner-entrypoint.sh"]
@@ -230,3 +296,8 @@ volumes:
   runner_claude_config:
   runner_codex_config:
   runner_gemini_config:
+  runner2_workspace:
+  runner2_config:
+  runner2_claude_config:
+  runner2_codex_config:
+  runner2_gemini_config:

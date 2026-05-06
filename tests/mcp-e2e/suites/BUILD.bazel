@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_test")
+
+# MCP end-to-end test suites. Tagged "e2e" + "manual" so `bazel test //...`
+# never picks them up — they require a live deploy/dev stack. Run with:
+#   bazel run //deploy/dev:up   # one-time setup
+#   bazel test //tests/mcp-e2e/suites:e2e --test_tag_filters=e2e \
+#     --test_env=BACKEND_HTTP_PORT --test_env=MCP_PORT --test_env=POSTGRES_PORT
+go_test(
+    name = "e2e",
+    srcs = glob(["*_test.go"]),
+    tags = [
+        "e2e",
+        "manual",
+        "no-sandbox",
+    ],
+    deps = [
+        "//tests/mcp-e2e/client",
+        "//tests/mcp-e2e/fixture",
+        "@com_github_lib_pq//:pq",
+    ],
+)
