@@ -4,6 +4,7 @@ load("//build_defs/docker:go_oci_image.bzl", "go_oci_image")
 go_library(
     name = "server_lib",
     srcs = [
+        "cmd_migrate.go",
         "embedder_select.go",
         "eventbus_autopilot.go",
         "eventbus_loop.go",
@@ -75,8 +76,12 @@ go_library(
         "//backend/internal/service/ticket",
         "//backend/internal/service/tokenusage",
         "//backend/internal/service/user",
+        "//backend/migrations",
         "//backend/pkg/crypto",
         "//proto/runner/v1:runner_go_proto",
+        "@com_github_golang_migrate_migrate_v4//:migrate",
+        "@com_github_golang_migrate_migrate_v4//database/postgres",
+        "@com_github_golang_migrate_migrate_v4//source/iofs",
         "@com_github_redis_go_redis_extra_redisotel_v9//:redisotel",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@io_gorm_gorm//:gorm",
