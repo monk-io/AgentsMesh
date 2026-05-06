@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "client",
+    srcs = [
+        "backend_rest.go",
+        "db.go",
+        "mcp.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/tests/mcp-e2e/client",
+    visibility = ["//tests/mcp-e2e:__subpackages__"],
+    deps = [
+        "@com_github_lib_pq//:pq",
+    ],
+)

@@ -190,6 +190,24 @@ BEGIN
 
     RAISE NOTICE 'Runner ID: %', v_runner_id;
 
+    -- Second runner row so dev-runner-2 (started by docker-compose for
+    -- mcp-e2e cross-runner specs) can register. The container's mTLS cert
+    -- carries CN=dev-runner-2; backend matches that against this row to
+    -- attach the gRPC stream.
+    INSERT INTO runners (
+        organization_id, node_id, description,
+        status, max_concurrent_pods
+    )
+    SELECT v_org_id,
+           'dev-runner-2',
+           'Development Docker Runner (cross-runner e2e)',
+           'offline',
+           10
+    WHERE NOT EXISTS (
+        SELECT 1 FROM runners
+        WHERE organization_id = v_org_id AND node_id = 'dev-runner-2'
+    );
+
     -- =========================================================================
     -- 6. 创建示例 Ticket
     -- =========================================================================
