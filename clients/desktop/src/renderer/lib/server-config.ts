@@ -77,6 +77,18 @@ export function getPresets(): { kind: "global" | "cn"; label: string; url: strin
 }
 
 /**
+ * Human-readable label for the currently selected server. The footer
+ * pill in AuthShell uses this to show the user what they're connected
+ * to. Custom mode falls back to the preset name when the user hasn't
+ * supplied a label, so we never render an empty pill.
+ */
+export function getActiveLabel(cfg: ServerConfig): string {
+  if (cfg.kind === "custom" && cfg.customLabel.trim()) return cfg.customLabel;
+  if (cfg.kind === "cn") return PRESETS.cn.label;
+  return PRESETS.global.label;
+}
+
+/**
  * Resolves the URL the renderer should hit. Returns null when no
  * explicit choice has been made yet — env.ts then falls back to the
  * preload-bridge default (AGENTSMESH_API_URL the main process was
