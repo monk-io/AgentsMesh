@@ -60,9 +60,6 @@ vi.mock('@/lib/wasm-core', () => {
     put: fn().mockResolvedValue('{}'),
     delete: fn().mockResolvedValue('{}'),
     patch: fn().mockResolvedValue('{}'),
-    set_token: fn(),
-    set_org_slug: fn(),
-    clear_auth: fn(),
     org_path: fn((p: string) => `/api/v1/orgs/test-org${p}`),
   }
 

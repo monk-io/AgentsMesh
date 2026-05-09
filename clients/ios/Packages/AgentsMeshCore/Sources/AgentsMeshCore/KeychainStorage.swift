@@ -55,12 +55,4 @@ public final class KeychainStorage: StorageCallback, @unchecked Sendable {
         ]
         SecItemDelete(query as CFDictionary)
     }
-
-    public func clear() {
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-        ]
-        SecItemDelete(query as CFDictionary)
-    }
 }

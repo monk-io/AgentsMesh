@@ -70,7 +70,8 @@ pub use pod::{
 };
 pub(crate) use pod::update_pod_alias_req;
 pub use user::{
-    AuthSessionDto, AuthTokensDto, OrganizationDto, SSOConfigDto, UserDto, UserIdentityDto,
+    AuthSessionDto, AuthTokensDto, BootstrapCleanupReasonDto, BootstrapResultDto,
+    OrganizationDto, SSOConfigDto, UserDto, UserIdentityDto,
 };
 pub use workspace::{
     AuthorizeRunnerRequestDto, BranchDto, CreateRepositoryRequestDto, CreateRunnerTokenRequestDto,

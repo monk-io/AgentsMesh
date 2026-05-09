@@ -33,7 +33,6 @@ export interface IAgentService {
 }
 
 export interface IApiClient {
-  clear_auth(): void;
   create_agent_service(): IAgentService;
   create_apikey_service(): IApiKeyService;
   create_auth_api_service(): IAuthApiService;
@@ -62,16 +61,12 @@ export interface IApiClient {
   create_user_credential_service(): IUserCredentialService;
   delete(endpoint: string): Promise<string>;
   get(endpoint: string): Promise<string>;
-  get_org_slug(): string | undefined;
-  get_token(): string | undefined;
   org_path(path: string): string;
   patch(endpoint: string, body: string): Promise<string>;
   post(endpoint: string, body: string): Promise<string>;
   public_get(endpoint: string): Promise<string>;
   public_post(endpoint: string, body: string): Promise<string>;
   put(endpoint: string, body: string): Promise<string>;
-  set_org_slug(slug: string): void;
-  set_token(token: string, refresh_token: string): void;
   readonly base_url: string;
 }
 
@@ -93,6 +88,9 @@ export interface IAuthApiService {
 }
 
 export interface IAuthManager {
+  apply_session?(session_json: string): void;
+  bootstrap(): Promise<string>;
+  clear_session?(): void;
   fetch_organizations(): Promise<string>;
   get_current_org_json(): any;
   get_current_user_json(): any;
@@ -103,7 +101,8 @@ export interface IAuthManager {
   login(email: string, password: string): Promise<string>;
   logout(): Promise<void>;
   refresh_token(): Promise<string>;
-  restore_session(): boolean | Promise<boolean>;
+  set_current_org?(org_json: string): Promise<void> | void;
+  set_organizations?(orgs_json: string): void;
   switch_org(slug: string): void;
   readonly base_url: string;
 }

@@ -1,3 +1,4 @@
+use agentsmesh_auth::{BootstrapCleanupReason, BootstrapResult};
 use agentsmesh_types::{AuthSession, AuthTokens, Organization, SSOConfig, User, UserIdentity};
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -121,3 +122,52 @@ impl From<SSOConfig> for SSOConfigDto {
         }
     }
 }
+
+#[derive(Clone, Debug, uniffi::Enum)]
+pub enum BootstrapCleanupReasonDto {
+    BaseUrlMismatch,
+    TokenExpiredAndRefreshFailed,
+    UnauthorizedFromIdentityCall,
+    StorageCorrupt,
+    LegacyDataPurged,
+}
+
+impl From<BootstrapCleanupReason> for BootstrapCleanupReasonDto {
+    fn from(r: BootstrapCleanupReason) -> Self {
+        match r {
+            BootstrapCleanupReason::BaseUrlMismatch => Self::BaseUrlMismatch,
+            BootstrapCleanupReason::TokenExpiredAndRefreshFailed => Self::TokenExpiredAndRefreshFailed,
+            BootstrapCleanupReason::UnauthorizedFromIdentityCall => Self::UnauthorizedFromIdentityCall,
+            BootstrapCleanupReason::StorageCorrupt => Self::StorageCorrupt,
+            BootstrapCleanupReason::LegacyDataPurged => Self::LegacyDataPurged,
+        }
+    }
+}
+
+#[derive(Clone, Debug, uniffi::Enum)]
+pub enum BootstrapResultDto {
+    Anonymous,
+    Authenticated {
+        user: UserDto,
+        current_org: Option<OrganizationDto>,
+    },
+    AnonymousAfterCleanup {
+        reason: BootstrapCleanupReasonDto,
+    },
+}
+
+impl From<BootstrapResult> for BootstrapResultDto {
+    fn from(r: BootstrapResult) -> Self {
+        match r {
+            BootstrapResult::Anonymous => Self::Anonymous,
+            BootstrapResult::Authenticated { user, current_org } => Self::Authenticated {
+                user: user.into(),
+                current_org: current_org.map(Into::into),
+            },
+            BootstrapResult::AnonymousAfterCleanup { reason } => Self::AnonymousAfterCleanup {
+                reason: reason.into(),
+            },
+        }
+    }
+}
+
