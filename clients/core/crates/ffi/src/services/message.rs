@@ -1,7 +1,8 @@
 use crate::core::AgentsMeshCore;
 use crate::dto::{
     mark_messages_read_req, DeadLetterListResponseDto, DirectMessageDto,
-    DirectMessageListResponseDto, SendDirectMessageRequestDto, UnreadCountResponseDto,
+    DirectMessageListResponseDto, ReplayDeadLetterResponseDto, SendDirectMessageRequestDto,
+    UnreadCountResponseDto,
 };
 use crate::error::CoreError;
 
@@ -81,8 +82,11 @@ impl AgentsMeshCore {
         Ok(resp.into())
     }
 
-    pub async fn replay_mesh_dead_letter(&self, entry_id: i64) -> Result<(), CoreError> {
-        self.api.replay_mesh_dead_letter(entry_id).await?;
-        Ok(())
+    pub async fn replay_mesh_dead_letter(
+        &self,
+        entry_id: i64,
+    ) -> Result<ReplayDeadLetterResponseDto, CoreError> {
+        let resp = self.api.replay_mesh_dead_letter(entry_id).await?;
+        Ok(resp.into())
     }
 }

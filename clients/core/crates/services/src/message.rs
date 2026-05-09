@@ -79,8 +79,8 @@ impl MessageService {
         serde_json::to_string(&resp).map_err(crate::wire)
     }
 
-    pub async fn replay_dead_letter(&self, entry_id: i64) -> Result<(), String> {
-        self.client.replay_mesh_dead_letter(entry_id).await.map_err(crate::wire)?;
-        Ok(())
+    pub async fn replay_dead_letter(&self, entry_id: i64) -> Result<String, String> {
+        let resp = self.client.replay_mesh_dead_letter(entry_id).await.map_err(crate::wire)?;
+        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

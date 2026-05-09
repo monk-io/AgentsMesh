@@ -205,6 +205,13 @@ pub struct CreatePodRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreatePodResponse {
+    pub pod: Pod,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdatePodAliasRequest {
     pub alias: String,
 }

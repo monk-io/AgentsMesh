@@ -166,7 +166,10 @@ mod api_agent_billing_tests {
     async fn create_api_key() {
         let s = MockServer::start().await;
         Mock::given(method("POST")).and(path("/api/v1/orgs/acme/api-keys"))
-            .respond_with(ok(json!({"id":1,"name":"new-key"})))
+            .respond_with(ok(json!({
+                "api_key": {"id":1,"name":"new-key"},
+                "raw_key": "amk_secret_value_here"
+            })))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
         let data = agentsmesh_types::CreateApiKeyRequest {
@@ -175,7 +178,10 @@ mod api_agent_billing_tests {
             scopes: None,
             expires_in: None,
         };
-        let _ = c.create_api_key(&data).await.unwrap();
+        // Verify raw_key is preserved end-to-end (issue #345 regression guard)
+        let resp = c.create_api_key(&data).await.unwrap();
+        assert_eq!(resp.raw_key, "amk_secret_value_here");
+        assert_eq!(resp.api_key.id, 1);
     }
 
     #[tokio::test]

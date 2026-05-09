@@ -187,6 +187,8 @@ pub struct InviteChannelMembersRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelMessageListResponse {
     pub messages: Vec<ChannelMessage>,
+    #[serde(default)]
+    pub has_more: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -290,6 +292,32 @@ mod tests {
         let json = serde_json::to_string(&preview).unwrap();
         let decoded: MessagePreview = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded.sender_name, "alice");
+    }
+
+    #[test]
+    fn channel_message_list_decodes_has_more() {
+        let json = r#"{"messages":[],"has_more":true}"#;
+        let resp: ChannelMessageListResponse = serde_json::from_str(json).unwrap();
+        assert!(resp.has_more);
+    }
+
+    #[test]
+    fn channel_message_list_relay_preserves_has_more() {
+        let backend = r#"{
+            "messages": [{"id":1,"channel_id":2,"body":"hi"}],
+            "has_more": true
+        }"#;
+        let typed: ChannelMessageListResponse = serde_json::from_str(backend).unwrap();
+        let relayed = serde_json::to_string(&typed).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&relayed).unwrap();
+        assert_eq!(parsed["has_more"], serde_json::json!(true), "has_more dropped by relay");
+    }
+
+    #[test]
+    fn channel_message_list_defaults_has_more_false() {
+        let json = r#"{"messages":[]}"#;
+        let resp: ChannelMessageListResponse = serde_json::from_str(json).unwrap();
+        assert!(!resp.has_more);
     }
 
     #[test]

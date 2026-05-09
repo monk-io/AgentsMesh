@@ -82,8 +82,8 @@ impl WasmMessageService {
         serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
-    pub async fn replay_dead_letter(&self, entry_id: i64) -> Result<(), String> {
-        self.client.replay_mesh_dead_letter(entry_id).await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    pub async fn replay_dead_letter(&self, entry_id: i64) -> Result<String, String> {
+        let resp = self.client.replay_mesh_dead_letter(entry_id).await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 }

@@ -58,7 +58,7 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn message_replay_dead_letter(&self, entry_id: i64) -> napi::Result<()> {
+    pub async fn message_replay_dead_letter(&self, entry_id: i64) -> napi::Result<String> {
         let svc = self.message.lock().await;
             svc.replay_dead_letter(entry_id).await.map_err(err)
     }

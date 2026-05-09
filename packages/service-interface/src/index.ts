@@ -435,7 +435,7 @@ export interface IMessageService {
   get_unread_count(): Promise<string>;
   mark_all_read(): Promise<void>;
   mark_read(json: string): Promise<void>;
-  replay_dead_letter(entry_id: bigint): Promise<void>;
+  replay_dead_letter(entry_id: bigint): Promise<string>;
   send_message(json: string, pod_key?: string | null): Promise<string>;
 }
 

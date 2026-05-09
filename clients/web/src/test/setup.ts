@@ -734,7 +734,7 @@ vi.mock('@/lib/wasm-core', () => {
       get_conversation: fn().mockResolvedValue('{"messages":[]}'),
       get_sent_messages: fn().mockResolvedValue('{"messages":[]}'),
       get_dead_letters: fn().mockResolvedValue('{"entries":[]}'),
-      replay_dead_letter: fn().mockResolvedValue(undefined),
+      replay_dead_letter: fn().mockResolvedValue('{}'),
     })),
     getNotificationService: fn(() => ({
       get_preferences: fn().mockResolvedValue('{"preferences":[]}'),

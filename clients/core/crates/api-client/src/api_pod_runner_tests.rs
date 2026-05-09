@@ -54,7 +54,7 @@ mod api_pod_runner_tests {
     async fn create_pod() {
         let s = MockServer::start().await;
         Mock::given(method("POST")).and(path("/api/v1/orgs/acme/pods"))
-            .respond_with(ok(pod_json("pod-new", "creating")))
+            .respond_with(ok(json!({"pod": pod_json("pod-new", "creating")})))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), Tok::org("acme"));
         let data = agentsmesh_types::CreatePodRequest {
@@ -64,7 +64,7 @@ mod api_pod_runner_tests {
             resume_agent_session: None, perpetual: None,
         };
         let r = c.create_pod(&data).await.unwrap();
-        assert_eq!(r.key, "pod-new");
+        assert_eq!(r.pod.key, "pod-new");
     }
 
     #[tokio::test]

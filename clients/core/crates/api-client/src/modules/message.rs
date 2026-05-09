@@ -125,7 +125,7 @@ impl ApiClient {
     pub async fn replay_mesh_dead_letter(
         &self,
         entry_id: i64,
-    ) -> Result<EmptyResponse, ApiError> {
+    ) -> Result<ReplayDeadLetterResponse, ApiError> {
         self.post(
             &self.org_path(&format!("/messages/dlq/{entry_id}/replay")),
             &serde_json::json!({}),

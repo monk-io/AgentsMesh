@@ -38,7 +38,7 @@ export class ElectronMessageService implements IMessageService {
     return invoke<string>("messageGetDeadLetters", limit, offset);
   }
 
-  async replay_dead_letter(entryId: bigint): Promise<void> {
-    await invoke<void>("messageReplayDeadLetter", Number(entryId));
+  async replay_dead_letter(entryId: bigint): Promise<string> {
+    return invoke<string>("messageReplayDeadLetter", Number(entryId));
   }
 }

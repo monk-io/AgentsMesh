@@ -330,6 +330,8 @@ impl From<LoopRunData> for LoopRunDataDto {
 pub struct LoopRunListResponseDto {
     pub runs: Vec<LoopRunDataDto>,
     pub total: Option<i64>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 impl From<LoopRunListResponse> for LoopRunListResponseDto {
@@ -337,6 +339,8 @@ impl From<LoopRunListResponse> for LoopRunListResponseDto {
         Self {
             runs: r.runs.into_iter().map(LoopRunDataDto::from).collect(),
             total: r.total,
+            limit: r.limit,
+            offset: r.offset,
         }
     }
 }
