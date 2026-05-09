@@ -59,8 +59,3 @@ pub struct AutopilotIteration {
 pub struct AutopilotListResponse {
     pub controllers: Vec<AutopilotController>,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AutopilotIterationListResponse {
-    pub iterations: Vec<AutopilotIteration>,
-}

@@ -8,6 +8,7 @@ pub struct UserDto {
     pub username: String,
     pub name: Option<String>,
     pub avatar_url: Option<String>,
+    pub is_email_verified: Option<bool>,
 }
 
 impl From<User> for UserDto {
@@ -18,6 +19,7 @@ impl From<User> for UserDto {
             username: u.username,
             name: u.name,
             avatar_url: u.avatar_url,
+            is_email_verified: u.is_email_verified,
         }
     }
 }

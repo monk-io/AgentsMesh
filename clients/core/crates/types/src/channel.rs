@@ -162,6 +162,8 @@ pub struct MuteChannelRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelListResponse {
     pub channels: Vec<Channel>,
+    #[serde(default)]
+    pub total: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -236,7 +238,7 @@ mod tests {
             body: "Hello from agent".into(),
             content: Some(serde_json::json!({"schema_version": 1, "kind": "ast", "blocks": []})),
             mentions: None, reply_to: None,
-            sender_user: Some(User { id: 1, email: "a@b.com".into(), username: "u".into(), name: None, avatar_url: None }),
+            sender_user: Some(User { id: 1, email: "a@b.com".into(), username: "u".into(), name: None, avatar_url: None, is_email_verified: None }),
             sender_user_id: Some(1), sender_pod: Some("pod-1".into()),
             sender_pod_info: Some(SenderPodInfo { pod_key: "pod-1".into(), alias: Some("my-agent".into()), agent: Some(SenderAgentInfo { name: "claude".into() }) }),
             message_type: Some("text".into()), pod_key: Some("pod-1".into()),

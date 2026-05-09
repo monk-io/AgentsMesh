@@ -7,6 +7,8 @@ pub struct User {
     pub username: String,
     pub name: Option<String>,
     pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub is_email_verified: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,6 +81,7 @@ mod tests {
             username: "dev".into(),
             name: Some("Dev User".into()),
             avatar_url: None,
+            is_email_verified: Some(true),
         };
         let json = serde_json::to_string(&user).unwrap();
         let decoded: User = serde_json::from_str(&json).unwrap();
@@ -142,6 +145,7 @@ mod tests {
                 username: "u".into(),
                 name: None,
                 avatar_url: None,
+                is_email_verified: None,
             },
             expires_in: Some(3600),
         };

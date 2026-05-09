@@ -433,8 +433,8 @@ export interface IMessageService {
   get_messages(unread_only?: boolean | null, limit?: number | null, offset?: number | null): Promise<string>;
   get_sent_messages(limit?: number | null, offset?: number | null): Promise<string>;
   get_unread_count(): Promise<string>;
-  mark_all_read(): Promise<void>;
-  mark_read(json: string): Promise<void>;
+  mark_all_read(): Promise<string>;
+  mark_read(json: string): Promise<string>;
   replay_dead_letter(entry_id: bigint): Promise<string>;
   send_message(json: string, pod_key?: string | null): Promise<string>;
 }

@@ -1,8 +1,7 @@
 use agentsmesh_types::{
-    ApproveAutopilotRequest, AutopilotController, AutopilotIteration,
-    AutopilotIterationListResponse, AutopilotListResponse, AutopilotStatus, CreateAutopilotRequest,
-    CreateLoopRequest, LoopData, LoopListResponse, LoopRunData, LoopRunListResponse,
-    LoopRunStatus, UpdateLoopRequest,
+    ApproveAutopilotRequest, AutopilotController, AutopilotIteration, AutopilotListResponse,
+    AutopilotStatus, CreateAutopilotRequest, CreateLoopRequest, LoopData, LoopListResponse,
+    LoopRunData, LoopRunListResponse, LoopRunStatus, UpdateLoopRequest,
 };
 
 // ── Enums ─────────────────────────────────────────────────
@@ -149,14 +148,10 @@ pub struct AutopilotIterationListResponseDto {
     pub iterations: Vec<AutopilotIterationDto>,
 }
 
-impl From<AutopilotIterationListResponse> for AutopilotIterationListResponseDto {
-    fn from(r: AutopilotIterationListResponse) -> Self {
+impl From<Vec<AutopilotIteration>> for AutopilotIterationListResponseDto {
+    fn from(iterations: Vec<AutopilotIteration>) -> Self {
         Self {
-            iterations: r
-                .iterations
-                .into_iter()
-                .map(AutopilotIterationDto::from)
-                .collect(),
+            iterations: iterations.into_iter().map(AutopilotIterationDto::from).collect(),
         }
     }
 }

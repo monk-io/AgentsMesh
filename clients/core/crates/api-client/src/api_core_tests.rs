@@ -518,7 +518,7 @@ mod api_core_tests {
     async fn get_support_ticket_detail() {
         let s = MockServer::start().await;
         Mock::given(method("GET")).and(path("/api/v1/support-tickets/42"))
-            .respond_with(ok(json!({"id":42,"title":"help"})))
+            .respond_with(ok(json!({"ticket":{"id":42,"title":"help"},"messages":[]})))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
         let _ = c.get_support_ticket_detail(42).await.unwrap();

@@ -309,7 +309,7 @@ mod api_agent_billing_tests {
         let s = MockServer::start().await;
         Mock::given(method("GET"))
             .and(path("/api/v1/orgs/acme/autopilot-controllers/ctrl-1/iterations"))
-            .respond_with(ok(json!({"iterations":[]})))
+            .respond_with(ok(json!([])))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
         let _ = c.get_autopilot_iterations("ctrl-1").await.unwrap();

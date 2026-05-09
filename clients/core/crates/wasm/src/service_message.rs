@@ -44,15 +44,15 @@ impl WasmMessageService {
         serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
-    pub async fn mark_read(&self, json: &str) -> Result<(), String> {
+    pub async fn mark_read(&self, json: &str) -> Result<String, String> {
         let req: MarkMessagesReadRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        self.client.mark_mesh_messages_read(&req).await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+        let resp = self.client.mark_mesh_messages_read(&req).await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
-    pub async fn mark_all_read(&self) -> Result<(), String> {
-        self.client.mark_all_mesh_messages_read().await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    pub async fn mark_all_read(&self) -> Result<String, String> {
+        let resp = self.client.mark_all_mesh_messages_read().await.map_err(agentsmesh_services::wire)?;
+        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
     }
 
     pub async fn get_conversation(

@@ -43,16 +43,16 @@ impl AgentsMeshCore {
         Ok(msg.into())
     }
 
-    pub async fn mark_mesh_messages_read(&self, message_ids: Vec<i64>) -> Result<(), CoreError> {
-        self.api
+    pub async fn mark_mesh_messages_read(&self, message_ids: Vec<i64>) -> Result<i64, CoreError> {
+        let resp = self.api
             .mark_mesh_messages_read(&mark_messages_read_req(message_ids))
             .await?;
-        Ok(())
+        Ok(resp.marked_count)
     }
 
-    pub async fn mark_all_mesh_messages_read(&self) -> Result<(), CoreError> {
-        self.api.mark_all_mesh_messages_read().await?;
-        Ok(())
+    pub async fn mark_all_mesh_messages_read(&self) -> Result<i64, CoreError> {
+        let resp = self.api.mark_all_mesh_messages_read().await?;
+        Ok(resp.marked_count)
     }
 
     pub async fn get_mesh_conversation(

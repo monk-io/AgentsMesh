@@ -26,12 +26,12 @@ export class ElectronMessageService implements IMessageService {
     return invoke<string>("messageSendMessage", json, podKey);
   }
 
-  async mark_read(json: string): Promise<void> {
-    await invoke<void>("messageMarkRead", json);
+  async mark_read(json: string): Promise<string> {
+    return invoke<string>("messageMarkRead", json);
   }
 
-  async mark_all_read(): Promise<void> {
-    await invoke<void>("messageMarkAllRead");
+  async mark_all_read(): Promise<string> {
+    return invoke<string>("messageMarkAllRead");
   }
 
   async get_dead_letters(limit?: number | null, offset?: number | null): Promise<string> {

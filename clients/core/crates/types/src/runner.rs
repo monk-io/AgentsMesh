@@ -86,6 +86,25 @@ pub struct RunnerListResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelayConnectionInfo {
+    pub pod_key: String,
+    pub relay_url: String,
+    pub session_id: String,
+    pub connected: bool,
+    #[serde(default)]
+    pub connected_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunnerDetailResponse {
+    pub runner: Runner,
+    #[serde(default)]
+    pub relay_connections: Option<Vec<RelayConnectionInfo>>,
+    #[serde(default)]
+    pub latest_runner_version: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerTokenListResponse {
     pub tokens: Vec<GRPCRegistrationToken>,
 }

@@ -121,10 +121,11 @@ mod api_pod_runner_tests {
     async fn get_runner() {
         let s = MockServer::start().await;
         Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners/3"))
-            .respond_with(ok(runner_json(3))).expect(1).mount(&s).await;
+            .respond_with(ok(json!({"runner": runner_json(3)})))
+            .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), Tok::org("acme"));
         let r = c.get_runner(3).await.unwrap();
-        assert_eq!(r.id, 3);
+        assert_eq!(r.runner.id, 3);
     }
 
     #[tokio::test]

@@ -18,8 +18,8 @@ impl ApiClient {
         self.get(&self.org_path("/runners/available")).await
     }
 
-    pub async fn get_runner(&self, id: i64) -> Result<Runner, ApiError> {
-        self.get_resource(&self.org_path(&format!("/runners/{id}")), "runner").await
+    pub async fn get_runner(&self, id: i64) -> Result<RunnerDetailResponse, ApiError> {
+        self.get(&self.org_path(&format!("/runners/{id}"))).await
     }
 
     pub async fn update_runner(

@@ -76,7 +76,7 @@ impl ApiClient {
     pub async fn get_autopilot_iterations(
         &self,
         key: &str,
-    ) -> Result<AutopilotIterationListResponse, ApiError> {
+    ) -> Result<Vec<AutopilotIteration>, ApiError> {
         self.get(&self.org_path(&format!(
             "/autopilot-controllers/{key}/iterations"
         )))

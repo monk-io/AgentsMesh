@@ -59,12 +59,12 @@ impl ApiClient {
     pub async fn mark_mesh_messages_read(
         &self,
         data: &MarkMessagesReadRequest,
-    ) -> Result<EmptyResponse, ApiError> {
+    ) -> Result<MarkReadResponse, ApiError> {
         self.post(&self.org_path("/messages/mark-read"), data)
             .await
     }
 
-    pub async fn mark_all_mesh_messages_read(&self) -> Result<EmptyResponse, ApiError> {
+    pub async fn mark_all_mesh_messages_read(&self) -> Result<MarkReadResponse, ApiError> {
         self.post(
             &self.org_path("/messages/mark-all-read"),
             &serde_json::json!({}),

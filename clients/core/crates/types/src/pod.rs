@@ -188,6 +188,8 @@ pub struct PodConnectionInfo {
     pub local_relay_url: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub local_token: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub local_relay_node_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,6 +272,7 @@ mod tests {
             pod_key: "pod-1".into(),
             local_relay_url: String::new(),
             local_token: String::new(),
+            local_relay_node_id: String::new(),
         };
         let json = serde_json::to_string(&info).unwrap();
         let decoded: PodConnectionInfo = serde_json::from_str(&json).unwrap();
