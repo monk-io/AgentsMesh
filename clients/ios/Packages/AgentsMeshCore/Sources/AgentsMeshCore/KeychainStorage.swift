@@ -55,4 +55,15 @@ public final class KeychainStorage: StorageCallback, @unchecked Sendable {
         ]
         SecItemDelete(query as CFDictionary)
     }
+
+    /// Wipe every keychain item under this service. Used by the
+    /// `AGENTSMESH_RESET_SESSION=1` debug entry-point so we can boot
+    /// from a clean state without uninstalling the app.
+    public func clear() {
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
 }
