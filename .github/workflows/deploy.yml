@@ -38,7 +38,7 @@ jobs:
       migrations: ${{ steps.filter.outputs.migrations }}
     steps:
       - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -115,7 +115,7 @@ jobs:
       version: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v6
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true

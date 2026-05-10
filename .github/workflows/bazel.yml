@@ -35,8 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -61,8 +61,8 @@ jobs:
     timeout-minutes: 45
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -81,8 +81,8 @@ jobs:
     timeout-minutes: 45
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -111,8 +111,8 @@ jobs:
       matrix:
         module: [backend, runner, relay]
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -131,8 +131,8 @@ jobs:
     timeout-minutes: 25
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -165,8 +165,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -269,8 +269,8 @@ jobs:
     timeout-minutes: 20
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -285,8 +285,8 @@ jobs:
     timeout-minutes: 20
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -317,8 +317,8 @@ jobs:
           - service: web-admin
             target: //clients/web-admin:image
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -334,8 +334,8 @@ jobs:
     timeout-minutes: 35
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -408,7 +408,7 @@ jobs:
     timeout-minutes: 30
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Select Xcode
         # macos-26 ships Xcode 26 by default at /Applications/Xcode.app.
         # Pin via xcode-select so any later image revisions stay
@@ -423,7 +423,7 @@ jobs:
           xcrun --version || sudo xcode-select -s /Applications/Xcode.app
           xcodebuild -version
           swift --version
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -467,7 +467,7 @@ jobs:
           cd dist && zip -r AgentsMeshCore-xcframework.zip \
                           AgentsMeshCore.xcframework AgentsMeshCore.swift
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AgentsMeshCore-xcframework
           path: dist/AgentsMeshCore-xcframework.zip
@@ -501,8 +501,8 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -634,7 +634,7 @@ jobs:
 
       - name: Upload Web e2e artifacts (shard ${{ matrix.shard }})
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-e2e-artifacts-shard-${{ matrix.shard }}
           path: |
@@ -657,8 +657,8 @@ jobs:
     timeout-minutes: 30
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -739,7 +739,7 @@ jobs:
 
       - name: Upload MCP e2e logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mcp-e2e-logs
           path: |
@@ -759,8 +759,8 @@ jobs:
     timeout-minutes: 60
     needs: smoke
     steps:
-      - uses: actions/checkout@v4
-      - uses: bazel-contrib/setup-bazel@0.9.1
+      - uses: actions/checkout@v6
+      - uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
           disk-cache: true
@@ -844,7 +844,7 @@ jobs:
 
       - name: Upload Desktop e2e artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-e2e-artifacts
           path: |
