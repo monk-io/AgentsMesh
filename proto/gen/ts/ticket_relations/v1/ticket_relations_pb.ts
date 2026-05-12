@@ -37,14 +37,44 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ticket_relations/v1/ticket_relations.proto.
  */
 export const file_ticket_relations_v1_ticket_relations: GenFile = /*@__PURE__*/
-  fileDesc("Cip0aWNrZXRfcmVsYXRpb25zL3YxL3RpY2tldF9yZWxhdGlvbnMucHJvdG8SGXByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEijgEKCFJlbGF0aW9uEgoKAmlkGAEgASgDEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoAxIYChBzb3VyY2VfdGlja2V0X2lkGAMgASgDEhgKEHRhcmdldF90aWNrZXRfaWQYBCABKAMSFQoNcmVsYXRpb25fdHlwZRgFIAEoCRISCgpjcmVhdGVkX2F0GAYgASgJIoIECgxNZXJnZVJlcXVlc3QSCgoCaWQYASABKAMSDgoGbXJfaWlkGAIgASgFEg0KBXRpdGxlGAMgASgJEg0KBXN0YXRlGAQgASgJEg4KBm1yX3VybBgFIAEoCRIVCg1zb3VyY2VfYnJhbmNoGAYgASgJEhUKDXRhcmdldF9icmFuY2gYByABKAkSHAoPcGlwZWxpbmVfc3RhdHVzGAggASgJSACIAQESGAoLcGlwZWxpbmVfaWQYCSABKANIAYgBARIZCgxwaXBlbGluZV91cmwYCiABKAlIAogBARIWCgl0aWNrZXRfaWQYCyABKANIA4gBARITCgZwb2RfaWQYDCABKANIBIgBARIdChBtZXJnZV9jb21taXRfc2hhGA0gASgJSAWIAQESFgoJbWVyZ2VkX2F0GA4gASgJSAaIAQESGQoMbWVyZ2VkX2J5X2lkGA8gASgDSAeIAQESEgoKY3JlYXRlZF9hdBgQIAEoCRISCgp1cGRhdGVkX2F0GBEgASgJQhIKEF9waXBlbGluZV9zdGF0dXNCDgoMX3BpcGVsaW5lX2lkQg8KDV9waXBlbGluZV91cmxCDAoKX3RpY2tldF9pZEIJCgdfcG9kX2lkQhMKEV9tZXJnZV9jb21taXRfc2hhQgwKCl9tZXJnZWRfYXRCDwoNX21lcmdlZF9ieV9pZCLhAgoGQ29tbWl0EgoKAmlkGAEgASgDEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoAxIRCgl0aWNrZXRfaWQYAyABKAMSFQoNcmVwb3NpdG9yeV9pZBgEIAEoAxITCgZwb2RfaWQYBSABKANIAIgBARISCgpjb21taXRfc2hhGAYgASgJEhYKDmNvbW1pdF9tZXNzYWdlGAcgASgJEhcKCmNvbW1pdF91cmwYCCABKAlIAYgBARIYCgthdXRob3JfbmFtZRgJIAEoCUgCiAEBEhkKDGF1dGhvcl9lbWFpbBgKIAEoCUgDiAEBEhkKDGNvbW1pdHRlZF9hdBgLIAEoCUgEiAEBEhIKCmNyZWF0ZWRfYXQYDCABKAlCCQoHX3BvZF9pZEINCgtfY29tbWl0X3VybEIOCgxfYXV0aG9yX25hbWVCDwoNX2F1dGhvcl9lbWFpbEIPCg1fY29tbWl0dGVkX2F0IjMKDkNvbW1lbnRNZW50aW9uEg8KB3VzZXJfaWQYASABKAMSEAoIdXNlcm5hbWUYAiABKAkihQEKC0NvbW1lbnRVc2VyEgoKAmlkGAEgASgDEhAKCHVzZXJuYW1lGAIgASgJEhEKBG5hbWUYAyABKAlIAIgBARITCgZhdmF0YXIYBCABKAlIAYgBARISCgVlbWFpbBgFIAEoCUgCiAEBQgcKBV9uYW1lQgkKB19hdmF0YXJCCAoGX2VtYWlsIpkCCgdDb21tZW50EgoKAmlkGAEgASgDEhEKCXRpY2tldF9pZBgCIAEoAxIPCgd1c2VyX2lkGAMgASgDEg8KB2NvbnRlbnQYBCABKAkSFgoJcGFyZW50X2lkGAUgASgDSACIAQESOwoIbWVudGlvbnMYBiADKAsyKS5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkNvbW1lbnRNZW50aW9uEhIKCmNyZWF0ZWRfYXQYByABKAkSEgoKdXBkYXRlZF9hdBgIIAEoCRI5CgR1c2VyGAkgASgLMiYucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50VXNlckgBiAEBQgwKCl9wYXJlbnRfaWRCBwoFX3VzZXIiPQoUTGlzdFJlbGF0aW9uc1JlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEwoLdGlja2V0X3NsdWcYAiABKAkieQoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEjIKBWl0ZW1zGAEgAygLMiMucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5SZWxhdGlvbhINCgV0b3RhbBgCIAEoAxINCgVsaW1pdBgDIAEoBRIOCgZvZmZzZXQYBCABKAUiagoVQ3JlYXRlUmVsYXRpb25SZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKC3RpY2tldF9zbHVnGAIgASgJEhMKC3RhcmdldF9zbHVnGAMgASgJEhUKDXJlbGF0aW9uX3R5cGUYBCABKAkiUwoVRGVsZXRlUmVsYXRpb25SZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKC3RpY2tldF9zbHVnGAIgASgJEhMKC3JlbGF0aW9uX2lkGAMgASgDIhgKFkRlbGV0ZVJlbGF0aW9uUmVzcG9uc2UiQQoYTGlzdE1lcmdlUmVxdWVzdHNSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKC3RpY2tldF9zbHVnGAIgASgJIoEBChlMaXN0TWVyZ2VSZXF1ZXN0c1Jlc3BvbnNlEjYKBWl0ZW1zGAEgAygLMicucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5NZXJnZVJlcXVlc3QSDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIjsKEkxpc3RDb21taXRzUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCSJ1ChNMaXN0Q29tbWl0c1Jlc3BvbnNlEjAKBWl0ZW1zGAEgAygLMiEucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21taXQSDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIqgCChFMaW5rQ29tbWl0UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRISCgpjb21taXRfc2hhGAMgASgJEhsKDmNvbW1pdF9tZXNzYWdlGAQgASgJSACIAQESFwoKY29tbWl0X3VybBgFIAEoCUgBiAEBEhgKC2F1dGhvcl9uYW1lGAYgASgJSAKIAQESGQoMYXV0aG9yX2VtYWlsGAcgASgJSAOIAQESGQoMY29tbWl0dGVkX2F0GAggASgJSASIAQFCEQoPX2NvbW1pdF9tZXNzYWdlQg0KC19jb21taXRfdXJsQg4KDF9hdXRob3JfbmFtZUIPCg1fYXV0aG9yX2VtYWlsQg8KDV9jb21taXR0ZWRfYXQiTwoTVW5saW5rQ29tbWl0UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRIRCgljb21taXRfaWQYAyABKAMiFgoUVW5saW5rQ29tbWl0UmVzcG9uc2UiegoTTGlzdENvbW1lbnRzUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRISCgVsaW1pdBgDIAEoBUgAiAEBEhMKBm9mZnNldBgEIAEoBUgBiAEBQggKBl9saW1pdEIJCgdfb2Zmc2V0IncKFExpc3RDb21tZW50c1Jlc3BvbnNlEjEKBWl0ZW1zGAEgAygLMiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50Eg0KBXRvdGFsGAIgASgDEg0KBWxpbWl0GAMgASgFEg4KBm9mZnNldBgEIAEoBSKxAQoUQ3JlYXRlQ29tbWVudFJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEwoLdGlja2V0X3NsdWcYAiABKAkSDwoHY29udGVudBgDIAEoCRIWCglwYXJlbnRfaWQYBCABKANIAIgBARI7CghtZW50aW9ucxgFIAMoCzIpLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuQ29tbWVudE1lbnRpb25CDAoKX3BhcmVudF9pZCKfAQoUVXBkYXRlQ29tbWVudFJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEwoLdGlja2V0X3NsdWcYAiABKAkSEgoKY29tbWVudF9pZBgDIAEoAxIPCgdjb250ZW50GAQgASgJEjsKCG1lbnRpb25zGAUgAygLMikucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50TWVudGlvbiJRChREZWxldGVDb21tZW50UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRISCgpjb21tZW50X2lkGAMgASgDIhcKFURlbGV0ZUNvbW1lbnRSZXNwb25zZTLbCQoWVGlja2V0UmVsYXRpb25zU2VydmljZRJyCg1MaXN0UmVsYXRpb25zEi8ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5MaXN0UmVsYXRpb25zUmVxdWVzdBowLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEmcKDkNyZWF0ZVJlbGF0aW9uEjAucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5DcmVhdGVSZWxhdGlvblJlcXVlc3QaIy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLlJlbGF0aW9uEnUKDkRlbGV0ZVJlbGF0aW9uEjAucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5EZWxldGVSZWxhdGlvblJlcXVlc3QaMS5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkRlbGV0ZVJlbGF0aW9uUmVzcG9uc2USfgoRTGlzdE1lcmdlUmVxdWVzdHMSMy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpc3RNZXJnZVJlcXVlc3RzUmVxdWVzdBo0LnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuTGlzdE1lcmdlUmVxdWVzdHNSZXNwb25zZRJsCgtMaXN0Q29tbWl0cxItLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuTGlzdENvbW1pdHNSZXF1ZXN0Gi4ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5MaXN0Q29tbWl0c1Jlc3BvbnNlEl0KCkxpbmtDb21taXQSLC5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpbmtDb21taXRSZXF1ZXN0GiEucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21taXQSbwoMVW5saW5rQ29tbWl0Ei4ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5VbmxpbmtDb21taXRSZXF1ZXN0Gi8ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5VbmxpbmtDb21taXRSZXNwb25zZRJvCgxMaXN0Q29tbWVudHMSLi5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpc3RDb21tZW50c1JlcXVlc3QaLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpc3RDb21tZW50c1Jlc3BvbnNlEmQKDUNyZWF0ZUNvbW1lbnQSLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkNyZWF0ZUNvbW1lbnRSZXF1ZXN0GiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50EmQKDVVwZGF0ZUNvbW1lbnQSLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLlVwZGF0ZUNvbW1lbnRSZXF1ZXN0GiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50EnIKDURlbGV0ZUNvbW1lbnQSLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkRlbGV0ZUNvbW1lbnRSZXF1ZXN0GjAucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5EZWxldGVDb21tZW50UmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9hbnRocm9waWNzL2FnZW50c21lc2gvcHJvdG8vZ2VuL2dvL3RpY2tldF9yZWxhdGlvbnMvdjE7dGlja2V0cmVsYXRpb25zdjFiBnByb3RvMw");
+  fileDesc("Cip0aWNrZXRfcmVsYXRpb25zL3YxL3RpY2tldF9yZWxhdGlvbnMucHJvdG8SGXByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEiPwoUUmVsYXRlZFRpY2tldFN1bW1hcnkSCgoCaWQYASABKAMSDAoEc2x1ZxgCIAEoCRINCgV0aXRsZRgDIAEoCSLMAgoIUmVsYXRpb24SCgoCaWQYASABKAMSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgDEhgKEHNvdXJjZV90aWNrZXRfaWQYAyABKAMSGAoQdGFyZ2V0X3RpY2tldF9pZBgEIAEoAxIVCg1yZWxhdGlvbl90eXBlGAUgASgJEhIKCmNyZWF0ZWRfYXQYBiABKAkSSwoNc291cmNlX3RpY2tldBgHIAEoCzIvLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuUmVsYXRlZFRpY2tldFN1bW1hcnlIAIgBARJLCg10YXJnZXRfdGlja2V0GAggASgLMi8ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5SZWxhdGVkVGlja2V0U3VtbWFyeUgBiAEBQhAKDl9zb3VyY2VfdGlja2V0QhAKDl90YXJnZXRfdGlja2V0IoIECgxNZXJnZVJlcXVlc3QSCgoCaWQYASABKAMSDgoGbXJfaWlkGAIgASgFEg0KBXRpdGxlGAMgASgJEg0KBXN0YXRlGAQgASgJEg4KBm1yX3VybBgFIAEoCRIVCg1zb3VyY2VfYnJhbmNoGAYgASgJEhUKDXRhcmdldF9icmFuY2gYByABKAkSHAoPcGlwZWxpbmVfc3RhdHVzGAggASgJSACIAQESGAoLcGlwZWxpbmVfaWQYCSABKANIAYgBARIZCgxwaXBlbGluZV91cmwYCiABKAlIAogBARIWCgl0aWNrZXRfaWQYCyABKANIA4gBARITCgZwb2RfaWQYDCABKANIBIgBARIdChBtZXJnZV9jb21taXRfc2hhGA0gASgJSAWIAQESFgoJbWVyZ2VkX2F0GA4gASgJSAaIAQESGQoMbWVyZ2VkX2J5X2lkGA8gASgDSAeIAQESEgoKY3JlYXRlZF9hdBgQIAEoCRISCgp1cGRhdGVkX2F0GBEgASgJQhIKEF9waXBlbGluZV9zdGF0dXNCDgoMX3BpcGVsaW5lX2lkQg8KDV9waXBlbGluZV91cmxCDAoKX3RpY2tldF9pZEIJCgdfcG9kX2lkQhMKEV9tZXJnZV9jb21taXRfc2hhQgwKCl9tZXJnZWRfYXRCDwoNX21lcmdlZF9ieV9pZCLhAgoGQ29tbWl0EgoKAmlkGAEgASgDEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoAxIRCgl0aWNrZXRfaWQYAyABKAMSFQoNcmVwb3NpdG9yeV9pZBgEIAEoAxITCgZwb2RfaWQYBSABKANIAIgBARISCgpjb21taXRfc2hhGAYgASgJEhYKDmNvbW1pdF9tZXNzYWdlGAcgASgJEhcKCmNvbW1pdF91cmwYCCABKAlIAYgBARIYCgthdXRob3JfbmFtZRgJIAEoCUgCiAEBEhkKDGF1dGhvcl9lbWFpbBgKIAEoCUgDiAEBEhkKDGNvbW1pdHRlZF9hdBgLIAEoCUgEiAEBEhIKCmNyZWF0ZWRfYXQYDCABKAlCCQoHX3BvZF9pZEINCgtfY29tbWl0X3VybEIOCgxfYXV0aG9yX25hbWVCDwoNX2F1dGhvcl9lbWFpbEIPCg1fY29tbWl0dGVkX2F0IjMKDkNvbW1lbnRNZW50aW9uEg8KB3VzZXJfaWQYASABKAMSEAoIdXNlcm5hbWUYAiABKAkibwoLQ29tbWVudFVzZXISCgoCaWQYASABKAMSEAoIdXNlcm5hbWUYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhcKCmF2YXRhcl91cmwYBCABKAlIAYgBAUIHCgVfbmFtZUINCgtfYXZhdGFyX3VybCLOAgoHQ29tbWVudBIKCgJpZBgBIAEoAxIRCgl0aWNrZXRfaWQYAiABKAMSDwoHdXNlcl9pZBgDIAEoAxIPCgdjb250ZW50GAQgASgJEhYKCXBhcmVudF9pZBgFIAEoA0gAiAEBEjsKCG1lbnRpb25zGAYgAygLMikucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50TWVudGlvbhISCgpjcmVhdGVkX2F0GAcgASgJEhIKCnVwZGF0ZWRfYXQYCCABKAkSOQoEdXNlchgJIAEoCzImLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuQ29tbWVudFVzZXJIAYgBARIzCgdyZXBsaWVzGAogAygLMiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50QgwKCl9wYXJlbnRfaWRCBwoFX3VzZXIiPQoUTGlzdFJlbGF0aW9uc1JlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEwoLdGlja2V0X3NsdWcYAiABKAkieQoVTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEjIKBWl0ZW1zGAEgAygLMiMucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5SZWxhdGlvbhINCgV0b3RhbBgCIAEoAxINCgVsaW1pdBgDIAEoBRIOCgZvZmZzZXQYBCABKAUiagoVQ3JlYXRlUmVsYXRpb25SZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKC3RpY2tldF9zbHVnGAIgASgJEhMKC3RhcmdldF9zbHVnGAMgASgJEhUKDXJlbGF0aW9uX3R5cGUYBCABKAkiUwoVRGVsZXRlUmVsYXRpb25SZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKC3RpY2tldF9zbHVnGAIgASgJEhMKC3JlbGF0aW9uX2lkGAMgASgDIhgKFkRlbGV0ZVJlbGF0aW9uUmVzcG9uc2UiQQoYTGlzdE1lcmdlUmVxdWVzdHNSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKC3RpY2tldF9zbHVnGAIgASgJIoEBChlMaXN0TWVyZ2VSZXF1ZXN0c1Jlc3BvbnNlEjYKBWl0ZW1zGAEgAygLMicucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5NZXJnZVJlcXVlc3QSDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIjsKEkxpc3RDb21taXRzUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCSJ1ChNMaXN0Q29tbWl0c1Jlc3BvbnNlEjAKBWl0ZW1zGAEgAygLMiEucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21taXQSDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIqgCChFMaW5rQ29tbWl0UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRISCgpjb21taXRfc2hhGAMgASgJEhsKDmNvbW1pdF9tZXNzYWdlGAQgASgJSACIAQESFwoKY29tbWl0X3VybBgFIAEoCUgBiAEBEhgKC2F1dGhvcl9uYW1lGAYgASgJSAKIAQESGQoMYXV0aG9yX2VtYWlsGAcgASgJSAOIAQESGQoMY29tbWl0dGVkX2F0GAggASgJSASIAQFCEQoPX2NvbW1pdF9tZXNzYWdlQg0KC19jb21taXRfdXJsQg4KDF9hdXRob3JfbmFtZUIPCg1fYXV0aG9yX2VtYWlsQg8KDV9jb21taXR0ZWRfYXQiTwoTVW5saW5rQ29tbWl0UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRIRCgljb21taXRfaWQYAyABKAMiFgoUVW5saW5rQ29tbWl0UmVzcG9uc2UiegoTTGlzdENvbW1lbnRzUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRISCgVsaW1pdBgDIAEoBUgAiAEBEhMKBm9mZnNldBgEIAEoBUgBiAEBQggKBl9saW1pdEIJCgdfb2Zmc2V0IncKFExpc3RDb21tZW50c1Jlc3BvbnNlEjEKBWl0ZW1zGAEgAygLMiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50Eg0KBXRvdGFsGAIgASgDEg0KBWxpbWl0GAMgASgFEg4KBm9mZnNldBgEIAEoBSKxAQoUQ3JlYXRlQ29tbWVudFJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEwoLdGlja2V0X3NsdWcYAiABKAkSDwoHY29udGVudBgDIAEoCRIWCglwYXJlbnRfaWQYBCABKANIAIgBARI7CghtZW50aW9ucxgFIAMoCzIpLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuQ29tbWVudE1lbnRpb25CDAoKX3BhcmVudF9pZCKfAQoUVXBkYXRlQ29tbWVudFJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEwoLdGlja2V0X3NsdWcYAiABKAkSEgoKY29tbWVudF9pZBgDIAEoAxIPCgdjb250ZW50GAQgASgJEjsKCG1lbnRpb25zGAUgAygLMikucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50TWVudGlvbiJRChREZWxldGVDb21tZW50UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRITCgt0aWNrZXRfc2x1ZxgCIAEoCRISCgpjb21tZW50X2lkGAMgASgDIhcKFURlbGV0ZUNvbW1lbnRSZXNwb25zZTLbCQoWVGlja2V0UmVsYXRpb25zU2VydmljZRJyCg1MaXN0UmVsYXRpb25zEi8ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5MaXN0UmVsYXRpb25zUmVxdWVzdBowLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlEmcKDkNyZWF0ZVJlbGF0aW9uEjAucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5DcmVhdGVSZWxhdGlvblJlcXVlc3QaIy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLlJlbGF0aW9uEnUKDkRlbGV0ZVJlbGF0aW9uEjAucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5EZWxldGVSZWxhdGlvblJlcXVlc3QaMS5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkRlbGV0ZVJlbGF0aW9uUmVzcG9uc2USfgoRTGlzdE1lcmdlUmVxdWVzdHMSMy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpc3RNZXJnZVJlcXVlc3RzUmVxdWVzdBo0LnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuTGlzdE1lcmdlUmVxdWVzdHNSZXNwb25zZRJsCgtMaXN0Q29tbWl0cxItLnByb3RvLnRpY2tldF9yZWxhdGlvbnMudjEuTGlzdENvbW1pdHNSZXF1ZXN0Gi4ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5MaXN0Q29tbWl0c1Jlc3BvbnNlEl0KCkxpbmtDb21taXQSLC5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpbmtDb21taXRSZXF1ZXN0GiEucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21taXQSbwoMVW5saW5rQ29tbWl0Ei4ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5VbmxpbmtDb21taXRSZXF1ZXN0Gi8ucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5VbmxpbmtDb21taXRSZXNwb25zZRJvCgxMaXN0Q29tbWVudHMSLi5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpc3RDb21tZW50c1JlcXVlc3QaLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkxpc3RDb21tZW50c1Jlc3BvbnNlEmQKDUNyZWF0ZUNvbW1lbnQSLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkNyZWF0ZUNvbW1lbnRSZXF1ZXN0GiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50EmQKDVVwZGF0ZUNvbW1lbnQSLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLlVwZGF0ZUNvbW1lbnRSZXF1ZXN0GiIucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5Db21tZW50EnIKDURlbGV0ZUNvbW1lbnQSLy5wcm90by50aWNrZXRfcmVsYXRpb25zLnYxLkRlbGV0ZUNvbW1lbnRSZXF1ZXN0GjAucHJvdG8udGlja2V0X3JlbGF0aW9ucy52MS5EZWxldGVDb21tZW50UmVzcG9uc2VCVVpTZ2l0aHViLmNvbS9hbnRocm9waWNzL2FnZW50c21lc2gvcHJvdG8vZ2VuL2dvL3RpY2tldF9yZWxhdGlvbnMvdjE7dGlja2V0cmVsYXRpb25zdjFiBnByb3RvMw");
+
+/**
+ * RelatedTicketSummary is the minimal projection of a ticket the relation
+ * UI consumes: {id, slug, title}. Backend exposes via GORM `SourceTicket` /
+ * `TargetTicket` associations preloaded in ListRelations.
+ *
+ * @generated from message proto.ticket_relations.v1.RelatedTicketSummary
+ */
+export type RelatedTicketSummary = Message<"proto.ticket_relations.v1.RelatedTicketSummary"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+};
+
+/**
+ * Describes the message proto.ticket_relations.v1.RelatedTicketSummary.
+ * Use `create(RelatedTicketSummarySchema)` to create a new message.
+ */
+export const RelatedTicketSummarySchema: GenMessage<RelatedTicketSummary> = /*@__PURE__*/
+  messageDesc(file_ticket_relations_v1_ticket_relations, 0);
 
 /**
  * Relation mirrors backend/internal/domain/ticket/relation.go. SourceTicketID /
- * TargetTicketID surface as int64; the REST handler returns them under
- * `source_ticket_id` / `target_ticket_id`, but the Rust DTO carries
- * `source_slug` / `target_slug` — keep both shapes here, leaving the
- * resolution to the converter (PR #246 reconciliation).
+ * TargetTicketID surface as int64; UI also reads the nested `source_ticket` /
+ * `target_ticket` summaries (TicketDetailSidebar / RelationsList), so the
+ * proto carries both raw IDs and the optional summary projections.
  *
  * @generated from message proto.ticket_relations.v1.Relation
  */
@@ -80,6 +110,16 @@ export type Relation = Message<"proto.ticket_relations.v1.Relation"> & {
    * @generated from field: string created_at = 6;
    */
   createdAt: string;
+
+  /**
+   * @generated from field: optional proto.ticket_relations.v1.RelatedTicketSummary source_ticket = 7;
+   */
+  sourceTicket?: RelatedTicketSummary | undefined;
+
+  /**
+   * @generated from field: optional proto.ticket_relations.v1.RelatedTicketSummary target_ticket = 8;
+   */
+  targetTicket?: RelatedTicketSummary | undefined;
 };
 
 /**
@@ -87,7 +127,7 @@ export type Relation = Message<"proto.ticket_relations.v1.Relation"> & {
  * Use `create(RelationSchema)` to create a new message.
  */
 export const RelationSchema: GenMessage<Relation> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 0);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 1);
 
 /**
  * MergeRequest mirrors backend/internal/domain/ticket/merge_request.go and
@@ -192,7 +232,7 @@ export type MergeRequest = Message<"proto.ticket_relations.v1.MergeRequest"> & {
  * Use `create(MergeRequestSchema)` to create a new message.
  */
 export const MergeRequestSchema: GenMessage<MergeRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 1);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 2);
 
 /**
  * Commit mirrors backend/internal/domain/ticket/commit.go.
@@ -266,7 +306,7 @@ export type Commit = Message<"proto.ticket_relations.v1.Commit"> & {
  * Use `create(CommitSchema)` to create a new message.
  */
 export const CommitSchema: GenMessage<Commit> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 2);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 3);
 
 /**
  * CommentMention mirrors ticket.CommentMention; surfaced inline on Comment.
@@ -290,7 +330,7 @@ export type CommentMention = Message<"proto.ticket_relations.v1.CommentMention">
  * Use `create(CommentMentionSchema)` to create a new message.
  */
 export const CommentMentionSchema: GenMessage<CommentMention> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 3);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 4);
 
 /**
  * CommentUser is the minimal user shape the REST handler serializes via the
@@ -315,14 +355,9 @@ export type CommentUser = Message<"proto.ticket_relations.v1.CommentUser"> & {
   name?: string | undefined;
 
   /**
-   * @generated from field: optional string avatar = 4;
+   * @generated from field: optional string avatar_url = 4;
    */
-  avatar?: string | undefined;
-
-  /**
-   * @generated from field: optional string email = 5;
-   */
-  email?: string | undefined;
+  avatarUrl?: string | undefined;
 };
 
 /**
@@ -330,10 +365,13 @@ export type CommentUser = Message<"proto.ticket_relations.v1.CommentUser"> & {
  * Use `create(CommentUserSchema)` to create a new message.
  */
 export const CommentUserSchema: GenMessage<CommentUser> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 4);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 5);
 
 /**
- * Comment mirrors backend/internal/domain/ticket/comment.go.
+ * Comment mirrors backend/internal/domain/ticket/comment.go. `replies` is
+ * populated by ListComments via Preload, where children are pre-fetched with
+ * their User association — kept inline so the UI doesn't make N+1 round
+ * trips per top-level comment.
  *
  * @generated from message proto.ticket_relations.v1.Comment
  */
@@ -382,6 +420,11 @@ export type Comment = Message<"proto.ticket_relations.v1.Comment"> & {
    * @generated from field: optional proto.ticket_relations.v1.CommentUser user = 9;
    */
   user?: CommentUser | undefined;
+
+  /**
+   * @generated from field: repeated proto.ticket_relations.v1.Comment replies = 10;
+   */
+  replies: Comment[];
 };
 
 /**
@@ -389,7 +432,7 @@ export type Comment = Message<"proto.ticket_relations.v1.Comment"> & {
  * Use `create(CommentSchema)` to create a new message.
  */
 export const CommentSchema: GenMessage<Comment> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 5);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 6);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListRelationsRequest
@@ -411,7 +454,7 @@ export type ListRelationsRequest = Message<"proto.ticket_relations.v1.ListRelati
  * Use `create(ListRelationsRequestSchema)` to create a new message.
  */
 export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 6);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 7);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListRelationsResponse
@@ -443,7 +486,7 @@ export type ListRelationsResponse = Message<"proto.ticket_relations.v1.ListRelat
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 7);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 8);
 
 /**
  * @generated from message proto.ticket_relations.v1.CreateRelationRequest
@@ -477,7 +520,7 @@ export type CreateRelationRequest = Message<"proto.ticket_relations.v1.CreateRel
  * Use `create(CreateRelationRequestSchema)` to create a new message.
  */
 export const CreateRelationRequestSchema: GenMessage<CreateRelationRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 8);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 9);
 
 /**
  * @generated from message proto.ticket_relations.v1.DeleteRelationRequest
@@ -504,7 +547,7 @@ export type DeleteRelationRequest = Message<"proto.ticket_relations.v1.DeleteRel
  * Use `create(DeleteRelationRequestSchema)` to create a new message.
  */
 export const DeleteRelationRequestSchema: GenMessage<DeleteRelationRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 9);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 10);
 
 /**
  * @generated from message proto.ticket_relations.v1.DeleteRelationResponse
@@ -517,7 +560,7 @@ export type DeleteRelationResponse = Message<"proto.ticket_relations.v1.DeleteRe
  * Use `create(DeleteRelationResponseSchema)` to create a new message.
  */
 export const DeleteRelationResponseSchema: GenMessage<DeleteRelationResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 10);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 11);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListMergeRequestsRequest
@@ -539,7 +582,7 @@ export type ListMergeRequestsRequest = Message<"proto.ticket_relations.v1.ListMe
  * Use `create(ListMergeRequestsRequestSchema)` to create a new message.
  */
 export const ListMergeRequestsRequestSchema: GenMessage<ListMergeRequestsRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 11);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 12);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListMergeRequestsResponse
@@ -571,7 +614,7 @@ export type ListMergeRequestsResponse = Message<"proto.ticket_relations.v1.ListM
  * Use `create(ListMergeRequestsResponseSchema)` to create a new message.
  */
 export const ListMergeRequestsResponseSchema: GenMessage<ListMergeRequestsResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 12);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 13);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListCommitsRequest
@@ -593,7 +636,7 @@ export type ListCommitsRequest = Message<"proto.ticket_relations.v1.ListCommitsR
  * Use `create(ListCommitsRequestSchema)` to create a new message.
  */
 export const ListCommitsRequestSchema: GenMessage<ListCommitsRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 13);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 14);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListCommitsResponse
@@ -625,7 +668,7 @@ export type ListCommitsResponse = Message<"proto.ticket_relations.v1.ListCommits
  * Use `create(ListCommitsResponseSchema)` to create a new message.
  */
 export const ListCommitsResponseSchema: GenMessage<ListCommitsResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 14);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 15);
 
 /**
  * @generated from message proto.ticket_relations.v1.LinkCommitRequest
@@ -679,7 +722,7 @@ export type LinkCommitRequest = Message<"proto.ticket_relations.v1.LinkCommitReq
  * Use `create(LinkCommitRequestSchema)` to create a new message.
  */
 export const LinkCommitRequestSchema: GenMessage<LinkCommitRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 15);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 16);
 
 /**
  * @generated from message proto.ticket_relations.v1.UnlinkCommitRequest
@@ -706,7 +749,7 @@ export type UnlinkCommitRequest = Message<"proto.ticket_relations.v1.UnlinkCommi
  * Use `create(UnlinkCommitRequestSchema)` to create a new message.
  */
 export const UnlinkCommitRequestSchema: GenMessage<UnlinkCommitRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 16);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 17);
 
 /**
  * @generated from message proto.ticket_relations.v1.UnlinkCommitResponse
@@ -719,7 +762,7 @@ export type UnlinkCommitResponse = Message<"proto.ticket_relations.v1.UnlinkComm
  * Use `create(UnlinkCommitResponseSchema)` to create a new message.
  */
 export const UnlinkCommitResponseSchema: GenMessage<UnlinkCommitResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 17);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 18);
 
 /**
  * @generated from message proto.ticket_relations.v1.ListCommentsRequest
@@ -755,7 +798,7 @@ export type ListCommentsRequest = Message<"proto.ticket_relations.v1.ListComment
  * Use `create(ListCommentsRequestSchema)` to create a new message.
  */
 export const ListCommentsRequestSchema: GenMessage<ListCommentsRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 18);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 19);
 
 /**
  * ListCommentsResponse preserves the {items, total, limit, offset} envelope
@@ -790,7 +833,7 @@ export type ListCommentsResponse = Message<"proto.ticket_relations.v1.ListCommen
  * Use `create(ListCommentsResponseSchema)` to create a new message.
  */
 export const ListCommentsResponseSchema: GenMessage<ListCommentsResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 19);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 20);
 
 /**
  * @generated from message proto.ticket_relations.v1.CreateCommentRequest
@@ -827,7 +870,7 @@ export type CreateCommentRequest = Message<"proto.ticket_relations.v1.CreateComm
  * Use `create(CreateCommentRequestSchema)` to create a new message.
  */
 export const CreateCommentRequestSchema: GenMessage<CreateCommentRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 20);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 21);
 
 /**
  * @generated from message proto.ticket_relations.v1.UpdateCommentRequest
@@ -864,7 +907,7 @@ export type UpdateCommentRequest = Message<"proto.ticket_relations.v1.UpdateComm
  * Use `create(UpdateCommentRequestSchema)` to create a new message.
  */
 export const UpdateCommentRequestSchema: GenMessage<UpdateCommentRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 21);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 22);
 
 /**
  * @generated from message proto.ticket_relations.v1.DeleteCommentRequest
@@ -891,7 +934,7 @@ export type DeleteCommentRequest = Message<"proto.ticket_relations.v1.DeleteComm
  * Use `create(DeleteCommentRequestSchema)` to create a new message.
  */
 export const DeleteCommentRequestSchema: GenMessage<DeleteCommentRequest> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 22);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 23);
 
 /**
  * @generated from message proto.ticket_relations.v1.DeleteCommentResponse
@@ -904,7 +947,7 @@ export type DeleteCommentResponse = Message<"proto.ticket_relations.v1.DeleteCom
  * Use `create(DeleteCommentResponseSchema)` to create a new message.
  */
 export const DeleteCommentResponseSchema: GenMessage<DeleteCommentResponse> = /*@__PURE__*/
-  messageDesc(file_ticket_relations_v1_ticket_relations, 23);
+  messageDesc(file_ticket_relations_v1_ticket_relations, 24);
 
 /**
  * @generated from service proto.ticket_relations.v1.TicketRelationsService
