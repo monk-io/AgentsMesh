@@ -1,4 +1,30 @@
-import { getBillingService } from "@/lib/wasm-core";
+// Legacy `billingApi` adapter. After the proto migration this thin wrapper
+// delegates to billingConnect.ts (binary-wire Connect-RPC) so existing call
+// sites keep working unchanged while the wire is now prost-encoded — PR #334
+// fix preserved end-to-end.
+//
+// New call sites should import directly from `./billingConnect`; this module
+// stays as the dual-track shim until every consumer flips.
+
+import {
+  changeBillingCycleConnect,
+  createCheckoutConnect,
+  createSubscriptionConnect,
+  getCheckoutStatusConnect,
+  getDeploymentInfoConnect,
+  getOverviewConnect,
+  getPublicPricingConnect,
+  getSeatUsageConnect,
+  listInvoicesConnect,
+  listPlansConnect,
+  purchaseSeatsConnect,
+  reactivateSubscriptionConnect,
+  requestCancelSubscriptionConnect,
+  updateSubscriptionConnect,
+  upgradeSubscriptionConnect,
+  type CreateCheckoutInput,
+} from "./billingConnect";
+
 export type {
   SubscriptionPlan, PlanPrice, PlanWithPrice, UsageOverview, BillingOverview,
   Subscription, CheckoutRequest, CheckoutResponse, CheckoutStatus,
@@ -6,61 +32,34 @@ export type {
   Currency, BillingCycle, OrderType, PaymentProvider,
 } from "./billing-types";
 
+// Most legacy callers don't pass orgSlug — they let the wasm session carry
+// it. With Connect every RPC needs the slug on the request body. We let
+// callers continue to invoke without slug; tenant-aware components must now
+// pass it through (see useBillingData migration). The default empty string
+// is a deliberate ResolveOrgScope-fail at the boundary so the call surfaces
+// the missing context instead of silently hitting the wrong org.
 export const billingApi = {
-  getOverview: async () => {
-    const json = await getBillingService().get_overview();
-    return JSON.parse(json);
-  },
-  listPlans: async () => {
-    const json = await getBillingService().list_plans();
-    return JSON.parse(json);
-  },
-  getDeploymentInfo: async () => {
-    const json = await getBillingService().get_deployment_info();
-    return JSON.parse(json);
-  },
-  createSubscription: async (planName: string) => {
-    const json = await getBillingService().create_subscription(JSON.stringify({ plan_name: planName }));
-    return JSON.parse(json);
-  },
-  updateSubscription: async (planName: string) => {
-    const json = await getBillingService().update_subscription(JSON.stringify({ plan_name: planName }));
-    return JSON.parse(json);
-  },
-  upgradeSubscription: async (planName: string) => {
-    const json = await getBillingService().upgrade(JSON.stringify({ plan_name: planName }));
-    return JSON.parse(json);
-  },
-  reactivateSubscription: async () => {
-    const json = await getBillingService().reactivate();
-    return JSON.parse(json);
-  },
-  requestCancelSubscription: async (immediate: boolean) => {
-    const json = await getBillingService().request_cancel(JSON.stringify({ immediate }));
-    return JSON.parse(json);
-  },
-  listInvoices: async (limit?: number, offset?: number) => {
-    const json = await getBillingService().list_invoices(limit ?? null, offset ?? null);
-    return JSON.parse(json);
-  },
-  createCheckout: async (data: Record<string, unknown>) => {
-    const json = await getBillingService().create_checkout(JSON.stringify(data));
-    return JSON.parse(json);
-  },
-  getCheckoutStatus: async (orderNo: string) => {
-    const json = await getBillingService().get_checkout_status(orderNo);
-    return JSON.parse(json);
-  },
-  changeBillingCycle: async (cycle: string) => {
-    const json = await getBillingService().change_cycle(JSON.stringify({ cycle }));
-    return JSON.parse(json);
-  },
-  getSeatUsage: async () => {
-    const json = await getBillingService().get_seat_usage();
-    return JSON.parse(json);
-  },
-  purchaseSeats: async (count: number) => {
-    const json = await getBillingService().purchase_seats(JSON.stringify({ count }));
-    return JSON.parse(json);
-  },
+  getOverview: async (orgSlug = "") => getOverviewConnect(orgSlug),
+  listPlans: async (orgSlug = "") => ({ plans: await listPlansConnect(orgSlug) }),
+  getDeploymentInfo: async (orgSlug = "") => getDeploymentInfoConnect(orgSlug),
+  createSubscription: async (orgSlug: string, planName: string) =>
+    createSubscriptionConnect(orgSlug, planName),
+  updateSubscription: async (orgSlug: string, planName: string) =>
+    updateSubscriptionConnect(orgSlug, planName),
+  upgradeSubscription: async (orgSlug: string, planName: string) =>
+    upgradeSubscriptionConnect(orgSlug, planName),
+  reactivateSubscription: async (orgSlug: string) => reactivateSubscriptionConnect(orgSlug),
+  requestCancelSubscription: async (orgSlug: string, immediate: boolean) =>
+    requestCancelSubscriptionConnect(orgSlug, immediate),
+  listInvoices: async (orgSlug: string, limit?: number, offset?: number) =>
+    listInvoicesConnect(orgSlug, { limit, offset }),
+  createCheckout: async (orgSlug: string, input: CreateCheckoutInput) =>
+    createCheckoutConnect(orgSlug, input),
+  getCheckoutStatus: async (orgSlug: string, orderNo: string) =>
+    getCheckoutStatusConnect(orgSlug, orderNo),
+  changeBillingCycle: async (orgSlug: string, cycle: "monthly" | "yearly") =>
+    changeBillingCycleConnect(orgSlug, cycle),
+  getSeatUsage: async (orgSlug: string) => getSeatUsageConnect(orgSlug),
+  purchaseSeats: async (orgSlug: string, count: number) => purchaseSeatsConnect(orgSlug, count),
+  getPublicPricing: async (currency?: string) => getPublicPricingConnect(currency),
 };
