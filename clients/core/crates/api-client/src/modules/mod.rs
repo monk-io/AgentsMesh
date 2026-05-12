@@ -20,6 +20,7 @@ pub mod loop_api;
 pub mod mesh;
 pub mod message;
 pub mod notification;
+pub mod notification_connect;
 pub mod organization;
 pub mod pod;
 pub mod promocode;
