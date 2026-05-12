@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "extension",
+    srcs = [
+        "skill_registry.go",
+        "skill_registry_convert.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/internal/api/connect/interceptors",
+        "//backend/internal/domain/extension",
+        "//backend/internal/middleware",
+        "//backend/internal/service/extension",
+        "//proto/extension/v1:extension_go_proto",
+        "@com_connectrpc_connect//:connect",
+    ],
+)
+
+go_test(
+    name = "extension_test",
+    srcs = ["skill_registry_test.go"],
+    embed = [":extension"],
+    deps = [
+        "//backend/internal/api/connect/interceptors",
+        "//backend/internal/domain/extension",
+        "//backend/internal/middleware",
+        "//backend/internal/service/extension",
+        "//proto/extension/v1:extension_go_proto",
+        "@com_connectrpc_connect//:connect",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

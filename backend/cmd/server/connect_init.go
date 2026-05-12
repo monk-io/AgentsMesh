@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	extensionconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 )
@@ -46,15 +47,11 @@ func defaultConnectHandlerOptions(cfg *config.Config) []connect.HandlerOption {
 // everything else. Per-service Mount calls registered onto connectMux
 // here pick up the default HandlerOptions (auth interceptor, …); the
 // REST router is untouched.
-func wrapWithConnect(cfg *config.Config, rest http.Handler) http.Handler {
+func wrapWithConnect(cfg *config.Config, svc *serviceContainer, rest http.Handler) http.Handler {
 	connectMux := http.NewServeMux()
 	opts := defaultConnectHandlerOptions(cfg)
 
-	// Per-service mount points land here as Connect migration progresses,
-	// e.g.:
-	//   extensionconnect.Mount(connectMux, extensionconnect.NewServer(deps), opts...)
-	//   podconnect.Mount(connectMux, podconnect.NewServer(deps), opts...)
-	mountConnectServices(connectMux, opts)
+	mountConnectServices(connectMux, svc, opts)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, connectPathPrefix) {
@@ -66,6 +63,7 @@ func wrapWithConnect(cfg *config.Config, rest http.Handler) http.Handler {
 }
 
 // mountConnectServices is the seam each per-service migration PR adds
-// to. Today it is empty (Phase 0: no services on Connect yet); the
-// signature is fixed so specialist PRs only insert one line each.
-func mountConnectServices(_ *http.ServeMux, _ []connect.HandlerOption) {}
+// to. Specialist PRs insert one line per service.
+func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	extensionconnect.Mount(mux, extensionconnect.NewServer(svc.extension, svc.org), opts...)
+}
