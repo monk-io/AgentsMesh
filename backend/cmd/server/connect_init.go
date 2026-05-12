@@ -27,6 +27,7 @@ import (
 	supportticketconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/support_ticket"
 	ticketconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/ticket"
 	ticketrelationsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/ticket_relations"
+	tokenusageconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/token_usage"
 	userconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/user"
 	usercredentialconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/user_credential"
 	v1 "github.com/anthropics/agentsmesh/backend/internal/api/rest/v1"
@@ -124,6 +125,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountAuthService(mux, svc, cfg, opts)
 	mountGrantService(mux, svc, opts)
 	mountFileService(mux, svc, opts)
+	mountTokenUsageService(mux, svc, opts)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)
@@ -281,4 +283,14 @@ func mountFileService(mux *http.ServeMux, svc *serviceContainer, opts []connect.
 	}
 	srv := fileconnect.NewServer(svc.file, svc.org)
 	fileconnect.Mount(mux, srv, opts...)
+}
+
+// mountTokenUsageService wires TokenUsageService — admin-only dashboard
+// for token consumption analytics. Skips when nil.
+func mountTokenUsageService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	if svc.tokenUsage == nil {
+		return
+	}
+	srv := tokenusageconnect.NewServer(svc.tokenUsage, svc.org)
+	tokenusageconnect.Mount(mux, srv, opts...)
 }
