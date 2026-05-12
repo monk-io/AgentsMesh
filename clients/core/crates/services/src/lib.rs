@@ -1,6 +1,7 @@
 mod agent;
 mod apikey;
 mod auth_api;
+mod auth_connect;
 mod autopilot;
 mod billing;
 mod binding;
@@ -36,6 +37,7 @@ mod user_credential_provider_connect;
 pub use agent::AgentService;
 pub use apikey::ApiKeyService;
 pub use auth_api::AuthApiService;
+pub use auth_connect::AuthConnectService;
 pub use autopilot::AutopilotService;
 pub use billing::BillingService;
 pub use binding::BindingService;

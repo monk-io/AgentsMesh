@@ -229,4 +229,10 @@ impl WasmApiClient {
     pub fn create_auth_api_service(&self) -> crate::service_auth_api::WasmAuthApiService {
         crate::service_auth_api::WasmAuthApiService::new(self.client.clone())
     }
+
+    pub fn create_auth_connect_service(
+        &self,
+    ) -> crate::service_auth_connect::WasmAuthConnectService {
+        crate::service_auth_connect::WasmAuthConnectService::new(self.client.clone())
+    }
 }
