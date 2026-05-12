@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "channel.go",
         "channels_handlers.go",
+        "content_resolver.go",
         "convert.go",
         "document_handlers.go",
         "errors.go",
