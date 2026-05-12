@@ -1,4 +1,5 @@
 mod agent;
+mod agent_proto;
 mod agentpod_settings;
 mod agentpod_settings_proto;
 mod apikey;
@@ -150,6 +151,18 @@ pub mod proto_ticket_v1 {
 /// window without name collisions.
 pub mod proto_org_v1 {
     pub use super::org_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.agent.v1`. Bundles `AgentService`
+/// (org-scoped agent catalog + custom CRUD) and `UserAgentConfigService`
+/// (user-scoped personal config) because they share the same proto package.
+/// Coexists with the legacy serde `Agent` / `UserAgentConfig` for the
+/// dual-track window. AgentListResponse is the §9 multi-field exception
+/// (builtin_agents + custom_agents kept separate per existing REST shape);
+/// UserAgentConfigListResponse keeps the `configs` field (§9 exception #2,
+/// sub-resource envelope).
+pub mod proto_agent_v1 {
+    pub use super::agent_proto::*;
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.invitation.v1`. Bundles three
