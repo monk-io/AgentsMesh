@@ -35,6 +35,7 @@ go_library(
         "//backend/internal/api/connect/pod",
         "//backend/internal/api/connect/repository",
         "//backend/internal/api/connect/runner",
+        "//backend/internal/api/connect/user_credential",
         "//backend/internal/api/grpc",
         "//backend/internal/api/rest",
         "//backend/internal/api/rest/v1:rest",

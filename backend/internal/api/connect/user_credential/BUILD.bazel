@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "user_credential",
+    srcs = [
+        "agent_credential.go",
+        "convert.go",
+        "git_credential.go",
+        "repository_provider.go",
+        "server.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/user_credential",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/internal/domain/agent",
+        "//backend/internal/domain/user",
+        "//backend/internal/infra/git",
+        "//backend/internal/middleware",
+        "//backend/internal/service/agent",
+        "//backend/internal/service/user",
+        "//proto/user_credential/v1:user_credential_go_proto",
+        "@com_connectrpc_connect//:connect",
+    ],
+)

@@ -13,6 +13,7 @@ import (
 	podconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod"
 	repositoryconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/repository"
 	runnerconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/runner"
+	usercredentialconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/user_credential"
 	v1 "github.com/anthropics/agentsmesh/backend/internal/api/rest/v1"
 	"github.com/anthropics/agentsmesh/backend/internal/config"
 )
@@ -84,6 +85,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountRunnerService(mux, svc, rest, cfg, opts)
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)
+	usercredentialconnect.Mount(mux, usercredentialconnect.NewServer(svc.user, svc.credentialProfile), opts...)
 }
 
 // mountRunnerService wires the runner Connect server with its optional
