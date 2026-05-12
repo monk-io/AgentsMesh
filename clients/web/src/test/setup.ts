@@ -799,6 +799,8 @@ vi.mock('@/lib/wasm-core', () => {
     getNotificationService: fn(() => ({
       get_preferences: fn().mockResolvedValue('{"preferences":[]}'),
       set_preference: fn().mockResolvedValue('{}'),
+      listPreferencesConnect: fn().mockResolvedValue(new Uint8Array()),
+      setPreferenceConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getPromoCodeService: fn(() => ({
       validate: fn().mockResolvedValue('{}'),
