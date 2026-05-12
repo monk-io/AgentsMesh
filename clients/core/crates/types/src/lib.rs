@@ -34,6 +34,7 @@ mod service_error;
 mod sso;
 mod support_ticket;
 mod ticket;
+mod ticket_relations_proto;
 mod ticket_requests;
 mod token_usage;
 mod user_credential;
@@ -107,6 +108,17 @@ pub mod proto_repository_v1 {
 /// user-scoped — no org_slug, conventions §3.5 exception #1.
 pub mod proto_user_credential_v1 {
     pub use super::user_credential_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.ticket_relations.v1`. Bundles
+/// relations / comments / commits / merge-requests under one module — they
+/// share the `ticket_slug` lookup, so the proto file is one. Coexists with
+/// the legacy serde `TicketRelation` / `TicketComment` / `TicketCommit` /
+/// `MergeRequest` for the dual-track window. PR 986a38ca6 reconciliation:
+/// the comment list envelope (`{items, total, limit, offset}`) survives
+/// the wire — the adapter remaps to the legacy `{comments, ...}` shape.
+pub mod proto_ticket_relations_v1 {
+    pub use super::ticket_relations_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
