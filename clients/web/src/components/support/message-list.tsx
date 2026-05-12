@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { SupportTicketMessage } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+import { getSupportTicketAttachmentUrl } from "@/lib/api/supportTicketConnect";
 import { Download, Shield, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTimeAgo } from "@/lib/utils/time";
@@ -40,9 +40,7 @@ function MessageBubble({ message }: { message: SupportTicketMessage }) {
 
   const handleDownload = async (attachmentId: number) => {
     try {
-      const { url } = JSON.parse(
-        await getSupportTicketService().get_attachment_url(BigInt(attachmentId))
-      );
+      const { url } = await getSupportTicketAttachmentUrl(attachmentId);
       window.open(url, "_blank");
     } catch {
       toast.error(t("support.downloadFailed"));

@@ -1,4 +1,23 @@
+// Legacy support-ticket adapter. After the proto migration the four
+// JSON-bodied operations (list, getDetail, getAttachmentUrl) delegate to
+// supportTicketConnect.ts (binary-wire Connect-RPC) — see migration ADR.
+//
+// Two operations remain on REST during dual-track:
+//   * createSupportTicket — multipart/form-data with optional files[]
+//   * addSupportTicketMessage — multipart/form-data with optional files[]
+// Connect-RPC has no multipart story; these stay until a follow-up
+// chunked-upload Connect path lands or the file upload surface gets
+// extracted to its own RPC + presigned URL flow.
+//
+// New call sites should import from `./supportTicketConnect` for the
+// migrated RPCs; this module stays as the dual-track shim.
+
 import { initWasmCore, getSupportTicketService } from "@/lib/wasm-core";
+import {
+  getSupportTicketAttachmentUrl as getAttachmentUrlConnect,
+  getSupportTicketDetail as getDetailConnect,
+  listSupportTickets as listConnect,
+} from "./supportTicketConnect";
 
 export type {
   SupportTicket, SupportTicketMessage, SupportTicketAttachment,
@@ -27,16 +46,16 @@ export async function createSupportTicket(data: {
   return JSON.parse(json);
 }
 
-export async function listSupportTickets(params?: SupportTicketListParams): Promise<SupportTicketListResponse> {
+export async function listSupportTickets(
+  params?: SupportTicketListParams,
+): Promise<SupportTicketListResponse> {
   await initWasmCore();
-  return JSON.parse(await getSupportTicketService().list(
-    params?.status ?? null, params?.page ?? null, params?.page_size ?? null,
-  ));
+  return listConnect(params);
 }
 
 export async function getSupportTicketDetail(id: number): Promise<SupportTicketDetail> {
   await initWasmCore();
-  return JSON.parse(await getSupportTicketService().get_detail(BigInt(id)));
+  return getDetailConnect(id);
 }
 
 export async function addSupportTicketMessage(
@@ -51,7 +70,9 @@ export async function addSupportTicketMessage(
   return JSON.parse(json);
 }
 
-export async function getSupportTicketAttachmentUrl(attachmentId: number): Promise<{ url: string }> {
+export async function getSupportTicketAttachmentUrl(
+  attachmentId: number,
+): Promise<{ url: string }> {
   await initWasmCore();
-  return JSON.parse(await getSupportTicketService().get_attachment_url(BigInt(attachmentId)));
+  return getAttachmentUrlConnect(attachmentId);
 }

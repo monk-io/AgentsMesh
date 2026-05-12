@@ -16,7 +16,7 @@ import {
   addSupportTicketMessage,
 } from "@/lib/api/support-ticket";
 import type { SupportTicketDetail } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+import { getSupportTicketDetail } from "@/lib/api/supportTicketConnect";
 
 export default function SupportTicketDetailPage() {
   const params = useParams();
@@ -37,9 +37,7 @@ export default function SupportTicketDetailPage() {
 
   const fetchDetail = useCallback(async () => {
     try {
-      const result: SupportTicketDetail = JSON.parse(
-        await getSupportTicketService().get_detail(BigInt(ticketId))
-      );
+      const result: SupportTicketDetail = await getSupportTicketDetail(ticketId);
       setData(result);
       setError(null);
     } catch {

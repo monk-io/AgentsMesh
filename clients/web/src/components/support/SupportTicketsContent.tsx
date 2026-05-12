@@ -15,7 +15,7 @@ import type {
   SupportTicket,
   SupportTicketListResponse,
 } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+import { listSupportTickets } from "@/lib/api/supportTicketConnect";
 import { formatTimeAgo } from "@/lib/utils/time";
 
 interface SupportTicketsContentProps {
@@ -41,13 +41,11 @@ export function SupportTicketsContent({ variant = "wide" }: SupportTicketsConten
     setIsLoading(true);
     setError(null);
     try {
-      const result: SupportTicketListResponse = JSON.parse(
-        await getSupportTicketService().list(
-          statusFilter || null,
-          page,
-          20,
-        )
-      );
+      const result: SupportTicketListResponse = await listSupportTickets({
+        status: statusFilter || undefined,
+        page,
+        page_size: 20,
+      });
       setData(result);
     } catch {
       setError(t("support.error.loadFailed"));

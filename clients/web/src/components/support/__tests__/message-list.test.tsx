@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { MessageList } from "../message-list";
 import type { SupportTicketMessage } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+import { getSupportTicketAttachmentUrl } from "@/lib/api/supportTicketConnect";
 
-const mockGetAttachmentUrl = vi.fn();
+vi.mock("@/lib/api/supportTicketConnect", () => ({
+  getSupportTicketAttachmentUrl: vi.fn(),
+}));
 
 // Mock window.open
 const mockWindowOpen = vi.fn();
@@ -86,14 +88,9 @@ describe("MessageList", () => {
 
 describe("MessageBubble (via MessageList)", () => {
   beforeEach(() => {
-    vi.mocked(getSupportTicketService).mockReturnValue({
-      list: vi.fn().mockResolvedValue('{"tickets":[]}'),
-      get_detail: vi.fn().mockResolvedValue('{}'),
-      get_attachment_url: mockGetAttachmentUrl,
-    } as unknown as ReturnType<typeof getSupportTicketService>);
-    mockGetAttachmentUrl.mockResolvedValue(
-      JSON.stringify({ url: "https://example.com/download/file.png" })
-    );
+    vi.mocked(getSupportTicketAttachmentUrl).mockResolvedValue({
+      url: "https://example.com/download/file.png",
+    });
   });
   it("renders user message correctly", () => {
     render(<MessageList messages={[baseMessage]} />);
@@ -125,7 +122,7 @@ describe("MessageBubble (via MessageList)", () => {
     expect(downloadBtn).toBeInTheDocument();
     fireEvent.click(downloadBtn!);
 
-    expect(mockGetAttachmentUrl).toHaveBeenCalledWith(BigInt(101));
+    expect(getSupportTicketAttachmentUrl).toHaveBeenCalledWith(101);
   });
 
   it("shows user name when available", () => {

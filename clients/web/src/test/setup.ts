@@ -914,6 +914,9 @@ vi.mock('@/lib/wasm-core', () => {
       get_attachment_url: fn().mockResolvedValue('{}'),
       create_ticket: fn().mockResolvedValue('{}'),
       add_message: fn().mockResolvedValue('{}'),
+      listSupportTicketsConnect: fn().mockResolvedValue(new Uint8Array()),
+      getSupportTicketConnect: fn().mockResolvedValue(new Uint8Array()),
+      getAttachmentUrlConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getAuthApiService: fn(() => ({
       register: fn().mockResolvedValue('{}'),
