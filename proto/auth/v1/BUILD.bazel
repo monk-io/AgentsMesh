@@ -1,0 +1,37 @@
+load("@rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
+
+# Bazel-native protobuf code generation for auth.v1.
+#
+# Mirrors proto/user_credential/v1/BUILD.bazel — same hermetic
+# protoc/protoc-gen-go pipeline, same `proto/gen/go/<svc>/v1` importpath
+# shape. The Rust prost DTOs are hand-maintained at
+# clients/core/crates/types/src/auth_proto.rs; the validator pins
+# .proto field number ↔ Rust `prost(tag = N)` mapping at build time
+# (watch list hazard #8).
+#
+# This is a USER-SCOPED / PUBLIC service (no org_slug = 1) — conventions
+# §3.5 exempts user-scoped RPCs from the org-scope helper. Most AuthService
+# RPCs run *without* the auth interceptor (login/register can't require a
+# token to obtain one). Only AuthSessionService.Logout is authenticated.
+
+proto_library(
+    name = "auth_proto",
+    srcs = ["auth.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "auth_go_proto",
+    compilers = ["@rules_go//proto:go_proto"],
+    importpath = "github.com/anthropics/agentsmesh/proto/gen/go/auth/v1",
+    proto = ":auth_proto",
+    visibility = ["//visibility:public"],
+)
+
+validate_prost_tags(
+    name = "auth_validate",
+    proto = "auth.proto",
+    rust = "//clients/core/crates/types:src/auth_proto.rs",
+)
