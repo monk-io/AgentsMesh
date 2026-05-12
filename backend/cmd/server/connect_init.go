@@ -19,6 +19,7 @@ import (
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
 	podconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod"
+	promocodeconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/promocode"
 	repositoryconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/repository"
 	runnerconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/runner"
 	ssoconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/sso"
@@ -116,6 +117,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	), opts...)
 	mountBillingService(mux, svc, opts)
 	mountInvitationService(mux, svc, opts)
+	promocodeconnect.Mount(mux, promocodeconnect.NewServer(svc.promoCode, svc.org), opts...)
 	supportticketconnect.Mount(mux, supportticketconnect.NewServer(svc.supportTicket), opts...)
 	mountSSOService(mux, svc)
 	mountAuthService(mux, svc, cfg, opts)

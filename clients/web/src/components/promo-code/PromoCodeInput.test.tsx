@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PromoCodeInput } from './PromoCodeInput'
-import { getPromoCodeService } from '@/lib/wasm-core'
+import * as promocodeConnect from '@/lib/api/promocodeConnect'
 
 const mockT = (key: string) => {
   const translations: Record<string, string> = {
@@ -26,52 +26,46 @@ const mockT = (key: string) => {
   return translations[key] || key
 }
 
-const mockValidate = vi.fn().mockResolvedValue('{}')
-const mockRedeem = vi.fn().mockResolvedValue('{}')
+vi.mock('@/lib/api/promocodeConnect', () => ({
+  validatePromoCode: vi.fn(),
+  redeemPromoCode: vi.fn(),
+  getRedemptionHistory: vi.fn(),
+}))
 
-vi.mocked(getPromoCodeService).mockReturnValue({
-  validate: mockValidate,
-  redeem: mockRedeem,
-  get_history: vi.fn().mockResolvedValue('{"codes":[]}'),
-} as unknown as ReturnType<typeof getPromoCodeService>)
+const ORG_SLUG = 'acme'
 
 describe('PromoCodeInput', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(getPromoCodeService).mockReturnValue({
-      validate: mockValidate,
-      redeem: mockRedeem,
-      get_history: vi.fn().mockResolvedValue('{"codes":[]}'),
-    } as unknown as ReturnType<typeof getPromoCodeService>)
   })
 
   it('renders input and validate button', () => {
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     expect(screen.getByPlaceholderText('Enter promo code')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument()
   })
 
   it('converts input to uppercase', async () => {
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'test123')
     expect(input).toHaveValue('TEST123')
   })
 
   it('disables validate button when code is empty', () => {
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const button = screen.getByRole('button', { name: 'Validate' })
     expect(button).toBeDisabled()
   })
 
   it('validates promo code successfully', async () => {
-    mockValidate.mockResolvedValue(JSON.stringify({
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
       valid: true, code: 'TEST123', plan_name: 'pro',
       plan_display_name: 'Pro', duration_months: 3,
-    }))
+    })
 
     const onValidate = vi.fn()
-    render(<PromoCodeInput onValidate={onValidate} t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} onValidate={onValidate} t={mockT} />)
 
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'TEST123')
@@ -82,6 +76,7 @@ describe('PromoCodeInput', () => {
     })
     expect(screen.getByText(/Plan: Pro/)).toBeInTheDocument()
     expect(screen.getByText(/Duration: 3 months/)).toBeInTheDocument()
+    expect(promocodeConnect.validatePromoCode).toHaveBeenCalledWith(ORG_SLUG, 'TEST123')
     expect(onValidate).toHaveBeenCalledWith({
       valid: true, code: 'TEST123', plan_name: 'pro',
       plan_display_name: 'Pro', duration_months: 3,
@@ -89,11 +84,11 @@ describe('PromoCodeInput', () => {
   })
 
   it('shows error for invalid promo code', async () => {
-    mockValidate.mockResolvedValue(JSON.stringify({
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
       valid: false, code: 'INVALID', message_code: 'promo_code_not_found',
-    }))
+    })
 
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'INVALID')
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }))
@@ -104,9 +99,9 @@ describe('PromoCodeInput', () => {
   })
 
   it('shows error on validate API failure', async () => {
-    mockValidate.mockRejectedValue(new Error('Network error'))
+    vi.mocked(promocodeConnect.validatePromoCode).mockRejectedValue(new Error('Network error'))
 
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'TEST123')
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }))
@@ -117,14 +112,16 @@ describe('PromoCodeInput', () => {
   })
 
   it('redeems promo code after validation', async () => {
-    mockValidate.mockResolvedValue(JSON.stringify({
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
       valid: true, code: 'TEST123', plan_name: 'pro',
       plan_display_name: 'Pro', duration_months: 3,
-    }))
-    mockRedeem.mockResolvedValue('{}')
+    })
+    vi.mocked(promocodeConnect.redeemPromoCode).mockResolvedValue({
+      success: true, plan_name: 'pro', duration_months: 3,
+    })
 
     const onRedeemSuccess = vi.fn()
-    render(<PromoCodeInput onRedeemSuccess={onRedeemSuccess} t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} onRedeemSuccess={onRedeemSuccess} t={mockT} />)
 
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'TEST123')
@@ -137,19 +134,22 @@ describe('PromoCodeInput', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Redeem' }))
 
     await waitFor(() => {
-      expect(onRedeemSuccess).toHaveBeenCalledWith({ success: true })
+      expect(onRedeemSuccess).toHaveBeenCalledWith({
+        success: true, plan_name: 'pro', duration_months: 3,
+      })
     })
+    expect(promocodeConnect.redeemPromoCode).toHaveBeenCalledWith(ORG_SLUG, 'TEST123')
     expect(input).toHaveValue('')
   })
 
   it('shows error on redeem failure', async () => {
-    mockValidate.mockResolvedValue(JSON.stringify({
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
       valid: true, code: 'TEST123', plan_name: 'pro',
       plan_display_name: 'Pro', duration_months: 3,
-    }))
-    mockRedeem.mockRejectedValue(new Error('Redeem failed'))
+    })
+    vi.mocked(promocodeConnect.redeemPromoCode).mockRejectedValue(new Error('Redeem failed'))
 
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'TEST123')
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }))
@@ -165,35 +165,60 @@ describe('PromoCodeInput', () => {
     })
   })
 
+  it('surfaces message_code from a non-success redeem response', async () => {
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
+      valid: true, code: 'TEST123', plan_name: 'pro',
+      plan_display_name: 'Pro', duration_months: 3,
+    })
+    vi.mocked(promocodeConnect.redeemPromoCode).mockResolvedValue({
+      success: false, message_code: 'promo_code_not_owner',
+    })
+
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
+    const input = screen.getByPlaceholderText('Enter promo code')
+    await userEvent.type(input, 'TEST123')
+    await userEvent.click(screen.getByRole('button', { name: 'Validate' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Valid promo code')).toBeInTheDocument()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Redeem' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Only owner can redeem')).toBeInTheDocument()
+    })
+  })
+
   it('disables input and button when disabled prop is true', () => {
-    render(<PromoCodeInput disabled={true} t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} disabled={true} t={mockT} />)
     expect(screen.getByPlaceholderText('Enter promo code')).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled()
   })
 
   it('handles Enter key to validate', async () => {
-    mockValidate.mockResolvedValue(JSON.stringify({
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
       valid: true, code: 'TEST123', plan_name: 'pro',
       plan_display_name: 'Pro', duration_months: 3,
-    }))
+    })
 
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'TEST123')
     await userEvent.keyboard('{Enter}')
 
     await waitFor(() => {
-      expect(mockValidate).toHaveBeenCalledWith(JSON.stringify({ code: 'TEST123' }))
+      expect(promocodeConnect.validatePromoCode).toHaveBeenCalledWith(ORG_SLUG, 'TEST123')
     })
   })
 
   it('clears validation when code changes', async () => {
-    mockValidate.mockResolvedValue(JSON.stringify({
+    vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
       valid: true, code: 'TEST123', plan_name: 'pro',
       plan_display_name: 'Pro', duration_months: 3,
-    }))
+    })
 
-    render(<PromoCodeInput t={mockT} />)
+    render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
     const input = screen.getByPlaceholderText('Enter promo code')
     await userEvent.type(input, 'TEST123')
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }))

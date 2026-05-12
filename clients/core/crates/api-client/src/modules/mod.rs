@@ -20,6 +20,7 @@ pub mod notification;
 pub mod organization;
 pub mod pod;
 pub mod promocode;
+pub mod promocode_connect;
 pub mod repository;
 pub mod runner;
 pub mod sso;

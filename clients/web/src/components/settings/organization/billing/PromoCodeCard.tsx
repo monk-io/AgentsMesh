@@ -2,6 +2,7 @@ import { PromoCodeInput } from "@/components/promo-code/PromoCodeInput";
 import type { TranslationFn } from "../GeneralSettings";
 
 interface PromoCodeCardProps {
+  orgSlug: string;
   onRedeemSuccess: () => void;
   t: TranslationFn;
 }
@@ -10,6 +11,7 @@ interface PromoCodeCardProps {
  * PromoCodeCard - Card for entering and redeeming promo codes
  */
 export function PromoCodeCard({
+  orgSlug,
   onRedeemSuccess,
   t,
 }: PromoCodeCardProps) {
@@ -20,6 +22,7 @@ export function PromoCodeCard({
         {t("settings.billingPage.promoCode.description")}
       </p>
       <PromoCodeInput
+        orgSlug={orgSlug}
         onRedeemSuccess={() => {
           onRedeemSuccess();
         }}

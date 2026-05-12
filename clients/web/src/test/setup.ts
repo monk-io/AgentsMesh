@@ -804,6 +804,9 @@ vi.mock('@/lib/wasm-core', () => {
       validate: fn().mockResolvedValue('{}'),
       redeem: fn().mockResolvedValue(undefined),
       get_history: fn().mockResolvedValue('{"codes":[]}'),
+      validatePromoCodeConnect: fn().mockResolvedValue(new Uint8Array()),
+      redeemPromoCodeConnect: fn().mockResolvedValue(new Uint8Array()),
+      getRedemptionHistoryConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getTokenUsageService: fn(() => ({
       get_dashboard: fn().mockResolvedValue('{}'),
