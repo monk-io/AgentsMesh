@@ -41,6 +41,7 @@ go_library(
         "//backend/internal/api/connect/grant",
         "//backend/internal/api/connect/interceptors",
         "//backend/internal/api/connect/invitation",
+        "//backend/internal/api/connect/loop",
         "//backend/internal/api/connect/notification",
         "//backend/internal/api/connect/org",
         "//backend/internal/api/connect/pod",

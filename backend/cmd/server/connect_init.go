@@ -19,6 +19,7 @@ import (
 	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
+	loopconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/loop"
 	notificationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/notification"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
 	podconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod"
@@ -130,6 +131,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountTokenUsageService(mux, svc, opts)
 	mountAutopilotService(mux, svc, rest, opts)
 	mountNotificationService(mux, svc, opts)
+	mountLoopService(mux, svc, rest, opts)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)
@@ -327,4 +329,20 @@ func mountNotificationService(mux *http.ServeMux, svc *serviceContainer, opts []
 	}
 	srv := notificationconnect.NewServer(svc.notifPrefStore, svc.org)
 	notificationconnect.Mount(mux, srv, opts...)
+}
+
+// mountLoopService wires LoopService — Loop CRUD + state actions
+// (Enable/Disable/Trigger) + Run management. Skips when the loop service
+// or orchestrator is not configured. PodCoordinator (when present)
+// satisfies the PodTerminatorForLoop interface used by CancelRun.
+func mountLoopService(mux *http.ServeMux, svc *serviceContainer, rest *v1.Services, opts []connect.HandlerOption) {
+	if svc.loop == nil || rest == nil || rest.LoopOrchestrator == nil {
+		return
+	}
+	var podTerm loopconnect.PodTerminatorForLoop
+	if rest.PodCoordinator != nil {
+		podTerm = rest.PodCoordinator
+	}
+	srv := loopconnect.NewServer(svc.loop, svc.loopRun, rest.LoopOrchestrator, svc.org, podTerm)
+	loopconnect.Mount(mux, srv, opts...)
 }
