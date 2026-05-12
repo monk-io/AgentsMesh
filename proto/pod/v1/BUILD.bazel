@@ -1,0 +1,43 @@
+load("@rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
+
+# Bazel-native protobuf code generation for proto.pod.v1.
+#
+# Mirrors proto/extension/v1/BUILD.bazel — same hermetic protoc/protoc-gen-go
+# pipeline, same `proto/gen/go/<svc>/v1` importpath shape. The Rust prost
+# DTOs are hand-maintained at clients/core/crates/types/src/pod_proto.rs and
+# agentpod_settings_proto.rs; `tools/validate_prost_tags` pins each
+# .proto field number ↔ Rust `prost(tag = N)` mapping at build time.
+
+proto_library(
+    name = "pod_proto",
+    srcs = [
+        "agentpod_settings.proto",
+        "pod.proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "pod_go_proto",
+    compilers = ["@rules_go//proto:go_proto"],
+    importpath = "github.com/anthropics/agentsmesh/proto/gen/go/pod/v1",
+    proto = ":pod_proto",
+    visibility = ["//visibility:public"],
+)
+
+# Watch list hazard #8 — catch hand-written prost struct drift on the
+# pod message tree. Settings/Providers ship as a paired Rust file so
+# both .proto units stay in lockstep with their prost mirrors.
+validate_prost_tags(
+    name = "pod_validate",
+    proto = "pod.proto",
+    rust = "//clients/core/crates/types:src/pod_proto.rs",
+)
+
+validate_prost_tags(
+    name = "agentpod_settings_validate",
+    proto = "agentpod_settings.proto",
+    rust = "//clients/core/crates/types:src/agentpod_settings_proto.rs",
+)

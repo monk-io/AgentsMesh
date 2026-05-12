@@ -1,5 +1,6 @@
 mod agent;
 mod agentpod_settings;
+mod agentpod_settings_proto;
 mod apikey;
 mod apikey_proto;
 mod auth;
@@ -23,6 +24,7 @@ mod message;
 mod notification;
 mod organization;
 mod pod;
+mod pod_proto;
 mod promocode;
 mod repository;
 mod runner;
@@ -77,6 +79,15 @@ pub mod proto_apikey_v1 {
 /// window without name collisions.
 pub mod proto_runner_api_v1 {
     pub use super::runner_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.pod.v1`. Bundles both `PodService`
+/// (org-scoped pod lifecycle) and `AgentPodSettingsService` (user-scoped
+/// settings/providers) because they share the same proto package. Coexists
+/// with the legacy serde `Pod` / `AgentPodSettings` for the dual-track window.
+pub mod proto_pod_v1 {
+    pub use super::agentpod_settings_proto::*;
+    pub use super::pod_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
