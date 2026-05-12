@@ -83,11 +83,11 @@ Replaced with generated Rust modules from `.proto` (committed but not hand-edite
 
 ### Specifics
 
-1. **Codec**: Connect+JSON is the default wire format (negotiated via `Content-Type: application/json`). Connect+proto-binary is opt-in per service (set `Content-Type: application/proto`) — leveraging the same handler. JSON wins because:
-   - It is curl-debuggable, matches existing dev habits.
-   - It is already in the wasm dep graph (`serde_json`); no new wire-format runtime cost.
-   - The drift cost we want to eliminate is **field naming/typing drift**, which is fully solved by a shared `.proto` regardless of codec.
-   - 2-3× decode speedup of binary buys little when payloads are <10 KB.
+1. **Codec**: protobuf binary is the only client wire format (`Content-Type: application/proto`). Server-side keeps Connect's default content-type negotiation for admin/curl debugging. Binary-only on the client wins because:
+   - It physically eliminates the field-name-mismatch drift class (snake_case ⇄ camelCase mismatches) that drove PR #329–#368 — wire identity is `prost(tag = N)`, not a string name.
+   - Server still accepts `application/json` (Connect-Go default negotiator), so curl and admin scripts retain a debug surface at zero cost.
+   - 2-3× decode speedup of binary buys little when payloads are <10 KB, so performance is not the argument — drift elimination is.
+   - See conventions §2.5 for the full client-wire rule set.
 
 2. **Migration model**: One-way migration. Each service migrates from REST + hand-written DTO → Connect-RPC + `.proto`. **No long-term dual-track.** Per-service old REST handlers can stay mounted in parallel during the migration window for safety, but are removed when the new Connect handler ships green CI.
 
@@ -176,7 +176,7 @@ Replaced with generated Rust modules from `.proto` (committed but not hand-edite
 
 | Item | Locked value |
 |---|---|
-| Codec default | Connect+JSON |
+| Codec (client wire) | `application/proto` only; server accepts JSON for debug |
 | Proto package | `proto.<domain>.v1` (e.g., `proto.extension.v1`) |
 | Service URL | `/<package>.<Service>/<Method>` |
 | Field naming on wire | camelCase (Connect protojson auto from snake_case `.proto`) |
@@ -186,6 +186,12 @@ Replaced with generated Rust modules from `.proto` (committed but not hand-edite
 | Single-entity create/update response | message **is** the entity (no `{entity: ...}` wrapper) |
 | Timestamp type | `string` ISO-8601 (no `google.protobuf.Timestamp`) |
 | Optional scalars | proto3 `optional` keyword (not default scalars) where zero is meaningful |
-| `oneof` JSON shape | `{kind: {variantName: ...}}` tagged shape, untagged Rust enum + custom deserialize |
+| `oneof` encoding | `prost::Oneof` on Rust side; binary wire makes JSON shape moot (only relevant for server curl debug) |
 | Error model | Connect standard (`connect.NewError(connect.CodeXxx, err)`) — **forbidden**: `{error: "..."}` |
 | Required header | `Connect-Protocol-Version: 1` (wasm helper injects) |
+
+## Revision history
+
+- 2026-05-12: Initial ADR (POC verdict + 5-7 day plan)
+- 2026-05-12: Codec pivot — binary-only client wire (`application/proto`), drop JSON path. Server retains content-type negotiation for debugging. Eliminates the field-name-mismatch drift class (PR #329-#368 root cause) at the wire layer. See conventions §2.5.
+- 2026-05-12: Timestamp policy upgraded from "delay until needed" to "forbidden" — binary wire removes the only argument (curl readability) for `google.protobuf.Timestamp` on the client lane, and prost-types adds ~50 KB to the wasm bundle. See conventions §6.

@@ -88,26 +88,11 @@ This bit the existing `ListComments` endpoint (`backend/internal/api/rest/v1/tic
 
 ---
 
-## 4. `google.protobuf.Timestamp` introduction cost
+## #4: ~~google.protobuf.Timestamp 引入门槛~~ → **CLOSED (forbidden)**
 
-### Symptom
-
-A specialist agent reaches for `google.protobuf.Timestamp` for "last_synced_at" or "created_at", encounters:
-
-1. `prost` doesn't include WKT decoders by default — need `prost-types` crate.
-2. Adding `prost-types` to `MODULE.bazel` is a 4-line edit but pulls another crate, +bundle size, +another piece of the codegen tool's translation table.
-3. The Rust ⇄ JSON encoding for `Timestamp` matches protojson's `2026-05-12T13:16:10Z` exactly — but only via `prost-types`'s `pbjson_types::Timestamp` re-export, not the plain `prost-types::Timestamp`. A subtle import mistake silently emits Unix epoch seconds or breaks at runtime.
-
-### Detection
-
-1. **Hard CI gate**: `! grep -r 'google.protobuf.Timestamp' proto/` returns non-empty → fail. Until the team explicitly decides to lift this, no service introduces it.
-2. **Linter check on Rust side**: `! grep -r 'prost_types::Timestamp\|prost-types' clients/core/crates/wasm/` — same restriction at the import level.
-
-### Mitigation
-
-- **Use `string` ISO-8601 for v1.** Conventions §6. Backend already emits this from `time.Time` fields via `gin.H` JSON marshal.
-- **Use `Option<String>` for nullable timestamps** (e.g., `last_synced_at` is `null` before first sync).
-- **If a future service genuinely needs typed `Timestamp`** (e.g., arithmetic on backend without re-parsing ISO-8601), open a separate ADR — do not slip it into a migration PR.
+**状态**：CLOSED — conventions §6 把 Timestamp 升级为绝对禁止。
+**理由**：见 conventions §6。
+**强制点**：buf_lint custom rule (`no-wkt-timestamp`)，第 1 个 service PR (skill_registry) 必须 land。
 
 ---
 
@@ -310,7 +295,7 @@ For v1, prefer **shared messages in `proto.<domain>.v1`** only if the domain is 
 | 1 | ~~camelCase drift~~ | **CLOSED** by binary wire | (codec choice eliminates surface) | conventions §2.5 — no client JSON path |
 | 2 | `oneof` encoding | LOW (was MEDIUM) | per-variant round-trip | prost-stock `#[derive(prost::Oneof)]`, no custom serde |
 | 3 | Optional vs default scalar | MEDIUM | per-RPC `offset=0` test | `optional` keyword |
-| 4 | `Timestamp` introduction | LOW (gated) | grep CI gate | use `string` ISO-8601 |
+| 4 | ~~`Timestamp` introduction~~ | **CLOSED** (forbidden) | `buf_lint` `no-wkt-timestamp` rule | conventions §6 — `string` ISO-8601 only |
 | 5 | Auth interceptor gap | **HIGH** | "401 without bearer" test | block on interceptor PR |
 | 6 | Backend field accumulation | **HIGH** (re-opens issues) | three-way diff before `.proto` | runbook §1 mandates the diff |
 | 7 | wasm bundle creep | LOW | per-PR delta + cumulative budget | per-service ceiling; no codec fallback (binary mandatory) |

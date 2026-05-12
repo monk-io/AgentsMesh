@@ -337,42 +337,56 @@ Binary wire elides absent fields by tag-number absence (prost's `Option<T>` maps
 
 ---
 
-## 6. Timestamps — `string` ISO-8601, **no** `google.protobuf.Timestamp`
+## 6. Timestamp（严令：禁用 google.protobuf.Timestamp）
 
-**Rule**: All time fields are `string`, formatted as RFC 3339 / ISO-8601 (`2026-05-12T13:16:10Z`).
+### 规约
 
-Rationale (POC §3.4):
-- `prost-types` is a separate crate. Adding it = one more `crate.spec` + wasm bundle cost.
-- Backend already emits RFC 3339 (`time.RFC3339`) from `time.Time` fields via `gin.H` JSON marshal.
-- Migrating to `google.protobuf.Timestamp` later is **non-breaking** on the JSON wire (`protojson` encodes `Timestamp` as the same ISO-8601 string).
+所有时间字段必须用 **`string` ISO-8601 UTC**：
 
-**Bad**:
-```protobuf
+```proto
+message Foo {
+  string created_at = 1;   // "2026-05-12T13:16:10Z"
+  string updated_at = 2;
+}
+```
+
+### 为什么
+
+1. **`google.protobuf.Timestamp` 需要 `prost-types` crate** —— wasm bundle +50 KB（实测自其它 Connect 项目；与现有 prost 0.13 graph 增量）
+2. **binary wire 下 Timestamp 无收益** —— 字段名 drift 已经在 wire 层消失，Timestamp 唯一论证 ("better curl readability") 不成立（client 端 wire 是 binary，curl debug 用 server 端 JSON negotiate）
+3. **既有 26 service 现状** —— 当前所有 timestamp 字段在 Rust DTO 都是 `Option<String>`（POC 报告 confirmed），切到 Timestamp 会触发全量重序列化
+4. **不可逆扩散** —— 一旦一个 service 用了 Timestamp，prost-types 进 dep graph，其它 service 加 Timestamp 边际成本为 0，会迅速扩散
+
+### 错误示例
+
+```proto
+// 任何引入都被 buf_lint 拒绝
 import "google/protobuf/timestamp.proto";
 
-message SkillRegistry {
-  google.protobuf.Timestamp last_synced_at = 1;   // pulls prost-types into wasm
+message Foo {
+  google.protobuf.Timestamp created_at = 1;
 }
 ```
 
-**Good**:
-```protobuf
-message SkillRegistry {
-  string last_synced_at = 1;       // RFC 3339 "2026-05-12T13:16:10Z"
-}
+### CI 检测
+
+`buf_lint` 加入 custom rule（land 在 skill_registry reference PR）：
+
+```yaml
+# buf.yaml fragment
+lint:
+  except:
+    - PACKAGE_VERSION_SUFFIX
+  custom:
+    no-wkt-timestamp:
+      message: "Use string ISO-8601 instead of google.protobuf.Timestamp; see conventions §6"
+      check: |
+        proto.imports == "google/protobuf/timestamp.proto"
 ```
 
-```rust
-#[derive(Clone, PartialEq, prost::Message)]
-pub struct SkillRegistry {
-    #[prost(string, tag = "1")]
-    pub last_synced_at: String,
-}
-```
+### Parsing helpers（Go 端）
 
-**Use `Option<String>` for nullable timestamps** (most "last seen at" / "ended at" fields) — `#[prost(string, optional, tag = "N")] pub field: Option<String>`.
-
-**CI gate**: `grep -r 'google.protobuf.Timestamp' proto/` returns non-empty → fail (until we explicitly lift this restriction).
+Service handler 收到 ISO-8601 字符串后用 `time.Parse(time.RFC3339, s)`；不便利但单点处理。
 
 ---
 
