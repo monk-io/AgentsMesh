@@ -19,6 +19,7 @@ import (
 	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
+	notificationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/notification"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
 	podconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod"
 	promocodeconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/promocode"
@@ -128,6 +129,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountFileService(mux, svc, opts)
 	mountTokenUsageService(mux, svc, opts)
 	mountAutopilotService(mux, svc, rest, opts)
+	mountNotificationService(mux, svc, opts)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)
@@ -312,4 +314,17 @@ func mountAutopilotService(mux *http.ServeMux, svc *serviceContainer, rest *v1.S
 	}
 	srv := autopilotconnect.NewServer(svc.autopilot, svc.org, svc.pod, cmdSender)
 	autopilotconnect.Mount(mux, srv, opts...)
+}
+
+// mountNotificationService wires NotificationService — per-user notification
+// preference CRUD inside an org. REST stays mounted at
+// /api/v1/orgs/:slug/notifications/preferences for the dual-track window.
+// Phase 2 (unread-count subscribe stream) stays on the websocket relay path
+// because Connect's unary contract cannot model server-push.
+func mountNotificationService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	if svc.notifPrefStore == nil {
+		return
+	}
+	srv := notificationconnect.NewServer(svc.notifPrefStore, svc.org)
+	notificationconnect.Mount(mux, srv, opts...)
 }
