@@ -37,6 +37,7 @@ mod ticket;
 mod ticket_requests;
 mod token_usage;
 mod user_credential;
+mod user_credential_proto;
 
 pub use agent::*;
 pub use agentpod_settings::*;
@@ -98,6 +99,14 @@ pub mod proto_pod_v1 {
 /// the proto SSOT carries all 19 backend fields the legacy DTO dropped.
 pub mod proto_repository_v1 {
     pub use super::repository_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.user_credential.v1`. Three
+/// services share this module because they live in the same proto package
+/// (GitCredential, AgentCredentialProfile, RepositoryProvider). All are
+/// user-scoped — no org_slug, conventions §3.5 exception #1.
+pub mod proto_user_credential_v1 {
+    pub use super::user_credential_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
