@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import type { RepositoryData } from "@/lib/api/repositoryTypes";
-import { getRepositoryService } from "@/lib/wasm-core";
+import { updateRepository } from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 
 interface EditRepositoryModalProps {
@@ -23,6 +24,7 @@ export function EditRepositoryModal({
   onUpdated,
 }: EditRepositoryModalProps) {
   const t = useTranslations();
+  const currentOrg = useCurrentOrg();
   const [name, setName] = useState(repository.name);
   const [defaultBranch, setDefaultBranch] = useState(repository.default_branch);
   const [ticketPrefix, setTicketPrefix] = useState(repository.ticket_prefix || "");
@@ -37,19 +39,20 @@ export function EditRepositoryModal({
       setError(t("repositories.edit.nameRequired"));
       return;
     }
+    if (!currentOrg) return;
 
     setLoading(true);
     setError("");
 
     try {
-      await getRepositoryService().update(BigInt(repository.id), JSON.stringify({
+      await updateRepository(currentOrg.slug, repository.id, {
         name,
         default_branch: defaultBranch,
         ticket_prefix: ticketPrefix || undefined,
         is_active: isActive,
         http_clone_url: httpCloneUrl || undefined,
         ssh_clone_url: sshCloneUrl || undefined,
-      }));
+      });
       onUpdated();
     } catch (err) {
       console.error("Failed to update repository:", err);

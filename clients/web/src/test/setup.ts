@@ -711,6 +711,21 @@ vi.mock('@/lib/wasm-core', () => {
       get_webhook_status: fn().mockResolvedValue('{}'),
       get_webhook_secret: fn().mockResolvedValue('{}'),
       list_merge_requests: fn().mockResolvedValue('{"merge_requests":[]}'),
+      // Connect-RPC binary methods. Tests that exercise Connect paths
+      // override these with proto-encoded fixtures via their own mocks.
+      list_repositories_connect: fn().mockResolvedValue(new Uint8Array()),
+      get_repository_connect: fn().mockResolvedValue(new Uint8Array()),
+      create_repository_connect: fn().mockResolvedValue(new Uint8Array()),
+      update_repository_connect: fn().mockResolvedValue(new Uint8Array()),
+      delete_repository_connect: fn().mockResolvedValue(new Uint8Array()),
+      list_repository_branches_connect: fn().mockResolvedValue(new Uint8Array()),
+      sync_repository_branches_connect: fn().mockResolvedValue(new Uint8Array()),
+      list_repository_merge_requests_connect: fn().mockResolvedValue(new Uint8Array()),
+      register_repository_webhook_connect: fn().mockResolvedValue(new Uint8Array()),
+      delete_repository_webhook_connect: fn().mockResolvedValue(new Uint8Array()),
+      get_repository_webhook_status_connect: fn().mockResolvedValue(new Uint8Array()),
+      get_repository_webhook_secret_connect: fn().mockResolvedValue(new Uint8Array()),
+      mark_repository_webhook_configured_connect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getExtensionService: fn(() => ({
       list_skill_registries: fn().mockResolvedValue('{"skill_registries":[]}'),

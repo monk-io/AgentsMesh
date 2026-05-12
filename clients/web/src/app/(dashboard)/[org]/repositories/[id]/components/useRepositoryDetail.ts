@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { RepositoryData } from "@/lib/api/repositoryTypes";
-import { getRepositoryService } from "@/lib/wasm-core";
+import { getRepository, deleteRepository } from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ export interface UseRepositoryDetailResult {
 export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailResult {
   const t = useTranslations();
   const router = useRouter();
+  const currentOrg = useCurrentOrg();
 
   const [repository, setRepository] = useState<RepositoryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,32 +42,33 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
   });
 
   const loadRepository = useCallback(async () => {
+    if (!currentOrg) return;
     try {
-      const res = JSON.parse(await getRepositoryService().get(BigInt(repositoryId)));
-      setRepository(res.repository ?? res);
+      const res = await getRepository(currentOrg.slug, repositoryId);
+      setRepository(res);
     } catch (error) {
       console.error("Failed to load repository:", error);
     } finally {
       setLoading(false);
     }
-  }, [repositoryId]);
+  }, [repositoryId, currentOrg]);
 
   useEffect(() => {
     loadRepository();
   }, [loadRepository]);
 
   const handleDelete = useCallback(async () => {
-    if (!repository) return;
+    if (!repository || !currentOrg) return;
     const confirmed = await deleteDialog.confirm();
     if (!confirmed) return;
     try {
-      await getRepositoryService().delete(BigInt(repositoryId));
+      await deleteRepository(currentOrg.slug, repositoryId);
       router.push("../repositories");
     } catch (error) {
       console.error("Failed to delete repository:", error);
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
-  }, [repository, repositoryId, router, deleteDialog, t]);
+  }, [repository, repositoryId, router, deleteDialog, t, currentOrg]);
 
   return {
     repository,

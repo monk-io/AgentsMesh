@@ -4,7 +4,9 @@ import {
   AgentData,
   RepositoryData,
 } from "@/lib/api";
-import { getRunnerService, getAgentService, getRepositoryService } from "@/lib/wasm-core";
+import { getRunnerService, getAgentService } from "@/lib/wasm-core";
+import { listRepositories } from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 
 export interface PodCreationData {
   runners: RunnerData[];
@@ -25,6 +27,7 @@ export interface PodCreationData {
  * Only loads when enabled is true (e.g., when modal is open)
  */
 export function usePodCreationData(enabled: boolean): PodCreationData {
+  const currentOrg = useCurrentOrg();
   const [runners, setRunners] = useState<RunnerData[]>([]);
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [repositories, setRepositories] = useState<RepositoryData[]>([]);
@@ -42,10 +45,13 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
       setLoading(true);
       setError(null);
       try {
+        const reposPromise = currentOrg
+          ? listRepositories(currentOrg.slug)
+          : Promise.resolve({ items: [], total: 0, limit: 0, offset: 0 });
         const [runnersRes, agentsRes, reposRes] = await Promise.allSettled([
           getRunnerService().fetch_runners(null).then((j: string) => JSON.parse(j)),
           getAgentService().list_agents().then((j: string) => JSON.parse(j)),
-          getRepositoryService().list().then((j: string) => JSON.parse(j)),
+          reposPromise,
         ]);
 
         if (cancelled) return;
@@ -62,7 +68,7 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
           setAgents(agentList);
         }
         if (reposRes.status === "fulfilled") {
-          setRepositories(reposRes.value.repositories || []);
+          setRepositories(reposRes.value.items);
         }
       } catch (err) {
         if (cancelled) return;
@@ -81,7 +87,7 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [enabled, currentOrg]);
 
   // Reset selected runner when modal closes
   useEffect(() => {

@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPodService, getTicketService, getRepositoryService } from "@/lib/wasm-core";
+import { getPodService, getTicketService } from "@/lib/wasm-core";
+import { listRepositories } from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { SearchResults, PodSearchResult, TicketSearchResult, RepositorySearchResult } from "./types";
 
 /**
  * Custom hook for managing command palette search
  */
 export function useCommandPaletteSearch(search: string): SearchResults {
+  const currentOrg = useCurrentOrg();
   const [pods, setPods] = useState<PodSearchResult[]>([]);
   const [tickets, setTickets] = useState<TicketSearchResult[]>([]);
   const [repositories, setRepositories] = useState<RepositorySearchResult[]>([]);
@@ -24,10 +27,13 @@ export function useCommandPaletteSearch(search: string): SearchResults {
     const loadSearchResults = async () => {
       setLoading(true);
       try {
+        const reposPromise = currentOrg
+          ? listRepositories(currentOrg.slug).catch(() => ({ items: [] }))
+          : Promise.resolve({ items: [] });
         const [podsRes, ticketsRes, reposRes] = await Promise.all([
           getPodService().fetch_pods(null, null, null, null, null).then((j: string) => JSON.parse(j)).catch(() => ({ pods: [] })),
           getTicketService().fetch_tickets(undefined, 500, undefined).then((j: string) => JSON.parse(j)).catch(() => ({ tickets: [] })),
-          getRepositoryService().list().then((j: string) => JSON.parse(j)).catch(() => ({ repositories: [] })),
+          reposPromise,
         ]);
 
         // Filter by search term
@@ -47,7 +53,7 @@ export function useCommandPaletteSearch(search: string): SearchResults {
             .slice(0, 5)
         );
         setRepositories(
-          (reposRes.repositories || [])
+          (reposRes.items || [])
             .filter((r: { slug: string }) => r.slug.toLowerCase().includes(searchLower))
             .slice(0, 5)
         );
@@ -60,7 +66,7 @@ export function useCommandPaletteSearch(search: string): SearchResults {
 
     const debounce = setTimeout(loadSearchResults, 300);
     return () => clearTimeout(debounce);
-  }, [search]);
+  }, [search, currentOrg]);
 
   return { pods, tickets, repositories, loading };
 }

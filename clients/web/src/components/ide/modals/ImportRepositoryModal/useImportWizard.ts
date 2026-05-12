@@ -6,7 +6,9 @@ import {
   RepositoryData,
 } from "@/lib/api";
 import type { ProviderRepositoryData } from "@/lib/api/userRepositoryProviderTypes";
-import { getRepositoryService, getUserCredentialService } from "@/lib/wasm-core";
+import { createRepository } from "@/lib/api/repositoryConnect";
+import { getUserCredentialService } from "@/lib/wasm-core";
+import { useCurrentOrg } from "@/stores/auth";
 import type { ImportWizardState, ImportWizardActions, ImportWizardStep } from "./types";
 
 /**
@@ -67,6 +69,7 @@ export function useImportWizard({
 }: UseImportWizardOptions): [ImportWizardState, ImportWizardActions] {
   // Note: existingRepositories is available for future duplicate detection
   void _existingRepositories;
+  const currentOrg = useCurrentOrg();
   const [state, setState] = useState<ImportWizardState>(createInitialState);
 
   // Load providers - call this explicitly, not via useEffect
@@ -217,24 +220,28 @@ export function useImportWizard({
     },
 
     handleImport: async () => {
+      if (!currentOrg) {
+        setState(s => ({ ...s, error: t("repositories.modal.failedToImport") }));
+        return;
+      }
       setState(s => ({ ...s, importing: true, error: null }));
       try {
         // When importing from a provider, pass both HTTP and SSH clone URLs if available
         const httpCloneUrl = state.selectedRepo?.http_clone_url || state.manualCloneURL || undefined;
         const sshCloneUrl = state.selectedRepo?.ssh_clone_url || undefined;
 
-        await getRepositoryService().create(JSON.stringify({
+        await createRepository(currentOrg.slug, {
           provider_type: state.manualProviderType,
           provider_base_url: state.manualBaseURL,
           http_clone_url: httpCloneUrl,
           ssh_clone_url: sshCloneUrl,
-          external_id: state.selectedRepo?.id || state.manualSlug.replace(/[^a-zA-Z0-9]/g, "-"),
+          external_id: String(state.selectedRepo?.id || state.manualSlug.replace(/[^a-zA-Z0-9]/g, "-")),
           name: state.manualName,
           slug: state.manualSlug,
           default_branch: state.manualDefaultBranch || "main",
           ticket_prefix: state.ticketPrefix || undefined,
           visibility: state.visibility,
-        }));
+        });
         onImported?.();
         onClose();
       } catch (err) {

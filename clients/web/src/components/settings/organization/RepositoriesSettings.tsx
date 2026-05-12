@@ -9,7 +9,7 @@ import { CenteredSpinner } from "@/components/ui/spinner";
 import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { RepositoryData } from "@/lib/api/repositoryTypes";
-import { getRepositoryService } from "@/lib/wasm-core";
+import { listRepositories, deleteRepository } from "@/lib/api/repositoryConnect";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
@@ -34,16 +34,17 @@ export function RepositoriesSettings() {
   });
 
   const fetchRepositories = useCallback(async () => {
+    if (!orgSlug) return;
     try {
       setLoading(true);
-      const response = JSON.parse(await getRepositoryService().list()) as { repositories?: RepositoryData[] };
-      setRepositories(response.repositories ?? []);
+      const response = await listRepositories(orgSlug);
+      setRepositories(response.items);
     } catch (err) {
       toast.error(getLocalizedErrorMessage(err, t, t("common.error")));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, orgSlug]);
 
   useEffect(() => {
     fetchRepositories();
@@ -52,8 +53,9 @@ export function RepositoriesSettings() {
   const handleDelete = async (repo: RepositoryData) => {
     const ok = await confirmDelete();
     if (!ok) return;
+    if (!orgSlug) return;
     try {
-      await getRepositoryService().delete(BigInt(repo.id));
+      await deleteRepository(orgSlug, repo.id);
       toast.success(t("repositories.deleteSuccess"));
       await fetchRepositories();
     } catch (err) {

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
-import { getRepositoryService } from "@/lib/wasm-core";
+import { listRepositoryMergeRequests } from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import { useEventSubscription } from "@/hooks/useRealtimeEvents";
 import type { MREventData, PipelineEventData } from "@/lib/realtime";
 import type { PodData } from "@/lib/api";
@@ -19,6 +20,7 @@ interface DeliveryTabContentProps {
 }
 
 export function DeliveryTabContent({ selectedPodKey, pod, t }: DeliveryTabContentProps) {
+  const currentOrg = useCurrentOrg();
   const [mergeRequests, setMergeRequests] = useState<MergeRequestInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,22 +32,22 @@ export function DeliveryTabContent({ selectedPodKey, pod, t }: DeliveryTabConten
   const providerType = useMemo(() => pod?.repository?.provider_type, [pod?.repository?.provider_type]);
 
   const fetchMRs = useCallback(async () => {
-    if (!pod?.repository?.id || !pod?.branch_name) return;
+    if (!pod?.repository?.id || !pod?.branch_name || !currentOrg) return;
     setLoading(true);
     setError(null);
     try {
-      const resp = JSON.parse(
-        await getRepositoryService().list_merge_requests(
-          BigInt(pod.repository.id), pod.branch_name ?? null, null,
-        ),
+      const resp = await listRepositoryMergeRequests(
+        currentOrg.slug,
+        pod.repository.id,
+        { branch: pod.branch_name },
       );
-      setMergeRequests(resp.merge_requests as MergeRequestInfo[]);
+      setMergeRequests(resp.items);
     } catch (err) {
       const msg = getLocalizedErrorMessage(err, t, t("ide.bottomPanel.deliveryTab.loadError"));
       setError(msg);
       toast.error(msg);
     } finally { setLoading(false); }
-  }, [pod?.repository?.id, pod?.branch_name, t]);
+  }, [pod?.repository?.id, pod?.branch_name, t, currentOrg]);
 
   useEffect(() => {
     if (canShowDelivery) fetchMRs();

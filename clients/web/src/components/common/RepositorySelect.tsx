@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { RepositoryData } from "@/lib/api";
-import { getRepositoryService } from "@/lib/wasm-core";
+import { listRepositories } from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 
 export interface RepositorySelectProps {
   value: number | null;
@@ -22,18 +23,23 @@ export function RepositorySelect({
   className = "",
   activeOnly = true,
 }: RepositorySelectProps) {
+  const currentOrg = useCurrentOrg();
   const [repositories, setRepositories] = useState<RepositoryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadRepositories = useCallback(async () => {
+    if (!currentOrg) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = JSON.parse(await getRepositoryService().list());
-      let repos: RepositoryData[] = res.repositories || [];
+      const res = await listRepositories(currentOrg.slug);
+      let repos: RepositoryData[] = res.items;
       if (activeOnly) {
-        repos = repos.filter((r: RepositoryData) => r.is_active);
+        repos = repos.filter((r) => r.is_active);
       }
       setRepositories(repos);
     } catch (err) {
@@ -42,7 +48,7 @@ export function RepositorySelect({
     } finally {
       setLoading(false);
     }
-  }, [activeOnly]);
+  }, [activeOnly, currentOrg]);
 
   useEffect(() => {
     loadRepositories();

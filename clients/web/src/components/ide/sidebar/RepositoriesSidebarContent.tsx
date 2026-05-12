@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { RepositoryData } from "@/lib/api";
-import { getRepositoryService } from "@/lib/wasm-core";
+import { listRepositories } from "@/lib/api/repositoryConnect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -53,12 +53,14 @@ export function RepositoriesSidebarContent({ className, onImportRepo }: Reposito
     if (currentOrg) {
       loadRepositories();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrg]);
 
   const loadRepositories = async () => {
+    if (!currentOrg) return;
     try {
-      const response = JSON.parse(await getRepositoryService().list());
-      setRepositories(response.repositories || []);
+      const response = await listRepositories(currentOrg.slug);
+      setRepositories(response.items);
     } catch (error) {
       console.error("Failed to load repositories:", error);
     } finally {

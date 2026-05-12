@@ -2,12 +2,21 @@
 
 import { useState, useCallback } from "react";
 import { WebhookStatus, WebhookSecretResponse } from "@/lib/api";
-import { getRepositoryService } from "@/lib/wasm-core";
+import {
+  getRepositoryWebhookStatus,
+  getRepositoryWebhookSecret,
+  registerRepositoryWebhook,
+  deleteRepositoryWebhook,
+  markRepositoryWebhookConfigured,
+} from "@/lib/api/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import { WebhookState, WebhookSettingsState, WebhookSettingsActions } from "./types";
 
 export interface UseWebhookStateResult extends WebhookSettingsState, WebhookSettingsActions {}
 
 export function useWebhookState(repositoryId: number, onUpdate?: () => void): UseWebhookStateResult {
+  const currentOrg = useCurrentOrg();
+  const orgSlug = currentOrg?.slug ?? "";
   const [state, setState] = useState<WebhookState>("loading");
   const [status, setStatus] = useState<WebhookStatus | null>(null);
   const [secretData, setSecretData] = useState<WebhookSecretResponse | null>(null);
@@ -15,19 +24,20 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
   const [loading, setLoading] = useState(false);
 
   const loadStatus = useCallback(async () => {
+    if (!orgSlug) return;
     setState("loading");
     setError(null);
     try {
-      const res = JSON.parse(await getRepositoryService().get_webhook_status(BigInt(repositoryId)));
-      setStatus(res.webhook_status);
+      const res = await getRepositoryWebhookStatus(orgSlug, repositoryId);
+      setStatus(res);
 
-      if (res.webhook_status.registered && res.webhook_status.is_active) {
+      if (res.registered && res.is_active) {
         setState("registered");
-      } else if (res.webhook_status.needs_manual_setup) {
+      } else if (res.needs_manual_setup) {
         setState("needs_manual_setup");
         // Load secret for manual setup
         try {
-          const secretRes = JSON.parse(await getRepositoryService().get_webhook_secret(BigInt(repositoryId)));
+          const secretRes = await getRepositoryWebhookSecret(orgSlug, repositoryId);
           setSecretData(secretRes);
         } catch {
           // Secret might not be available if already configured
@@ -40,13 +50,14 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
       setError("Failed to load webhook status");
       setState("error");
     }
-  }, [repositoryId]);
+  }, [repositoryId, orgSlug]);
 
   const handleRegister = useCallback(async () => {
+    if (!orgSlug) return;
     setLoading(true);
     setError(null);
     try {
-      await getRepositoryService().register_webhook(BigInt(repositoryId));
+      await registerRepositoryWebhook(orgSlug, repositoryId);
       onUpdate?.();
       await loadStatus();
     } catch (err) {
@@ -55,13 +66,14 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     } finally {
       setLoading(false);
     }
-  }, [repositoryId, onUpdate, loadStatus]);
+  }, [repositoryId, onUpdate, loadStatus, orgSlug]);
 
   const handleDelete = useCallback(async () => {
+    if (!orgSlug) return;
     setLoading(true);
     setError(null);
     try {
-      await getRepositoryService().delete_webhook(BigInt(repositoryId));
+      await deleteRepositoryWebhook(orgSlug, repositoryId);
       setState("not_registered");
       setStatus(null);
       setSecretData(null);
@@ -72,13 +84,14 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     } finally {
       setLoading(false);
     }
-  }, [repositoryId, onUpdate]);
+  }, [repositoryId, onUpdate, orgSlug]);
 
   const handleMarkConfigured = useCallback(async () => {
+    if (!orgSlug) return;
     setLoading(true);
     setError(null);
     try {
-      await getRepositoryService().mark_webhook_configured(BigInt(repositoryId));
+      await markRepositoryWebhookConfigured(orgSlug, repositoryId);
       setState("registered");
       onUpdate?.();
       await loadStatus();
@@ -88,7 +101,7 @@ export function useWebhookState(repositoryId: number, onUpdate?: () => void): Us
     } finally {
       setLoading(false);
     }
-  }, [repositoryId, onUpdate, loadStatus]);
+  }, [repositoryId, onUpdate, loadStatus, orgSlug]);
 
   return {
     state,
