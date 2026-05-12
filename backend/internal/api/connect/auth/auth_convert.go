@@ -11,7 +11,9 @@ import (
 // is_email_verified, sourced from the same domain object.
 //
 // Passwords and other sensitive fields stay server-side; the proto User
-// message has no field for them.
+// message has no field for them. Name / AvatarURL on the domain side are
+// `*string` (nullable in the DB); we treat nil or empty-string the same
+// way REST does (omit from response).
 func toProtoUser(u *domainUser.User) *authv1.User {
 	if u == nil {
 		return nil
@@ -21,12 +23,12 @@ func toProtoUser(u *domainUser.User) *authv1.User {
 		Email:    u.Email,
 		Username: u.Username,
 	}
-	if u.Name != "" {
-		n := u.Name
+	if u.Name != nil && *u.Name != "" {
+		n := *u.Name
 		out.Name = &n
 	}
-	if u.AvatarURL != "" {
-		a := u.AvatarURL
+	if u.AvatarURL != nil && *u.AvatarURL != "" {
+		a := *u.AvatarURL
 		out.AvatarUrl = &a
 	}
 	verified := u.IsEmailVerified
