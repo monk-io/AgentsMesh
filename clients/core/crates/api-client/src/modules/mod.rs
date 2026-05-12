@@ -31,6 +31,7 @@ pub mod support_ticket_connect;
 pub mod ticket;
 pub mod ticket_relations;
 pub mod token_usage;
+pub mod token_usage_connect;
 pub mod user;
 pub mod user_agent_credential;
 pub mod user_agent_credential_connect;
