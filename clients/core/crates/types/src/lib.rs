@@ -27,6 +27,7 @@ mod pod;
 mod pod_proto;
 mod promocode;
 mod repository;
+mod repository_proto;
 mod runner;
 mod runner_proto;
 mod service_error;
@@ -88,6 +89,15 @@ pub mod proto_runner_api_v1 {
 pub mod proto_pod_v1 {
     pub use super::agentpod_settings_proto::*;
     pub use super::pod_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.repository.v1`. Re-exported as a
+/// distinct module so the legacy serde `Repository` (REST path) and the
+/// prost `Repository` (Connect path) coexist during the dual-track migration
+/// window without name collisions. PR #329 / #342 / #343 reconciliation:
+/// the proto SSOT carries all 19 backend fields the legacy DTO dropped.
+pub mod proto_repository_v1 {
+    pub use super::repository_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
