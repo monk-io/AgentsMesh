@@ -7,6 +7,7 @@ mod apikey_proto;
 mod auth;
 mod auth_proto;
 mod autopilot;
+mod autopilot_proto;
 mod billing;
 mod billing_proto;
 mod binding;
@@ -288,6 +289,21 @@ pub mod proto_file_v1 {
 /// dual-track migration window.
 pub mod proto_token_usage_v1 {
     pub use super::token_usage_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.autopilot.v1`. Org-scoped
+/// AutopilotControllerService — CRUD + 6 control actions (pause /
+/// resume / stop / approve / takeover / handback) + iteration history.
+/// Coexists with the legacy serde `AutopilotController` /
+/// `CreateAutopilotRequest` / `AutopilotActionResponse` / `AutopilotIteration`
+/// in `autopilot.rs` for the dual-track migration window.
+///
+/// Wire-shape reconciliation: the legacy serde `AutopilotController`
+/// carries `key` as a `#[serde(alias = "key")]` to autopilot_controller_key.
+/// The proto wire uses the canonical `autopilot_controller_key` (tag 2);
+/// the TS adapter remaps to the legacy shape.
+pub mod proto_autopilot_v1 {
+    pub use super::autopilot_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
