@@ -5,6 +5,7 @@ mod autopilot;
 mod billing;
 mod binding;
 mod blockstore;
+mod blockstore_connect;
 mod channel;
 mod channel_connect;
 mod error;

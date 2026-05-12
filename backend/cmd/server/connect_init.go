@@ -10,6 +10,7 @@ import (
 	agentpodsettingsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	billingconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/billing"
+	blockstoreconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/blockstore"
 	channelconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/channel"
 	extensionconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
@@ -90,6 +91,9 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 		repositoryconnect.WithBillingService(svc.billing),
 	), opts...)
 	apikeyconnect.Mount(mux, apikeyconnect.NewServer(svc.apikey, svc.org), opts...)
+	if svc.blockstore != nil {
+		blockstoreconnect.Mount(mux, blockstoreconnect.NewServer(svc.blockstore, svc.org), opts...)
+	}
 	orgconnect.Mount(mux, orgconnect.NewServer(svc.org, svc.user), opts...)
 	ticketrelationsconnect.Mount(mux, ticketrelationsconnect.NewServer(svc.ticket, svc.org), opts...)
 	channelconnect.Mount(mux, channelconnect.NewServer(svc.channel, svc.ticket, svc.org), opts...)

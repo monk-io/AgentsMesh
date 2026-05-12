@@ -14,7 +14,96 @@ impl WasmBlockstoreService {
         Self(BlockstoreService::new(client, state))
     }
 
-    // ── Mutations / fetches ──
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate; conventions §2.5 forbids it on the client.
+    //
+    // js_name is camelCase to match JS conventions; the `_connect` suffix
+    // marks the migration lane so the legacy JSON methods can coexist until
+    // the full 26-service migration ships.
+
+    #[wasm_bindgen(js_name = applyOpsConnect)]
+    pub async fn apply_ops_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.apply_ops_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listWorkspacesConnect)]
+    pub async fn list_workspaces_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_workspaces_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = ensureDefaultWorkspaceConnect)]
+    pub async fn ensure_default_workspace_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.ensure_default_workspace_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = createWorkspaceConnect)]
+    pub async fn create_workspace_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_workspace_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = deleteWorkspaceConnect)]
+    pub async fn delete_workspace_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_workspace_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = getBlockConnect)]
+    pub async fn get_block_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_block_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listChildrenConnect)]
+    pub async fn list_children_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_children_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listBacklinksConnect)]
+    pub async fn list_backlinks_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_backlinks_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = getSubtreeConnect)]
+    pub async fn get_subtree_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_subtree_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = streamOpsConnect)]
+    pub async fn stream_ops_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.stream_ops_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = exportWorkspaceConnect)]
+    pub async fn export_workspace_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.export_workspace_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listTypeDefsConnect)]
+    pub async fn list_type_defs_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_type_defs_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = getBlockAtConnect)]
+    pub async fn get_block_at_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_block_at_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = semanticSearchConnect)]
+    pub async fn semantic_search_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.semantic_search_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = memoryRetrieveConnect)]
+    pub async fn memory_retrieve_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.memory_retrieve_connect(request).await
+    }
+
+    // -------- Legacy JSON methods (preserved during dual-track) --------
+    //
+    // All block/ref/workspace data lives in the local Rust state cache. The
+    // legacy methods bridge to the existing REST path; the Connect methods
+    // above run in parallel for the proto-migration's binary wire.
 
     pub async fn apply_ops(&self, req_json: String) -> Result<String, String> {
         self.0.apply_ops(&req_json).await

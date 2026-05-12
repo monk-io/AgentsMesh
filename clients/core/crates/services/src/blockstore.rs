@@ -18,6 +18,8 @@ impl BlockstoreService {
         Self { client, state: RwLock::new(state) }
     }
 
+    pub(crate) fn client(&self) -> &ApiClient { &self.client }
+
     // ── Mutations ──
 
     pub async fn apply_ops(&self, req_json: &str) -> Result<String, String> {

@@ -11,6 +11,7 @@ mod billing;
 mod billing_proto;
 mod binding;
 mod blockstore;
+mod blockstore_proto;
 mod channel;
 mod channel_proto;
 mod common;
@@ -64,6 +65,14 @@ pub mod proto_billing_v1 {
 }
 pub use binding::*;
 pub use blockstore::*;
+
+/// Connect-RPC binary-wire DTOs for `proto.blockstore.v1`. Re-exported as a
+/// distinct module so the legacy serde `Block` / `BlockRef` / `BlockOp`
+/// (REST path) and the prost mirrors (Connect path) coexist during the
+/// dual-track migration window without name collisions.
+pub mod proto_blockstore_v1 {
+    pub use super::blockstore_proto::*;
+}
 pub use channel::*;
 pub use common::*;
 pub use enums::*;
