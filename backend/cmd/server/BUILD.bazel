@@ -28,6 +28,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//backend/internal/api/connect",
+        "//backend/internal/api/connect/agent",
         "//backend/internal/api/connect/agentpod_settings",
         "//backend/internal/api/connect/apikey",
         "//backend/internal/api/connect/billing",

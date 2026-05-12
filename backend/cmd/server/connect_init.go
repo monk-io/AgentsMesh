@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	agentconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agent"
 	agentpodsettingsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	billingconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/billing"
@@ -96,6 +97,9 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)
 	usercredentialconnect.Mount(mux, usercredentialconnect.NewServer(svc.user, svc.credentialProfile), opts...)
+	agentconnect.Mount(mux, agentconnect.NewServer(
+		svc.agentSvc, svc.credentialProfile, svc.userConfig, svc.org,
+	), opts...)
 	mountBillingService(mux, svc, opts)
 	mountInvitationService(mux, svc, opts)
 }
