@@ -24,6 +24,10 @@ pub struct SkillRegistry {
     pub is_disabled: Option<bool>,
 }
 
+// Connect-RPC binary-wire DTOs for proto.extension.v1 live in extension_proto.rs,
+// re-exported through lib.rs as `pub mod proto_extension_v1`. Keep the legacy
+// serde types above in this file for the REST handlers (dual-track migration).
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateSkillRegistryRequest {
     pub repository_url: String,

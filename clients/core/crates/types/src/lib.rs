@@ -10,6 +10,7 @@ mod channel;
 mod common;
 mod enums;
 mod extension;
+mod extension_proto;
 mod file_upload;
 mod grant;
 mod invitation;
@@ -43,6 +44,14 @@ pub use channel::*;
 pub use common::*;
 pub use enums::*;
 pub use extension::*;
+
+/// Connect-RPC binary-wire DTOs for `proto.extension.v1`. Re-exported as a
+/// distinct module so the legacy serde `SkillRegistry` (REST path) and the
+/// prost `SkillRegistry` (Connect path) coexist during the dual-track
+/// migration window without name collisions.
+pub mod proto_extension_v1 {
+    pub use super::extension_proto::*;
+}
 pub use file_upload::*;
 pub use grant::*;
 pub use invitation::*;

@@ -1,4 +1,5 @@
 mod client;
+mod connect_call;
 mod error;
 mod modules;
 mod refresh;
@@ -26,6 +27,7 @@ mod api_credential_tests;
 mod api_billing_extra_tests;
 
 pub use client::ApiClient;
+pub use connect_call::connect_call;
 pub use error::ApiError;
 pub use request::RequestOptions;
 pub use token_store::AuthTokenStore;

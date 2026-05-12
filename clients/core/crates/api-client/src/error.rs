@@ -26,6 +26,13 @@ pub enum ApiError {
 
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
+
+    /// Prost binary-wire decode failure on the Connect-RPC client lane
+    /// (conventions §2.5). Surfaced as a `ServiceError::InvalidJson` to the
+    /// FFI layer for backwards compatibility — front-ends treat both
+    /// JSON-decode and proto-decode failures as "malformed response".
+    #[error("proto decode error: {0}")]
+    Decode(String),
 }
 
 impl ApiError {
@@ -100,6 +107,9 @@ impl From<&ApiError> for ServiceError {
             }
             ApiError::Json(e) => ServiceError::InvalidJson {
                 message: e.to_string(),
+            },
+            ApiError::Decode(msg) => ServiceError::InvalidJson {
+                message: msg.clone(),
             },
         }
     }

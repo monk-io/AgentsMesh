@@ -13,6 +13,7 @@ rust_library(
         "//clients/core/crates/types",
         "@crates//:futures",
         "@crates//:futures-util",
+        "@crates//:prost",
         "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",

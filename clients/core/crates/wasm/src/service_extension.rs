@@ -13,6 +13,48 @@ impl WasmExtensionService {
         Self(ExtensionService::new(client))
     }
 
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate; conventions §2.5 forbids it on the client.
+    //
+    // js_name is camelCase to match the existing JS-side conventions; the
+    // `_connect` suffix marks the migration lane so the legacy JSON methods
+    // can coexist until all 26 services flip.
+
+    #[wasm_bindgen(js_name = listSkillRegistriesConnect)]
+    pub async fn list_skill_registries_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_skill_registries_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = createSkillRegistryConnect)]
+    pub async fn create_skill_registry_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_skill_registry_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = syncSkillRegistryConnect)]
+    pub async fn sync_skill_registry_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.sync_skill_registry_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = deleteSkillRegistryConnect)]
+    pub async fn delete_skill_registry_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_skill_registry_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = togglePlatformRegistryConnect)]
+    pub async fn toggle_platform_registry_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.toggle_platform_registry_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listSkillRegistryOverridesConnect)]
+    pub async fn list_skill_registry_overrides_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_skill_registry_overrides_connect(request).await
+    }
+
+    // -------- Legacy REST JSON methods (preserved during dual-track) --------
+
     pub async fn list_skill_registries(&self) -> Result<String, String> {
         self.0.list_skill_registries().await
     }

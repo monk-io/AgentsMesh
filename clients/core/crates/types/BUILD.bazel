@@ -3,6 +3,12 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 # Foundational domain types shared across every crate in `clients/core`.
 # No network / no serde_json::Value at the public API layer — just plain
 # `#[derive(Serialize, Deserialize)]` structs and enums.
+#
+# As of the Connect-RPC migration the crate also hosts `prost::Message` DTOs
+# for migrated services (e.g. `extension_proto.rs`). Those are zero-serde,
+# binary-wire-only (conventions §2.5, §3) and live in separate `*_proto.rs`
+# files so the legacy serde structs and the prost mirrors stay clearly
+# separated during the dual-track migration.
 rust_library(
     name = "types",
     srcs = glob(["src/**/*.rs"]),
@@ -10,6 +16,7 @@ rust_library(
     edition = "2021",
     visibility = ["//clients/core:__subpackages__"],
     deps = [
+        "@crates//:prost",
         "@crates//:serde",
         "@crates//:serde_json",
     ],

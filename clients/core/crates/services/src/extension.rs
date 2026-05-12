@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_types::*;
+use agentsmesh_types::proto_extension_v1 as ext_proto;
+use prost::Message;
 
 pub struct ExtensionService {
     client: Arc<ApiClient>,
@@ -11,6 +13,60 @@ impl ExtensionService {
     pub fn new(client: Arc<ApiClient>) -> Self {
         Self { client }
     }
+
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // Each method accepts a prost-encoded request body (`Vec<u8>`) and returns
+    // a prost-encoded response body — matching the wasm bridge's
+    // `Result<Vec<u8>, String>` surface (conventions §2.5).
+    //
+    // org_slug is sourced from the caller-supplied request, not from
+    // AuthManager — keeps these methods unit-testable without an org context
+    // in the token store. The wasm bridge populates org_slug before encoding.
+
+    pub async fn list_skill_registries_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::ListSkillRegistriesRequest::decode(request_bytes)
+            .map_err(|e| format!("decode list_skill_registries request: {e}"))?;
+        let resp = self.client.list_skill_registries_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn create_skill_registry_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::CreateSkillRegistryRequest::decode(request_bytes)
+            .map_err(|e| format!("decode create_skill_registry request: {e}"))?;
+        let resp = self.client.create_skill_registry_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn sync_skill_registry_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::SyncSkillRegistryRequest::decode(request_bytes)
+            .map_err(|e| format!("decode sync_skill_registry request: {e}"))?;
+        let resp = self.client.sync_skill_registry_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn delete_skill_registry_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::DeleteSkillRegistryRequest::decode(request_bytes)
+            .map_err(|e| format!("decode delete_skill_registry request: {e}"))?;
+        let resp = self.client.delete_skill_registry_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn toggle_platform_registry_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::TogglePlatformRegistryRequest::decode(request_bytes)
+            .map_err(|e| format!("decode toggle_platform_registry request: {e}"))?;
+        let resp = self.client.toggle_platform_registry_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn list_skill_registry_overrides_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::ListSkillRegistryOverridesRequest::decode(request_bytes)
+            .map_err(|e| format!("decode list_skill_registry_overrides request: {e}"))?;
+        let resp = self.client.list_skill_registry_overrides_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    // -------- Legacy REST (JSON wire) — preserved during dual-track --------
 
     pub async fn list_skill_registries(&self) -> Result<String, String> {
         let resp = self.client.list_skill_registries().await.map_err(crate::wire)?;
