@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SkillRegistry, SkillRegistryOverride } from "@/lib/api";
-import { getExtensionService } from "@/lib/wasm-core";
+import {
+  listSkillRegistryOverrides,
+  listSkillRegistries,
+  syncSkillRegistry,
+  deleteSkillRegistry,
+  togglePlatformRegistry,
+} from "@/lib/api/skillRegistry";
+import { useCurrentOrg } from "@/stores/auth";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import type { TranslationFn } from "../GeneralSettings";
@@ -15,6 +22,8 @@ interface SkillRegistriesSettingsProps {
 }
 
 export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
+  const currentOrg = useCurrentOrg();
+  const orgSlug = currentOrg?.slug ?? "";
   const [registries, setRegistries] = useState<SkillRegistry[]>([]);
   const [overrides, setOverrides] = useState<SkillRegistryOverride[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,14 +32,15 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const loadRegistries = useCallback(async (signal?: AbortSignal) => {
+    if (!orgSlug) return;
     try {
       const [registriesRes, overridesRes] = await Promise.all([
-        getExtensionService().list_skill_registries().then((j: string) => JSON.parse(j)),
-        getExtensionService().list_skill_registry_overrides().then((j: string) => JSON.parse(j)),
+        listSkillRegistries(orgSlug),
+        listSkillRegistryOverrides(orgSlug),
       ]);
       if (signal?.aborted) return;
-      setRegistries(registriesRes.skill_registries || []);
-      setOverrides(overridesRes.overrides || []);
+      setRegistries(registriesRes.items);
+      setOverrides(overridesRes.items);
     } catch (error) {
       if (signal?.aborted) return;
       console.error("Failed to load skill registries:", error);
@@ -39,7 +49,7 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [orgSlug]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,10 +79,11 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
 
   const handleTogglePlatformRegistry = useCallback(
     async (registryId: number, currentlyDisabled: boolean) => {
+      if (!orgSlug) return;
       setTogglingId(registryId);
       try {
-        const res = JSON.parse(await getExtensionService().toggle_skill_registry(BigInt(registryId), JSON.stringify({ is_disabled: !currentlyDisabled })));
-        setOverrides(res.overrides || []);
+        const res = await togglePlatformRegistry(orgSlug, registryId, !currentlyDisabled);
+        setOverrides(res.overrides);
         toast.success(t("extensions.skillRegistries.toggleSuccess"));
       } catch (error) {
         toast.error(getLocalizedErrorMessage(error, t, t("extensions.skillRegistries.failedToToggle")));
@@ -80,13 +91,14 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
         setTogglingId(null);
       }
     },
-    [t]
+    [orgSlug, t]
   );
 
   const handleSync = useCallback(async (id: number) => {
+    if (!orgSlug) return;
     setSyncingId(id);
     try {
-      await getExtensionService().sync_skill_registry(BigInt(id));
+      await syncSkillRegistry(orgSlug, id);
       toast.success(t("extensions.syncStarted"));
       loadRegistries();
     } catch (error) {
@@ -94,18 +106,19 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
     } finally {
       setSyncingId(null);
     }
-  }, [t, loadRegistries]);
+  }, [orgSlug, t, loadRegistries]);
 
   const handleDelete = useCallback(async (id: number) => {
+    if (!orgSlug) return;
     if (!window.confirm(t("extensions.confirmDeleteSource"))) return;
     try {
-      await getExtensionService().delete_skill_registry(BigInt(id));
+      await deleteSkillRegistry(orgSlug, id);
       toast.success(t("extensions.sourceDeleted"));
       loadRegistries();
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToDeleteSource")));
     }
-  }, [t, loadRegistries]);
+  }, [orgSlug, t, loadRegistries]);
 
   const getSyncStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {

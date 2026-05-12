@@ -4,8 +4,11 @@
 // to the wasm bridge (which forwards binary in / binary out — conventions
 // §2.5), and decodes responses via .fromBinary(). No JSON intermediate.
 //
-// Legacy JSON-flavored methods (getExtensionService().list_skill_registries()
-// etc.) remain available during dual-track; this file is the new lane.
+// Returns the existing web SkillRegistry / SkillRegistryOverride shape (the
+// snake_case TS interface in lib/api/extensionTypes.ts) so call sites don't
+// have to convert. The proto generated types are camelCase + BigInt-typed
+// — diverging the public API is a 30-file refactor, out of scope for the
+// dual-track migration window.
 
 import {
   CreateSkillRegistryRequestSchema,
@@ -19,18 +22,51 @@ import {
   SyncSkillRegistryRequestSchema,
   TogglePlatformRegistryRequestSchema,
   TogglePlatformRegistryResponseSchema,
-  type ListSkillRegistriesResponse,
-  type ListSkillRegistryOverridesResponse,
-  type SkillRegistry,
-  type TogglePlatformRegistryResponse,
+  type SkillRegistry as ProtoSkillRegistry,
+  type SkillRegistryOverride as ProtoSkillRegistryOverride,
 } from "@proto/extension/v1/skill_registry_pb";
 import { create, toBinary, fromBinary } from "@bufbuild/protobuf";
 import { getExtensionService } from "@/lib/wasm-core";
+import type {
+  SkillRegistry,
+  SkillRegistryOverride,
+  SkillRegistryAuthType,
+} from "@/lib/api/extensionTypes";
+
+function fromProto(r: ProtoSkillRegistry): SkillRegistry {
+  return {
+    id: Number(r.id),
+    organization_id:
+      r.organizationId === undefined ? null : Number(r.organizationId),
+    repository_url: r.repositoryUrl,
+    branch: r.branch,
+    source_type: r.sourceType,
+    detected_type: r.detectedType ?? "",
+    compatible_agents: r.compatibleAgents ?? [],
+    auth_type: r.authType as SkillRegistryAuthType,
+    last_synced_at: r.lastSyncedAt ?? null,
+    sync_status: r.syncStatus,
+    sync_error: r.syncError ?? "",
+    skill_count: r.skillCount,
+    is_active: r.isActive,
+  };
+}
+
+function fromProtoOverride(o: ProtoSkillRegistryOverride): SkillRegistryOverride {
+  return {
+    id: Number(o.id),
+    organization_id: Number(o.organizationId),
+    registry_id: Number(o.registryId),
+    is_disabled: o.isDisabled,
+    created_at: o.createdAt,
+    updated_at: o.updatedAt,
+  };
+}
 
 export async function listSkillRegistries(
   orgSlug: string,
   opts: { offset?: number; limit?: number } = {},
-): Promise<ListSkillRegistriesResponse> {
+): Promise<{ items: SkillRegistry[]; total: number; limit: number; offset: number }> {
   const req = create(ListSkillRegistriesRequestSchema, {
     orgSlug,
     offset: opts.offset,
@@ -38,7 +74,13 @@ export async function listSkillRegistries(
   });
   const bytes = toBinary(ListSkillRegistriesRequestSchema, req);
   const respBytes = await getExtensionService().listSkillRegistriesConnect(bytes);
-  return fromBinary(ListSkillRegistriesResponseSchema, new Uint8Array(respBytes));
+  const resp = fromBinary(ListSkillRegistriesResponseSchema, new Uint8Array(respBytes));
+  return {
+    items: resp.items.map(fromProto),
+    total: Number(resp.total),
+    limit: resp.limit,
+    offset: resp.offset,
+  };
 }
 
 export async function createSkillRegistry(
@@ -63,18 +105,18 @@ export async function createSkillRegistry(
   });
   const bytes = toBinary(CreateSkillRegistryRequestSchema, req);
   const respBytes = await getExtensionService().createSkillRegistryConnect(bytes);
-  return fromBinary(SkillRegistrySchema, new Uint8Array(respBytes));
+  return fromProto(fromBinary(SkillRegistrySchema, new Uint8Array(respBytes)));
 }
 
-export async function syncSkillRegistry(orgSlug: string, id: bigint): Promise<SkillRegistry> {
-  const req = create(SyncSkillRegistryRequestSchema, { orgSlug, id });
+export async function syncSkillRegistry(orgSlug: string, id: number): Promise<SkillRegistry> {
+  const req = create(SyncSkillRegistryRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(SyncSkillRegistryRequestSchema, req);
   const respBytes = await getExtensionService().syncSkillRegistryConnect(bytes);
-  return fromBinary(SkillRegistrySchema, new Uint8Array(respBytes));
+  return fromProto(fromBinary(SkillRegistrySchema, new Uint8Array(respBytes)));
 }
 
-export async function deleteSkillRegistry(orgSlug: string, id: bigint): Promise<void> {
-  const req = create(DeleteSkillRegistryRequestSchema, { orgSlug, id });
+export async function deleteSkillRegistry(orgSlug: string, id: number): Promise<void> {
+  const req = create(DeleteSkillRegistryRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(DeleteSkillRegistryRequestSchema, req);
   const respBytes = await getExtensionService().deleteSkillRegistryConnect(bytes);
   fromBinary(DeleteSkillRegistryResponseSchema, new Uint8Array(respBytes));
@@ -82,20 +124,26 @@ export async function deleteSkillRegistry(orgSlug: string, id: bigint): Promise<
 
 export async function togglePlatformRegistry(
   orgSlug: string,
-  id: bigint,
+  id: number,
   disabled: boolean,
-): Promise<TogglePlatformRegistryResponse> {
-  const req = create(TogglePlatformRegistryRequestSchema, { orgSlug, id, disabled });
+): Promise<{ overrides: SkillRegistryOverride[] }> {
+  const req = create(TogglePlatformRegistryRequestSchema, {
+    orgSlug,
+    id: BigInt(id),
+    disabled,
+  });
   const bytes = toBinary(TogglePlatformRegistryRequestSchema, req);
   const respBytes = await getExtensionService().togglePlatformRegistryConnect(bytes);
-  return fromBinary(TogglePlatformRegistryResponseSchema, new Uint8Array(respBytes));
+  const resp = fromBinary(TogglePlatformRegistryResponseSchema, new Uint8Array(respBytes));
+  return { overrides: resp.overrides.map(fromProtoOverride) };
 }
 
 export async function listSkillRegistryOverrides(
   orgSlug: string,
-): Promise<ListSkillRegistryOverridesResponse> {
+): Promise<{ items: SkillRegistryOverride[] }> {
   const req = create(ListSkillRegistryOverridesRequestSchema, { orgSlug });
   const bytes = toBinary(ListSkillRegistryOverridesRequestSchema, req);
   const respBytes = await getExtensionService().listSkillRegistryOverridesConnect(bytes);
-  return fromBinary(ListSkillRegistryOverridesResponseSchema, new Uint8Array(respBytes));
+  const resp = fromBinary(ListSkillRegistryOverridesResponseSchema, new Uint8Array(respBytes));
+  return { items: resp.items.map(fromProtoOverride) };
 }
