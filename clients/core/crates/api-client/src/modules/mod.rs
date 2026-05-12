@@ -24,6 +24,7 @@ pub mod repository;
 pub mod runner;
 pub mod sso;
 pub mod support_ticket;
+pub mod support_ticket_connect;
 pub mod ticket;
 pub mod ticket_relations;
 pub mod token_usage;

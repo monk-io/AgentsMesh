@@ -42,4 +42,28 @@ impl WasmSupportTicketService {
         let bytes: Vec<Vec<u8>> = file_data.iter().map(|d| d.to_vec()).collect();
         self.0.add_message(ticket_id, content, bytes, file_names).await
     }
+
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate; conventions §2.5 forbids it on the client.
+    //
+    // js_name is camelCase; the `Connect` suffix marks the migration lane so
+    // the legacy JSON methods can coexist until the UI fully cuts over.
+
+    #[wasm_bindgen(js_name = listSupportTicketsConnect)]
+    pub async fn list_support_tickets_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_support_tickets_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = getSupportTicketConnect)]
+    pub async fn get_support_ticket_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_support_ticket_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = getAttachmentUrlConnect)]
+    pub async fn get_attachment_url_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_attachment_url_connect(request).await
+    }
 }
