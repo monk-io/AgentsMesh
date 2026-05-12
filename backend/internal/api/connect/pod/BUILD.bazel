@@ -1,0 +1,47 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "pod",
+    srcs = [
+        "connection.go",
+        "convert.go",
+        "mount.go",
+        "mutations.go",
+        "queries.go",
+        "server.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/internal/api/connect/interceptors",
+        "//backend/internal/domain/agentpod",
+        "//backend/internal/domain/grant",
+        "//backend/internal/middleware",
+        "//backend/internal/service/agentpod",
+        "//backend/internal/service/billing",
+        "//backend/internal/service/geo",
+        "//backend/internal/service/grant",
+        "//backend/internal/service/relay",
+        "//backend/internal/service/runner",
+        "//backend/pkg/policy",
+        "//proto/pod/v1:pod_go_proto",
+        "@com_connectrpc_connect//:connect",
+    ],
+)
+
+go_test(
+    name = "pod_test",
+    srcs = ["server_test.go"],
+    embed = [":pod"],
+    deps = [
+        "//backend/internal/domain/agentpod",
+        "//backend/internal/middleware",
+        "//backend/internal/service/agentpod",
+        "//backend/internal/service/billing",
+        "//backend/internal/service/runner",
+        "//proto/pod/v1:pod_go_proto",
+        "@com_connectrpc_connect//:connect",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)
