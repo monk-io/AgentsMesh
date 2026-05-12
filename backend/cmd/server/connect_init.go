@@ -12,6 +12,7 @@ import (
 	channelconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/channel"
 	extensionconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
+	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
 	podconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod"
 	repositoryconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/repository"
@@ -96,6 +97,21 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountAgentPodSettingsService(mux, svc, opts)
 	usercredentialconnect.Mount(mux, usercredentialconnect.NewServer(svc.user, svc.credentialProfile), opts...)
 	mountBillingService(mux, svc, opts)
+	mountInvitationService(mux, svc, opts)
+}
+
+// mountInvitationService wires the auth-required InvitationService +
+// UserInvitationService and the unauthenticated PublicInvitationService onto
+// the same mux. The public service skips `opts` — the auth interceptor would
+// reject every token-only lookup from /invite/[token] before the user signs
+// in. The token IS the credential (single-use, opaque hex).
+func mountInvitationService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	srv := invitationconnect.NewServer(
+		svc.invitation, svc.org, svc.org, svc.user,
+		invitationconnect.WithBillingService(svc.billing),
+	)
+	invitationconnect.Mount(mux, srv, opts...)
+	invitationconnect.MountPublic(mux, invitationconnect.NewPublicServer(svc.invitation))
 }
 
 // mountBillingService wires both BillingService (auth-required, org-scoped)
