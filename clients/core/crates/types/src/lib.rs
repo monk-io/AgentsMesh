@@ -1,6 +1,7 @@
 mod agent;
 mod agentpod_settings;
 mod apikey;
+mod apikey_proto;
 mod auth;
 mod autopilot;
 mod billing;
@@ -51,6 +52,13 @@ pub use extension::*;
 /// migration window without name collisions.
 pub mod proto_extension_v1 {
     pub use super::extension_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.apikey.v1`. Re-exported as a
+/// distinct module so the legacy serde `ApiKey` (REST path) and the
+/// prost `ApiKey` (Connect path) coexist during dual-track migration.
+pub mod proto_apikey_v1 {
+    pub use super::apikey_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
