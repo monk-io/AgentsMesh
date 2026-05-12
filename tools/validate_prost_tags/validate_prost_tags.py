@@ -34,17 +34,17 @@ PROTO_MESSAGE_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-# Match a single field line. Supports proto3 modifiers (repeated, optional)
-# and the standard scalar / message type vocabulary. Captures the field name
+# Match a single field line. Supports proto3 modifiers (repeated, optional),
+# scalar / message types, and `map<K, V>` map types. Captures the field name
 # and tag number; the type is discarded — we only validate name↔tag mapping.
 #
 # Group layout:
 #   1 = modifier (optional|repeated, may be empty)
-#   2 = type (int32, string, MessageName, etc.)
+#   2 = type (int32, string, MessageName, map<...>, etc.)
 #   3 = field name
 #   4 = tag number
 PROTO_FIELD_RE = re.compile(
-    r"^\s*(?:(repeated|optional)\s+)?([\w.]+)\s+(\w+)\s*=\s*(\d+)\s*;",
+    r"^\s*(?:(repeated|optional)\s+)?([\w.]+(?:\s*<[^>]+>)?)\s+(\w+)\s*=\s*(\d+)\s*;",
     re.MULTILINE,
 )
 
@@ -81,9 +81,10 @@ RUST_STRUCT_RE = re.compile(
 
 # Match a `#[prost(... tag = "N")]` annotation immediately followed by a
 # `pub <field_name>:` declaration. The DOTALL crosses newlines between the
-# attribute line and the field line.
+# attribute line and the field line. `r#` raw-identifier prefix is stripped
+# so fields like `r#loop` (Rust keyword escape) match the .proto name `loop`.
 RUST_FIELD_RE = re.compile(
-    r"#\[prost\([^)]*tag\s*=\s*\"(\d+)\"[^)]*\)\]\s*pub\s+(\w+)\s*:",
+    r"#\[prost\([^)]*tag\s*=\s*\"(\d+)\"[^)]*\)\]\s*pub\s+(?:r#)?(\w+)\s*:",
     re.DOTALL,
 )
 
