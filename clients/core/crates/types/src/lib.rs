@@ -23,6 +23,7 @@ mod mesh;
 mod message;
 mod notification;
 mod organization;
+mod org_proto;
 mod pod;
 mod pod_proto;
 mod promocode;
@@ -119,6 +120,14 @@ pub mod proto_user_credential_v1 {
 /// the wire — the adapter remaps to the legacy `{comments, ...}` shape.
 pub mod proto_ticket_relations_v1 {
     pub use super::ticket_relations_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.org.v1`. Re-exported as a distinct
+/// module so the legacy serde `Organization` (REST path, in `auth.rs`) and the
+/// prost `Organization` (Connect path) coexist during the dual-track migration
+/// window without name collisions.
+pub mod proto_org_v1 {
+    pub use super::org_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
