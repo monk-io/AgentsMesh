@@ -11,6 +11,7 @@ pub mod extension;
 pub mod file;
 pub mod grant;
 pub mod invitation;
+pub mod invitation_connect;
 pub mod loop_api;
 pub mod mesh;
 pub mod message;
