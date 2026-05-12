@@ -234,6 +234,20 @@ Replace with imports from the wasm-generated `.d.ts` (or hand-author a thin type
 
 The auth-interceptor-gap (item 5) bites if a specialist agent uses the `http.ServeMux` registration without going through the wrapper that applies interceptors. **Runbook §3 mandates** the helper `MountWithInterceptors(mux, server, deps)` pattern, never raw `mux.Handle()`.
 
+### Tenant scope field placement
+
+Specialist agents must place `string org_slug = 1;` as the first field of every org-scoped request message (conventions §3.5). The auth-interceptor agent surfaced this: Connect URLs have no path params, so the existing REST `:slug` middleware-injection pattern does not work — payload-carried `org_slug` is the only path.
+
+**Detection**:
+- Custom linter rule on `tools/proto_lint`: every RPC request message has `string org_slug = 1;` OR matches the user-scoped / admin whitelist.
+- Per-handler test: send a request with empty `org_slug` → assert `connect.CodeInvalidArgument`.
+
+**Mitigation**:
+- Use the generic `authinterceptor.ResolveOrgScope[T]` helper (introduced by the first migrating service, locked in conventions §3.5).
+- Wasm side reads org slug from the `AuthManager`-held current org (`client.org_slug()`), not from TS arguments — keeps TS call sites unchanged.
+
+If an agent invents `organization_slug` or nests `org_slug` inside a sub-message, this is a **drift surface even without bugs shipping** — the helper signature breaks generic reuse, every service writes bespoke org-resolution boilerplate.
+
 ### Two services sharing a Rust type
 
 If `proto.pod.v1.Pod` and `proto.autopilot.v1.Pod` both define a `Pod` message, they generate two different Rust types in two different modules — they will **not** interop. Specialist agents must:

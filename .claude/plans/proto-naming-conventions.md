@@ -105,6 +105,123 @@ pub struct SkillRegistry {
 
 ---
 
+## 3.5 Tenant scope field — org-scoped RPC carries `org_slug` at tag 1
+
+### Rule
+
+Every **org-scoped** RPC request message has, as its **first field**:
+
+```protobuf
+message FooRequest {
+  string org_slug = 1;     // ALWAYS field 1, ALWAYS named org_slug
+  // business fields start from tag 2
+}
+```
+
+### Why
+
+Connect RPC URLs are `/proto.<domain>.v1.<Service>/<Method>` — **no path parameters**. The existing REST pattern `/api/v1/orgs/:slug/...` + middleware-injected tenant context **does not work** on Connect because there is no `:slug` to bind. Each request must carry its own org scope explicitly in the payload.
+
+Without locking the field name + tag, 26 specialist agents will each invent their own (`org_slug` vs `organization_slug` vs `org_id` vs nested `Context.org_slug`) — that's a new drift surface, and worse, it blocks a generic `ResolveOrgScope[T]` helper from being written once.
+
+### Exceptions
+
+Only **two** classes of RPC are exempt from `org_slug`:
+
+1. **User-scoped** (no org dependency): `Login`, `Register`, `ListMyOrganizations`, `GetMyProfile`, `RefreshToken`, etc.
+2. **Platform-admin scoped**: every `Admin<Service>Service` RPC — tenant is implied by the admin interceptor / system-wide context.
+
+Exempt request messages start their tag 1 with the **business field directly** (do not leave tag 1 reserved — the empty slot has no semantic).
+
+### Handler usage
+
+Every org-scoped Connect handler resolves the org scope first, using a generic helper introduced by the first migrating service (suggested: `skill_registry` as reference impl):
+
+```go
+// backend/internal/api/connect/interceptor/org_scope.go
+package authinterceptor
+
+type OrgScopedRequest interface { GetOrgSlug() string }
+
+func ResolveOrgScope[T OrgScopedRequest](
+    ctx context.Context, req *connect.Request[T], orgSvc organization.Service,
+) (context.Context, *organization.Organization, error) {
+    slug := req.Msg.GetOrgSlug()
+    if slug == "" {
+        return ctx, nil, connect.NewError(connect.CodeInvalidArgument, errors.New("missing org_slug"))
+    }
+    userID, err := UserID(ctx)
+    if err != nil { return ctx, nil, connect.NewError(connect.CodeUnauthenticated, err) }
+    org, err := orgSvc.GetBySlug(ctx, slug)
+    if err != nil { return ctx, nil, connect.NewError(connect.CodeNotFound, err) }
+    if !orgSvc.IsMember(ctx, org.ID, userID) {
+        return ctx, nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member"))
+    }
+    return contextWithTenant(ctx, org), org, nil
+}
+```
+
+Per-handler usage:
+
+```go
+func (s *Server) ListSkillRegistries(
+    ctx context.Context, req *connect.Request[v1.ListSkillRegistriesRequest],
+) (*connect.Response[v1.ListSkillRegistriesResponse], error) {
+    ctx, org, err := authinterceptor.ResolveOrgScope(ctx, req, s.orgSvc)
+    if err != nil { return nil, err }
+    // ... use org.ID, ctx
+}
+```
+
+### Bad
+
+```protobuf
+// org field in the middle
+message ListSkillRegistriesRequest {
+  int32 limit = 1;
+  string org_slug = 2;          // wrong tag
+}
+
+// renamed field
+message ListSkillRegistriesRequest {
+  string organization_slug = 1; // must be `org_slug`
+}
+
+// nested in a sub-message
+message ListSkillRegistriesRequest {
+  RequestContext ctx = 1;       // do NOT nest tenant in a sub-message
+  int32 limit = 2;
+}
+```
+
+### Good
+
+```protobuf
+message ListSkillRegistriesRequest {
+  string org_slug = 1;
+  optional int32 offset = 2;
+  optional int32 limit = 3;
+}
+
+message CreateSkillRegistryRequest {
+  string org_slug = 1;
+  string repository_url = 2;
+  optional string branch = 3;
+}
+```
+
+### CI gate
+
+Custom linter rule (`tools/proto_lint`, Day-3 task): every RPC request message must satisfy one of:
+
+1. The request message has field `string org_slug = 1;` as its first field, OR
+2. The service name matches the user-scoped whitelist (`Auth*`, `User*` for self-profile RPCs), OR
+3. The service name matches the admin pattern (`Admin*Service`).
+
+Violations fail CI. The whitelist is checked into `tools/proto_lint/user_scoped_services.txt`.
+
+---
+
 ## 4. `prost(tag = N)` stability — tags are forever, names are not
 
 **Rule**: Every Rust field has `#[prost(<type>, tag = "N")]` where N matches the `.proto` field number exactly.
@@ -499,6 +616,7 @@ package      : proto.<domain>.v1
 service      : <Domain>Service
 method       : VerbNoun (List, Create, Update, Delete, Get, Toggle, Sync)
 field name   : snake_case (.proto) ↔ camelCase (wire) ↔ #[serde(rename_all = "camelCase")] (Rust)
+org_slug     : org-scoped RPCs MUST have `string org_slug = 1;` as field 1 (User/Admin RPCs exempt)
 prost tag    : matches .proto field number, never reused, gaps go to `reserved`
 optional     : proto3 `optional` keyword wherever zero is semantically meaningful
 timestamps   : `string` ISO-8601, NOT google.protobuf.Timestamp

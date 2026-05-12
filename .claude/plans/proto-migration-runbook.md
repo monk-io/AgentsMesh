@@ -102,9 +102,13 @@ message <Service> {
   // every field from §1.3 reconciled
 }
 
+// All org-scoped request messages have `string org_slug = 1;` as their first field.
+// User-scoped / admin-only services drop this — see conventions.md §3.5.
+
 message List<Service>sRequest {
-  optional int32 offset = 1;
-  optional int32 limit = 2;
+  string org_slug = 1;
+  optional int32 offset = 2;
+  optional int32 limit = 3;
 }
 
 message List<Service>sResponse {
@@ -114,10 +118,10 @@ message List<Service>sResponse {
   int32 offset = 4;
 }
 
-message Get<Service>Request    { int64 id = 1; }
-message Create<Service>Request { string name = 1; optional string description = 2; }
-message Update<Service>Request { int64 id = 1; optional string name = 2; optional string description = 3; }
-message Delete<Service>Request { int64 id = 1; }
+message Get<Service>Request    { string org_slug = 1; int64 id = 2; }
+message Create<Service>Request { string org_slug = 1; string name = 2; optional string description = 3; }
+message Update<Service>Request { string org_slug = 1; int64 id = 2; optional string name = 3; optional string description = 4; }
+message Delete<Service>Request { string org_slug = 1; int64 id = 2; }
 message Delete<Service>Response {}
 ```
 
@@ -179,20 +183,28 @@ const (
     Delete<Service>Procedure = "/" + ServiceName + "/Delete<Service>"
 )
 
-type Server struct{ svc *<service>svc.Service }
+type Server struct {
+    svc    *<service>svc.Service
+    orgSvc organization.Service
+}
 
-func New(svc *<service>svc.Service) *Server { return &Server{svc: svc} }
+func New(svc *<service>svc.Service, orgSvc organization.Service) *Server {
+    return &Server{svc: svc, orgSvc: orgSvc}
+}
+
+// Org-scoped RPCs use authinterceptor.ResolveOrgScope (introduced by the first migrating
+// service — pattern locked in conventions.md §3.5). User-scoped / admin RPCs skip it.
 
 func (s *Server) List<Service>s(
     ctx context.Context, req *connect.Request[<service>v1.List<Service>sRequest],
 ) (*connect.Response[<service>v1.List<Service>sResponse], error) {
-    userID, err := authinterceptor.UserID(ctx)
-    if err != nil { return nil, connect.NewError(connect.CodeUnauthenticated, err) }
+    ctx, org, err := authinterceptor.ResolveOrgScope(ctx, req, s.orgSvc)
+    if err != nil { return nil, err }
 
     limit, offset := int(req.Msg.GetLimit()), int(req.Msg.GetOffset())
     if limit == 0 { limit = 20 }
 
-    items, total, err := s.svc.List(ctx, userID, limit, offset)
+    items, total, err := s.svc.List(ctx, org.ID, limit, offset)
     if err != nil { return nil, connect.NewError(connect.CodeInternal, err) }
 
     out := make([]*<service>v1.<Service>, 0, len(items))
@@ -205,9 +217,9 @@ func (s *Server) List<Service>s(
 func (s *Server) Create<Service>(
     ctx context.Context, req *connect.Request[<service>v1.Create<Service>Request],
 ) (*connect.Response[<service>v1.<Service>], error) {
-    userID, err := authinterceptor.UserID(ctx)
-    if err != nil { return nil, connect.NewError(connect.CodeUnauthenticated, err) }
-    entity, err := s.svc.Create(ctx, userID, &<service>svc.CreateRequest{
+    ctx, org, err := authinterceptor.ResolveOrgScope(ctx, req, s.orgSvc)
+    if err != nil { return nil, err }
+    entity, err := s.svc.Create(ctx, org.ID, &<service>svc.CreateRequest{
         Name: req.Msg.GetName(), Description: req.Msg.GetDescription(),
     })
     if err != nil {
@@ -298,8 +310,9 @@ pub struct <Service> {
 #[derive(Clone, PartialEq, Message, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct List<Service>sRequest {
-    #[prost(int32, optional, tag = "1")] #[serde(skip_serializing_if = "Option::is_none")] pub offset: Option<i32>,
-    #[prost(int32, optional, tag = "2")] #[serde(skip_serializing_if = "Option::is_none")] pub limit:  Option<i32>,
+    #[prost(string, tag = "1")] pub org_slug: String,
+    #[prost(int32, optional, tag = "2")] #[serde(skip_serializing_if = "Option::is_none")] pub offset: Option<i32>,
+    #[prost(int32, optional, tag = "3")] #[serde(skip_serializing_if = "Option::is_none")] pub limit:  Option<i32>,
 }
 
 #[derive(Clone, PartialEq, Message, Serialize, Deserialize)]
@@ -314,11 +327,12 @@ pub struct List<Service>sResponse {
 #[derive(Clone, PartialEq, Message, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Create<Service>Request {
-    #[prost(string, tag = "1")] pub name: String,
-    #[prost(string, optional, tag = "2")] #[serde(skip_serializing_if = "Option::is_none")] pub description: Option<String>,
+    #[prost(string, tag = "1")] pub org_slug: String,
+    #[prost(string, tag = "2")] pub name: String,
+    #[prost(string, optional, tag = "3")] #[serde(skip_serializing_if = "Option::is_none")] pub description: Option<String>,
 }
 
-// Get/Update/Delete requests analogous.
+// Get/Update/Delete requests analogous — each starts with `org_slug` at tag 1.
 ```
 
 ### 4.2 api-client — `clients/core/crates/api-client/src/modules/<service>.rs`
@@ -385,16 +399,19 @@ impl <Service>Service {
     #[wasm_bindgen(constructor)]
     pub fn new(client: &WasmApiClient) -> Self { Self { client: client.inner() } }
 
+    // org_slug typically comes from the AuthManager-held current org (org_path()),
+    // not from TS arguments — keeps existing TS call sites unchanged.
+
     #[wasm_bindgen(js_name = list<Service>s)]
     pub async fn list_<service>s(&self, offset: Option<i32>, limit: Option<i32>) -> Result<JsValue, JsValue> {
-        let req = List<Service>sRequest { offset, limit };
+        let req = List<Service>sRequest { org_slug: self.client.org_slug().await, offset, limit };
         let resp = self.client.list_<service>s(&req).await.map_err(api_err_to_js)?;
         serde_wasm_bindgen::to_value(&resp).map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
     #[wasm_bindgen(js_name = create<Service>)]
     pub async fn create_<service>(&self, name: String, description: Option<String>) -> Result<JsValue, JsValue> {
-        let req = Create<Service>Request { name, description };
+        let req = Create<Service>Request { org_slug: self.client.org_slug().await, name, description };
         let entity = self.client.create_<service>(&req).await.map_err(api_err_to_js)?;
         serde_wasm_bindgen::to_value(&entity).map_err(|e| JsValue::from_str(&e.to_string()))
     }
