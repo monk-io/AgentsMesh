@@ -29,6 +29,7 @@ mod grant_proto;
 mod invitation;
 mod invitation_proto;
 mod loop_requests;
+mod loop_proto;
 mod loop_types;
 mod mesh;
 mod message;
@@ -304,6 +305,18 @@ pub mod proto_token_usage_v1 {
 /// the TS adapter remaps to the legacy shape.
 pub mod proto_autopilot_v1 {
     pub use super::autopilot_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.loop.v1`. Org-scoped
+/// LoopService — Loop CRUD + Enable / Disable / Trigger + LoopRun
+/// list / cancel. The JSON config fields (autopilot_config,
+/// config_overrides, prompt_variables, trigger_params) ship as raw
+/// JSON strings to keep the proto surface stable; renderer + service
+/// layer continue to use map types. Coexists with the legacy serde
+/// `LoopData` / `LoopRunData` / `CreateLoopRequest` / `UpdateLoopRequest`
+/// in `loop_types.rs` + `loop_requests.rs` for the dual-track window.
+pub mod proto_loop_v1 {
+    pub use super::loop_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
