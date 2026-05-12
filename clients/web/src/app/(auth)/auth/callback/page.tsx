@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { getUserApiService } from "@/lib/wasm-getters";
+import { userApi } from "@/lib/api/user";
 import { initWasmCore } from "@/lib/wasm-core";
 import { resolvePostLoginUrl } from "@/lib/auth/post-login";
 import { Logo } from "@/components/common";
@@ -46,9 +46,8 @@ function OAuthCallbackContent() {
         // We'll get user info from the API
         await setAuth(token, { id: 0, email: "", username: "" }, refreshToken || undefined);
 
-        // Get user info
-        const userResponse = JSON.parse(await getUserApiService().get_me());
-        const user = userResponse.user;
+        // Get user info via Connect-RPC
+        const { user } = await userApi.getMe();
 
         // Update auth with actual user info
         await setAuth(token, user, refreshToken || undefined);

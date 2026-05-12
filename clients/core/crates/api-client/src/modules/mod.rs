@@ -31,6 +31,7 @@ pub mod token_usage;
 pub mod user;
 pub mod user_agent_credential;
 pub mod user_agent_credential_connect;
+pub mod user_connect;
 pub mod user_git_credential;
 pub mod user_git_credential_connect;
 pub mod user_repository_provider;

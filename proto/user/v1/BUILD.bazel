@@ -1,0 +1,36 @@
+load("@rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
+
+# Bazel-native protobuf code generation for user.v1.
+#
+# Mirrors proto/auth/v1/BUILD.bazel and proto/user_credential/v1/BUILD.bazel —
+# same hermetic protoc/protoc-gen-go pipeline, same
+# `proto/gen/go/<svc>/v1` importpath shape. The Rust prost DTOs are
+# hand-maintained at clients/core/crates/types/src/user_proto.rs; the
+# validator pins .proto field number ↔ Rust `prost(tag = N)` mapping at
+# build time (watch list hazard #8).
+#
+# This is a USER-SCOPED service (no org_slug = 1) — conventions §3.5
+# exempts user-scoped RPCs from the org-scope helper. Every method
+# addresses the caller (`/me/...` in REST). Search is also user-scoped.
+
+proto_library(
+    name = "user_proto",
+    srcs = ["user.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "user_go_proto",
+    compilers = ["@rules_go//proto:go_proto"],
+    importpath = "github.com/anthropics/agentsmesh/proto/gen/go/user/v1",
+    proto = ":user_proto",
+    visibility = ["//visibility:public"],
+)
+
+validate_prost_tags(
+    name = "user_validate",
+    proto = "user.proto",
+    rust = "//clients/core/crates/types:src/user_proto.rs",
+)

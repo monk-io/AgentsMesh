@@ -22,6 +22,7 @@ import (
 	supportticketconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/support_ticket"
 	ticketconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/ticket"
 	ticketrelationsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/ticket_relations"
+	userconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/user"
 	usercredentialconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/user_credential"
 	v1 "github.com/anthropics/agentsmesh/backend/internal/api/rest/v1"
 	"github.com/anthropics/agentsmesh/backend/internal/config"
@@ -102,6 +103,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)
 	usercredentialconnect.Mount(mux, usercredentialconnect.NewServer(svc.user, svc.credentialProfile), opts...)
+	userconnect.Mount(mux, userconnect.NewServer(svc.user, svc.org), opts...)
 	agentconnect.Mount(mux, agentconnect.NewServer(
 		svc.agentSvc, svc.credentialProfile, svc.userConfig, svc.org,
 	), opts...)

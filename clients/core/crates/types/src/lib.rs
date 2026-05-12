@@ -48,6 +48,7 @@ mod ticket_requests;
 mod token_usage;
 mod user_credential;
 mod user_credential_proto;
+mod user_proto;
 
 pub use agent::*;
 pub use agentpod_settings::*;
@@ -133,6 +134,15 @@ pub mod proto_repository_v1 {
 /// user-scoped — no org_slug, conventions §3.5 exception #1.
 pub mod proto_user_credential_v1 {
     pub use super::user_credential_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.user.v1`. UserService is the
+/// caller's profile / identity / search surface (REST `/api/v1/users/me*`
+/// + `/search`). All RPCs are user-scoped — no org_slug, conventions
+/// §3.5 exception #1. Coexists with the legacy serde `User` (REST path,
+/// in `auth.rs`) for the dual-track migration window.
+pub mod proto_user_v1 {
+    pub use super::user_proto::*;
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.ticket_relations.v1`. Bundles

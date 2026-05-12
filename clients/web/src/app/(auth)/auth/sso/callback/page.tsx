@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { getUserApiService } from "@/lib/wasm-getters";
+import { userApi } from "@/lib/api/user";
 import { initWasmCore } from "@/lib/wasm-core";
 import { resolvePostLoginUrl } from "@/lib/auth/post-login";
 import { Logo } from "@/components/common";
@@ -68,9 +68,9 @@ function SSOCallbackContent() {
         // Set token so subsequent API calls work
         await setAuth(token, { id: 0, email: "", username: "" }, refreshToken || undefined);
 
-        // Get user info
-        const userResponse = JSON.parse(await getUserApiService().get_me());
-        await setAuth(token, userResponse.user, refreshToken || undefined);
+        // Get user info via Connect-RPC
+        const { user } = await userApi.getMe();
+        await setAuth(token, user, refreshToken || undefined);
 
         const url = await resolvePostLoginUrl({
           redirectParam,

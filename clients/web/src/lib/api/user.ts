@@ -1,27 +1,45 @@
-import { getUserApiService, getApiClient } from "@/lib/wasm-core";
+// Web userApi facade — delegates to the Connect-RPC adapter
+// (clients/web/src/lib/api/userConnect.ts) which carries the binary wire
+// to the wasm bridge. Keeping this thin shim lets existing call sites
+// (UserPicker, auth callback pages) import { userApi } unchanged while
+// the underlying transport flips from REST JSON to Connect binary.
 
-export interface UserSummary {
-  id: number;
-  email: string;
-  username: string;
-  name?: string;
-  avatar_url?: string;
-}
+import {
+  changePassword as connectChangePassword,
+  deleteIdentity as connectDeleteIdentity,
+  getMe as connectGetMe,
+  listIdentities as connectListIdentities,
+  searchUsers as connectSearchUsers,
+  updateMe as connectUpdateMe,
+  type Identity,
+  type User,
+  type UserSummary,
+} from "@/lib/api/userConnect";
+
+export type { Identity, User, UserSummary };
 
 export const userApi = {
-  getMe: async () => {
-    const json = await getUserApiService().get_me();
-    return JSON.parse(json);
+  // /me returns the wrapped REST-style shape { user } so legacy callers
+  // that destructure `.user` keep working through the Connect lane.
+  getMe: async (): Promise<{ user: User }> => {
+    const user = await connectGetMe();
+    return { user };
   },
-  getOrganizations: async () => {
-    const json = await getUserApiService().get_organizations();
-    return JSON.parse(json) as { organizations: Array<{ id: number; name: string; slug: string; role: string }> };
+  updateMe: async (input: {
+    name?: string;
+    avatar_url?: string;
+  }): Promise<{ user: User }> => {
+    const user = await connectUpdateMe(input);
+    return { user };
   },
-  // TODO(wasm): add a dedicated search_users method to UserApiService once the core
-  // crate gains full-text user search. For now delegate to the shared ApiClient.
-  search: async (q: string, limit = 10): Promise<{ users: UserSummary[] }> => {
-    const query = `q=${encodeURIComponent(q)}&limit=${limit}`;
-    const json = await getApiClient().get(`/api/v1/users/search?${query}`);
-    return typeof json === "string" ? JSON.parse(json) : json;
+  changePassword: connectChangePassword,
+  listIdentities: connectListIdentities,
+  deleteIdentity: connectDeleteIdentity,
+  search: async (
+    q: string,
+    limit = 10,
+  ): Promise<{ users: UserSummary[] }> => {
+    const { items } = await connectSearchUsers(q, limit);
+    return { users: items };
   },
 };

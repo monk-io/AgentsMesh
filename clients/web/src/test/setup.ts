@@ -815,6 +815,12 @@ vi.mock('@/lib/wasm-core', () => {
     getUserApiService: fn(() => ({
       get_me: fn().mockResolvedValue('{}'),
       get_organizations: fn().mockResolvedValue('{"organizations":[]}'),
+      getMeConnect: fn().mockResolvedValue(new Uint8Array()),
+      updateMeConnect: fn().mockResolvedValue(new Uint8Array()),
+      changePasswordConnect: fn().mockResolvedValue(new Uint8Array()),
+      listIdentitiesConnect: fn().mockResolvedValue(new Uint8Array()),
+      deleteIdentityConnect: fn().mockResolvedValue(new Uint8Array()),
+      searchUsersConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getUserCredentialService: fn(() => ({
       list_git_credentials: fn().mockResolvedValue('{"credentials":[]}'),
