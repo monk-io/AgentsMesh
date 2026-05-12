@@ -1,0 +1,141 @@
+// SupportTicketService — user-facing support tickets.
+//
+// Migrated from REST handlers in backend/internal/api/rest/v1/support_tickets.go
+// per .claude/plans/proto-naming-conventions.md. Conventions enforced:
+//   * package proto.support_ticket.v1 + go_package suffix for dispatch
+//   * service names = <Domain>Service, methods PascalCase verbs
+//   * snake_case fields, no json_name annotations
+//   * timestamps as string ISO-8601 (no google.protobuf.Timestamp)
+//   * list response = {items, total, limit, offset} uniform envelope
+//     (replaces REST `{data, total, page, page_size, total_pages}` — the
+//     adapter remaps to the legacy shape; specialist prompt's "审视后决定
+//     是否归一化到标准 envelope" →归一)
+//   * create/get return entity directly (no {ticket: ...} wrapper)
+//
+// User-scoped service (conventions §3.5 exception #1): the caller is
+// identified by JWT (auth interceptor → UserID); tickets are addressed
+// by their owner's UserID, not by any org. There is no `org_slug`.
+//
+// File-upload paths (multipart POST on Create / AddMessage) and the
+// non-RPC GetAttachmentURL stay on REST for the dual-track window —
+// Connect-RPC has no multipart story and presigned-URL response shape
+// is trivial. Only the JSON-bodied RPCs move to Connect here.
+
+syntax = "proto3";
+
+package proto.support_ticket.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/support_ticket/v1;supportticketv1";
+
+// ============================================================================
+// SupportTicketService — user-scoped (auth-required, no org_slug)
+// ============================================================================
+service SupportTicketService {
+  rpc ListSupportTickets(ListSupportTicketsRequest) returns (ListSupportTicketsResponse);
+  rpc GetSupportTicket(GetSupportTicketRequest) returns (SupportTicketDetail);
+  rpc GetAttachmentUrl(GetAttachmentUrlRequest) returns (GetAttachmentUrlResponse);
+}
+
+// ----------------------------------------------------------------------------
+// Entities
+// ----------------------------------------------------------------------------
+
+// SupportTicket mirrors backend/internal/domain/supportticket/SupportTicket
+// minus eager-loaded associations. AssignedAdminID is omitted from the
+// user-facing wire (it's an admin-only detail that the user-side handler
+// never returned anyway).
+message SupportTicket {
+  int64 id = 1;
+  int64 user_id = 2;
+  string title = 3;
+  // bug / feature_request / usage_question / account / other
+  string category = 4;
+  // open / in_progress / resolved / closed
+  string status = 5;
+  // low / medium / high
+  string priority = 6;
+  string created_at = 7;
+  string updated_at = 8;
+  optional string resolved_at = 9;
+}
+
+// SupportTicketUser is the trimmed user view embedded in messages —
+// mirrors the REST `*user.User` association serialized by GORM's
+// `json:"user,omitempty"` (only id/name/email/avatar_url surface to the
+// renderer per supportTicketTypes.ts:21).
+message SupportTicketUser {
+  int64 id = 1;
+  optional string name = 2;
+  string email = 3;
+  optional string avatar_url = 4;
+}
+
+// SupportTicketAttachment mirrors the renderer-facing fields of the
+// domain Attachment (storage_key is intentionally hidden — internal).
+message SupportTicketAttachment {
+  int64 id = 1;
+  int64 ticket_id = 2;
+  optional int64 message_id = 3;
+  int64 uploader_id = 4;
+  string original_name = 5;
+  string mime_type = 6;
+  int64 size = 7;
+  string created_at = 8;
+}
+
+// SupportTicketMessage mirrors the renderer shape used by the
+// detail page (with eager-loaded User + Attachments).
+message SupportTicketMessage {
+  int64 id = 1;
+  int64 ticket_id = 2;
+  int64 user_id = 3;
+  string content = 4;
+  bool is_admin_reply = 5;
+  string created_at = 6;
+  optional SupportTicketUser user = 7;
+  repeated SupportTicketAttachment attachments = 8;
+}
+
+// ----------------------------------------------------------------------------
+// Requests / Responses
+// ----------------------------------------------------------------------------
+
+message ListSupportTicketsRequest {
+  // Status filter — `open` / `in_progress` / `resolved` / `closed`. Empty
+  // string (or absent) returns all statuses, matching REST behavior.
+  string status = 1;
+  // Offset/limit are the unified envelope (conventions §8). The REST
+  // handler accepted `page` / `page_size`; the adapter translates between
+  // the two surfaces so call-sites can switch one at a time.
+  optional int32 offset = 2;
+  optional int32 limit = 3;
+}
+
+message ListSupportTicketsResponse {
+  repeated SupportTicket items = 1;
+  int64 total = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message GetSupportTicketRequest {
+  int64 id = 1;
+}
+
+// SupportTicketDetail is the GetSupportTicket response — mirrors the
+// REST handler's `{ticket, messages}` shape (which already deviated
+// from gin's typical wrap-in-domain-key style). conventions §9 normally
+// asks Get to return the entity itself; this is the multi-field
+// exception (ticket + messages) called out in §9.
+message SupportTicketDetail {
+  SupportTicket ticket = 1;
+  repeated SupportTicketMessage messages = 2;
+}
+
+message GetAttachmentUrlRequest {
+  int64 attachment_id = 1;
+}
+
+message GetAttachmentUrlResponse {
+  string url = 1;
+}

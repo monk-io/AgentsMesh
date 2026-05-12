@@ -38,6 +38,7 @@ mod runner_proto;
 mod service_error;
 mod sso;
 mod support_ticket;
+mod support_ticket_proto;
 mod ticket;
 mod ticket_proto;
 mod ticket_relations_proto;
@@ -172,6 +173,17 @@ pub mod proto_agent_v1 {
 /// with the legacy serde `Invitation` for the dual-track window.
 pub mod proto_invitation_v1 {
     pub use super::invitation_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.support_ticket.v1`. User-scoped
+/// service (no org_slug, conventions §3.5 exception #1). Coexists with the
+/// legacy serde `SupportTicket` / `SupportTicketMessage` /
+/// `SupportTicketListResponse` for the dual-track window. The list
+/// envelope unified to `{items, total, limit, offset}` — the TS adapter
+/// remaps to the legacy `{data, total, page, page_size, total_pages}`
+/// surface so renderer-side call sites can flip one at a time.
+pub mod proto_support_ticket_v1 {
+    pub use super::support_ticket_proto::*;
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.auth.v1`. AuthService is public
