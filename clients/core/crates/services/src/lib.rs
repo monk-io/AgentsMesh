@@ -27,6 +27,9 @@ mod ticket_relations;
 mod token_usage;
 mod user;
 mod user_credential;
+mod user_credential_agent_connect;
+mod user_credential_git_connect;
+mod user_credential_provider_connect;
 
 pub use agent::AgentService;
 pub use apikey::ApiKeyService;

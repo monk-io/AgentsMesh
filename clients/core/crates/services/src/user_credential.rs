@@ -12,6 +12,12 @@ impl UserCredentialService {
         Self { client }
     }
 
+    /// Access the underlying ApiClient — used by sibling Connect-RPC impl
+    /// blocks in user_credential_*_connect.rs.
+    pub(crate) fn client(&self) -> &ApiClient {
+        &self.client
+    }
+
     pub async fn list_git_credentials(&self) -> Result<String, String> {
         let resp = self.client.list_user_git_credentials().await.map_err(crate::wire)?;
         serde_json::to_string(&resp).map_err(crate::wire)
