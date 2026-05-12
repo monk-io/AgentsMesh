@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "auth.go",
         "claims.go",
+        "org_scope.go",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors",
     visibility = ["//backend:__subpackages__"],
@@ -17,7 +18,10 @@ go_library(
 
 go_test(
     name = "interceptors_test",
-    srcs = ["auth_test.go"],
+    srcs = [
+        "auth_test.go",
+        "org_scope_test.go",
+    ],
     deps = [
         ":interceptors",
         "//backend/internal/middleware",
