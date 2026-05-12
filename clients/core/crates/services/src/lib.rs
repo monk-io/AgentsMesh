@@ -6,6 +6,7 @@ mod billing;
 mod binding;
 mod blockstore;
 mod channel;
+mod channel_connect;
 mod error;
 mod extension;
 mod file;

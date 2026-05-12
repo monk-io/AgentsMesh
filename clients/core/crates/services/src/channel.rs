@@ -20,6 +20,10 @@ impl ChannelService {
         Self { client, state: RwLock::new(state) }
     }
 
+    /// Crate-local accessor used by channel_connect.rs to forward to the
+    /// underlying api-client `*_connect` methods.
+    pub(crate) fn client(&self) -> &ApiClient { &self.client }
+
     pub fn channels_json(&self) -> String {
         serde_json::to_string(self.state.read().unwrap().get_channels()).unwrap_or_default()
     }

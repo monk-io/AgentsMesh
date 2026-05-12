@@ -15,6 +15,7 @@ mod service_billing;
 mod service_binding;
 mod service_blockstore;
 mod service_channel;
+mod service_channel_connect;
 mod service_extension;
 mod service_file;
 mod service_grant;
