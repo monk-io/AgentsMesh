@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "agentpod_settings",
+    srcs = [
+        "convert.go",
+        "handlers.go",
+        "server.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/internal/domain/agentpod",
+        "//backend/internal/middleware",
+        "//backend/internal/service/agentpod",
+        "//proto/pod/v1:pod_go_proto",
+        "@com_connectrpc_connect//:connect",
+    ],
+)
+
+go_test(
+    name = "agentpod_settings_test",
+    srcs = ["server_test.go"],
+    embed = [":agentpod_settings"],
+    deps = [
+        "//backend/internal/middleware",
+        "//proto/pod/v1:pod_go_proto",
+        "@com_connectrpc_connect//:connect",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)
