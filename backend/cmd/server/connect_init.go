@@ -14,6 +14,7 @@ import (
 	blockstoreconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/blockstore"
 	channelconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/channel"
 	extensionconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension"
+	fileconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/file"
 	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
@@ -122,6 +123,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountSSOService(mux, svc)
 	mountAuthService(mux, svc, cfg, opts)
 	mountGrantService(mux, svc, opts)
+	mountFileService(mux, svc, opts)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)
@@ -268,4 +270,15 @@ func mountGrantService(mux *http.ServeMux, svc *serviceContainer, opts []connect
 	}
 	srv := grantconnect.NewServer(svc.grant, svc.org, svc.pod, svc.runner, svc.repository)
 	grantconnect.Mount(mux, srv, opts...)
+}
+
+// mountFileService wires FileService — presigned upload URL generation.
+// Skips when the file service is nil (storage backend not configured);
+// the REST handler does the same in files.go.
+func mountFileService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	if svc.file == nil {
+		return
+	}
+	srv := fileconnect.NewServer(svc.file, svc.org)
+	fileconnect.Mount(mux, srv, opts...)
 }
