@@ -20,6 +20,7 @@ mod extension;
 mod extension_proto;
 mod file_upload;
 mod grant;
+mod grant_proto;
 mod invitation;
 mod invitation_proto;
 mod loop_requests;
@@ -247,6 +248,15 @@ pub mod proto_sso_v1 {
 /// backwards compatible at the call-site level).
 pub mod proto_notification_v1 {
     pub use super::notification_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.grant.v1`. Single
+/// `GrantService` covers all three resource types (pod / runner /
+/// repository) — the REST layer split was policy-only, the wire was
+/// already unified. Coexists with the legacy serde `ResourceGrant` for
+/// the dual-track window.
+pub mod proto_grant_v1 {
+    pub use super::grant_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;
