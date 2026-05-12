@@ -8,7 +8,8 @@ import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
-import { grantApi, organizationApi } from "@/lib/api";
+import { organizationApi } from "@/lib/api";
+import { listGrants, createGrant, deleteGrant } from "@/lib/api/grantConnect";
 import type { ResourceGrant, OrganizationMember } from "@/lib/api";
 
 interface ShareDialogProps {
@@ -38,7 +39,7 @@ export function ShareDialog({ open, onOpenChange, resourceType, resourceId }: Sh
     setError(null);
     try {
       const [grantsRes, membersRes] = await Promise.all([
-        grantApi.list(resourceType, resourceId),
+        listGrants(currentOrg.slug, resourceType, resourceId),
         organizationApi.listMembers(currentOrg.slug),
       ]);
       setGrants(grantsRes.grants || []);
@@ -64,7 +65,7 @@ export function ShareDialog({ open, onOpenChange, resourceType, resourceId }: Sh
     setSharing(true);
     setError(null);
     try {
-      await grantApi.grant(resourceType, resourceId, parseInt(selectedUserId));
+      await createGrant(currentOrg.slug, resourceType, resourceId, parseInt(selectedUserId));
       setSelectedUserId("");
       await loadData();
     } catch {
@@ -75,6 +76,7 @@ export function ShareDialog({ open, onOpenChange, resourceType, resourceId }: Sh
   };
 
   const handleRevoke = async (grantId: number) => {
+    if (!currentOrg) return;
     const confirmed = await confirm({
       title: t("share.revokeConfirmTitle"),
       description: t("share.revokeConfirmDescription"),
@@ -84,7 +86,7 @@ export function ShareDialog({ open, onOpenChange, resourceType, resourceId }: Sh
     });
     if (!confirmed) return;
     try {
-      await grantApi.revoke(resourceType, resourceId, grantId);
+      await deleteGrant(currentOrg.slug, resourceType, resourceId, grantId);
       await loadData();
     } catch {
       setError(t("share.revokeFailed"));
