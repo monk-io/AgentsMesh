@@ -31,6 +31,7 @@ mod org_proto;
 mod pod;
 mod pod_proto;
 mod promocode;
+mod promocode_proto;
 mod repository;
 mod repository_proto;
 mod runner;
@@ -184,6 +185,15 @@ pub mod proto_invitation_v1 {
 /// surface so renderer-side call sites can flip one at a time.
 pub mod proto_support_ticket_v1 {
     pub use super::support_ticket_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.promocode.v1`. Re-exported as a
+/// distinct module so the legacy serde `ValidatePromoRequest` etc. (REST
+/// path) and the prost mirrors (Connect path) coexist during the dual-track
+/// migration window without name collisions. Org-scoped surface only —
+/// admin CRUD over promo codes stays on REST during this migration.
+pub mod proto_promocode_v1 {
+    pub use super::promocode_proto::*;
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.auth.v1`. AuthService is public
