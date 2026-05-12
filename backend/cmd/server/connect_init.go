@@ -14,6 +14,7 @@ import (
 	blockstoreconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/blockstore"
 	channelconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/channel"
 	extensionconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension"
+	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
@@ -114,6 +115,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	supportticketconnect.Mount(mux, supportticketconnect.NewServer(svc.supportTicket), opts...)
 	mountSSOService(mux, svc)
 	mountAuthService(mux, svc, cfg, opts)
+	mountGrantService(mux, svc, opts)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)
@@ -249,4 +251,15 @@ func mountPodService(mux *http.ServeMux, svc *serviceContainer, rest *v1.Service
 func mountAgentPodSettingsService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
 	srv := agentpodsettingsconnect.NewServer(svc.agentpodSettings, svc.agentpodAIProvider)
 	agentpodsettingsconnect.Mount(mux, srv, opts...)
+}
+
+// mountGrantService wires GrantService — covers pod / runner / repository
+// grants under one Connect endpoint. Skips when the grant service is nil
+// (test wiring); the REST router does the same in routes_pods.go.
+func mountGrantService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	if svc.grant == nil {
+		return
+	}
+	srv := grantconnect.NewServer(svc.grant, svc.org, svc.pod, svc.runner, svc.repository)
+	grantconnect.Mount(mux, srv, opts...)
 }

@@ -214,6 +214,7 @@ func buildServicesContainer(
 		NotificationPrefStore: services.notifPrefStore,
 		TokenUsage:            services.tokenUsage,
 		Blockstore:            services.blockstore,
+		Grant:                 services.grant,
 		Redis:                 redisClient,
 	}
 }
