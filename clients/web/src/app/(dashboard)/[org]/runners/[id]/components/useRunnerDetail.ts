@@ -9,6 +9,7 @@ import type {
   RelayConnectionInfo,
 } from "@/lib/api/runnerTypes";
 import { getRunnerService, getPodService } from "@/lib/wasm-core";
+import { getRunner as getRunnerConnect } from "@/lib/api/runnerConnect";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
   const params = useParams();
   const router = useRouter();
   const runnerId = runnerIdArg ?? Number(params.id);
+  const orgSlug = String(params.org ?? "");
 
   const [runner, setRunner] = useState<RunnerData | null>(null);
   const [latestRunnerVersion, setLatestRunnerVersion] = useState<string | undefined>();
@@ -45,16 +47,19 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
 
   const loadRunner = useCallback(async () => {
     try {
-      const res = JSON.parse(await getRunnerService().fetch_runner(BigInt(runnerId)));
+      // Connect-RPC lane (proto.runner_api.v1.RunnerService/GetRunner).
+      // Binary in, binary out — runnerConnect handles the @bufbuild/protobuf
+      // encode/decode and maps to the snake_case web shapes.
+      const res = await getRunnerConnect(orgSlug, runnerId);
       setRunner(res.runner);
-      setRelayConnections(res.relay_connections || []);
+      setRelayConnections(res.relay_connections);
       setLatestRunnerVersion(res.latest_runner_version);
     } catch (error) {
       console.error("Failed to load runner:", error);
     } finally {
       setLoading(false);
     }
-  }, [runnerId]);
+  }, [runnerId, orgSlug]);
 
   const loadPods = useCallback(async () => {
     setLoadingPods(true);

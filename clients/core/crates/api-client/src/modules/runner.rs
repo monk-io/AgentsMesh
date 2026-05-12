@@ -1,6 +1,166 @@
 use crate::ApiClient;
+use crate::connect_call::connect_call;
 use crate::error::ApiError;
 use agentsmesh_types::*;
+use agentsmesh_types::proto_runner_api_v1 as runner_proto;
+
+// =============================================================================
+// Connect-RPC (binary wire). See proto-naming-conventions.md §2.5.
+// =============================================================================
+//
+// These methods call the Connect handlers in
+// backend/internal/api/connect/runner/. Procedure paths derive from
+// `proto.runner_api.v1.RunnerService.<Method>` (conventions §12).
+
+impl ApiClient {
+    pub async fn list_runners_connect(
+        &self,
+        req: &runner_proto::ListRunnersRequest,
+    ) -> Result<runner_proto::ListRunnersResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/ListRunners",
+            req,
+        )
+        .await
+    }
+
+    pub async fn list_available_runners_connect(
+        &self,
+        req: &runner_proto::ListAvailableRunnersRequest,
+    ) -> Result<runner_proto::ListAvailableRunnersResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/ListAvailableRunners",
+            req,
+        )
+        .await
+    }
+
+    pub async fn get_runner_connect(
+        &self,
+        req: &runner_proto::GetRunnerRequest,
+    ) -> Result<runner_proto::GetRunnerResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/GetRunner",
+            req,
+        )
+        .await
+    }
+
+    pub async fn update_runner_connect(
+        &self,
+        req: &runner_proto::UpdateRunnerRequest,
+    ) -> Result<runner_proto::Runner, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/UpdateRunner",
+            req,
+        )
+        .await
+    }
+
+    pub async fn delete_runner_connect(
+        &self,
+        req: &runner_proto::DeleteRunnerRequest,
+    ) -> Result<runner_proto::DeleteRunnerResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/DeleteRunner",
+            req,
+        )
+        .await
+    }
+
+    pub async fn upgrade_runner_connect(
+        &self,
+        req: &runner_proto::UpgradeRunnerRequest,
+    ) -> Result<runner_proto::UpgradeRunnerResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/UpgradeRunner",
+            req,
+        )
+        .await
+    }
+
+    pub async fn request_log_upload_connect(
+        &self,
+        req: &runner_proto::RequestLogUploadRequest,
+    ) -> Result<runner_proto::RequestLogUploadResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/RequestLogUpload",
+            req,
+        )
+        .await
+    }
+
+    pub async fn list_runner_logs_connect(
+        &self,
+        req: &runner_proto::ListRunnerLogsRequest,
+    ) -> Result<runner_proto::ListRunnerLogsResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/ListRunnerLogs",
+            req,
+        )
+        .await
+    }
+
+    pub async fn query_sandboxes_connect(
+        &self,
+        req: &runner_proto::QuerySandboxesRequest,
+    ) -> Result<runner_proto::QuerySandboxesResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/QuerySandboxes",
+            req,
+        )
+        .await
+    }
+
+    pub async fn create_runner_token_connect(
+        &self,
+        req: &runner_proto::CreateRunnerTokenRequest,
+    ) -> Result<runner_proto::RunnerToken, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/CreateRunnerToken",
+            req,
+        )
+        .await
+    }
+
+    pub async fn list_runner_tokens_connect(
+        &self,
+        req: &runner_proto::ListRunnerTokensRequest,
+    ) -> Result<runner_proto::ListRunnerTokensResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/ListRunnerTokens",
+            req,
+        )
+        .await
+    }
+
+    pub async fn delete_runner_token_connect(
+        &self,
+        req: &runner_proto::DeleteRunnerTokenRequest,
+    ) -> Result<runner_proto::DeleteRunnerTokenResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/DeleteRunnerToken",
+            req,
+        )
+        .await
+    }
+}
+
+// =============================================================================
+// Legacy REST methods — preserved for dual-track migration.
+// =============================================================================
 
 impl ApiClient {
     pub async fn list_runners(

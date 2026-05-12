@@ -3,9 +3,11 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::runner_state::RunnerState;
+use agentsmesh_types::proto_runner_api_v1 as runner_proto;
 use agentsmesh_types::{
     Runner, RunnerStatus, UpdateRunnerRequest, CreateRunnerTokenRequest,
 };
+use prost::Message;
 
 use crate::parse_status;
 
@@ -185,5 +187,96 @@ impl RunnerService {
             .authorize_runner(&req)
             .await.map_err(crate::wire)?;
         serde_json::to_string(&resp).map_err(crate::wire)
+    }
+
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // Each `*_connect` method takes prost-encoded bytes and returns prost-encoded
+    // bytes — matching the wasm bridge's `Result<Vec<u8>, String>` surface
+    // (conventions §2.5). Caller (TS) encodes via @bufbuild/protobuf .toBinary()
+    // and decodes via .fromBinary().
+
+    pub async fn list_runners_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::ListRunnersRequest::decode(request_bytes)
+            .map_err(|e| format!("decode list_runners request: {e}"))?;
+        let resp = self.client.list_runners_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn list_available_runners_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::ListAvailableRunnersRequest::decode(request_bytes)
+            .map_err(|e| format!("decode list_available_runners request: {e}"))?;
+        let resp = self.client.list_available_runners_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn get_runner_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::GetRunnerRequest::decode(request_bytes)
+            .map_err(|e| format!("decode get_runner request: {e}"))?;
+        let resp = self.client.get_runner_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn update_runner_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::UpdateRunnerRequest::decode(request_bytes)
+            .map_err(|e| format!("decode update_runner request: {e}"))?;
+        let resp = self.client.update_runner_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn delete_runner_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::DeleteRunnerRequest::decode(request_bytes)
+            .map_err(|e| format!("decode delete_runner request: {e}"))?;
+        let resp = self.client.delete_runner_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn upgrade_runner_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::UpgradeRunnerRequest::decode(request_bytes)
+            .map_err(|e| format!("decode upgrade_runner request: {e}"))?;
+        let resp = self.client.upgrade_runner_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn request_log_upload_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::RequestLogUploadRequest::decode(request_bytes)
+            .map_err(|e| format!("decode request_log_upload request: {e}"))?;
+        let resp = self.client.request_log_upload_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn list_runner_logs_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::ListRunnerLogsRequest::decode(request_bytes)
+            .map_err(|e| format!("decode list_runner_logs request: {e}"))?;
+        let resp = self.client.list_runner_logs_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn query_sandboxes_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::QuerySandboxesRequest::decode(request_bytes)
+            .map_err(|e| format!("decode query_sandboxes request: {e}"))?;
+        let resp = self.client.query_sandboxes_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn create_runner_token_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::CreateRunnerTokenRequest::decode(request_bytes)
+            .map_err(|e| format!("decode create_runner_token request: {e}"))?;
+        let resp = self.client.create_runner_token_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn list_runner_tokens_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::ListRunnerTokensRequest::decode(request_bytes)
+            .map_err(|e| format!("decode list_runner_tokens request: {e}"))?;
+        let resp = self.client.list_runner_tokens_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn delete_runner_token_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = runner_proto::DeleteRunnerTokenRequest::decode(request_bytes)
+            .map_err(|e| format!("decode delete_runner_token request: {e}"))?;
+        let resp = self.client.delete_runner_token_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
     }
 }

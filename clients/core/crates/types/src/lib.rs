@@ -25,6 +25,7 @@ mod pod;
 mod promocode;
 mod repository;
 mod runner;
+mod runner_proto;
 mod service_error;
 mod sso;
 mod support_ticket;
@@ -59,6 +60,14 @@ pub mod proto_extension_v1 {
 /// prost `ApiKey` (Connect path) coexist during dual-track migration.
 pub mod proto_apikey_v1 {
     pub use super::apikey_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.runner_api.v1`. Re-exported as
+/// `proto_runner_api_v1` so the legacy serde `Runner` (REST path) and the
+/// prost `Runner` (Connect path) coexist during the dual-track migration
+/// window without name collisions.
+pub mod proto_runner_api_v1 {
+    pub use super::runner_proto::*;
 }
 pub use file_upload::*;
 pub use grant::*;

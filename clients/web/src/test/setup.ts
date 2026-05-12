@@ -188,6 +188,23 @@ vi.mock('@/lib/wasm-core', () => {
         h.runner[field] = JSON.stringify(arr.filter((x) => x.id !== Number(id)))
       }
     }),
+    // Connect-RPC binary lane (proto.runner_api.v1.RunnerService).
+    // Each method takes a binary Uint8Array, returns an empty
+    // proto-encoded response (= zero bytes = default fields). Sufficient
+    // for unit-test smoke coverage; integration paths are exercised by
+    // e2e Playwright suites against a live backend.
+    listRunnersConnect: fn().mockResolvedValue(new Uint8Array()),
+    listAvailableRunnersConnect: fn().mockResolvedValue(new Uint8Array()),
+    getRunnerConnect: fn().mockResolvedValue(new Uint8Array()),
+    updateRunnerConnect: fn().mockResolvedValue(new Uint8Array()),
+    deleteRunnerConnect: fn().mockResolvedValue(new Uint8Array()),
+    upgradeRunnerConnect: fn().mockResolvedValue(new Uint8Array()),
+    requestLogUploadConnect: fn().mockResolvedValue(new Uint8Array()),
+    listRunnerLogsConnect: fn().mockResolvedValue(new Uint8Array()),
+    querySandboxesConnect: fn().mockResolvedValue(new Uint8Array()),
+    createRunnerTokenConnect: fn().mockResolvedValue(new Uint8Array()),
+    listRunnerTokensConnect: fn().mockResolvedValue(new Uint8Array()),
+    deleteRunnerTokenConnect: fn().mockResolvedValue(new Uint8Array()),
   }
 
   // --- Org state ---
