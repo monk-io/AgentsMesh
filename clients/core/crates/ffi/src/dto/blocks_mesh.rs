@@ -1,3 +1,4 @@
+use agentsmesh_types::proto_notification_v1 as notification_proto;
 use agentsmesh_types::{
     ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, ChildrenResult,
     MeshChannelInfo, MeshEdge, MeshNode, MeshRunnerInfo, MeshTopology, NotificationPreference,
@@ -505,5 +506,37 @@ impl From<SetNotificationPreferenceRequestDto> for SetNotificationPreferenceRequ
             is_muted: d.is_muted,
             channels: d.channels.map(|v| v.into_iter().map(|k| (k, true)).collect()),
         }
+    }
+}
+
+// Proto NotificationPreference carries channels as HashMap<String, bool>;
+// the legacy Swift DTO field is Vec<String> of enabled (true) keys. The
+// false entries are dropped — matches the REST-path projection.
+impl From<notification_proto::NotificationPreference> for NotificationPreferenceDto {
+    fn from(p: notification_proto::NotificationPreference) -> Self {
+        let channels: Vec<String> = p
+            .channels
+            .into_iter()
+            .filter(|(_, enabled)| *enabled)
+            .map(|(k, _)| k)
+            .collect();
+        Self {
+            source: if p.source.is_empty() { None } else { Some(p.source) },
+            entity_id: p.entity_id,
+            is_muted: Some(p.is_muted),
+            channels: Some(channels),
+        }
+    }
+}
+
+pub(crate) fn notification_list_from_proto(
+    resp: notification_proto::ListPreferencesResponse,
+) -> NotificationPreferenceListResponseDto {
+    NotificationPreferenceListResponseDto {
+        preferences: resp
+            .items
+            .into_iter()
+            .map(NotificationPreferenceDto::from)
+            .collect(),
     }
 }

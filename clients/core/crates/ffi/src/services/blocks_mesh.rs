@@ -1,14 +1,22 @@
+use std::collections::HashMap;
+
+use agentsmesh_types::proto_notification_v1 as notification_proto;
+
 use crate::core::AgentsMeshCore;
 use crate::dto::{
-    BlockDto, ChildrenResultDto, MeshTopologyDto,
-    NotificationPreferenceListResponseDto, SearchHitDto,
-    SemanticSearchRequestDto, SetNotificationPreferenceRequestDto, WorkspaceDto,
+    notification_list_from_proto, BlockDto, ChildrenResultDto, MeshTopologyDto,
+    NotificationPreferenceListResponseDto, SearchHitDto, SemanticSearchRequestDto,
+    SetNotificationPreferenceRequestDto, WorkspaceDto,
 };
 use crate::error::CoreError;
 
 #[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     // ── Mesh ──────────────────────────────────────────────
+    //
+    // proto.mesh.v1 has no Connect-RPC surface yet (the topology endpoint is
+    // a snapshot REST aggregator on the backend that splices pods + edges +
+    // channels + runners). Stays on REST until a proto MeshService lands.
 
     pub async fn get_mesh_topology(&self) -> Result<MeshTopologyDto, CoreError> {
         let t = self.api.get_mesh_topology().await?;
@@ -20,15 +28,32 @@ impl AgentsMeshCore {
     pub async fn get_notification_preferences(
         &self,
     ) -> Result<NotificationPreferenceListResponseDto, CoreError> {
-        let resp = self.api.get_notification_preferences().await?;
-        Ok(resp.into())
+        let req = notification_proto::ListPreferencesRequest { org_slug: self.org_slug()? };
+        let resp = self.api.list_notification_preferences_connect(&req).await?;
+        Ok(notification_list_from_proto(resp))
     }
 
     pub async fn set_notification_preference(
         &self,
         req: SetNotificationPreferenceRequestDto,
     ) -> Result<(), CoreError> {
-        self.api.set_notification_preference(&req.into()).await?;
+        // Legacy DTO `channels` is Vec<String> (the channels to enable). Proto
+        // SetPreferenceRequest carries a HashMap<String,bool> — each enabled
+        // channel maps to true. Empty channels list → empty map (server defaults).
+        let channels: HashMap<String, bool> = req
+            .channels
+            .unwrap_or_default()
+            .into_iter()
+            .map(|k| (k, true))
+            .collect();
+        let proto_req = notification_proto::SetPreferenceRequest {
+            org_slug: self.org_slug()?,
+            source: req.source,
+            entity_id: req.entity_id,
+            is_muted: req.is_muted.unwrap_or(false),
+            channels,
+        };
+        self.api.set_notification_preference_connect(&proto_req).await?;
         Ok(())
     }
 
