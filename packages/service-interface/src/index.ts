@@ -516,9 +516,9 @@ export interface IPodState {
 }
 
 export interface IPromoCodeService {
-  get_history(): Promise<string>;
-  redeem(json: string): Promise<void>;
-  validate(json: string): Promise<string>;
+  validatePromoCodeConnect(request: Uint8Array): Promise<Uint8Array>;
+  redeemPromoCodeConnect(request: Uint8Array): Promise<Uint8Array>;
+  getRedemptionHistoryConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IRelayManager {

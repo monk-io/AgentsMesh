@@ -419,4 +419,7 @@ export declare class AppState {
   userCredentialListProviderRepositories(id: number, page?: number | undefined | null, perPage?: number | undefined | null, search?: string | undefined | null): Promise<string>
   ssoDiscoverConnect(request: Array<number>): Promise<Array<number>>
   ssoLdapAuthConnect(request: Array<number>): Promise<Array<number>>
+  promocodeValidatePromoCodeConnect(request: Array<number>): Promise<Array<number>>
+  promocodeRedeemPromoCodeConnect(request: Array<number>): Promise<Array<number>>
+  promocodeGetRedemptionHistoryConnect(request: Array<number>): Promise<Array<number>>
 }

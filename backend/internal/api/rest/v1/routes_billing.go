@@ -8,10 +8,6 @@ import (
 
 func registerBillingRoutes(rg *gin.RouterGroup, svc *Services) {
 	RegisterBillingHandlers(rg.Group("/billing"), svc.Billing)
-
-	if svc.PromoCode != nil {
-		RegisterPromoCodeRoutes(rg.Group("/billing/promo-codes"), svc.PromoCode)
-	}
 }
 
 func registerBindingRoutes(rg *gin.RouterGroup, svc *Services) {
