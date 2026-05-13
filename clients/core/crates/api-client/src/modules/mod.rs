@@ -7,6 +7,7 @@ pub mod autopilot_connect;
 pub mod billing;
 pub mod billing_public;
 pub mod binding;
+pub mod binding_connect;
 pub mod blockstore;
 pub mod channel;
 pub mod extension;

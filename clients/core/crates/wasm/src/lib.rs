@@ -13,6 +13,7 @@ mod service_auth_connect;
 mod service_autopilot;
 mod service_billing;
 mod service_binding;
+mod service_binding_connect;
 mod service_blockstore;
 mod service_channel;
 mod service_channel_connect;

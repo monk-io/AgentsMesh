@@ -4,6 +4,7 @@ mod auth_connect;
 mod autopilot;
 mod billing;
 mod binding;
+mod binding_connect;
 mod blockstore;
 mod blockstore_connect;
 mod channel;

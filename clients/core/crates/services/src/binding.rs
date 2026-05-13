@@ -12,6 +12,12 @@ impl BindingService {
         Self { client }
     }
 
+    /// Crate-local accessor used by binding_connect.rs to forward to the
+    /// underlying api-client `*_connect` methods.
+    pub(crate) fn client(&self) -> &ApiClient {
+        &self.client
+    }
+
     pub async fn request_binding(
         &self, json: &str, pod_key: Option<String>,
     ) -> Result<String, String> {
