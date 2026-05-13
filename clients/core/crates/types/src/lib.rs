@@ -26,6 +26,7 @@ mod grant;
 mod grant_proto;
 mod invitation;
 mod invitation_proto;
+mod license_proto;
 mod loop_requests;
 mod loop_proto;
 mod loop_types;
@@ -209,6 +210,18 @@ pub mod proto_agent_v1 {
 /// with the legacy serde `Invitation` for the dual-track window.
 pub mod proto_invitation_v1 {
     pub use super::invitation_proto::*;
+}
+
+/// Connect-RPC binary-wire DTOs for `proto.license.v1`. System-wide
+/// (not org-scoped) OnPremise license management. Bundles two services:
+/// `LicenseService` (auth-required: Activate / Refresh / Validate) and
+/// `LicensePublicService` (no auth: GetStatus / GetLimits / CheckFeature
+/// — the login page needs license state before any token exists).
+/// Conventions §3.5 EXCEPTION: no org_slug — the whole server runs
+/// against ONE active license at a time, not per-org. No legacy serde
+/// counterpart in this crate; the REST surface was server-only.
+pub mod proto_license_v1 {
+    pub use super::license_proto::*;
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.support_ticket.v1`. User-scoped
