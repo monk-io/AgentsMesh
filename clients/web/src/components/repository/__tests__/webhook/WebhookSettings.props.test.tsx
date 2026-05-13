@@ -37,8 +37,8 @@ describe("WebhookSettings - Props", () => {
   });
 
   it("should work without onUpdate callback", async () => {
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
-    mockDeleteWebhook.mockResolvedValue(JSON.stringify({ message: "Deleted" }));
+    mockGetWebhookStatus.mockResolvedValue(registeredStatus);
+    mockDeleteWebhook.mockResolvedValue(undefined);
 
     render(<WebhookSettings repository={mockRepository} />);
 
@@ -56,7 +56,7 @@ describe("WebhookSettings - Props", () => {
   });
 
   it("should reload status when repository id changes", async () => {
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
+    mockGetWebhookStatus.mockResolvedValue(registeredStatus);
 
     const { rerender } = render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
