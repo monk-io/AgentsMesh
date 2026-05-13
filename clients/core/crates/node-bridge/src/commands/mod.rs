@@ -20,6 +20,7 @@ pub mod message;
 pub mod notification;
 pub mod org;
 pub mod pod;
+pub mod promocode;
 pub mod repository;
 pub mod runner;
 pub mod runner_api;

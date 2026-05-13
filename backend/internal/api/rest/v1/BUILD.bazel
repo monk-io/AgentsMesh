@@ -240,7 +240,6 @@ go_test(
         "pod_terminate_test.go",
         "promocode_admin_test.go",
         "promocode_setup_test.go",
-        "promocode_validate_test.go",
         "repositories_webhook_configured_test.go",
         "repositories_webhook_delete_test.go",
         "repositories_webhook_integration_test.go",

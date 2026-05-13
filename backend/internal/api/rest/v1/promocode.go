@@ -7,101 +7,20 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/promocode"
-	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	promocodeSvc "github.com/anthropics/agentsmesh/backend/internal/service/promocode"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
 
-// PromoCodeHandler handles promo code HTTP requests
+// PromoCodeHandler exposes platform-admin promo-code CRUD REST endpoints.
+// User-scoped flows (Validate / Redeem / GetRedemptionHistory) have moved
+// to proto.promocode.v1.PromoCodeService (Connect-RPC).
 type PromoCodeHandler struct {
 	service *promocodeSvc.Service
 }
 
-// NewPromoCodeHandler creates a new promo code handler
 func NewPromoCodeHandler(service *promocodeSvc.Service) *PromoCodeHandler {
 	return &PromoCodeHandler{service: service}
-}
-
-// ============ User API ============
-
-// ValidatePromoCodeRequest represents validate request body
-type ValidatePromoCodeRequest struct {
-	Code string `json:"code" binding:"required"`
-}
-
-// Validate validates a promo code
-// POST /api/v1/orgs/:slug/billing/promo-codes/validate
-func (h *PromoCodeHandler) Validate(c *gin.Context) {
-	tenant := c.MustGet("tenant").(*middleware.TenantContext)
-
-	var req ValidatePromoCodeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apierr.ValidationError(c, err.Error())
-		return
-	}
-
-	resp, err := h.service.Validate(c.Request.Context(), &promocodeSvc.ValidateRequest{
-		Code:           req.Code,
-		OrganizationID: tenant.OrganizationID,
-	})
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	c.JSON(http.StatusOK, resp)
-}
-
-// RedeemPromoCodeRequest represents redeem request body
-type RedeemPromoCodeRequest struct {
-	Code string `json:"code" binding:"required"`
-}
-
-// Redeem redeems a promo code
-// POST /api/v1/orgs/:slug/billing/promo-codes/redeem
-func (h *PromoCodeHandler) Redeem(c *gin.Context) {
-	tenant := c.MustGet("tenant").(*middleware.TenantContext)
-
-	var req RedeemPromoCodeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apierr.ValidationError(c, err.Error())
-		return
-	}
-
-	resp, err := h.service.Redeem(c.Request.Context(), &promocodeSvc.RedeemRequest{
-		Code:           req.Code,
-		OrganizationID: tenant.OrganizationID,
-		UserID:         tenant.UserID,
-		UserRole:       tenant.UserRole,
-		IPAddress:      c.ClientIP(),
-		UserAgent:      c.Request.UserAgent(),
-	})
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	if !resp.Success {
-		apierr.RespondWithExtra(c, http.StatusBadRequest, apierr.VALIDATION_FAILED, resp.MessageCode, gin.H{"message_code": resp.MessageCode})
-		return
-	}
-
-	c.JSON(http.StatusOK, resp)
-}
-
-// GetRedemptionHistory gets redemption history
-// GET /api/v1/orgs/:slug/billing/promo-codes/history
-func (h *PromoCodeHandler) GetRedemptionHistory(c *gin.Context) {
-	tenant := c.MustGet("tenant").(*middleware.TenantContext)
-
-	history, err := h.service.GetRedemptionHistory(c.Request.Context(), tenant.OrganizationID)
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"redemptions": history})
 }
 
 // ============ Admin API ============
@@ -131,7 +50,6 @@ func (h *PromoCodeHandler) AdminCreate(c *gin.Context) {
 		return
 	}
 
-	// Parse times
 	var startsAt, expiresAt *time.Time
 	if req.StartsAt != "" {
 		t, err := time.Parse(time.RFC3339, req.StartsAt)
@@ -277,15 +195,6 @@ func (h *PromoCodeHandler) AdminActivate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "promo code activated"})
-}
-
-// RegisterPromoCodeRoutes registers promo code routes for org-scoped billing
-func RegisterPromoCodeRoutes(rg *gin.RouterGroup, service *promocodeSvc.Service) {
-	handler := NewPromoCodeHandler(service)
-
-	rg.POST("/validate", handler.Validate)
-	rg.POST("/redeem", handler.Redeem)
-	rg.GET("/history", handler.GetRedemptionHistory)
 }
 
 // RegisterAdminPromoCodeRoutes registers admin promo code routes

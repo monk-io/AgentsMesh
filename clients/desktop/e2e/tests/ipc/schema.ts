@@ -4283,5 +4283,23 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "()"
+  },
+  {
+    "name": "promocode_validate_promo_code_connect",
+    "group": "promocode",
+    "params": [{"name": "request", "type": "Vec<u8>"}],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "promocode_redeem_promo_code_connect",
+    "group": "promocode",
+    "params": [{"name": "request", "type": "Vec<u8>"}],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "promocode_get_redemption_history_connect",
+    "group": "promocode",
+    "params": [{"name": "request", "type": "Vec<u8>"}],
+    "returnType": "Vec<u8>"
   }
 ];

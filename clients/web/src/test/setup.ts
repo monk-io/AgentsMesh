@@ -814,9 +814,6 @@ vi.mock('@/lib/wasm-core', () => {
       setPreferenceConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getPromoCodeService: fn(() => ({
-      validate: fn().mockResolvedValue('{}'),
-      redeem: fn().mockResolvedValue(undefined),
-      get_history: fn().mockResolvedValue('{"codes":[]}'),
       validatePromoCodeConnect: fn().mockResolvedValue(new Uint8Array()),
       redeemPromoCodeConnect: fn().mockResolvedValue(new Uint8Array()),
       getRedemptionHistoryConnect: fn().mockResolvedValue(new Uint8Array()),
