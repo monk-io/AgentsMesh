@@ -13,12 +13,17 @@ import {
   updatePodPerpetual as updatePodPerpetualConnect,
 } from "@/lib/api/podConnect";
 import type { PodState, Pod } from "./podTypes";
+import { SIDEBAR_STATUS_MAP, SIDEBAR_PAGE_SIZE } from "./podTypes";
 
 export type { Pod } from "./podTypes";
 export { SIDEBAR_STATUS_MAP } from "./podTypes";
 
 function orgSlug(): string {
   return readCurrentOrg()?.slug ?? "";
+}
+
+function sidebarStatusParam(filter: string): string | undefined {
+  return SIDEBAR_STATUS_MAP[filter];
 }
 
 export function usePods(): Pod[] {
@@ -89,9 +94,14 @@ export const usePodStore = create<PodState>((set, get) => ({
     set({ loading: true, error: null, currentSidebarFilter: statusFilter });
     try {
       const uid = statusFilter === "mine" ? readCurrentUser()?.id ?? null : null;
-      const userId = uid != null ? BigInt(uid) : null;
-      const json = await getPodService().fetch_sidebar_pods(statusFilter, userId);
-      const { total, hasMore } = JSON.parse(json);
+      const { items, total } = await listPodsConnect(orgSlug(), {
+        status: sidebarStatusParam(statusFilter),
+        created_by_id: uid ?? undefined,
+        limit: SIDEBAR_PAGE_SIZE,
+        offset: 0,
+      });
+      getPodService().set_pods(JSON.stringify(items));
+      const hasMore = items.length < total;
       set({ podTotal: total, podHasMore: hasMore, loading: false, _tick: get()._tick + 1 });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, "Failed to fetch pods"), loading: false });
@@ -105,10 +115,17 @@ export const usePodStore = create<PodState>((set, get) => ({
     set({ loadingMore: true });
     try {
       const uid = currentSidebarFilter === "mine" ? readCurrentUser()?.id ?? null : null;
-      const userId = uid != null ? BigInt(uid) : null;
-      const pods: Pod[] = JSON.parse(getPodService().pods_json());
-      const json = await getPodService().load_more_pods(currentSidebarFilter, userId, BigInt(pods.length));
-      const { total, hasMore } = JSON.parse(json);
+      const existing: Pod[] = JSON.parse(getPodService().pods_json());
+      const { items: newPods, total } = await listPodsConnect(orgSlug(), {
+        status: sidebarStatusParam(currentSidebarFilter),
+        created_by_id: uid ?? undefined,
+        limit: SIDEBAR_PAGE_SIZE,
+        offset: existing.length,
+      });
+      const svc = getPodService();
+      for (const pod of newPods) svc.upsert_pod(JSON.stringify(pod));
+      const allCount = (JSON.parse(svc.pods_json()) as Pod[]).length;
+      const hasMore = allCount < total;
       set((state) => {
         if (state.currentSidebarFilter !== currentSidebarFilter) return { loadingMore: false };
         return { podTotal: total, podHasMore: hasMore, loadingMore: false, _tick: state._tick + 1 };
