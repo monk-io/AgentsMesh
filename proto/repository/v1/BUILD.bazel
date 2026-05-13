@@ -14,6 +14,9 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 # committed mirror under proto/gen/ts/repository/v1/ — pending Bazel-native
 # `ts_proto_library` macro per runbook "TS proto codegen toolchain".
 
+# Watch list hazard #8 — catch hand-written prost struct drift.
+load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
+
 proto_library(
     name = "repository_proto",
     srcs = ["repository.proto"],
@@ -27,9 +30,6 @@ go_proto_library(
     proto = ":repository_proto",
     visibility = ["//visibility:public"],
 )
-
-# Watch list hazard #8 — catch hand-written prost struct drift.
-load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
 
 validate_prost_tags(
     name = "repository_validate",

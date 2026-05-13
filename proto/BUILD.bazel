@@ -50,14 +50,14 @@ write_file(
 
 npm_package(
     name = "pkg",
-    package = "@agentsmesh/proto",
-    version = "0.1.0",
     srcs = [
         ":proto_pkg_json",
     ] + glob(["gen/ts/**/*.ts"]),
+    package = "@agentsmesh/proto",
     # Strip the `gen/ts/` prefix so consumers see the package as
     # `<domain>/v1/<name>_pb.ts` (i.e. import path
     # `@agentsmesh/proto/agent/v1/agent_pb`).
     replace_prefixes = {"gen/ts/": ""},
+    version = "0.1.0",
     visibility = ["//visibility:public"],
 )

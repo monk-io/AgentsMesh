@@ -23,6 +23,7 @@ at build time) so a transient drift during a refactor doesn't block
 
 def _validate_prost_tags_test_impl(ctx):
     test_script = ctx.actions.declare_file(ctx.label.name + ".sh")
+
     # Bazel test runfiles: scripts run from `<bin>.runfiles/_main/`, the
     # validator's short_path is relative to that root, so prepending it to
     # the runfiles_dir gives the absolute path we exec.
@@ -44,6 +45,7 @@ exec "$runfiles_root/{validator}" "$runfiles_root/{proto}" "$runfiles_root/{rust
         ctx.file.rust,
         ctx.executable._validator,
     ])
+
     # Merge the validator's own runfiles (the .py data dep) so the wrapped
     # sh_binary can find it.
     runfiles = runfiles.merge(ctx.attr._validator[DefaultInfo].default_runfiles)

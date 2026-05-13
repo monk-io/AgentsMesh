@@ -3,8 +3,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "blockstore",
     srcs = [
-        "blockstore.go",
         "blocks_handlers.go",
+        "blockstore.go",
         "convert.go",
         "errors.go",
         "ops_handlers.go",

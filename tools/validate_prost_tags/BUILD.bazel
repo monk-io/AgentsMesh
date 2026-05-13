@@ -41,10 +41,10 @@ sh_test(
     name = "validate_prost_tags_smoke",
     srcs = ["smoke_test.sh"],
     data = [
-        ":validate_prost_tags",
-        "testdata/good.proto",
-        "testdata/good.rs",
         "testdata/bad.proto",
         "testdata/bad.rs",
+        "testdata/good.proto",
+        "testdata/good.rs",
+        ":validate_prost_tags",
     ],
 )
