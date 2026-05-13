@@ -1,11 +1,15 @@
-import { getPodService } from "@/lib/wasm-core";
+import { readCurrentOrg } from "@/stores/auth";
+import { createPod, terminatePod, type CreatePodInput } from "./podConnect";
+
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
 
 export const podApi = {
-  create: async (data: Record<string, unknown>) => {
-    const json = await getPodService().create_pod(JSON.stringify(data));
-    return JSON.parse(json);
+  create: async (data: CreatePodInput) => {
+    return createPod(orgSlug(), data);
   },
   terminate: async (podKey: string) => {
-    await getPodService().terminate_pod(podKey);
+    await terminatePod(orgSlug(), podKey);
   },
 };
