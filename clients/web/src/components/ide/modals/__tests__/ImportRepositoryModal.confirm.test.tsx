@@ -22,6 +22,11 @@ vi.mock("@/lib/api/repositoryConnect", () => ({
   fromProtoRepository: vi.fn(),
 }));
 
+vi.mock("@/lib/api/userRepositoryProvider", () => ({
+  listRepositoryProviders: vi.fn(),
+  listProviderRepositories: vi.fn(),
+}));
+
 // useImportWizard.handleImport bails on !currentOrg; provide a non-null org.
 vi.mock("@/stores/auth", () => ({
   useCurrentOrg: () => stable.org,

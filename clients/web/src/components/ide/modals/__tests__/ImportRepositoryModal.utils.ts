@@ -94,3 +94,7 @@ export function mockRepositoryCreate(response?: RepositoryData) {
   vi.mocked(repositoryConnect.createRepository).mockResolvedValue(response ?? mockCreatedRepository);
   return stableRepoSvc;
 }
+
+// Pass-through used by navigation tests to compose a RepositoryData literal
+// before handing it to mockRepositoryCreate.
+export const createRepositoryResponse = (r: RepositoryData): RepositoryData => r;

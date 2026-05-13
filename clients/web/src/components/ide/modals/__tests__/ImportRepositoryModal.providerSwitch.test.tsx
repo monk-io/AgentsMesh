@@ -3,6 +3,11 @@ import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import { setupProviderMocks } from "./ImportRepositoryModal.utils";
 
+vi.mock("@/lib/api/userRepositoryProvider", () => ({
+  listRepositoryProviders: vi.fn(),
+  listProviderRepositories: vi.fn(),
+}));
+
 describe("ImportRepositoryModal - Provider Type Switching", () => {
   const mockOnClose = vi.fn();
   const mockOnImported = vi.fn();

@@ -6,6 +6,11 @@ import {
   stableCredSvc,
 } from "./ImportRepositoryModal.utils";
 
+vi.mock("@/lib/api/userRepositoryProvider", () => ({
+  listRepositoryProviders: vi.fn(),
+  listProviderRepositories: vi.fn(),
+}));
+
 describe("ImportRepositoryModal - Rendering", () => {
   const mockOnClose = vi.fn();
   const mockOnImported = vi.fn();

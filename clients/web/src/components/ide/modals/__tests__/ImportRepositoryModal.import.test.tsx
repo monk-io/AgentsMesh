@@ -17,6 +17,11 @@ vi.mock("@/lib/api/repositoryConnect", () => ({
   fromProtoRepository: vi.fn(),
 }));
 
+vi.mock("@/lib/api/userRepositoryProvider", () => ({
+  listRepositoryProviders: vi.fn(),
+  listProviderRepositories: vi.fn(),
+}));
+
 vi.mock("@/stores/auth", () => ({
   useCurrentOrg: () => stable.org,
   useCurrentUser: () => stable.user,

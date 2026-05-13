@@ -6,6 +6,11 @@ import {
   stableCredSvc,
 } from "./ImportRepositoryModal.utils";
 
+vi.mock("@/lib/api/userRepositoryProvider", () => ({
+  listRepositoryProviders: vi.fn(),
+  listProviderRepositories: vi.fn(),
+}));
+
 describe("ImportRepositoryModal - Provider Selection and Browse", () => {
   const mockOnClose = vi.fn();
   const mockOnImported = vi.fn();
@@ -27,9 +32,9 @@ describe("ImportRepositoryModal - Provider Selection and Browse", () => {
     fireEvent.click(screen.getByText("My GitHub"));
 
     await waitFor(() => {
-      expect(stableCredSvc.list_provider_repositories).toHaveBeenCalledWith(
-        BigInt(1), 1, 20, undefined,
-      );
+      expect(stableCredSvc.list_provider_repositories).toHaveBeenCalledWith({
+        id: 1, page: 1, per_page: 20,
+      });
     });
   });
 
@@ -115,9 +120,9 @@ describe("ImportRepositoryModal - Provider Selection and Browse", () => {
     fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(stableCredSvc.list_provider_repositories).toHaveBeenCalledWith(
-        BigInt(1), 1, 20, "test-search",
-      );
+      expect(stableCredSvc.list_provider_repositories).toHaveBeenCalledWith({
+        id: 1, page: 1, per_page: 20, search: "test-search",
+      });
     });
   });
 });
