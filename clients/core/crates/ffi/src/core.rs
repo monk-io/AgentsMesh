@@ -22,6 +22,22 @@ pub struct AgentsMeshCore {
     pub(crate) blockstore: Arc<BlockstoreService>,
 }
 
+impl AgentsMeshCore {
+    /// Resolve the current org slug for Connect-RPC requests that carry
+    /// `org_slug` in the body (most proto.*.v1 services). Returns
+    /// `CoreError::NotAuthenticated` rather than silently sending an
+    /// empty string — the backend would 400, but the client error is
+    /// clearer.
+    pub(crate) fn org_slug(&self) -> Result<String, CoreError> {
+        self.auth
+            .get_current_org()
+            .map(|o| o.slug)
+            .ok_or_else(|| CoreError::Unknown {
+                message: "no current org — Connect-RPC requires org_slug".into(),
+            })
+    }
+}
+
 #[uniffi::export]
 impl AgentsMeshCore {
     #[uniffi::constructor]
