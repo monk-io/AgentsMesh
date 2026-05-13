@@ -1,4 +1,5 @@
 use agentsmesh_auth::{BootstrapCleanupReason, BootstrapResult};
+use agentsmesh_types::proto_user_v1 as user_proto;
 use agentsmesh_types::{AuthSession, AuthTokens, Organization, SSOConfig, User, UserIdentity};
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -20,6 +21,19 @@ impl From<User> for UserDto {
             name: u.name,
             avatar_url: u.avatar_url,
             is_email_verified: u.is_email_verified,
+        }
+    }
+}
+
+impl From<user_proto::User> for UserDto {
+    fn from(u: user_proto::User) -> Self {
+        Self {
+            id: u.id,
+            email: u.email,
+            username: u.username,
+            name: u.name,
+            avatar_url: u.avatar_url,
+            is_email_verified: Some(u.is_email_verified),
         }
     }
 }
