@@ -91,9 +91,14 @@ function makeService(): FakeService {
 
 vi.mock("@agentsmesh/service-runtime", () => ({
   getLocalRunnerService: () => svc,
-  getRunnerService: () => ({
-    create_token: vi.fn(async () => JSON.stringify(createTokenResp ?? { token: "tok-xyz", id: 1 })),
-  }),
+}));
+
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => ({ slug: "test-org" }),
+}));
+
+vi.mock("@/lib/api/runnerConnect", () => ({
+  createRunnerToken: vi.fn(async () => createTokenResp ?? { token: "tok-xyz", id: 1 }),
 }));
 
 vi.mock("@/lib/wasm-core", () => ({

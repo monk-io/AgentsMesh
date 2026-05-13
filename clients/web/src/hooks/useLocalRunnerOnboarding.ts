@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getLocalRunnerService, getRunnerService } from "@agentsmesh/service-runtime";
+import { getLocalRunnerService } from "@agentsmesh/service-runtime";
 import { getApiClient } from "@/lib/wasm-core";
+import { createRunnerToken } from "@/lib/api/runnerConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { ILocalRunnerService, LocalRunnerStatus } from "@agentsmesh/service-interface";
 
 export type StepKey =
@@ -68,6 +70,7 @@ export interface UseLocalRunnerOnboarding {
 
 export function useLocalRunnerOnboarding(): UseLocalRunnerOnboarding {
   const svc = getLocalRunnerService() as ILocalRunnerService | undefined;
+  const currentOrg = useCurrentOrg();
   const [phase, setPhase] = useState<Phase>(svc ? { kind: "loading" } : { kind: "idle", status: "not_installed" });
   const [localNodeId, setLocalNodeId] = useState<string | null>(null);
   const phaseRef = useRef(phase);
@@ -129,10 +132,8 @@ export function useLocalRunnerOnboarding(): UseLocalRunnerOnboarding {
       if (!(await svc.is_registered())) {
         currentStep = "token";
         setPhase({ kind: "installing", step: currentStep });
-        const tokenResp = JSON.parse(
-          await getRunnerService().create_token(JSON.stringify({ name: "Desktop" })),
-        );
-        const token: string | undefined = tokenResp?.token;
+        const tokenResp = await createRunnerToken(currentOrg?.slug ?? "", { name: "Desktop" });
+        const token: string | undefined = tokenResp.token;
         if (!token) throw new Error("backend returned empty registration token");
 
         currentStep = "register";
@@ -161,7 +162,7 @@ export function useLocalRunnerOnboarding(): UseLocalRunnerOnboarding {
       setLocalNodeId(nodeId);
       setPhase({ kind: "error", status, step: currentStep, message });
     }
-  }, [svc, refresh]);
+  }, [svc, refresh, currentOrg]);
 
   return { unsupported: !svc, localNodeId, phase, onRegister, refresh };
 }
