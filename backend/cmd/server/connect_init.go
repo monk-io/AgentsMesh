@@ -8,6 +8,7 @@ import (
 
 	agentconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agent"
 	agentpodsettingsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings"
+	promocodeadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/promocode"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	authconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/auth"
 	autopilotconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/autopilot"
@@ -141,6 +142,19 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountNotificationService(mux, svc, opts)
 	mountLoopService(mux, svc, rest, opts)
 	mountLicenseService(mux, svc, opts)
+	mountAdminServices(mux, svc, opts)
+}
+
+// mountAdminServices wires the platform-admin Connect surface. Every
+// handler in this group internally calls interceptors.ResolveSystemAdmin
+// against svc.adminDB to mirror REST's AdminMiddleware. Skips silently
+// when svc.admin is nil (admin disabled by config) — same gate the REST
+// router applies at router.go:202.
+func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	if svc.admin == nil {
+		return
+	}
+	promocodeadminconnect.Mount(mux, promocodeadminconnect.NewServer(svc.admin, svc.adminDB), opts...)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)

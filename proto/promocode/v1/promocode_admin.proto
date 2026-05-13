@@ -1,0 +1,173 @@
+// PromoCodeAdminService — platform-admin CRUD over promo codes.
+//
+// Migrated from REST handlers in
+// backend/internal/api/rest/v1/admin/promo_codes*.go. The org-scoped
+// PromoCodeService lives next door in promocode.proto. The split exists
+// because they have different auth surfaces — that one runs through
+// ResolveOrgScope + org membership; this one runs through the
+// system-admin interceptor (TenantContext.UserID + is_system_admin DB
+// lookup), so any drift on the membership check would be a security bug
+// if they shared transport plumbing.
+//
+// Conventions: same as promocode.proto — snake_case, ISO-8601 strings,
+// {items,total,page,page_size,total_pages} list envelope, create/update
+// returns entity directly.
+
+syntax = "proto3";
+
+package proto.promocode.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/promocode/v1;promocodev1";
+
+// ============================================================================
+// PromoCodeAdminService — platform-admin only. Mirrors REST routes at
+// /api/v1/admin/promo-codes/*.
+// ============================================================================
+service PromoCodeAdminService {
+  rpc ListPromoCodes(ListPromoCodesRequest) returns (ListPromoCodesResponse);
+  rpc GetPromoCode(GetPromoCodeRequest) returns (PromoCode);
+  rpc CreatePromoCode(CreatePromoCodeRequest) returns (PromoCode);
+  rpc UpdatePromoCode(UpdatePromoCodeRequest) returns (PromoCode);
+  rpc ActivatePromoCode(ActivatePromoCodeRequest) returns (ActivatePromoCodeResponse);
+  rpc DeactivatePromoCode(DeactivatePromoCodeRequest) returns (DeactivatePromoCodeResponse);
+  rpc DeletePromoCode(DeletePromoCodeRequest) returns (DeletePromoCodeResponse);
+  rpc ListPromoCodeRedemptions(ListPromoCodeRedemptionsRequest) returns (ListPromoCodeRedemptionsResponse);
+}
+
+// ----------------------------------------------------------------------------
+// PromoCode — mirrors backend/internal/domain/promocode.PromoCode fields
+// the admin REST handler exposes. Times are ISO-8601 strings per §8.
+// ----------------------------------------------------------------------------
+message PromoCode {
+  int64 id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  string type = 5;
+  string plan_name = 6;
+  int32 duration_months = 7;
+  optional int32 max_uses = 8;
+  int32 used_count = 9;
+  int32 max_uses_per_org = 10;
+  string starts_at = 11;
+  optional string expires_at = 12;
+  bool is_active = 13;
+  optional int64 created_by_id = 14;
+  string created_at = 15;
+  string updated_at = 16;
+}
+
+// RedemptionDetail mirrors admin.RedemptionWithDetails — embedded
+// User and Organization JSON blobs flatten to their primary fields
+// (id + display name); admin UI doesn't read the nested object beyond
+// that, so we avoid wire-marshalling full entity messages.
+message RedemptionDetail {
+  int64 id = 1;
+  int64 promo_code_id = 2;
+  int64 organization_id = 3;
+  int64 user_id = 4;
+  string plan_name = 5;
+  int32 duration_months = 6;
+  string new_period_end = 7;
+  optional string ip_address = 8;
+  string created_at = 9;
+  optional string user_email = 10;
+  optional string user_username = 11;
+  optional string organization_name = 12;
+  optional string organization_slug = 13;
+}
+
+// ----------------------------------------------------------------------------
+// List
+// ----------------------------------------------------------------------------
+message ListPromoCodesRequest {
+  optional string type = 1;
+  optional string plan_name = 2;
+  optional bool is_active = 3;
+  optional string search = 4;
+  optional int32 page = 5;
+  optional int32 page_size = 6;
+}
+
+message ListPromoCodesResponse {
+  repeated PromoCode data = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+// ----------------------------------------------------------------------------
+// Get / Create / Update / Delete / Activate / Deactivate
+// ----------------------------------------------------------------------------
+message GetPromoCodeRequest {
+  int64 id = 1;
+}
+
+message CreatePromoCodeRequest {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+  string type = 4;
+  string plan_name = 5;
+  int32 duration_months = 6;
+  optional int32 max_uses = 7;
+  int32 max_uses_per_org = 8;
+  optional string starts_at = 9;
+  optional string expires_at = 10;
+}
+
+message UpdatePromoCodeRequest {
+  int64 id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional int32 max_uses = 4;
+  optional int32 max_uses_per_org = 5;
+  // expires_at semantics mirror REST: omitted = unchanged, empty string = clear,
+  // RFC3339 = set. The discriminator field `clear_expires_at` makes the empty
+  // case explicit on the wire (Connect can't distinguish "" vs unset on
+  // optional fields when round-tripping through JSON).
+  optional string expires_at = 6;
+  bool clear_expires_at = 7;
+}
+
+message ActivatePromoCodeRequest {
+  int64 id = 1;
+}
+
+message ActivatePromoCodeResponse {
+  string message = 1;
+}
+
+message DeactivatePromoCodeRequest {
+  int64 id = 1;
+}
+
+message DeactivatePromoCodeResponse {
+  string message = 1;
+}
+
+message DeletePromoCodeRequest {
+  int64 id = 1;
+}
+
+message DeletePromoCodeResponse {
+  string message = 1;
+}
+
+// ----------------------------------------------------------------------------
+// ListPromoCodeRedemptions
+// ----------------------------------------------------------------------------
+message ListPromoCodeRedemptionsRequest {
+  int64 id = 1;
+  optional int32 page = 2;
+  optional int32 page_size = 3;
+}
+
+message ListPromoCodeRedemptionsResponse {
+  repeated RedemptionDetail data = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}

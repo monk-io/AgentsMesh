@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "promocode",
+    srcs = [
+        "convert.go",
+        "handlers_query.go",
+        "handlers_write.go",
+        "server.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/promocode",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/internal/api/connect/interceptors",
+        "//backend/internal/domain/organization",
+        "//backend/internal/domain/promocode",
+        "//backend/internal/domain/user",
+        "//backend/internal/infra/database",
+        "//backend/internal/service/admin",
+        "//proto/promocode/v1:promocode_go_proto",
+        "@com_connectrpc_connect//:connect",
+    ],
+)

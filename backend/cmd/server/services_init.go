@@ -10,9 +10,11 @@ import (
 	runnerDomain "github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/infra"
 	blockstoreinfra "github.com/anthropics/agentsmesh/backend/internal/infra/blockstore"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
+	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	apikeyservice "github.com/anthropics/agentsmesh/backend/internal/service/apikey"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
@@ -48,6 +50,8 @@ type serviceContainer struct {
 	auth              *auth.Service
 	user              *user.Service
 	org               *organization.Service
+	admin             *adminservice.Service
+	adminDB           database.DB
 	agentSvc          *agent.AgentService
 	credentialProfile *agent.CredentialProfileService
 	userConfig        *agent.UserConfigService
@@ -207,10 +211,19 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	// service can dispatch block ops inside its create/update/delete paths.
 	ticketSvc.SetBlockstore(blockstoreSvc)
 
+	// admin.Service backs both the REST admin handlers (mounted by
+	// admin.RegisterRoutes) and the Connect admin handlers (mounted by
+	// connect_init's mountAdminServices). Keeping a single instance here
+	// avoids two parallel audit-log pipelines.
+	dbWrapper := database.NewGormWrapper(db)
+	adminSvc := adminservice.NewService(dbWrapper)
+
 	return &serviceContainer{
 		auth:               authSvc,
 		user:               userSvc,
 		org:                orgSvc,
+		admin:              adminSvc,
+		adminDB:            dbWrapper,
 		agentSvc:           agentSvc,
 		credentialProfile:  credentialProfileSvc,
 		userConfig:         userConfigSvc,
