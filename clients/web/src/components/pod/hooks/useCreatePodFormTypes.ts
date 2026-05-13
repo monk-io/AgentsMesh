@@ -54,6 +54,7 @@ export interface CreatePodFormState {
   // Form state
   loading: boolean;
   error: string | null;
+  warning: string | null;
   validationErrors: FormValidationErrors;
   isValid: boolean;
 

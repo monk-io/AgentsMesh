@@ -63,6 +63,9 @@ ts_project(
         "//:node_modules/@agentsmesh/service-interface",
         "//:node_modules/@agentsmesh/service-runtime",
         "//:node_modules/@agentsmesh/node-bridge",
+        # `@agentsmesh/proto` ships the generated Connect-RPC TS
+        # modules; `@proto/*` in tsconfig resolves through this mount.
+        "//:node_modules/@agentsmesh/proto",
         "//:node_modules/agentsmesh-wasm",
     ],
 )
@@ -135,6 +138,7 @@ _NEXT_DATA_COMMON = [
     "//:node_modules/@agentsmesh/service-interface",
     "//:node_modules/@agentsmesh/service-runtime",
     "//:node_modules/@agentsmesh/node-bridge",
+    "//:node_modules/@agentsmesh/proto",
     "//:node_modules/agentsmesh-wasm",
     "//:package_json_bin",
     # Generated TS proto message classes — `@proto/*` alias resolves

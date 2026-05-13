@@ -5,7 +5,7 @@ import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
 import { getTicketService, parseWasmAny } from "@/lib/wasm-core";
 import * as ticketApi from "@/lib/api/ticketConnect";
-import { useAuthStore } from "@/stores/auth";
+import { readCurrentOrg } from "@/stores/auth";
 
 export type { TicketStatus, TicketPriority };
 export interface Label { id: number; name: string; color: string }
@@ -27,7 +27,7 @@ const initPag = (cols: BoardColumn[]) => Object.fromEntries(
 
 const svc = () => getTicketService();
 const bump = () => useTicketStore.setState((s) => ({ _tick: s._tick + 1 }));
-const orgSlug = (): string => useAuthStore.getState().currentOrg?.slug || "";
+const orgSlug = (): string => readCurrentOrg()?.slug || "";
 
 interface TicketState {
   _tick: number; selectedTicketSlug: string | null;

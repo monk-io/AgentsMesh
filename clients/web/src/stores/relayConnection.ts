@@ -232,7 +232,7 @@ async function resolveLocalNodeId(): Promise<string | null> {
   if (!svc) return null;
   if (!cachedNodeIdPromise) {
     cachedNodeIdPromise = svc.local_node_id().then(
-      (id) => {
+      (id: string | null) => {
         if (!id) cachedNodeIdPromise = null;
         return id;
       },

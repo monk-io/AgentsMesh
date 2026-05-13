@@ -22,7 +22,7 @@ function useLocalNodeId(): string | null {
     const svc = getLocalRunnerService();
     if (!svc) return;
     let cancelled = false;
-    void svc.local_node_id().then((id) => {
+    void svc.local_node_id().then((id: string | null) => {
       if (!cancelled) setNodeId(id);
     });
     return () => {

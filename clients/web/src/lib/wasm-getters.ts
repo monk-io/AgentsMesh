@@ -9,7 +9,7 @@ import {
   WasmPromoCodeService, WasmTokenUsageService, WasmSSOService,
   WasmUserApiService, WasmUserCredentialService, WasmOrgApiService,
   WasmAgentService, WasmTicketRelationsService, WasmFileService,
-  WasmSupportTicketService, WasmAuthApiService, WasmAuthConnectService,
+  WasmSupportTicketService, WasmAuthConnectService,
   WasmBlockstoreService,
   WasmRunnerState, WasmMeshState, WasmTicketState, WasmChannelState,
   WasmLoopState, WasmAcpSessionManager, WasmOrgState, WasmUserState,

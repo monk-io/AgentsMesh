@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { usePods } from "@/stores/pod";
 import { organizationApi } from "@/lib/api/organization";
+import type { OrganizationMember } from "@/lib/api/organizationTypes";
 import { useChannelPods } from "@/hooks/useChannelPods";
 import { getPodDisplayName, getMentionSafeName, getShortPodKey } from "@/lib/pod-display-name";
 
@@ -70,13 +71,17 @@ export function useMentionCandidates({
         if (cancelled) return;
 
         const memberItems: MentionItem[] = (response.members || [])
-          .filter((m: { user?: { id: number } }) => m.user && m.user.id !== user?.id)
-          .map((m: { user: { id: number; username: string; name?: string; avatar_url?: string } }) => ({
+          .filter(
+            (m): m is OrganizationMember & {
+              user: NonNullable<OrganizationMember["user"]>;
+            } => !!m.user && m.user.id !== user?.id,
+          )
+          .map((m) => ({
             id: `user:${m.user.id}`,
             type: "user" as const,
             mentionText: m.user.username,
             displayName: m.user.name || m.user.username,
-            description: (m.user as { email?: string }).email,
+            description: m.user.email,
             avatarUrl: m.user.avatar_url,
           }));
 

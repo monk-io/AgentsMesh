@@ -2,6 +2,8 @@
 
 load("@aspect_bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_js//npm:defs.bzl", "npm_package")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 
 # Generated TS proto message classes (committed mirror under `gen/ts/`).
 # vitest / next consume via the `@proto/*` path alias resolved to
@@ -19,29 +21,43 @@ copy_to_bin(
 )
 
 # js_library wrapper — surfaces `JsInfo.sources` for downstream
-# bundlers (vite / next webpack). Note: ts_project's tsc action
-# only picks up `transitive_types` from JsInfo (i.e. .d.ts files),
-# so this target alone is NOT sufficient for tsc typecheck — the
-# .ts sources must be staged via runfiles or added to a downstream
-# ts_project's `srcs`. See //clients/web:src for how the typecheck
-# leg gets the files.
+# bundlers (vite / next webpack). Note: ts_project's tsc action only
+# picks up `transitive_types` from JsInfo (i.e. .d.ts files), so this
+# target alone is NOT sufficient for tsc typecheck — see the npm
+# package target below for the workspace-resolvable mount that
+# satisfies tsc's rootDir constraint.
 js_library(
     name = "proto_gen_ts",
     srcs = [":proto_gen_ts_files"],
     visibility = ["//visibility:public"],
 )
 
-# Source-level export so cross-package `ts_project` targets can pull
-# the .ts files into their own `srcs` list — required because tsc
-# only walks files it sees as srcs (transitive types from JsInfo
-# carry .d.ts, not .ts).
-exports_files(
-    glob(["gen/ts/**/*.ts"]),
-    visibility = ["//clients:__subpackages__"],
+# `@agentsmesh/proto` internal npm package — surfaces the generated
+# TS proto modules under a workspace-mounted node_modules path so the
+# web/ts code can resolve them through tsc's normal node module walk
+# instead of a tsconfig path alias to `../../proto/gen/ts`. The path
+# alias keeps the files _outside_ tsc's rootDir, which trips TS6059
+# the moment any file under :src imports them.
+#
+# `gen/ts/<domain>/v1/<name>_pb.ts` becomes
+# `node_modules/@agentsmesh/proto/<domain>/v1/<name>_pb.ts` after
+# `npm_link_package` mounts the result at the workspace root.
+write_file(
+    name = "proto_pkg_json",
+    out = "package.json",
+    content = ['{"name": "@agentsmesh/proto", "version": "0.1.0", "type": "module"}'],
 )
 
-filegroup(
-    name = "proto_gen_ts_sources",
-    srcs = glob(["gen/ts/**/*.ts"]),
-    visibility = ["//clients:__subpackages__"],
+npm_package(
+    name = "pkg",
+    package = "@agentsmesh/proto",
+    version = "0.1.0",
+    srcs = [
+        ":proto_pkg_json",
+    ] + glob(["gen/ts/**/*.ts"]),
+    # Strip the `gen/ts/` prefix so consumers see the package as
+    # `<domain>/v1/<name>_pb.ts` (i.e. import path
+    # `@agentsmesh/proto/agent/v1/agent_pb`).
+    replace_prefixes = {"gen/ts/": ""},
+    visibility = ["//visibility:public"],
 )

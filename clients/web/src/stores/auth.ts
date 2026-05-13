@@ -132,7 +132,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e) {
       // Bootstrap call itself failed (network down before any storage hit).
       // Treat as anonymous; storage is untouched so retry on reload is safe.
-      console.warn("auth bootstrap failed:", getErrorMessage(e));
+      console.warn("auth bootstrap failed:", getErrorMessage(e, "bootstrap"));
       result = { kind: "anonymous" };
     }
     if (result.kind === "anonymous_after_cleanup") {

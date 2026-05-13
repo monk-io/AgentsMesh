@@ -42,7 +42,7 @@ export function InfraRunnerDetail({ runnerId, onBack }: Props) {
     const svc = getLocalRunnerService();
     if (!svc) return;
     let cancelled = false;
-    void svc.local_node_id().then((id) => { if (!cancelled) setLocalNodeId(id); }).catch(() => {});
+    void svc.local_node_id().then((id: string | null) => { if (!cancelled) setLocalNodeId(id); }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 

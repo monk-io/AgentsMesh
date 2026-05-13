@@ -51,6 +51,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@agentsmesh/service-runtime",
     "@agentsmesh/service-interface",
+    "@agentsmesh/proto",
   ],
 
   webpack: (config, { isServer }) => {
