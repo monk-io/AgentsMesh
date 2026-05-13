@@ -331,14 +331,18 @@ export interface IGitProviderState {
 }
 
 export interface IInvitationService {
-  accept(token: string): Promise<void>;
-  create(json: string): Promise<string>;
-  get_by_token(token: string): Promise<string>;
-  list(): Promise<string>;
-  list_pending(): Promise<string>;
-  resend(id: bigint): Promise<void>;
-  revoke(id: bigint): Promise<void>;
+  listInvitationsConnect(request: Uint8Array): Promise<Uint8Array>;
+  createInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  revokeInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  resendInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  acceptInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  listPendingInvitationsConnect(request: Uint8Array): Promise<Uint8Array>;
+  getInvitationByTokenConnect(request: Uint8Array): Promise<Uint8Array>;
 }
+
+// Alias for the same surface — desktop adapter file uses this name to mirror
+// the auth_connect.ts / *_connect.ts naming convention.
+export type IInvitationConnectService = IInvitationService;
 
 export type LocalRunnerStatus = "running" | "stopped" | "unknown" | "not_installed";
 

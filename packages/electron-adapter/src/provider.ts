@@ -8,7 +8,7 @@ import { ElectronMeshService } from './mesh';
 import { ElectronBillingService } from './billing';
 import { ElectronExtensionService } from './extension';
 import { ElectronRepositoryService } from './repository';
-import { ElectronInvitationService } from './invitation';
+import { ElectronInvitationConnectService } from './invitation';
 import { ElectronApiKeyService } from './apikey';
 import { ElectronBindingService } from './binding';
 import { ElectronMessageService } from './message';
@@ -100,7 +100,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     billingService: new ElectronBillingService(),
     extensionService: new ElectronExtensionService(),
     repositoryService: new ElectronRepositoryService(),
-    invitationService: new ElectronInvitationService(),
+    invitationService: new ElectronInvitationConnectService(),
     apiKeyService: new ElectronApiKeyService(),
     bindingService: new ElectronBindingService(),
     messageService: new ElectronMessageService(),

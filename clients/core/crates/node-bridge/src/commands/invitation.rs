@@ -4,45 +4,44 @@ use crate::{AppState, err};
 #[napi]
 impl AppState {
     #[napi]
-    pub async fn invitation_list(&self) -> napi::Result<String> {
+    pub async fn invitation_list_invitations_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.list().await.map_err(err)
+        svc.list_invitations_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn invitation_create(&self, json: String) -> napi::Result<String> {
+    pub async fn invitation_create_invitation_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.create(&json).await.map_err(err)
+        svc.create_invitation_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn invitation_revoke(&self, id: i64) -> napi::Result<()> {
+    pub async fn invitation_revoke_invitation_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.revoke(id).await.map_err(err)
+        svc.revoke_invitation_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn invitation_resend(&self, id: i64) -> napi::Result<()> {
+    pub async fn invitation_resend_invitation_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.resend(id).await.map_err(err)
+        svc.resend_invitation_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn invitation_get_by_token(&self, token: String) -> napi::Result<String> {
+    pub async fn invitation_accept_invitation_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.get_by_token(&token).await.map_err(err)
+        svc.accept_invitation_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn invitation_accept(&self, token: String) -> napi::Result<()> {
+    pub async fn invitation_list_pending_invitations_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.accept(&token).await.map_err(err)
+        svc.list_pending_invitations_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn invitation_list_pending(&self) -> napi::Result<String> {
+    pub async fn invitation_get_invitation_by_token_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.invitation.lock().await;
-            svc.list_pending().await.map_err(err)
+        svc.get_invitation_by_token_connect(&request).await.map_err(err)
     }
-
 }

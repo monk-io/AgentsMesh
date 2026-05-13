@@ -8,7 +8,7 @@ export { ElectronMeshService } from './mesh';
 export { ElectronBillingService } from './billing';
 export { ElectronExtensionService } from './extension';
 export { ElectronRepositoryService } from './repository';
-export { ElectronInvitationService } from './invitation';
+export { ElectronInvitationConnectService } from './invitation';
 export { ElectronApiKeyService } from './apikey';
 export { ElectronBindingService } from './binding';
 export { ElectronMessageService } from './message';

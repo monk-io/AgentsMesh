@@ -1,3 +1,7 @@
+// Legacy REST helpers preserved for the iOS UniFFI bridge (see
+// clients/core/crates/ffi/src/services/misc.rs). The Connect lane lives in
+// invitation_connect.rs and is what the wasm bridge / web stack uses; FFI is
+// not on Connect yet, so these methods stay until that migration.
 use crate::ApiClient;
 use crate::error::ApiError;
 use agentsmesh_types::*;

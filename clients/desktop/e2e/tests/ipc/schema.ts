@@ -1645,71 +1645,81 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "String"
   },
   {
-    "name": "invitation_list",
-    "group": "invitation",
-    "params": [],
-    "returnType": "String"
-  },
-  {
-    "name": "invitation_create",
+    "name": "invitation_list_invitations_connect",
     "group": "invitation",
     "params": [
       {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "invitation_revoke",
+    "name": "invitation_create_invitation_connect",
     "group": "invitation",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "invitation_resend",
+    "name": "invitation_revoke_invitation_connect",
     "group": "invitation",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "invitation_get_by_token",
+    "name": "invitation_resend_invitation_connect",
     "group": "invitation",
     "params": [
       {
-        "name": "token",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "invitation_accept",
+    "name": "invitation_accept_invitation_connect",
     "group": "invitation",
     "params": [
       {
-        "name": "token",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "invitation_list_pending",
+    "name": "invitation_list_pending_invitations_connect",
     "group": "invitation",
-    "params": [],
-    "returnType": "String"
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "invitation_get_invitation_by_token_connect",
+    "group": "invitation",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
   },
   {
     "name": "loop_svc_loops_json",

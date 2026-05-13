@@ -1,32 +1,53 @@
 import { invoke } from "./invoke";
-import type { IInvitationService } from "@agentsmesh/service-interface";
+import type { IInvitationConnectService } from "@agentsmesh/service-interface";
 
-export class ElectronInvitationService implements IInvitationService {
-  async list(): Promise<string> {
-    return invoke<string>("invitationList");
+export class ElectronInvitationConnectService implements IInvitationConnectService {
+  async listInvitationsConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationListInvitationsConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async list_pending(): Promise<string> {
-    return invoke<string>("invitationListPending");
+  async createInvitationConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationCreateInvitationConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async create(json: string): Promise<string> {
-    return invoke<string>("invitationCreate", json);
+  async revokeInvitationConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationRevokeInvitationConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async get_by_token(token: string): Promise<string> {
-    return invoke<string>("invitationGetByToken", token);
+  async resendInvitationConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationResendInvitationConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async accept(token: string): Promise<void> {
-    await invoke<void>("invitationAccept", token);
+  async acceptInvitationConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationAcceptInvitationConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async revoke(id: bigint): Promise<void> {
-    await invoke<void>("invitationRevoke", Number(id));
+  async listPendingInvitationsConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationListPendingInvitationsConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async resend(id: bigint): Promise<void> {
-    await invoke<void>("invitationResend", Number(id));
+  async getInvitationByTokenConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "invitationGetInvitationByTokenConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 }

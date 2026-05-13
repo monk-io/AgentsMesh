@@ -202,13 +202,13 @@ export declare class AppState {
   grantList(resourceType: string, resourceId: string): Promise<string>
   grantCreate(resourceType: string, resourceId: string, userId: number): Promise<string>
   grantRevoke(resourceType: string, resourceId: string, grantId: number): Promise<void>
-  invitationList(): Promise<string>
-  invitationCreate(json: string): Promise<string>
-  invitationRevoke(id: number): Promise<void>
-  invitationResend(id: number): Promise<void>
-  invitationGetByToken(token: string): Promise<string>
-  invitationAccept(token: string): Promise<void>
-  invitationListPending(): Promise<string>
+  invitationListInvitationsConnect(request: Array<number>): Promise<Array<number>>
+  invitationCreateInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationRevokeInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationResendInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationAcceptInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationListPendingInvitationsConnect(request: Array<number>): Promise<Array<number>>
+  invitationGetInvitationByTokenConnect(request: Array<number>): Promise<Array<number>>
   localRunnerBinaryPath(): Promise<string>
   localRunnerHostTarget(): Promise<string | null>
   localRunnerIsInstalled(): Promise<boolean>
