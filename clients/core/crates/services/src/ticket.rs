@@ -3,11 +3,12 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::ticket_state::TicketState;
+use agentsmesh_types::proto_ticket_v1 as ticket_proto;
 use agentsmesh_types::{
     Ticket, TicketStatus, TicketPriority, Label, BoardColumn,
-    CreateTicketRequest, UpdateTicketRequest, UpdateTicketStatusRequest,
-    CreateLabelRequest,
+    CreateTicketRequest, UpdateTicketRequest,
 };
+use prost::Message;
 
 use crate::parse_status;
 
@@ -120,96 +121,186 @@ impl TicketService {
     pub async fn fetch_tickets(
         &self, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
     ) -> Result<String, String> {
-        let resp = self.client
-            .list_tickets(status.as_deref(), limit, offset)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_tickets(resp.tickets.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
+        let req = ticket_proto::ListTicketsRequest {
+            org_slug: self.client.current_org_slug(),
+            repository_id: None,
+            status,
+            priority: None,
+            assignee_id: None,
+            labels: vec![],
+            query: None,
+            offset: offset.map(|v| v as i32),
+            limit: limit.map(|v| v as i32),
+        };
+        let resp = self.client.list_tickets_connect(&req).await.map_err(crate::wire)?;
+        let total = resp.total;
+        let resp_limit = resp.limit;
+        let resp_offset = resp.offset;
+        let tickets: Vec<Ticket> = resp.items.into_iter().map(crate::proto_convert::ticket::from_proto).collect();
+        self.state.write().unwrap().set_tickets(tickets.clone());
+        let envelope = serde_json::json!({
+            "tickets": tickets,
+            "total": total,
+            "limit": resp_limit,
+            "offset": resp_offset,
+        });
+        serde_json::to_string(&envelope).map_err(crate::wire)
     }
 
     pub async fn fetch_board(&self, repository_id: Option<i64>) -> Result<String, String> {
-        let resp = self.client
-            .get_ticket_board(repository_id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_board_columns(resp.columns.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
+        let req = ticket_proto::GetBoardRequest {
+            org_slug: self.client.current_org_slug(),
+            repository_id,
+            limit: None,
+            priority: None,
+            assignee_id: None,
+            query: None,
+        };
+        let resp = self.client.get_board_connect(&req).await.map_err(crate::wire)?;
+        let columns: Vec<BoardColumn> = resp.columns.into_iter().map(crate::proto_convert::ticket::board_column_from_proto).collect();
+        self.state.write().unwrap().set_board_columns(columns.clone());
+        let envelope = serde_json::json!({ "columns": columns });
+        serde_json::to_string(&envelope).map_err(crate::wire)
     }
 
     pub async fn load_more_column(
         &self, status: &str, offset: u32, limit: u32,
     ) -> Result<String, String> {
-        let resp = self.client
-            .list_tickets(Some(status), Some(limit), Some(offset))
-            .await.map_err(crate::wire)?;
+        let req = ticket_proto::ListTicketsRequest {
+            org_slug: self.client.current_org_slug(),
+            repository_id: None,
+            status: Some(status.to_string()),
+            priority: None,
+            assignee_id: None,
+            labels: vec![],
+            query: None,
+            offset: Some(offset as i32),
+            limit: Some(limit as i32),
+        };
+        let resp = self.client.list_tickets_connect(&req).await.map_err(crate::wire)?;
+        let total = resp.total;
+        let tickets: Vec<Ticket> = resp.items.into_iter().map(crate::proto_convert::ticket::from_proto).collect();
         let parsed = parse_status::<TicketStatus>(status);
-        self.state.write().unwrap().append_column_tickets(parsed, resp.tickets.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
+        self.state.write().unwrap().append_column_tickets(parsed, tickets.clone());
+        let envelope = serde_json::json!({
+            "tickets": tickets,
+            "total": total,
+        });
+        serde_json::to_string(&envelope).map_err(crate::wire)
     }
 
     pub async fn fetch_ticket(&self, slug: &str) -> Result<String, String> {
-        let ticket: Ticket = self.client
-            .get_ticket(slug)
-            .await.map_err(crate::wire)?;
+        let req = ticket_proto::GetTicketRequest {
+            org_slug: self.client.current_org_slug(),
+            ticket_slug: slug.to_string(),
+        };
+        let resp = self.client.get_ticket_connect(&req).await.map_err(crate::wire)?;
+        let ticket = crate::proto_convert::ticket::from_proto(resp);
         self.state.write().unwrap().set_current_ticket(Some(ticket.clone()));
         serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn create_ticket(&self, request_json: &str) -> Result<String, String> {
-        let req: CreateTicketRequest = serde_json::from_str(request_json)
+        let req_legacy: CreateTicketRequest = serde_json::from_str(request_json)
             .map_err(crate::wire)?;
-        let ticket: Ticket = self.client
-            .create_ticket(&req)
-            .await.map_err(crate::wire)?;
+        let req = ticket_proto::CreateTicketRequest {
+            org_slug: self.client.current_org_slug(),
+            title: req_legacy.title,
+            content: req_legacy.content,
+            status: None,
+            priority: req_legacy.priority.and_then(|p| serde_json::to_value(p).ok().and_then(|v| v.as_str().map(String::from))),
+            repository_id: req_legacy.repository_id,
+            assignee_ids: req_legacy.assignee_ids.unwrap_or_default(),
+            labels: req_legacy.labels.unwrap_or_default().into_iter().map(|id| id.to_string()).collect(),
+            parent_ticket_slug: req_legacy.parent_slug,
+            due_date: None,
+        };
+        let resp = self.client.create_ticket_connect(&req).await.map_err(crate::wire)?;
+        let ticket = crate::proto_convert::ticket::from_proto(resp);
         self.state.write().unwrap().add_ticket(ticket.clone());
         serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn update_ticket(&self, slug: &str, request_json: &str) -> Result<String, String> {
-        let req: UpdateTicketRequest = serde_json::from_str(request_json)
+        let req_legacy: UpdateTicketRequest = serde_json::from_str(request_json)
             .map_err(crate::wire)?;
-        let ticket: Ticket = self.client
-            .update_ticket(slug, &req)
-            .await.map_err(crate::wire)?;
+        let req = ticket_proto::UpdateTicketRequest {
+            org_slug: self.client.current_org_slug(),
+            ticket_slug: slug.to_string(),
+            title: req_legacy.title,
+            content: req_legacy.content,
+            status: None,
+            priority: req_legacy.priority.and_then(|p| serde_json::to_value(p).ok().and_then(|v| v.as_str().map(String::from))),
+            repository_id: req_legacy.repository_id,
+            assignee_ids: vec![],
+            labels: vec![],
+            due_date: None,
+        };
+        let resp = self.client.update_ticket_connect(&req).await.map_err(crate::wire)?;
+        let ticket = crate::proto_convert::ticket::from_proto(resp);
         self.state.write().unwrap().update_ticket(slug, ticket.clone());
         serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn delete_ticket(&self, slug: &str) -> Result<(), String> {
-        self.client.delete_ticket(slug).await.map_err(crate::wire)?;
+        let req = ticket_proto::DeleteTicketRequest {
+            org_slug: self.client.current_org_slug(),
+            ticket_slug: slug.to_string(),
+        };
+        self.client.delete_ticket_connect(&req).await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_ticket(slug);
         Ok(())
     }
 
     pub async fn update_ticket_status(&self, slug: &str, status: &str) -> Result<String, String> {
-        let parsed = parse_status::<TicketStatus>(status);
-        let req = UpdateTicketStatusRequest { status: parsed };
-        let ticket: Ticket = self.client
-            .update_ticket_status(slug, &req)
-            .await.map_err(crate::wire)?;
+        let req = ticket_proto::UpdateTicketStatusRequest {
+            org_slug: self.client.current_org_slug(),
+            ticket_slug: slug.to_string(),
+            status: status.to_string(),
+        };
+        self.client.update_ticket_status_connect(&req).await.map_err(crate::wire)?;
+        // proto.ticket.v1 UpdateTicketStatus returns an empty response; re-fetch
+        // the ticket so the legacy method contract (returns Ticket JSON) holds.
+        let get_req = ticket_proto::GetTicketRequest {
+            org_slug: self.client.current_org_slug(),
+            ticket_slug: slug.to_string(),
+        };
+        let ticket_proto_msg = self.client.get_ticket_connect(&get_req).await.map_err(crate::wire)?;
+        let ticket = crate::proto_convert::ticket::from_proto(ticket_proto_msg);
         self.state.write().unwrap().update_ticket(slug, ticket.clone());
         serde_json::to_string(&ticket).map_err(crate::wire)
     }
 
     pub async fn fetch_labels(&self, repository_id: Option<i64>) -> Result<String, String> {
-        let resp = self.client
-            .list_labels(repository_id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_labels(resp.labels.clone());
-        serde_json::to_string(&resp.labels).map_err(crate::wire)
+        let req = ticket_proto::ListLabelsRequest {
+            org_slug: self.client.current_org_slug(),
+            repository_id,
+        };
+        let resp = self.client.list_labels_connect(&req).await.map_err(crate::wire)?;
+        let labels: Vec<Label> = resp.items.into_iter().map(crate::proto_convert::ticket::label_from_proto).collect();
+        self.state.write().unwrap().set_labels(labels.clone());
+        serde_json::to_string(&labels).map_err(crate::wire)
     }
 
     pub async fn create_label(&self, name: &str, color: &str, repository_id: Option<i64>) -> Result<String, String> {
-        let req = CreateLabelRequest { name: name.to_string(), color: color.to_string() };
-        let _ = repository_id;
-        let label: Label = self.client
-            .create_label(&req)
-            .await.map_err(crate::wire)?;
+        let req = ticket_proto::CreateLabelRequest {
+            org_slug: self.client.current_org_slug(),
+            name: name.to_string(),
+            color: color.to_string(),
+            repository_id,
+        };
+        let resp = self.client.create_label_connect(&req).await.map_err(crate::wire)?;
+        let label = crate::proto_convert::ticket::label_from_proto(resp);
         self.state.write().unwrap().add_label(label.clone());
         serde_json::to_string(&label).map_err(crate::wire)
     }
 
     pub async fn delete_label(&self, id: f64) -> Result<(), String> {
-        self.client.delete_label(id as i64).await.map_err(crate::wire)?;
+        let req = ticket_proto::DeleteLabelRequest {
+            org_slug: self.client.current_org_slug(),
+            id: id as i64,
+        };
+        self.client.delete_label_connect(&req).await.map_err(crate::wire)?;
         self.state.write().unwrap().remove_label(id as i64);
         Ok(())
     }
@@ -217,6 +308,8 @@ impl TicketService {
     pub async fn get_ticket_pods(
         &self, slug: &str, active_only: Option<bool>,
     ) -> Result<String, String> {
+        // proto.ticket.v1 does not own ticket→pod lookup — that's MeshService
+        // (see mesh.go). Stay on REST until MeshService migrates.
         let resp = self.client
             .get_ticket_pods(slug, active_only)
             .await.map_err(crate::wire)?;
@@ -230,10 +323,14 @@ impl TicketService {
     }
 
     pub async fn get_sub_tickets(&self, slug: &str) -> Result<String, String> {
-        let resp = self.client
-            .get_sub_tickets(slug)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
+        let req = ticket_proto::GetSubTicketsRequest {
+            org_slug: self.client.current_org_slug(),
+            ticket_slug: slug.to_string(),
+        };
+        let resp = self.client.get_sub_tickets_connect(&req).await.map_err(crate::wire)?;
+        let tickets: Vec<Ticket> = resp.items.into_iter().map(crate::proto_convert::ticket::from_proto).collect();
+        let envelope = serde_json::json!({ "tickets": tickets });
+        serde_json::to_string(&envelope).map_err(crate::wire)
     }
 }
 
@@ -245,9 +342,6 @@ impl TicketService {
 // prost-encoded bytes — matching the wasm bridge's `Result<Vec<u8>, String>`
 // surface. Caller (TS) encodes via @bufbuild/protobuf .toBinary() and
 // decodes via .fromBinary().
-
-use agentsmesh_types::proto_ticket_v1 as ticket_proto;
-use prost::Message;
 
 impl TicketService {
     pub async fn list_tickets_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
