@@ -1,5 +1,18 @@
 import type { MessageContent, MessageMentions } from "./channel-message-types";
 import { getChannelService } from "@/lib/wasm-core";
+import { readCurrentOrg } from "@/stores/auth";
+import {
+  updateChannel as updateChannelConnect,
+  archiveChannel as archiveChannelConnect,
+  unarchiveChannel as unarchiveChannelConnect,
+  searchChannelMessages as searchChannelMessagesConnect,
+  listChannelPods as listChannelPodsConnect,
+  joinChannelPod as joinChannelPodConnect,
+  leaveChannelPod as leaveChannelPodConnect,
+  inviteChannelMembers as inviteChannelMembersConnect,
+  removeChannelMember as removeChannelMemberConnect,
+  listChannelMembers as listChannelMembersConnect,
+} from "./channelConnect";
 
 export type { MessageContent, MessageMentions } from "./channel-message-types";
 export type { InlineElement, Block } from "./channel-message-types";
@@ -52,63 +65,67 @@ export interface ChannelMessage {
   };
 }
 
-// All channel operations route through Rust (WASM SSOT).
-// list/get/create/getMessages/sendMessage are consumed directly by stores (channelStore/channelMessageStore)
-// via svc().xxx — they are not re-exported here to avoid duplicate wrappers.
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
+
+// channelApi: thin wrappers around channelConnect that also patch Rust SSOT so
+// hooks reading `channel_*_json` selectors observe fresh data. list/get/create
+// + message fetch live directly in stores (channelStore / channelMessageStore).
 export const channelApi = {
   update: async (id: number, data: { name?: string; description?: string; document?: string }) => {
-    const json = await getChannelService().update_channel(BigInt(id), JSON.stringify(data));
-    return { channel: JSON.parse(json) as ChannelData };
+    const channel = await updateChannelConnect(orgSlug(), id, data);
+    getChannelService().update_channel_local(BigInt(id), JSON.stringify(channel));
+    return { channel };
   },
 
   archive: async (id: number) => {
-    await getChannelService().archive_channel(BigInt(id));
+    await archiveChannelConnect(orgSlug(), id);
     return { message: "ok" };
   },
 
   unarchive: async (id: number) => {
-    await getChannelService().unarchive_channel(BigInt(id));
+    await unarchiveChannelConnect(orgSlug(), id);
     return { message: "ok" };
   },
 
   searchMessages: async (id: number, q: string, limit = 20) => {
-    const json = await getChannelService().search_channel_messages(BigInt(id), q, limit);
-    return JSON.parse(json) as { messages: ChannelMessage[] };
+    const messages = await searchChannelMessagesConnect(orgSlug(), id, q, limit);
+    return { messages };
   },
 
   getPods: async (id: number) => {
-    const json = await getChannelService().get_channel_pods(BigInt(id));
-    return JSON.parse(json) as {
-      pods: Array<{ id: number; pod_key: string; alias?: string; status: string; agent_status: string }>;
-      total: number;
-    };
+    const { pods, total } = await listChannelPodsConnect(orgSlug(), id);
+    // Fan out to Rust SSOT so useChannelPods (reads channel_pods_json) sees it.
+    getChannelService().set_channel_pods_local(BigInt(id), JSON.stringify(pods));
+    return { pods, total };
   },
 
   joinPod: async (id: number, podKey: string) => {
-    await getChannelService().join_channel(BigInt(id), podKey);
+    await joinChannelPodConnect(orgSlug(), id, podKey);
     return { message: "ok" };
   },
 
   leavePod: async (id: number, podKey: string) => {
-    await getChannelService().leave_channel(BigInt(id), podKey);
+    await leaveChannelPodConnect(orgSlug(), id, podKey);
     return { message: "ok" };
   },
 
   inviteMembers: async (id: number, userIds: number[]) => {
-    await getChannelService().invite_channel_members(BigInt(id), JSON.stringify(userIds));
+    await inviteChannelMembersConnect(orgSlug(), id, userIds);
     return { message: "ok" };
   },
 
   removeMember: async (id: number, userId: number) => {
-    await getChannelService().remove_channel_member(BigInt(id), BigInt(userId));
+    await removeChannelMemberConnect(orgSlug(), id, userId);
+    // Mirror Rust wasm path: remove from cached members so selector re-reads it gone.
+    getChannelService().remove_channel_member_local(BigInt(id), BigInt(userId));
     return { message: "ok" };
   },
 
   listMembers: async (id: number) => {
-    const json = await getChannelService().fetch_channel_members(BigInt(id));
-    return JSON.parse(json) as {
-      members: Array<{ channel_id: number; user_id: number; role: string; is_muted: boolean; joined_at: string }>;
-      total: number;
-    };
+    const { members, total } = await listChannelMembersConnect(orgSlug(), id);
+    getChannelService().set_channel_members_local(BigInt(id), JSON.stringify(members));
+    return { members, total };
   },
 };
