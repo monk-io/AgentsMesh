@@ -811,6 +811,17 @@ vi.mock('@/lib/wasm-core', () => {
       get_pending_bindings: fn().mockResolvedValue('{"bindings":[]}'),
       get_bound_pods: fn().mockResolvedValue('{"pods":[]}'),
       check_binding: fn().mockResolvedValue('{}'),
+      // Connect-RPC (binary wire) — return empty Uint8Array for tests
+      requestBindingConnect: fn().mockResolvedValue(new Uint8Array()),
+      acceptBindingConnect: fn().mockResolvedValue(new Uint8Array()),
+      rejectBindingConnect: fn().mockResolvedValue(new Uint8Array()),
+      unbindConnect: fn().mockResolvedValue(new Uint8Array()),
+      requestScopesConnect: fn().mockResolvedValue(new Uint8Array()),
+      approveScopesConnect: fn().mockResolvedValue(new Uint8Array()),
+      listBindingsConnect: fn().mockResolvedValue(new Uint8Array()),
+      getPendingBindingsConnect: fn().mockResolvedValue(new Uint8Array()),
+      getBoundPodsConnect: fn().mockResolvedValue(new Uint8Array()),
+      checkBindingConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getMessageService: fn(() => ({
       send_message: fn().mockResolvedValue('{}'),
