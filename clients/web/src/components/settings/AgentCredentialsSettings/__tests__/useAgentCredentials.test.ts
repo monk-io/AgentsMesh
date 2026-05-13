@@ -1,12 +1,32 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getUserCredentialService, getAgentService } from "@/lib/wasm-core";
+import { getUserCredentialService } from "@/lib/wasm-core";
+import * as agentConnect from "@/lib/api/agentConnect";
 
 const mockListCredentials = vi.fn();
-const mockListAgents = vi.fn();
-const mockGetConfigSchema = vi.fn();
 const mockCreateCredential = vi.fn();
 const mockUpdateCredential = vi.fn();
+
+const stable = vi.hoisted(() => ({
+  org: { id: 1, name: "TestOrg", slug: "test-org" },
+  user: { id: 1, email: "u@e.com", username: "u" },
+}));
+
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stable.org,
+  useCurrentUser: () => stable.user,
+  useAuthOrganizations: () => [],
+  useAuthStore: () => ({ currentOrg: stable.org }),
+  useIsAuthenticated: () => true,
+  readCurrentUser: () => stable.user,
+  readCurrentOrg: () => stable.org,
+  readOrganizations: () => [],
+}));
+
+vi.mock("@/lib/api/agentConnect", () => ({
+  listAgents: vi.fn(),
+  getAgentConfigSchema: vi.fn(),
+}));
 
 import { useAgentCredentials } from "../useAgentCredentials";
 import type { CredentialFormData } from "../types";
@@ -17,8 +37,13 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockListCredentials.mockResolvedValue(JSON.stringify({ items: [] }));
-    mockListAgents.mockResolvedValue(JSON.stringify({ agents: [{ name: "Claude", slug: "claude-code" }] }));
-    mockGetConfigSchema.mockResolvedValue(JSON.stringify({
+    vi.mocked(agentConnect.listAgents).mockResolvedValue({
+      items: [{ name: "Claude", slug: "claude-code", description: "", is_active: true, sort_order: 0, supports_acp: false, supports_pty: true, supports_built_in_mcp: false }],
+      total: 1,
+      limit: 0,
+      offset: 0,
+    });
+    vi.mocked(agentConnect.getAgentConfigSchema).mockResolvedValue({
       schema: {
         fields: [],
         credential_fields: [
@@ -27,20 +52,14 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
           { name: "ANTHROPIC_BASE_URL", type: "text", optional: true },
         ],
       },
-    }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
 
     vi.mocked(getUserCredentialService).mockReturnValue({
       ...getUserCredentialService(),
       list_agent_credentials: mockListCredentials,
       create_agent_credential: mockCreateCredential,
       update_agent_credential: mockUpdateCredential,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
-
-    vi.mocked(getAgentService).mockReturnValue({
-      ...getAgentService(),
-      list_agents: mockListAgents,
-      get_config_schema: mockGetConfigSchema,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
   });
