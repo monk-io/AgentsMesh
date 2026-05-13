@@ -253,9 +253,6 @@ go_test(
         "runners_upgrade_test.go",
         "token_usage_test.go",
         "users_basic_test.go",
-        "users_identity_test.go",
-        "users_password_test.go",
-        "users_search_test.go",
     ],
     embed = [":rest"],
     deps = [

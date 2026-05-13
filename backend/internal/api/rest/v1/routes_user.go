@@ -17,13 +17,10 @@ func RegisterUserRoutes(rg *gin.RouterGroup, userSvc *user.Service, orgSvc *orga
 	userHandler := NewUserHandler(userSvc, orgSvc)
 	agentHandler := NewAgentHandler(agentSvc, credentialSvc, userConfigSvc)
 
-	// Profile routes
+	// REST surface kept for AuthManager (Rust) + iOS ffi consumers only.
+	// Profile mutation / identities / search migrated to proto.user.v1.UserService.
 	rg.GET("/me", userHandler.GetCurrentUser)
-	rg.PUT("/me", userHandler.UpdateCurrentUser)
-	rg.POST("/me/password", userHandler.ChangePassword)
 	rg.GET("/me/organizations", userHandler.ListUserOrganizations)
-	rg.GET("/me/identities", userHandler.ListIdentities)
-	rg.DELETE("/me/identities/:provider", userHandler.DeleteIdentity)
 
 	// User agent configs (personal runtime configuration)
 	rg.GET("/me/agent-configs", agentHandler.ListUserAgentConfigs)
@@ -63,9 +60,6 @@ func RegisterUserRoutes(rg *gin.RouterGroup, userSvc *user.Service, orgSvc *orga
 	// User Agent Credential Profiles (for agent API credentials)
 	agentCredentialHandler := NewUserAgentCredentialHandler(credentialSvc)
 	agentCredentialHandler.RegisterRoutes(rg)
-
-	// User search
-	rg.GET("/search", userHandler.SearchUsers)
 }
 
 // RegisterOrganizationRoutes registers organization routes.
