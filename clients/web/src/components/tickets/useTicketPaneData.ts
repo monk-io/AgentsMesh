@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getTicketService } from "@/lib/wasm-core";
+import { getTicket as getTicketConnect } from "@/lib/api/ticketConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import { useTicketStore, useTickets, Ticket, TicketStatus } from "@/stores/ticket";
 
 export function useTicketPaneData(slug: string) {
+  const orgSlug = useCurrentOrg()?.slug || "";
   const updateTicket = useTicketStore((s) => s.updateTicket);
   const updateTicketStatus = useTicketStore((s) => s.updateTicketStatus);
   const tickets = useTickets();
@@ -25,15 +27,15 @@ export function useTicketPaneData(slug: string) {
       setLoading(true);
       setError(null);
       try {
-        const data = JSON.parse(await getTicketService().fetch_ticket(slug));
-        setTicket(data);
+        const data = await getTicketConnect(orgSlug, slug);
+        setTicket(data as Ticket);
       } catch (err: unknown) {
         console.error("Failed to load ticket:", err);
         setError(err instanceof Error ? err.message : "Failed to load ticket");
       } finally { setLoading(false); }
     };
     loadTicket();
-  }, [slug, tickets]);
+  }, [slug, tickets, orgSlug]);
 
   const handleStatusChange = useCallback(async (newStatus: TicketStatus) => {
     if (!ticket) return;

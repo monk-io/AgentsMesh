@@ -14,7 +14,7 @@ import {
   ResponsiveDialogFooter,
 } from "@/components/ui/responsive-dialog";
 import { TicketPriority } from "@/lib/api/ticketTypes";
-import { getTicketService } from "@/lib/wasm-core";
+import { createTicket as createTicketConnect } from "@/lib/api/ticketConnect";
 import type { OrganizationMember } from "@/lib/api/organizationTypes";
 import { listMembers } from "@/lib/api/org";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
@@ -113,14 +113,14 @@ export function TicketCreateDialog({
     setError(null);
 
     try {
-      const response = JSON.parse(await getTicketService().create_ticket(JSON.stringify({
+      const response = await createTicketConnect(currentOrg?.slug || "", {
         repository_id: form.repositoryId,
         title: form.title.trim(),
         content: form.content || undefined,
         priority: form.priority,
         parent_ticket_slug: parentTicketSlug,
         assignee_ids: form.assigneeIds.length > 0 ? form.assigneeIds : undefined,
-      })));
+      });
 
       onCreated?.(response.id, response.slug);
       handleClose();

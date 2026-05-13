@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPodService, getTicketService } from "@/lib/wasm-core";
+import { getPodService } from "@/lib/wasm-core";
+import { listTickets } from "@/lib/api/ticketConnect";
 import { listRepositories } from "@/lib/api/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import type { SearchResults, PodSearchResult, TicketSearchResult, RepositorySearchResult } from "./types";
@@ -30,9 +31,12 @@ export function useCommandPaletteSearch(search: string): SearchResults {
         const reposPromise = currentOrg
           ? listRepositories(currentOrg.slug).catch(() => ({ items: [] }))
           : Promise.resolve({ items: [] });
+        const ticketsPromise = currentOrg
+          ? listTickets(currentOrg.slug, { limit: 500 }).then((r) => ({ tickets: r.items })).catch(() => ({ tickets: [] }))
+          : Promise.resolve({ tickets: [] });
         const [podsRes, ticketsRes, reposRes] = await Promise.all([
           getPodService().fetch_pods(null, null, null, null, null).then((j: string) => JSON.parse(j)).catch(() => ({ pods: [] })),
-          getTicketService().fetch_tickets(undefined, 500, undefined).then((j: string) => JSON.parse(j)).catch(() => ({ tickets: [] })),
+          ticketsPromise,
           reposPromise,
         ]);
 
