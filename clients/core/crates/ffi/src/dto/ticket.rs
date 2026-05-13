@@ -1,4 +1,4 @@
-use agentsmesh_types::{BoardColumn, BoardResponse, Label, LabelListResponse, Ticket, TicketListResponse, TicketPriority, TicketStatus};
+use agentsmesh_types::{BoardColumn, Label, Ticket, TicketPriority, TicketStatus};
 
 // ── Enums ─────────────────────────────────────────────────
 
@@ -113,17 +113,6 @@ pub struct TicketListResponseDto {
     pub offset: Option<i64>,
 }
 
-impl From<TicketListResponse> for TicketListResponseDto {
-    fn from(r: TicketListResponse) -> Self {
-        Self {
-            tickets: r.tickets.into_iter().map(TicketDto::from).collect(),
-            total: r.total,
-            limit: r.limit,
-            offset: r.offset,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct BoardColumnDto {
     pub status: TicketStatusDto,
@@ -148,17 +137,6 @@ pub struct BoardResponseDto {
     pub priority_counts_json: Option<String>,
 }
 
-impl From<BoardResponse> for BoardResponseDto {
-    fn from(r: BoardResponse) -> Self {
-        Self {
-            columns: r.columns.into_iter().map(BoardColumnDto::from).collect(),
-            priority_counts_json: r
-                .priority_counts
-                .and_then(|v| serde_json::to_string(&v).ok()),
-        }
-    }
-}
-
 // ── Label ─────────────────────────────────────────────────
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -181,14 +159,6 @@ impl From<Label> for LabelDto {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct LabelListResponseDto {
     pub labels: Vec<LabelDto>,
-}
-
-impl From<LabelListResponse> for LabelListResponseDto {
-    fn from(r: LabelListResponse) -> Self {
-        Self {
-            labels: r.labels.into_iter().map(LabelDto::from).collect(),
-        }
-    }
 }
 
 // ── Request DTOs ──────────────────────────────────────────

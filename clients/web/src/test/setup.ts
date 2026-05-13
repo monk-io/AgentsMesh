@@ -543,19 +543,28 @@ vi.mock('@/lib/wasm-core', () => {
     // Current ticket
     current_ticket_json: fn(() => h.ticket.current || undefined),
     set_current_ticket: fn((j: string) => { h.ticket.current = j }),
-    // Service async methods
-    fetch_tickets: fn().mockResolvedValue(JSON.stringify({ tickets: [], total: 0 })),
-    fetch_ticket: fn().mockResolvedValue('{}'),
-    create_ticket: fn().mockResolvedValue('{}'),
-    update_ticket_api: fn().mockResolvedValue('{}'),
-    delete_ticket: fn().mockResolvedValue(undefined),
-    update_status: fn().mockResolvedValue(undefined),
-    fetch_board: fn().mockResolvedValue(JSON.stringify({ board: { columns: [], priority_counts: {} } })),
-    fetch_labels: fn().mockResolvedValue(JSON.stringify({ labels: [] })),
-    get_sub_tickets: fn().mockResolvedValue(JSON.stringify({ sub_tickets: [] })),
-    get_pods: fn().mockResolvedValue(JSON.stringify({ pods: [] })),
+    // REST-only (MeshService owns ticket→pod lookup)
     get_ticket_pods: fn().mockResolvedValue(JSON.stringify({ pods: [] })),
     ticket_pods_json: fn(() => '[]'),
+    // Connect-RPC binary wire — every adapter call resolves to an empty
+    // Uint8Array (decodes to the proto default = empty list / no-op).
+    list_tickets_connect: fn().mockResolvedValue(new Uint8Array()),
+    get_ticket_connect: fn().mockResolvedValue(new Uint8Array()),
+    create_ticket_connect: fn().mockResolvedValue(new Uint8Array()),
+    update_ticket_connect: fn().mockResolvedValue(new Uint8Array()),
+    delete_ticket_connect: fn().mockResolvedValue(new Uint8Array()),
+    update_ticket_status_connect: fn().mockResolvedValue(new Uint8Array()),
+    get_active_tickets_connect: fn().mockResolvedValue(new Uint8Array()),
+    get_board_connect: fn().mockResolvedValue(new Uint8Array()),
+    get_sub_tickets_connect: fn().mockResolvedValue(new Uint8Array()),
+    add_assignee_connect: fn().mockResolvedValue(new Uint8Array()),
+    remove_assignee_connect: fn().mockResolvedValue(new Uint8Array()),
+    list_labels_connect: fn().mockResolvedValue(new Uint8Array()),
+    create_label_connect: fn().mockResolvedValue(new Uint8Array()),
+    update_label_connect: fn().mockResolvedValue(new Uint8Array()),
+    delete_label_connect: fn().mockResolvedValue(new Uint8Array()),
+    add_label_connect: fn().mockResolvedValue(new Uint8Array()),
+    remove_label_connect: fn().mockResolvedValue(new Uint8Array()),
   }
 
   // --- Mesh state ---
