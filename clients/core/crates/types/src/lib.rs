@@ -10,6 +10,7 @@ mod autopilot_proto;
 mod billing;
 mod billing_proto;
 mod binding;
+mod binding_proto;
 mod blockstore;
 mod blockstore_proto;
 mod channel;
@@ -71,6 +72,14 @@ pub mod proto_billing_v1 {
     pub use super::billing_proto::*;
 }
 pub use binding::*;
+
+/// Connect-RPC binary-wire DTOs for `proto.binding.v1`. Re-exported as a
+/// distinct module so the legacy serde `Binding` (REST path) and the prost
+/// `PodBinding` (Connect path) coexist during the dual-track migration
+/// window without name collisions.
+pub mod proto_binding_v1 {
+    pub use super::binding_proto::*;
+}
 pub use blockstore::*;
 
 /// Connect-RPC binary-wire DTOs for `proto.blockstore.v1`. Re-exported as a
