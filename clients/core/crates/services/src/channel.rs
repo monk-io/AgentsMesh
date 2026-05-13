@@ -6,7 +6,8 @@ use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::channel_state::ChannelState;
 use agentsmesh_types::proto_channel_v1 as channel_proto;
 use agentsmesh_types::{
-    Channel, ChannelMessage, EditChannelMessageRequest, SendChannelMessageRequest,
+    Channel, ChannelMember, ChannelMessage, EditChannelMessageRequest, Pod,
+    SendChannelMessageRequest,
 };
 
 use crate::channel_proto_convert::{
@@ -130,6 +131,22 @@ impl ChannelService {
 
     pub fn remove_channel_local(&self, id: i64) {
         self.state.write().unwrap().remove_channel(id);
+    }
+
+    pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
+        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(json) {
+            self.state.write().unwrap().set_channel_pods(channel_id, pods);
+        }
+    }
+
+    pub fn set_channel_members_local(&self, channel_id: i64, json: &str) {
+        if let Ok(members) = serde_json::from_str::<Vec<ChannelMember>>(json) {
+            self.state.write().unwrap().set_channel_members(channel_id, members);
+        }
+    }
+
+    pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {
+        self.state.write().unwrap().remove_channel_member(channel_id, user_id);
     }
 
     pub fn set_current_user(&self, user_json: &str) {

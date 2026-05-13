@@ -77,6 +77,18 @@ impl WasmChannelService {
 
     pub fn remove_channel_local(&self, id: i64) { self.0.remove_channel_local(id); }
 
+    pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
+        self.0.set_channel_pods_local(channel_id, json);
+    }
+
+    pub fn set_channel_members_local(&self, channel_id: i64, json: &str) {
+        self.0.set_channel_members_local(channel_id, json);
+    }
+
+    pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {
+        self.0.remove_channel_member_local(channel_id, user_id);
+    }
+
     pub fn set_current_user(&self, user_json: &str) { self.0.set_current_user(user_json); }
     pub fn set_current_user_id(&self, user_id: Option<i64>) { self.0.set_current_user_id(user_id); }
 
