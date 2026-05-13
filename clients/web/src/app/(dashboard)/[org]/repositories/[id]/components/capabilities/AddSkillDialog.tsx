@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { SkillMarketItem } from "@/lib/api";
-import { getExtensionService } from "@/lib/wasm-core";
+import { extensionApi } from "@/lib/api/extension";
 import { listMarketSkills } from "@/lib/api/marketExtension";
 import { installSkillFromMarket, installSkillFromGitHub } from "@/lib/api/repoSkillExtension";
 import { useCurrentOrg } from "@/stores/auth";
@@ -113,11 +113,8 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
       if (!file) return;
       setInstalling(true);
       try {
-        const bytes = new Uint8Array(await file.arrayBuffer());
         // Multipart upload stays REST (Connect doesn't handle multipart/form-data).
-        await getExtensionService().install_skill_from_upload(
-          BigInt(repositoryId), bytes, file.name, scope,
-        );
+        await extensionApi.installSkillFromUpload(repositoryId, file, scope);
         toast.success(t("extensions.installed"));
         onInstalled();
       } catch (error) {
