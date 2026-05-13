@@ -3325,157 +3325,191 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "()"
   },
   {
-    "name": "ticket_fetch_tickets",
+    "name": "ticket_list_tickets_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "status",
-        "type": "Option<String>"
-      },
-      {
-        "name": "limit",
-        "type": "Option<u32>"
-      },
-      {
-        "name": "offset",
-        "type": "Option<u32>"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_fetch_board",
+    "name": "ticket_get_ticket_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "repository_id",
-        "type": "Option<i64>"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_load_more_column",
+    "name": "ticket_create_ticket_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "status",
-        "type": "String"
-      },
-      {
-        "name": "offset",
-        "type": "u32"
-      },
-      {
-        "name": "limit",
-        "type": "u32"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_fetch_ticket",
+    "name": "ticket_update_ticket_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_create_ticket",
+    "name": "ticket_delete_ticket_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "request_json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_update_ticket",
+    "name": "ticket_update_ticket_status_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "request_json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_delete_ticket",
+    "name": "ticket_get_active_tickets_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_update_ticket_status",
+    "name": "ticket_get_board_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "status",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_fetch_labels",
+    "name": "ticket_get_sub_tickets_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "repository_id",
-        "type": "Option<i64>"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_create_label",
+    "name": "ticket_add_assignee_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "name",
-        "type": "String"
-      },
-      {
-        "name": "color",
-        "type": "String"
-      },
-      {
-        "name": "repository_id",
-        "type": "Option<i64>"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_delete_label",
+    "name": "ticket_remove_assignee_connect",
     "group": "ticket_api",
     "params": [
       {
-        "name": "id",
-        "type": "f64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "ticket_list_labels_connect",
+    "group": "ticket_api",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "ticket_create_label_connect",
+    "group": "ticket_api",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "ticket_update_label_connect",
+    "group": "ticket_api",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "ticket_delete_label_connect",
+    "group": "ticket_api",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "ticket_add_label_connect",
+    "group": "ticket_api",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "ticket_remove_label_connect",
+    "group": "ticket_api",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
   },
   {
     "name": "ticket_get_ticket_pods",
@@ -3488,17 +3522,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       {
         "name": "active_only",
         "type": "Option<bool>"
-      }
-    ],
-    "returnType": "String"
-  },
-  {
-    "name": "ticket_get_sub_tickets",
-    "group": "ticket_api",
-    "params": [
-      {
-        "name": "slug",
-        "type": "String"
       }
     ],
     "returnType": "String"

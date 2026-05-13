@@ -4,75 +4,113 @@ use crate::{AppState, err};
 #[napi]
 impl AppState {
     #[napi]
-    pub async fn ticket_fetch_tickets(&self, status: Option<String>, limit: Option<u32>, offset: Option<u32>) -> napi::Result<String> {
+    pub async fn ticket_list_tickets_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.fetch_tickets(status, limit, offset).await.map_err(err)
+        svc.list_tickets_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_fetch_board(&self, repository_id: Option<i64>) -> napi::Result<String> {
+    pub async fn ticket_get_ticket_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.fetch_board(repository_id).await.map_err(err)
+        svc.get_ticket_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_load_more_column(&self, status: String, offset: u32, limit: u32) -> napi::Result<String> {
+    pub async fn ticket_create_ticket_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.load_more_column(&status, offset, limit).await.map_err(err)
+        svc.create_ticket_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_fetch_ticket(&self, slug: String) -> napi::Result<String> {
+    pub async fn ticket_update_ticket_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.fetch_ticket(&slug).await.map_err(err)
+        svc.update_ticket_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_create_ticket(&self, request_json: String) -> napi::Result<String> {
+    pub async fn ticket_delete_ticket_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.create_ticket(&request_json).await.map_err(err)
+        svc.delete_ticket_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_update_ticket(&self, slug: String, request_json: String) -> napi::Result<String> {
+    pub async fn ticket_update_ticket_status_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.update_ticket(&slug, &request_json).await.map_err(err)
+        svc.update_ticket_status_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_delete_ticket(&self, slug: String) -> napi::Result<()> {
+    pub async fn ticket_get_active_tickets_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.delete_ticket(&slug).await.map_err(err)
+        svc.get_active_tickets_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_update_ticket_status(&self, slug: String, status: String) -> napi::Result<String> {
+    pub async fn ticket_get_board_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.update_ticket_status(&slug, &status).await.map_err(err)
+        svc.get_board_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_fetch_labels(&self, repository_id: Option<i64>) -> napi::Result<String> {
+    pub async fn ticket_get_sub_tickets_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.fetch_labels(repository_id).await.map_err(err)
+        svc.get_sub_tickets_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_create_label(&self, name: String, color: String, repository_id: Option<i64>) -> napi::Result<String> {
+    pub async fn ticket_add_assignee_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.create_label(&name, &color, repository_id).await.map_err(err)
+        svc.add_assignee_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn ticket_delete_label(&self, id: f64) -> napi::Result<()> {
+    pub async fn ticket_remove_assignee_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.ticket.lock().await;
-            svc.delete_label(id).await.map_err(err)
+        svc.remove_assignee_connect(&request).await.map_err(err)
     }
 
+    #[napi]
+    pub async fn ticket_list_labels_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.ticket.lock().await;
+        svc.list_labels_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
+    pub async fn ticket_create_label_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.ticket.lock().await;
+        svc.create_label_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
+    pub async fn ticket_update_label_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.ticket.lock().await;
+        svc.update_label_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
+    pub async fn ticket_delete_label_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.ticket.lock().await;
+        svc.delete_label_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
+    pub async fn ticket_add_label_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.ticket.lock().await;
+        svc.add_label_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
+    pub async fn ticket_remove_label_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.ticket.lock().await;
+        svc.remove_label_connect(&request).await.map_err(err)
+    }
+
+    // REST-only: proto.ticket.v1 does not own ticket→pod lookup
+    // (that's MeshService). Stays JSON until MeshService migrates.
     #[napi]
     pub async fn ticket_get_ticket_pods(&self, slug: String, active_only: Option<bool>) -> napi::Result<String> {
         let svc = self.ticket.lock().await;
-            svc.get_ticket_pods(&slug, active_only).await.map_err(err)
+        svc.get_ticket_pods(&slug, active_only).await.map_err(err)
     }
 
     #[napi]
@@ -80,11 +118,4 @@ impl AppState {
         let svc = self.ticket.lock().await;
         Ok(svc.ticket_pods_json(&slug))
     }
-
-    #[napi]
-    pub async fn ticket_get_sub_tickets(&self, slug: String) -> napi::Result<String> {
-        let svc = self.ticket.lock().await;
-            svc.get_sub_tickets(&slug).await.map_err(err)
-    }
-
 }

@@ -356,20 +356,25 @@ export declare class AppState {
   ticketSetLabels(json: string): Promise<void>
   ticketAddLabel(json: string): Promise<void>
   ticketRemoveLabel(id: number): Promise<void>
-  ticketFetchTickets(status?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  ticketFetchBoard(repositoryId?: number | undefined | null): Promise<string>
-  ticketLoadMoreColumn(status: string, offset: number, limit: number): Promise<string>
-  ticketFetchTicket(slug: string): Promise<string>
-  ticketCreateTicket(requestJson: string): Promise<string>
-  ticketUpdateTicket(slug: string, requestJson: string): Promise<string>
-  ticketDeleteTicket(slug: string): Promise<void>
-  ticketUpdateTicketStatus(slug: string, status: string): Promise<string>
-  ticketFetchLabels(repositoryId?: number | undefined | null): Promise<string>
-  ticketCreateLabel(name: string, color: string, repositoryId?: number | undefined | null): Promise<string>
-  ticketDeleteLabel(id: number): Promise<void>
+  ticketListTicketsConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketCreateTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketUpdateTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketDeleteTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketUpdateTicketStatusConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetActiveTicketsConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetBoardConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetSubTicketsConnect(request: Array<number>): Promise<Array<number>>
+  ticketAddAssigneeConnect(request: Array<number>): Promise<Array<number>>
+  ticketRemoveAssigneeConnect(request: Array<number>): Promise<Array<number>>
+  ticketListLabelsConnect(request: Array<number>): Promise<Array<number>>
+  ticketCreateLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketUpdateLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketDeleteLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketAddLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketRemoveLabelConnect(request: Array<number>): Promise<Array<number>>
   ticketGetTicketPods(slug: string, activeOnly?: boolean | undefined | null): Promise<string>
   ticketTicketPodsJson(slug: string): Promise<string>
-  ticketGetSubTickets(slug: string): Promise<string>
   ticketRelationsListRelationsConnect(request: Array<number>): Promise<Array<number>>
   ticketRelationsCreateRelationConnect(request: Array<number>): Promise<Array<number>>
   ticketRelationsDeleteRelationConnect(request: Array<number>): Promise<Array<number>>

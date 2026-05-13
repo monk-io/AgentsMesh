@@ -638,25 +638,15 @@ export interface ITicketRelationsService {
 }
 
 export interface ITicketService {
+  // Local state mutators (in-memory cache) — wasm/electron both back these.
   add_label(json: string): void;
   add_ticket(json: string): void;
   append_column_tickets(status: string, json: string): void;
   board_columns_json(): string;
-  create_label(name: string, color: string, repository_id?: bigint | null): Promise<string>;
-  create_ticket(request_json: string): Promise<string>;
   current_ticket_json(): any;
-  delete_label(id: number): Promise<void>;
-  delete_ticket(slug: string): Promise<void>;
-  fetch_board(repository_id?: bigint | null): Promise<string>;
-  fetch_labels(repository_id?: bigint | null): Promise<string>;
-  fetch_ticket(slug: string): Promise<string>;
-  fetch_tickets(status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   filter_tickets_json(search: string, statuses_json: string, priorities_json: string, repository_ids_json: string): string;
-  get_sub_tickets(slug: string): Promise<string>;
   get_ticket_by_slug_json(slug: string): any;
-  get_ticket_pods(slug: string, active_only?: boolean | null): Promise<string>;
   labels_json(): string;
-  load_more_column(status: string, offset: number, limit: number): Promise<string>;
   remove_label(id: number): void;
   remove_ticket(slug: string): void;
   set_board_columns(json: string): void;
@@ -664,10 +654,31 @@ export interface ITicketService {
   set_labels(json: string): void;
   set_tickets(json: string): void;
   tickets_json(): string;
-  update_ticket(slug: string, request_json: string): Promise<string>;
   update_ticket_local(slug: string, json: string): void;
-  update_ticket_status(slug: string, status: string): Promise<string>;
   update_ticket_status_local(slug: string, status: string): void;
+  // REST-only (proto.ticket.v1 doesn't own ticket→pod lookup — MeshService does).
+  get_ticket_pods(slug: string, active_only?: boolean | null): Promise<string>;
+  ticket_pods_json(slug: string): string;
+  // Connect-RPC binary wire — each method takes prost-encoded request bytes
+  // and returns prost-encoded response bytes. Encoders / decoders live in
+  // clients/web/src/lib/api/ticketConnect.ts.
+  list_tickets_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_ticket_status_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_active_tickets_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_board_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_sub_tickets_connect(request: Uint8Array): Promise<Uint8Array>;
+  add_assignee_connect(request: Uint8Array): Promise<Uint8Array>;
+  remove_assignee_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_labels_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  add_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  remove_label_connect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ITicketState {
