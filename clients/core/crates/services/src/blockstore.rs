@@ -2,8 +2,9 @@ use std::sync::{Arc, RwLock};
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::blockstore_state::BlockstoreState;
+use agentsmesh_types::proto_blockstore_v1 as blockstore_proto;
 use agentsmesh_types::{
-    ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, OpEnvelope, OpKind,
+    ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, OpEnvelope, OpKind,
     SearchHit, SemanticSearchRequest, Workspace,
 };
 use serde_json::Value;
@@ -20,13 +21,27 @@ impl BlockstoreService {
 
     pub(crate) fn client(&self) -> &ApiClient { &self.client }
 
+    fn org_slug(&self) -> String { self.client.current_org_slug() }
+
     // ── Mutations ──
 
     pub async fn apply_ops(&self, req_json: &str) -> Result<String, String> {
         let req: ApplyOpsRequest = serde_json::from_str(req_json)
             .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
-        let res: ApplyOpsResult = self.client.blocks_apply_ops(&req).await
+        let proto_req = blockstore_proto::ApplyOpsRequest {
+            org_slug: self.org_slug(),
+            workspace_id: req.workspace_id.clone(),
+            ops: req.ops.iter().map(op_envelope_to_proto).collect(),
+            idempotency_key: req.idempotency_key.clone(),
+            parent_op_id: req.parent_op_id,
+        };
+        let resp = self.client.blockstore_apply_ops_connect(&proto_req).await
             .map_err(crate::wire)?;
+        let res = ApplyOpsResult {
+            op_ids: resp.op_ids,
+            was_replay: resp.was_replay,
+            parent_op_id: resp.parent_op_id,
+        };
         self.apply_local_ops(&req, &res);
         serde_json::to_string(&res).map_err(crate::wire)
     }
@@ -55,26 +70,36 @@ impl BlockstoreService {
     // ── Fetches (cache + return JSON) ──
 
     pub async fn list_workspaces(&self) -> Result<String, String> {
-        let list: Vec<Workspace> = self.client.blocks_list_workspaces().await
+        let req = blockstore_proto::ListWorkspacesRequest { org_slug: self.org_slug() };
+        let resp = self.client.blockstore_list_workspaces_connect(&req).await
             .map_err(crate::wire)?;
+        let list: Vec<Workspace> = resp.items.into_iter().map(workspace_from_proto).collect();
         self.state.write().unwrap().replace_workspaces(list.clone());
         serde_json::to_string(&serde_json::json!({ "workspaces": list }))
             .map_err(crate::wire)
     }
 
     pub async fn ensure_default_workspace(&self) -> Result<String, String> {
-        let ws: Workspace = self.client.blocks_ensure_default_workspace().await
+        let req = blockstore_proto::EnsureDefaultWorkspaceRequest { org_slug: self.org_slug() };
+        let resp = self.client.blockstore_ensure_default_workspace_connect(&req).await
             .map_err(crate::wire)?;
+        let ws = workspace_from_proto(resp);
         self.state.write().unwrap().upsert_workspace(ws.clone());
         serde_json::to_string(&ws).map_err(crate::wire)
     }
 
     pub async fn load_subtree(&self, workspace_id: &str, root_id: &str) -> Result<(), String> {
-        let res = self.client.blocks_get_subtree(workspace_id, root_id, 64).await
+        let req = blockstore_proto::GetSubtreeRequest {
+            org_slug: self.org_slug(),
+            workspace_id: workspace_id.to_string(),
+            root_id: root_id.to_string(),
+            max_depth: Some(64),
+        };
+        let resp = self.client.blockstore_get_subtree_connect(&req).await
             .map_err(crate::wire)?;
         let mut state = self.state.write().unwrap();
-        for b in res.blocks { state.upsert_block(b); }
-        for r in res.refs { state.upsert_ref(r); }
+        for b in resp.blocks { state.upsert_block(block_from_proto(b)?); }
+        for r in resp.refs { state.upsert_ref(block_ref_from_proto(r)?); }
         // Seed watermark so WS subscription recognises this workspace.
         if state.last_op_id.get(workspace_id).is_none() {
             state.set_last_op_id(workspace_id, 0);
@@ -83,27 +108,49 @@ impl BlockstoreService {
     }
 
     pub async fn load_type_defs(&self, workspace_id: &str) -> Result<(), String> {
-        let blocks: Vec<Block> = self.client.blocks_list_type_defs(workspace_id).await
+        let req = blockstore_proto::ListTypeDefsRequest {
+            org_slug: self.org_slug(),
+            workspace_id: workspace_id.to_string(),
+        };
+        let resp = self.client.blockstore_list_type_defs_connect(&req).await
             .map_err(crate::wire)?;
         let mut state = self.state.write().unwrap();
-        for b in blocks { state.upsert_block(b); }
+        for b in resp.items { state.upsert_block(block_from_proto(b)?); }
         Ok(())
     }
 
     pub async fn catchup(&self, workspace_id: &str) -> Result<(), String> {
         let after = self.state.read().unwrap().get_last_op_id(workspace_id);
-        let ops: Vec<BlockOp> = self.client.blocks_catchup_ops(workspace_id, after, 500).await
+        let req = blockstore_proto::StreamOpsRequest {
+            org_slug: self.org_slug(),
+            workspace_id: workspace_id.to_string(),
+            after: Some(after),
+            limit: Some(500),
+        };
+        let resp = self.client.blockstore_stream_ops_connect(&req).await
             .map_err(crate::wire)?;
         let mut state = self.state.write().unwrap();
-        for op in &ops { state.apply_remote_op(op); }
+        for op in resp.items {
+            let op = block_op_from_proto(op)?;
+            state.apply_remote_op(&op);
+        }
         Ok(())
     }
 
     pub async fn semantic_search(&self, workspace_id: &str, req_json: &str) -> Result<String, String> {
         let req: SemanticSearchRequest = serde_json::from_str(req_json)
             .map_err(|e| format!("invalid search request: {e}"))?;
-        let hits: Vec<SearchHit> = self.client.blocks_semantic_search(workspace_id, &req).await
+        let proto_req = blockstore_proto::SemanticSearchRequest {
+            org_slug: self.org_slug(),
+            workspace_id: workspace_id.to_string(),
+            query: req.query,
+            top_k: req.top_k.map(|v| v as i32),
+            min_score: req.min_score.map(|v| v as f32),
+            r#type: req.block_type,
+        };
+        let resp = self.client.blockstore_semantic_search_connect(&proto_req).await
             .map_err(crate::wire)?;
+        let hits: Vec<SearchHit> = resp.hits.into_iter().map(search_hit_from_proto).collect();
         serde_json::to_string(&serde_json::json!({ "hits": hits })).map_err(crate::wire)
     }
 
@@ -248,4 +295,125 @@ fn chrono_like_now() -> String {
     // Services crate is WASM-compatible: avoid chrono. The server replaces this
     // with its authoritative timestamp via catchup_ops.
     "".into()
+}
+
+// ── proto.blockstore.v1 → internal type conversions ──
+//
+// Proto carries `data`/`meta`/`payload`/`forward`/`inverse` as opaque JSON
+// strings; the internal `Block`/`BlockOp` types hold `serde_json::Value`.
+// Conversions parse the JSON once at the boundary, matching what the legacy
+// REST path delivered.
+
+fn json_string_to_value(s: &str) -> Result<Value, String> {
+    if s.is_empty() { return Ok(Value::Null); }
+    serde_json::from_str(s).map_err(|e| format!("invalid JSON string: {e}"))
+}
+
+fn workspace_from_proto(w: blockstore_proto::Workspace) -> Workspace {
+    Workspace {
+        id: w.id,
+        organization_id: w.organization_id,
+        slug: w.slug,
+        name: w.name,
+        root_block_id: w.root_block_id,
+        created_at: w.created_at,
+    }
+}
+
+fn block_from_proto(b: blockstore_proto::Block) -> Result<Block, String> {
+    Ok(Block {
+        id: b.id,
+        workspace_id: b.workspace_id,
+        block_type: b.r#type,
+        data: json_string_to_value(&b.data_json)?,
+        text: b.text,
+        meta: json_string_to_value(&b.meta_json)?,
+        created_by: b.created_by,
+        created_at: b.created_at,
+        updated_at: b.updated_at,
+        deleted_at: b.deleted_at,
+    })
+}
+
+fn block_ref_from_proto(r: blockstore_proto::BlockRef) -> Result<BlockRef, String> {
+    Ok(BlockRef {
+        id: r.id,
+        workspace_id: r.workspace_id,
+        from_id: r.from_id,
+        to_id: r.to_id,
+        rel: r.rel,
+        order_key: r.order_key,
+        anchor: r.anchor,
+        meta: json_string_to_value(&r.meta_json)?,
+        created_by: r.created_by,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+    })
+}
+
+fn block_op_from_proto(o: blockstore_proto::BlockOp) -> Result<BlockOp, String> {
+    Ok(BlockOp {
+        id: o.id,
+        workspace_id: o.workspace_id,
+        idempotency_key: o.idempotency_key,
+        actor_type: parse_actor_type(&o.actor_type),
+        actor_id: o.actor_id,
+        op: parse_op_kind(&o.op)?,
+        target_block: o.target_block,
+        target_ref: o.target_ref,
+        payload: json_string_to_value(&o.payload_json)?,
+        forward: json_string_to_value(&o.forward_json)?,
+        inverse: json_string_to_value(&o.inverse_json)?,
+        parent_op_id: o.parent_op_id,
+        applied_at: o.applied_at,
+    })
+}
+
+fn parse_actor_type(s: &str) -> ActorType {
+    match s {
+        "user" => ActorType::User,
+        "agent" => ActorType::Agent,
+        _ => ActorType::System,
+    }
+}
+
+fn parse_op_kind(s: &str) -> Result<OpKind, String> {
+    // Proto carries OpKind as a serde-camelCase string (matching the JSON wire
+    // shape) so callers can decode without a parallel enum vocabulary.
+    match s {
+        "createBlock" => Ok(OpKind::CreateBlock),
+        "updateBlock" => Ok(OpKind::UpdateBlock),
+        "deleteBlock" => Ok(OpKind::DeleteBlock),
+        "addRef" => Ok(OpKind::AddRef),
+        "removeRef" => Ok(OpKind::RemoveRef),
+        "updateRef" => Ok(OpKind::UpdateRef),
+        other => Err(format!("unknown op kind: {other}")),
+    }
+}
+
+fn search_hit_from_proto(h: blockstore_proto::SearchHit) -> SearchHit {
+    SearchHit {
+        block_id: h.block_id,
+        block_type: h.r#type,
+        snippet: h.snippet,
+        score: h.score as f64,
+    }
+}
+
+fn op_kind_to_proto_string(k: &OpKind) -> &'static str {
+    match k {
+        OpKind::CreateBlock => "createBlock",
+        OpKind::UpdateBlock => "updateBlock",
+        OpKind::DeleteBlock => "deleteBlock",
+        OpKind::AddRef => "addRef",
+        OpKind::RemoveRef => "removeRef",
+        OpKind::UpdateRef => "updateRef",
+    }
+}
+
+fn op_envelope_to_proto(env: &OpEnvelope) -> blockstore_proto::OpEnvelope {
+    blockstore_proto::OpEnvelope {
+        op: op_kind_to_proto_string(&env.op).to_string(),
+        payload_json: serde_json::to_string(&env.payload).unwrap_or_else(|_| "null".into()),
+    }
 }
