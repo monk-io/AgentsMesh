@@ -1,8 +1,4 @@
-use agentsmesh_types::{
-    AddAssigneeRequest, AddTicketLabelRequest, BoardColumn, BoardResponse, CreateLabelRequest,
-    CreateTicketRequest, Label, LabelListResponse, Ticket, TicketListResponse, TicketPriority,
-    TicketStatus, UpdateLabelRequest, UpdateTicketRequest, UpdateTicketStatusRequest,
-};
+use agentsmesh_types::{BoardColumn, BoardResponse, Label, LabelListResponse, Ticket, TicketListResponse, TicketPriority, TicketStatus};
 
 // ── Enums ─────────────────────────────────────────────────
 
@@ -210,22 +206,6 @@ pub struct CreateTicketRequestDto {
     pub parent_slug: Option<String>,
 }
 
-impl From<CreateTicketRequestDto> for CreateTicketRequest {
-    fn from(d: CreateTicketRequestDto) -> Self {
-        Self {
-            title: d.title,
-            content: d.content,
-            priority: d.priority.map(Into::into),
-            severity: d.severity,
-            estimate: d.estimate,
-            repository_id: d.repository_id,
-            assignee_ids: d.assignee_ids,
-            labels: d.labels,
-            parent_slug: d.parent_slug,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct UpdateTicketRequestDto {
     pub title: Option<String>,
@@ -236,59 +216,14 @@ pub struct UpdateTicketRequestDto {
     pub repository_id: Option<i64>,
 }
 
-impl From<UpdateTicketRequestDto> for UpdateTicketRequest {
-    fn from(d: UpdateTicketRequestDto) -> Self {
-        Self {
-            title: d.title,
-            content: d.content,
-            priority: d.priority.map(Into::into),
-            severity: d.severity,
-            estimate: d.estimate,
-            repository_id: d.repository_id,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct CreateLabelRequestDto {
     pub name: String,
     pub color: String,
 }
 
-impl From<CreateLabelRequestDto> for CreateLabelRequest {
-    fn from(d: CreateLabelRequestDto) -> Self {
-        Self {
-            name: d.name,
-            color: d.color,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct UpdateLabelRequestDto {
     pub name: Option<String>,
     pub color: Option<String>,
-}
-
-impl From<UpdateLabelRequestDto> for UpdateLabelRequest {
-    fn from(d: UpdateLabelRequestDto) -> Self {
-        Self {
-            name: d.name,
-            color: d.color,
-        }
-    }
-}
-
-pub(crate) fn update_ticket_status_req(status: TicketStatusDto) -> UpdateTicketStatusRequest {
-    UpdateTicketStatusRequest {
-        status: status.into(),
-    }
-}
-
-pub(crate) fn add_assignee_req(user_id: i64) -> AddAssigneeRequest {
-    AddAssigneeRequest { user_id }
-}
-
-pub(crate) fn add_ticket_label_req(label_id: i64) -> AddTicketLabelRequest {
-    AddTicketLabelRequest { label_id }
 }

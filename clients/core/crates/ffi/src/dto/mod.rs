@@ -66,7 +66,6 @@ pub use ticket::{
     LabelListResponseDto, TicketDto, TicketListResponseDto, TicketPriorityDto, TicketStatusDto,
     UpdateLabelRequestDto, UpdateTicketRequestDto,
 };
-pub(crate) use ticket::{add_assignee_req, add_ticket_label_req, update_ticket_status_req};
 
 pub use pod::{
     CreatePodRequestDto, CreatePodResponseDto, PodAgentInfoDto, PodConnectionInfoDto,

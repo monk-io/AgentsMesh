@@ -8,10 +8,9 @@
 use agentsmesh_types::proto_pod_v1 as pod_proto;
 use agentsmesh_types::proto_repository_v1 as repo_proto;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::proto_ticket_v1 as ticket_proto;
 use agentsmesh_types::{
-    BoardColumn, Label, Pod, PodAgentInfo, PodConnectionInfo, PodCreatedByInfo, PodLoopInfo,
-    PodRepositoryInfo, PodRunnerInfo, PodTicketInfo, Repository, Runner, Ticket,
+    Pod, PodAgentInfo, PodConnectionInfo, PodCreatedByInfo, PodLoopInfo,
+    PodRepositoryInfo, PodRunnerInfo, PodTicketInfo, Repository, Runner,
 };
 
 pub mod pod {
@@ -141,35 +140,7 @@ pub mod repository {
     }
 }
 
-pub mod ticket {
-    use super::*;
-
-    pub fn from_proto(t: ticket_proto::Ticket) -> Ticket {
-        Ticket {
-            slug: t.slug,
-            title: t.title,
-            content: t.content,
-            status: super::parse_status(&t.status),
-            priority: super::parse_status(&t.priority),
-            repository_id: t.repository_id,
-            parent_slug: t.parent_ticket_slug,
-            created_at: super::option_string(&t.created_at),
-            updated_at: super::option_string(&t.updated_at),
-        }
-    }
-
-    pub fn label_from_proto(l: ticket_proto::Label) -> Label {
-        Label { id: l.id, name: l.name, color: l.color }
-    }
-
-    pub fn board_column_from_proto(c: ticket_proto::BoardColumn) -> BoardColumn {
-        BoardColumn {
-            status: super::parse_status(&c.status),
-            tickets: c.tickets.into_iter().map(from_proto).collect(),
-            total_count: c.total_count,
-        }
-    }
-}
+pub mod ticket {}
 
 fn option_string(s: &str) -> Option<String> {
     if s.is_empty() { None } else { Some(s.to_string()) }

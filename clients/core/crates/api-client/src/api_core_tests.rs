@@ -38,28 +38,8 @@ mod api_core_tests {
     // backend/internal/api/connect/pod cover the same surface.
 
     // ── ticket ──────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_tickets() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/tickets"))
-            .and(query_param("status", "open"))
-            .respond_with(ok(json!({"tickets":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_tickets(Some("open"), None, None).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_ticket_board() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/tickets/board"))
-            .and(query_param("repository_id", "42"))
-            .respond_with(ok(json!({"columns":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_ticket_board(Some(42)).await.unwrap();
-    }
+    // ticket REST mocks removed: REST surface eliminated; Connect handler
+    // tests in backend/internal/api/connect/ticket cover the same surface.
 
     // ── runner ──────────────────────────────────────────────────────────
     // list_runners + sibling REST mocks removed: REST surface eliminated;

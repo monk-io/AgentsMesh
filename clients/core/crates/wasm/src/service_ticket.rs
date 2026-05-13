@@ -63,54 +63,6 @@ impl WasmTicketService {
     pub fn add_label(&self, json: &str) { self.0.add_label(json); }
     pub fn remove_label(&self, id: f64) { self.0.remove_label(id); }
 
-    pub async fn fetch_tickets(
-        &self, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        self.0.fetch_tickets(status, limit, offset).await
-    }
-
-    pub async fn fetch_board(&self, repository_id: Option<i64>) -> Result<String, String> {
-        self.0.fetch_board(repository_id).await
-    }
-
-    pub async fn load_more_column(
-        &self, status: &str, offset: u32, limit: u32,
-    ) -> Result<String, String> {
-        self.0.load_more_column(status, offset, limit).await
-    }
-
-    pub async fn fetch_ticket(&self, slug: &str) -> Result<String, String> {
-        self.0.fetch_ticket(slug).await
-    }
-
-    pub async fn create_ticket(&self, request_json: &str) -> Result<String, String> {
-        self.0.create_ticket(request_json).await
-    }
-
-    pub async fn update_ticket(&self, slug: &str, request_json: &str) -> Result<String, String> {
-        self.0.update_ticket(slug, request_json).await
-    }
-
-    pub async fn delete_ticket(&self, slug: &str) -> Result<(), String> {
-        self.0.delete_ticket(slug).await
-    }
-
-    pub async fn update_ticket_status(&self, slug: &str, status: &str) -> Result<String, String> {
-        self.0.update_ticket_status(slug, status).await
-    }
-
-    pub async fn fetch_labels(&self, repository_id: Option<i64>) -> Result<String, String> {
-        self.0.fetch_labels(repository_id).await
-    }
-
-    pub async fn create_label(&self, name: &str, color: &str, repository_id: Option<i64>) -> Result<String, String> {
-        self.0.create_label(name, color, repository_id).await
-    }
-
-    pub async fn delete_label(&self, id: f64) -> Result<(), String> {
-        self.0.delete_label(id).await
-    }
-
     pub async fn get_ticket_pods(
         &self, slug: &str, active_only: Option<bool>,
     ) -> Result<String, String> {
@@ -119,10 +71,6 @@ impl WasmTicketService {
 
     pub fn ticket_pods_json(&self, slug: &str) -> String {
         self.0.ticket_pods_json(slug)
-    }
-
-    pub async fn get_sub_tickets(&self, slug: &str) -> Result<String, String> {
-        self.0.get_sub_tickets(slug).await
     }
 
     // -------- Connect-RPC (binary wire) --------
