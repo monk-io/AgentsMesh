@@ -3,45 +3,45 @@ import { test, expect } from "../../../fixtures";
 import { invokeIpc } from "../../../helpers/ipc";
 
 test.describe("IPC · extension", () => {
-  test("extension_list_skill_registries", async ({ page }) => {
+  test("extension_list_skill_registries_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_list_skill_registries").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_list_skill_registries_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_create_skill_registry", async ({ page }) => {
+  test("extension_create_skill_registry_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_create_skill_registry", "").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_create_skill_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_sync_skill_registry", async ({ page }) => {
+  test("extension_sync_skill_registry_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_sync_skill_registry", 0).catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_sync_skill_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_toggle_skill_registry", async ({ page }) => {
+  test("extension_toggle_platform_registry_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_toggle_skill_registry", 0, "").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_toggle_platform_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_delete_skill_registry", async ({ page }) => {
+  test("extension_delete_skill_registry_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_delete_skill_registry", 0).catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_delete_skill_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_list_skill_registry_overrides", async ({ page }) => {
+  test("extension_list_skill_registry_overrides_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_list_skill_registry_overrides").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_list_skill_registry_overrides_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 

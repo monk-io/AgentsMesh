@@ -14,17 +14,6 @@ func registerExtensionRoutes(rg *gin.RouterGroup, svc *Services) {
 
 	handler := NewExtensionHandler(svc.Extension)
 
-	skillRegistries := rg.Group("/skill-registries")
-	{
-		skillRegistries.GET("", handler.ListSkillRegistries)
-		skillRegistries.POST("", handler.CreateSkillRegistry)
-		skillRegistries.POST("/:id/sync", handler.SyncSkillRegistry)
-		skillRegistries.DELETE("/:id", handler.DeleteSkillRegistry)
-		skillRegistries.PUT("/:id/toggle", handler.TogglePlatformRegistry)
-	}
-
-	rg.GET("/skill-registry-overrides", handler.ListSkillRegistryOverrides)
-
 	market := rg.Group("/market")
 	{
 		market.GET("/skills", handler.ListMarketSkills)

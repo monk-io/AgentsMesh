@@ -1449,64 +1449,70 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "()"
   },
   {
-    "name": "extension_list_skill_registries",
-    "group": "extension",
-    "params": [],
-    "returnType": "String"
-  },
-  {
-    "name": "extension_create_skill_registry",
+    "name": "extension_list_skill_registries_connect",
     "group": "extension",
     "params": [
       {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_sync_skill_registry",
+    "name": "extension_create_skill_registry_connect",
     "group": "extension",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_toggle_skill_registry",
+    "name": "extension_sync_skill_registry_connect",
     "group": "extension",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_delete_skill_registry",
+    "name": "extension_toggle_platform_registry_connect",
     "group": "extension",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_list_skill_registry_overrides",
+    "name": "extension_delete_skill_registry_connect",
     "group": "extension",
-    "params": [],
-    "returnType": "String"
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "extension_list_skill_registry_overrides_connect",
+    "group": "extension",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
   },
   {
     "name": "extension_list_market_skills",

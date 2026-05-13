@@ -57,26 +57,4 @@ export const extensionApi = {
     const json = await getExtensionService().install_custom_mcp_server(BigInt(repoId), JSON.stringify(data));
     return JSON.parse(json);
   },
-  listSkillRegistries: async () => {
-    const json = await getExtensionService().list_skill_registries();
-    return JSON.parse(json);
-  },
-  listSkillRegistryOverrides: async () => {
-    const json = await getExtensionService().list_skill_registry_overrides();
-    return JSON.parse(json);
-  },
-  togglePlatformRegistry: async (registryId: number, disabled: boolean) => {
-    const json = await getExtensionService().toggle_skill_registry(BigInt(registryId), JSON.stringify({ disabled }));
-    return JSON.parse(json);
-  },
-  syncSkillRegistry: async (id: number) => {
-    await getExtensionService().sync_skill_registry(BigInt(id));
-  },
-  deleteSkillRegistry: async (id: number) => {
-    await getExtensionService().delete_skill_registry(BigInt(id));
-  },
-  createSkillRegistry: async (data: Record<string, unknown>) => {
-    const json = await getExtensionService().create_skill_registry(JSON.stringify(data));
-    return JSON.parse(json);
-  },
 };

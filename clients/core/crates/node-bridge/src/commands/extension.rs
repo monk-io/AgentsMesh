@@ -4,39 +4,39 @@ use crate::{AppState, err};
 #[napi]
 impl AppState {
     #[napi]
-    pub async fn extension_list_skill_registries(&self) -> napi::Result<String> {
+    pub async fn extension_list_skill_registries_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.list_skill_registries().await.map_err(err)
+        svc.list_skill_registries_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_create_skill_registry(&self, json: String) -> napi::Result<String> {
+    pub async fn extension_create_skill_registry_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.create_skill_registry(&json).await.map_err(err)
+        svc.create_skill_registry_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_sync_skill_registry(&self, id: i64) -> napi::Result<()> {
+    pub async fn extension_sync_skill_registry_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.sync_skill_registry(id).await.map_err(err)
+        svc.sync_skill_registry_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_toggle_skill_registry(&self, id: i64, json: String) -> napi::Result<String> {
+    pub async fn extension_toggle_platform_registry_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.toggle_skill_registry(id, &json).await.map_err(err)
+        svc.toggle_platform_registry_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_delete_skill_registry(&self, id: i64) -> napi::Result<()> {
+    pub async fn extension_delete_skill_registry_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.delete_skill_registry(id).await.map_err(err)
+        svc.delete_skill_registry_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_list_skill_registry_overrides(&self) -> napi::Result<String> {
+    pub async fn extension_list_skill_registry_overrides_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.list_skill_registry_overrides().await.map_err(err)
+        svc.list_skill_registry_overrides_connect(&request).await.map_err(err)
     }
 
     #[napi]

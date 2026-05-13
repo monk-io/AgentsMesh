@@ -237,56 +237,11 @@ impl ApiClient {
 }
 
 // =============================================================================
-// Legacy REST methods — preserved for dual-track migration.
+// Legacy REST methods — preserved for dual-track migration (market + repo
+// skill/mcp routes haven't been flipped yet).
 // =============================================================================
 
 impl ApiClient {
-    pub async fn list_skill_registries(&self) -> Result<SkillRegistryListResponse, ApiError> {
-        self.get(&self.org_path("/skill-registries")).await
-    }
-
-    pub async fn create_skill_registry(
-        &self,
-        data: &CreateSkillRegistryRequest,
-    ) -> Result<SkillRegistry, ApiError> {
-        self.post_resource(&self.org_path("/skill-registries"), data, "registry").await
-    }
-
-    pub async fn sync_skill_registry(
-        &self,
-        id: i64,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.post(
-            &self.org_path(&format!("/skill-registries/{id}/sync")),
-            &serde_json::json!({}),
-        )
-        .await
-    }
-
-    pub async fn toggle_skill_registry(
-        &self,
-        id: i64,
-        data: &ToggleRegistryRequest,
-    ) -> Result<SkillRegistry, ApiError> {
-        self.put(
-            &self.org_path(&format!("/skill-registries/{id}/toggle")),
-            data,
-        )
-        .await
-    }
-
-    pub async fn delete_skill_registry(&self, id: i64) -> Result<EmptyResponse, ApiError> {
-        self.delete(&self.org_path(&format!("/skill-registries/{id}")))
-            .await
-    }
-
-    pub async fn list_skill_registry_overrides(
-        &self,
-    ) -> Result<SkillRegistryOverrideListResponse, ApiError> {
-        self.get(&self.org_path("/skill-registry-overrides"))
-            .await
-    }
-
     pub async fn list_market_skills(
         &self,
         query: Option<&str>,

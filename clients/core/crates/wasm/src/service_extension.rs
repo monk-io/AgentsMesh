@@ -119,31 +119,7 @@ impl WasmExtensionService {
         self.0.uninstall_mcp_server_connect(request).await
     }
 
-    // -------- Legacy REST JSON methods (preserved during dual-track) --------
-
-    pub async fn list_skill_registries(&self) -> Result<String, String> {
-        self.0.list_skill_registries().await
-    }
-
-    pub async fn create_skill_registry(&self, json: &str) -> Result<String, String> {
-        self.0.create_skill_registry(json).await
-    }
-
-    pub async fn sync_skill_registry(&self, id: i64) -> Result<(), String> {
-        self.0.sync_skill_registry(id).await
-    }
-
-    pub async fn toggle_skill_registry(&self, id: i64, json: &str) -> Result<String, String> {
-        self.0.toggle_skill_registry(id, json).await
-    }
-
-    pub async fn delete_skill_registry(&self, id: i64) -> Result<(), String> {
-        self.0.delete_skill_registry(id).await
-    }
-
-    pub async fn list_skill_registry_overrides(&self) -> Result<String, String> {
-        self.0.list_skill_registry_overrides().await
-    }
+    // -------- Legacy REST JSON methods (preserved for not-yet-migrated routes) --------
 
     pub async fn list_market_skills(
         &self, query: Option<String>, category: Option<String>,

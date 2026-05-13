@@ -739,12 +739,14 @@ vi.mock('@/lib/wasm-core', () => {
       mark_repository_webhook_configured_connect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getExtensionService: fn(() => ({
-      list_skill_registries: fn().mockResolvedValue('{"skill_registries":[]}'),
-      create_skill_registry: fn().mockResolvedValue('{}'),
-      sync_skill_registry: fn().mockResolvedValue(undefined),
-      toggle_skill_registry: fn().mockResolvedValue('{}'),
-      delete_skill_registry: fn().mockResolvedValue(undefined),
-      list_skill_registry_overrides: fn().mockResolvedValue('{"overrides":[]}'),
+      // SkillRegistryService — Connect-RPC (binary wire)
+      listSkillRegistriesConnect: fn().mockResolvedValue(new Uint8Array()),
+      createSkillRegistryConnect: fn().mockResolvedValue(new Uint8Array()),
+      syncSkillRegistryConnect: fn().mockResolvedValue(new Uint8Array()),
+      togglePlatformRegistryConnect: fn().mockResolvedValue(new Uint8Array()),
+      deleteSkillRegistryConnect: fn().mockResolvedValue(new Uint8Array()),
+      listSkillRegistryOverridesConnect: fn().mockResolvedValue(new Uint8Array()),
+      // Legacy REST (market + repo skill/mcp still on JSON wire)
       list_market_skills: fn().mockResolvedValue('{"skills":[]}'),
       list_market_mcp_servers: fn().mockResolvedValue('{"servers":[]}'),
       list_repo_skills: fn().mockResolvedValue('{"installs":[]}'),

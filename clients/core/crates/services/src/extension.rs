@@ -156,39 +156,7 @@ impl ExtensionService {
         Ok(resp.encode_to_vec())
     }
 
-    // -------- Legacy REST (JSON wire) — preserved during dual-track --------
-
-    pub async fn list_skill_registries(&self) -> Result<String, String> {
-        let resp = self.client.list_skill_registries().await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn create_skill_registry(&self, json: &str) -> Result<String, String> {
-        let req: CreateSkillRegistryRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client.create_skill_registry(&req).await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn sync_skill_registry(&self, id: i64) -> Result<(), String> {
-        self.client.sync_skill_registry(id).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
-    pub async fn toggle_skill_registry(&self, id: i64, json: &str) -> Result<String, String> {
-        let req: ToggleRegistryRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client.toggle_skill_registry(id, &req).await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn delete_skill_registry(&self, id: i64) -> Result<(), String> {
-        self.client.delete_skill_registry(id).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
-    pub async fn list_skill_registry_overrides(&self) -> Result<String, String> {
-        let resp = self.client.list_skill_registry_overrides().await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
+    // -------- Legacy REST (JSON wire) — preserved for not-yet-migrated routes --------
 
     pub async fn list_market_skills(
         &self, query: Option<String>, category: Option<String>,
