@@ -5,6 +5,8 @@
 mod automation;
 mod blocks_mesh;
 mod channel;
+mod channel_messages;
+mod channel_proto_convert;
 mod message;
 mod misc;
 mod pod;

@@ -44,10 +44,6 @@ pub use channel::{
     CreateChannelRequestDto, MessagePreviewDto, SenderAgentInfoDto, SenderPodInfoDto,
     UpdateChannelRequestDto,
 };
-pub(crate) use channel::{
-    edit_message_req, invite_channel_members_req, join_channel_pod_req, mute_channel_req,
-    send_message_req,
-};
 pub use message::{
     DeadLetterEntryDto, DeadLetterListResponseDto, DirectMessageDto, DirectMessageListResponseDto,
     ReplayDeadLetterResponseDto, SendDirectMessageRequestDto, UnreadCountResponseDto,

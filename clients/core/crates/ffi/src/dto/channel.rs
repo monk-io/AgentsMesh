@@ -2,10 +2,8 @@ use std::collections::HashMap;
 
 use agentsmesh_types::{
     Channel, ChannelListResponse, ChannelMember, ChannelMemberListResponse, ChannelMessage,
-    ChannelMessageListResponse, ChannelUnreadResponse, CreateChannelRequest,
-    EditChannelMessageRequest, InviteChannelMembersRequest, JoinChannelPodRequest,
-    MessagePreview, MuteChannelRequest, SendChannelMessageRequest, SenderAgentInfo, SenderPodInfo,
-    UpdateChannelRequest,
+    ChannelMessageListResponse, ChannelUnreadResponse, CreateChannelRequest, MessagePreview,
+    SenderAgentInfo, SenderPodInfo, UpdateChannelRequest,
 };
 
 use super::UserDto;
@@ -252,64 +250,4 @@ impl From<ChannelUnreadResponse> for ChannelUnreadResponseDto {
     fn from(r: ChannelUnreadResponse) -> Self {
         Self { unread: r.unread }
     }
-}
-
-/// Build a strong-typed `SendChannelMessageRequest`. Accepts either:
-///   - the new wrapped shape `{source, mentions, content, attachment_key, ...}`
-///     (any combination, all fields optional), or
-///   - a bare `MessageContent` AST (legacy callers) which is rewrapped as
-///     `{content: <ast>}` so it reaches the new server-side path.
-/// Shape detection is structural: presence of any new top-level key wins,
-/// otherwise the value is treated as a raw AST.
-pub(crate) fn send_message_req(
-    content_json: String,
-    pod_key: Option<String>,
-    reply_to: Option<i64>,
-) -> Result<SendChannelMessageRequest, serde_json::Error> {
-    let value: serde_json::Value = serde_json::from_str(&content_json)?;
-    let mut req = if has_request_shape(&value) {
-        serde_json::from_value::<SendChannelMessageRequest>(value)?
-    } else {
-        SendChannelMessageRequest { content: Some(value), ..Default::default() }
-    };
-    if pod_key.is_some() {
-        req.pod_key = pod_key;
-    }
-    if reply_to.is_some() {
-        req.reply_to = reply_to;
-    }
-    Ok(req)
-}
-
-pub(crate) fn edit_message_req(
-    content_json: String,
-) -> Result<EditChannelMessageRequest, serde_json::Error> {
-    let value: serde_json::Value = serde_json::from_str(&content_json)?;
-    if has_request_shape(&value) {
-        serde_json::from_value(value)
-    } else {
-        Ok(EditChannelMessageRequest { content: Some(value), ..Default::default() })
-    }
-}
-
-fn has_request_shape(v: &serde_json::Value) -> bool {
-    let Some(obj) = v.as_object() else { return false };
-    obj.contains_key("source")
-        || obj.contains_key("content")
-        || obj.contains_key("mentions")
-        || obj.contains_key("attachment_key")
-        || obj.contains_key("pod_key")
-        || obj.contains_key("reply_to")
-}
-
-pub(crate) fn join_channel_pod_req(pod_key: String) -> JoinChannelPodRequest {
-    JoinChannelPodRequest { pod_key }
-}
-
-pub(crate) fn mute_channel_req(muted: bool) -> MuteChannelRequest {
-    MuteChannelRequest { muted }
-}
-
-pub(crate) fn invite_channel_members_req(user_ids: Vec<i64>) -> InviteChannelMembersRequest {
-    InviteChannelMembersRequest { user_ids }
 }

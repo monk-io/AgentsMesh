@@ -1,11 +1,12 @@
+use agentsmesh_types::proto_channel_v1 as channel_proto;
+
 use crate::core::AgentsMeshCore;
 use crate::dto::{
-    edit_message_req, invite_channel_members_req, join_channel_pod_req, mute_channel_req,
-    send_message_req, ChannelDto, ChannelListResponseDto, ChannelMemberListResponseDto,
-    ChannelMessageDto, ChannelMessageListResponseDto, ChannelUnreadResponseDto,
-    CreateChannelRequestDto, PodListResponseDto, UpdateChannelRequestDto,
+    ChannelDto, ChannelListResponseDto, ChannelMemberListResponseDto, CreateChannelRequestDto,
+    PodListResponseDto, UpdateChannelRequestDto,
 };
 use crate::error::CoreError;
+use crate::services::channel_proto_convert::{member_list_from_proto, pod_list_from_proto};
 
 #[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
@@ -13,12 +14,20 @@ impl AgentsMeshCore {
         &self,
         include_archived: Option<bool>,
     ) -> Result<ChannelListResponseDto, CoreError> {
-        let resp = self.api.list_channels(include_archived).await?;
-        Ok(resp.into())
+        let req = channel_proto::ListChannelsRequest {
+            org_slug: self.org_slug()?,
+            include_archived,
+            ..Default::default()
+        };
+        let resp = self.api.list_channels_connect(&req).await?;
+        Ok(ChannelListResponseDto {
+            channels: resp.items.into_iter().map(ChannelDto::from).collect(),
+        })
     }
 
     pub async fn get_channel(&self, id: i64) -> Result<ChannelDto, CoreError> {
-        let ch = self.api.get_channel(id).await?;
+        let req = channel_proto::GetChannelRequest { org_slug: self.org_slug()?, id };
+        let ch = self.api.get_channel_connect(&req).await?;
         Ok(ch.into())
     }
 
@@ -26,7 +35,17 @@ impl AgentsMeshCore {
         &self,
         req: CreateChannelRequestDto,
     ) -> Result<ChannelDto, CoreError> {
-        let ch = self.api.create_channel(&req.into()).await?;
+        let proto_req = channel_proto::CreateChannelRequest {
+            org_slug: self.org_slug()?,
+            name: req.name,
+            description: req.description,
+            document: req.document,
+            repository_id: req.repository_id,
+            ticket_slug: req.ticket_slug,
+            visibility: None,
+            member_ids: Vec::new(),
+        };
+        let ch = self.api.create_channel_connect(&proto_req).await?;
         Ok(ch.into())
     }
 
@@ -35,97 +54,52 @@ impl AgentsMeshCore {
         id: i64,
         req: UpdateChannelRequestDto,
     ) -> Result<ChannelDto, CoreError> {
-        let ch = self.api.update_channel(id, &req.into()).await?;
+        let proto_req = channel_proto::UpdateChannelRequest {
+            org_slug: self.org_slug()?,
+            id,
+            name: req.name,
+            description: req.description,
+            document: None,
+        };
+        let ch = self.api.update_channel_connect(&proto_req).await?;
         Ok(ch.into())
     }
 
     pub async fn archive_channel(&self, id: i64) -> Result<(), CoreError> {
-        self.api.archive_channel(id).await?;
+        let req = channel_proto::ArchiveChannelRequest { org_slug: self.org_slug()?, id };
+        self.api.archive_channel_connect(&req).await?;
         Ok(())
     }
 
     pub async fn unarchive_channel(&self, id: i64) -> Result<(), CoreError> {
-        self.api.unarchive_channel(id).await?;
+        let req = channel_proto::UnarchiveChannelRequest { org_slug: self.org_slug()?, id };
+        self.api.unarchive_channel_connect(&req).await?;
         Ok(())
-    }
-
-    pub async fn get_channel_messages(
-        &self,
-        id: i64,
-        limit: Option<u32>,
-        before_id: Option<i64>,
-    ) -> Result<ChannelMessageListResponseDto, CoreError> {
-        let resp = self.api.get_channel_messages(id, limit, before_id).await?;
-        Ok(resp.into())
-    }
-
-    /// Send a channel message. `content_json` is the AST string (validated
-    /// by the server; frontend builds it via the agentfile/block editor).
-    pub async fn send_channel_message(
-        &self,
-        id: i64,
-        content_json: String,
-        pod_key: Option<String>,
-        reply_to: Option<i64>,
-    ) -> Result<ChannelMessageDto, CoreError> {
-        let req = send_message_req(content_json, pod_key, reply_to)?;
-        let msg = self.api.send_channel_message(id, &req).await?;
-        Ok(msg.into())
-    }
-
-    pub async fn edit_channel_message(
-        &self,
-        channel_id: i64,
-        message_id: i64,
-        content_json: String,
-    ) -> Result<ChannelMessageDto, CoreError> {
-        let req = edit_message_req(content_json)?;
-        let msg = self
-            .api
-            .edit_channel_message(channel_id, message_id, &req)
-            .await?;
-        Ok(msg.into())
-    }
-
-    pub async fn delete_channel_message(
-        &self,
-        channel_id: i64,
-        message_id: i64,
-    ) -> Result<(), CoreError> {
-        self.api
-            .delete_channel_message(channel_id, message_id)
-            .await?;
-        Ok(())
-    }
-
-    pub async fn mark_channel_read(
-        &self,
-        id: i64,
-        message_id: i64,
-    ) -> Result<(), CoreError> {
-        self.api.mark_channel_read(id, message_id).await?;
-        Ok(())
-    }
-
-    pub async fn get_channel_unread_counts(&self) -> Result<ChannelUnreadResponseDto, CoreError> {
-        let resp = self.api.get_channel_unread_counts().await?;
-        Ok(resp.into())
     }
 
     pub async fn mute_channel(&self, id: i64, muted: bool) -> Result<(), CoreError> {
-        self.api.mute_channel(id, &mute_channel_req(muted)).await?;
+        let req = channel_proto::MuteChannelRequest {
+            org_slug: self.org_slug()?,
+            id,
+            muted,
+        };
+        self.api.mute_channel_connect(&req).await?;
         Ok(())
     }
 
     pub async fn get_channel_pods(&self, id: i64) -> Result<PodListResponseDto, CoreError> {
-        let resp = self.api.get_channel_pods(id).await?;
-        Ok(resp.into())
+        let req = channel_proto::ListChannelPodsRequest { org_slug: self.org_slug()?, id };
+        let resp = self.api.list_channel_pods_connect(&req).await?;
+        Ok(pod_list_from_proto(resp))
     }
 
     pub async fn join_channel_pod(&self, id: i64, pod_key: String) -> Result<(), CoreError> {
-        self.api
-            .join_channel_pod(id, &join_channel_pod_req(pod_key))
-            .await?;
+        let req = channel_proto::JoinChannelPodRequest {
+            org_slug: self.org_slug()?,
+            id,
+            pod_key,
+        };
+        self.api.join_channel_pod_connect(&req).await?;
         Ok(())
     }
 
@@ -134,7 +108,12 @@ impl AgentsMeshCore {
         id: i64,
         pod_key: String,
     ) -> Result<(), CoreError> {
-        self.api.leave_channel_pod(id, &pod_key).await?;
+        let req = channel_proto::LeaveChannelPodRequest {
+            org_slug: self.org_slug()?,
+            id,
+            pod_key,
+        };
+        self.api.leave_channel_pod_connect(&req).await?;
         Ok(())
     }
 
@@ -142,8 +121,14 @@ impl AgentsMeshCore {
         &self,
         id: i64,
     ) -> Result<ChannelMemberListResponseDto, CoreError> {
-        let resp = self.api.list_channel_members(id).await?;
-        Ok(resp.into())
+        let req = channel_proto::ListChannelMembersRequest {
+            org_slug: self.org_slug()?,
+            id,
+            limit: None,
+            offset: None,
+        };
+        let resp = self.api.list_channel_members_connect(&req).await?;
+        Ok(member_list_from_proto(resp))
     }
 
     pub async fn invite_channel_members(
@@ -151,9 +136,12 @@ impl AgentsMeshCore {
         id: i64,
         user_ids: Vec<i64>,
     ) -> Result<(), CoreError> {
-        self.api
-            .invite_channel_members(id, &invite_channel_members_req(user_ids))
-            .await?;
+        let req = channel_proto::InviteChannelMembersRequest {
+            org_slug: self.org_slug()?,
+            id,
+            user_ids,
+        };
+        self.api.invite_channel_members_connect(&req).await?;
         Ok(())
     }
 
@@ -162,7 +150,12 @@ impl AgentsMeshCore {
         id: i64,
         user_id: i64,
     ) -> Result<(), CoreError> {
-        self.api.remove_channel_member(id, user_id).await?;
+        let req = channel_proto::RemoveChannelMemberRequest {
+            org_slug: self.org_slug()?,
+            id,
+            user_id,
+        };
+        self.api.remove_channel_member_connect(&req).await?;
         Ok(())
     }
 }
