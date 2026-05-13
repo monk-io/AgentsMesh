@@ -8,13 +8,14 @@ import type {
   SandboxStatus,
   RelayConnectionInfo,
 } from "@/lib/api/runnerTypes";
-import { getRunnerService, getPodService } from "@/lib/wasm-core";
+import { getRunnerService } from "@/lib/wasm-core";
 import {
   getRunner as getRunnerConnect,
   updateRunner as updateRunnerConnect,
   deleteRunner as deleteRunnerConnect,
   querySandboxes as querySandboxesConnect,
 } from "@/lib/api/runnerConnect";
+import { createPod as createPodConnect } from "@/lib/api/podConnect";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -105,14 +106,17 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
     if (!runner || !resumingPod) return;
     setResumeLoading(true);
     try {
-      const res: { pod?: { pod_key: string }; pod_key?: string } = JSON.parse(await getPodService().create_pod(JSON.stringify({
+      const { pod } = await createPodConnect(orgSlug, {
         agent_slug: resumingPod.agent_slug || "",
-        runner_id: runner.id, source_pod_key: resumingPod.pod_key,
-        resume_agent_session: true, cols: 120, rows: 30,
-      })));
+        runner_id: runner.id,
+        source_pod_key: resumingPod.pod_key,
+        resume_agent_session: true,
+        cols: 120,
+        rows: 30,
+      });
       setResumeDialogOpen(false);
       setResumingPod(null);
-      router.push(`/${params.org}/workspace?pod=${(res.pod ?? res).pod_key}`);
+      router.push(`/${params.org}/workspace?pod=${pod.pod_key}`);
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     } finally {
