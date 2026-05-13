@@ -33,16 +33,10 @@ pub struct Runner {
     pub updated_at: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GRPCRegistrationToken {
-    pub id: i64,
-    pub name: Option<String>,
-    pub token: Option<String>,
-    pub max_uses: Option<i32>,
-    pub used_count: Option<i32>,
-    pub expires_at: Option<String>,
-    pub created_at: Option<String>,
-}
+// Legacy request payloads: still consumed by services::RunnerService when it
+// receives JSON requests from the web/desktop UI (the wire shape on the
+// JS/NAPI boundary stays stable while the internal call routes through
+// Connect-RPC). proto_runner_api_v1 owns the wire-level request types.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateRunnerRequest {
@@ -66,41 +60,14 @@ pub struct SandboxQueryRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SandboxStatus {
-    pub pod_key: String,
-    pub exists: bool,
-    pub can_resume: bool,
-    #[serde(default)]
-    pub sandbox_path: Option<String>,
-    #[serde(default)]
-    pub repository_url: Option<String>,
-    #[serde(default)]
-    pub branch_name: Option<String>,
-    #[serde(default)]
-    pub current_commit: Option<String>,
-    #[serde(default)]
-    pub size_bytes: Option<i64>,
-    #[serde(default)]
-    pub last_modified: Option<i64>,
-    #[serde(default)]
-    pub has_uncommitted_changes: Option<bool>,
-    #[serde(default)]
-    pub error: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SandboxQueryResponse {
-    #[serde(default)]
-    pub sandboxes: Vec<SandboxStatus>,
-    #[serde(default)]
-    pub error: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpgradeRunnerRequest {
     pub target_version: Option<String>,
     pub force: Option<bool>,
 }
+
+// REST carve-outs without proto coverage (Tailscale-style runner
+// registration). Stays serde so the kept ApiClient REST methods can drive
+// them.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthorizeRunnerRequest {
@@ -109,56 +76,10 @@ pub struct AuthorizeRunnerRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunnerListResponse {
-    #[serde(default)]
-    pub runners: Vec<Runner>,
-    #[serde(default)]
-    pub latest_runner_version: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RelayConnectionInfo {
-    pub pod_key: String,
-    pub relay_url: String,
-    pub session_id: String,
-    pub connected: bool,
-    #[serde(default)]
-    pub connected_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunnerDetailResponse {
-    pub runner: Runner,
-    #[serde(default)]
-    pub relay_connections: Option<Vec<RelayConnectionInfo>>,
-    #[serde(default)]
-    pub latest_runner_version: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunnerTokenListResponse {
-    pub tokens: Vec<GRPCRegistrationToken>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunnerAuthStatus {
     pub status: String,
     pub runner_id: Option<i64>,
     pub organization_slug: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunnerLog {
-    pub id: i64,
-    pub runner_id: i64,
-    pub filename: Option<String>,
-    pub url: Option<String>,
-    pub created_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunnerLogListResponse {
-    pub logs: Vec<RunnerLog>,
 }
 
 #[cfg(test)]
@@ -222,31 +143,5 @@ mod tests {
         let info = decoded.host_info.unwrap();
         assert_eq!(info["arch"], "arm64");
         assert_eq!(info["cores"], 8);
-    }
-
-    #[test]
-    fn grpc_registration_token_roundtrip() {
-        let tok = GRPCRegistrationToken {
-            id: 5,
-            name: Some("dev-token".into()),
-            token: Some("grpc-tok-abc".into()),
-            max_uses: Some(10),
-            used_count: Some(3),
-            expires_at: Some("2026-12-31T23:59:59Z".into()),
-            created_at: Some("2026-01-01T00:00:00Z".into()),
-        };
-        let json = serde_json::to_string(&tok).unwrap();
-        let decoded: GRPCRegistrationToken = serde_json::from_str(&json).unwrap();
-        assert_eq!(decoded.id, 5);
-        assert_eq!(decoded.max_uses, Some(10));
-    }
-
-    #[test]
-    fn grpc_registration_token_minimal() {
-        let json = r#"{"id":1}"#;
-        let tok: GRPCRegistrationToken = serde_json::from_str(json).unwrap();
-        assert_eq!(tok.id, 1);
-        assert!(tok.name.is_none());
-        assert!(tok.token.is_none());
     }
 }

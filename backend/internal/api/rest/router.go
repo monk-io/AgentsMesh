@@ -117,9 +117,6 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 		// Public config endpoints (deployment info for frontend)
 		v1.RegisterPublicConfigRoutes(apiV1.Group("/config"), svc.Billing)
 
-		// Public runner release endpoint (consumed by desktop onboarding)
-		v1.RegisterRunnerReleaseRoutes(apiV1)
-
 		// gRPC Runner routes (public, for Runner CLI registration with mTLS)
 		if svc.GRPCRunnerHandler != nil {
 			v1.RegisterGRPCRunnerRoutes(apiV1, svc.GRPCRunnerHandler)

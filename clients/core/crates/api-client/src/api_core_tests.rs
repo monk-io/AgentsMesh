@@ -62,17 +62,9 @@ mod api_core_tests {
     }
 
     // ── runner ──────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_runners() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners"))
-            .and(query_param("status", "online"))
-            .respond_with(ok(json!({"runners":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_runners(Some("online")).await.unwrap();
-    }
+    // list_runners + sibling REST mocks removed: REST surface eliminated;
+    // Connect handler tests in backend/internal/api/connect/runner cover
+    // the same surface.
 
     // ── billing ─────────────────────────────────────────────────────────
     // get_billing_overview removed — Connect handler tests cover it

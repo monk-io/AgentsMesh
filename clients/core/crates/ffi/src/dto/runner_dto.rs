@@ -1,8 +1,7 @@
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
 use agentsmesh_types::{
-    AuthorizeRunnerRequest, CreateRunnerTokenRequest, GRPCRegistrationToken, Runner,
-    RunnerAuthStatus, RunnerListResponse, RunnerLog, RunnerLogListResponse, RunnerStatus,
-    RunnerTokenListResponse, UpdateRunnerRequest, UpgradeRunnerRequest,
+    AuthorizeRunnerRequest, CreateRunnerTokenRequest, Runner, RunnerAuthStatus, RunnerStatus,
+    UpdateRunnerRequest, UpgradeRunnerRequest,
 };
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
@@ -109,15 +108,6 @@ pub struct RunnerListResponseDto {
     pub latest_runner_version: Option<String>,
 }
 
-impl From<RunnerListResponse> for RunnerListResponseDto {
-    fn from(r: RunnerListResponse) -> Self {
-        Self {
-            runners: r.runners.into_iter().map(RunnerDto::from).collect(),
-            latest_runner_version: r.latest_runner_version,
-        }
-    }
-}
-
 pub(crate) fn runner_list_from_proto(
     resp: runner_proto::ListRunnersResponse,
 ) -> RunnerListResponseDto {
@@ -138,20 +128,6 @@ pub struct GrpcRegistrationTokenDto {
     pub created_at: Option<String>,
 }
 
-impl From<GRPCRegistrationToken> for GrpcRegistrationTokenDto {
-    fn from(t: GRPCRegistrationToken) -> Self {
-        Self {
-            id: t.id,
-            name: t.name,
-            token: t.token,
-            max_uses: t.max_uses,
-            used_count: t.used_count,
-            expires_at: t.expires_at,
-            created_at: t.created_at,
-        }
-    }
-}
-
 impl From<runner_proto::RunnerToken> for GrpcRegistrationTokenDto {
     fn from(t: runner_proto::RunnerToken) -> Self {
         Self {
@@ -169,18 +145,6 @@ impl From<runner_proto::RunnerToken> for GrpcRegistrationTokenDto {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct RunnerTokenListResponseDto {
     pub tokens: Vec<GrpcRegistrationTokenDto>,
-}
-
-impl From<RunnerTokenListResponse> for RunnerTokenListResponseDto {
-    fn from(r: RunnerTokenListResponse) -> Self {
-        Self {
-            tokens: r
-                .tokens
-                .into_iter()
-                .map(GrpcRegistrationTokenDto::from)
-                .collect(),
-        }
-    }
 }
 
 pub(crate) fn runner_token_list_from_proto(
@@ -285,18 +249,6 @@ pub struct RunnerLogDto {
     pub created_at: Option<String>,
 }
 
-impl From<RunnerLog> for RunnerLogDto {
-    fn from(l: RunnerLog) -> Self {
-        Self {
-            id: l.id,
-            runner_id: l.runner_id,
-            filename: l.filename,
-            url: l.url,
-            created_at: l.created_at,
-        }
-    }
-}
-
 impl From<runner_proto::RunnerLog> for RunnerLogDto {
     fn from(l: runner_proto::RunnerLog) -> Self {
         Self {
@@ -313,14 +265,6 @@ impl From<runner_proto::RunnerLog> for RunnerLogDto {
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct RunnerLogListResponseDto {
     pub logs: Vec<RunnerLogDto>,
-}
-
-impl From<RunnerLogListResponse> for RunnerLogListResponseDto {
-    fn from(r: RunnerLogListResponse) -> Self {
-        Self {
-            logs: r.logs.into_iter().map(RunnerLogDto::from).collect(),
-        }
-    }
 }
 
 pub(crate) fn runner_log_list_from_proto(

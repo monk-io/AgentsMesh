@@ -24,15 +24,14 @@ mod api_pod_runner_tests {
         ResponseTemplate::new(200).set_body_json(b)
     }
 
-    fn runner_json(id: i64) -> serde_json::Value {
-        json!({
-            "id": id, "name": "r1", "status": "online",
-            "max_concurrent_pods": 5, "active_pod_count": 0, "is_enabled": true
-        })
-    }
-
     // Pod tests removed: REST surface eliminated; Connect handler tests in
     // backend/internal/api/connect/pod cover the same surface.
+    //
+    // Most runner REST mocks removed for the same reason; Connect handler
+    // tests in backend/internal/api/connect/runner own the surface. The
+    // mocks that remain cover REST carve-outs without proto coverage:
+    // list_runner_pods (no runner_id filter in proto.pod.v1.ListPods),
+    // get_runner_auth_status + authorize_runner (registration bootstrap).
 
     #[tokio::test]
     async fn redeem_promo_code() {
@@ -47,79 +46,6 @@ mod api_pod_runner_tests {
     }
 
     #[tokio::test]
-    async fn list_available_runners() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners/available"))
-            .respond_with(ok(json!({"runners":[]}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.list_available_runners().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_runner() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners/3"))
-            .respond_with(ok(json!({"runner": runner_json(3)})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let r = c.get_runner(3).await.unwrap();
-        assert_eq!(r.runner.id, 3);
-    }
-
-    #[tokio::test]
-    async fn update_runner() {
-        let s = MockServer::start().await;
-        Mock::given(method("PUT")).and(path("/api/v1/orgs/acme/runners/3"))
-            .respond_with(ok(runner_json(3))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::UpdateRunnerRequest {
-            description: Some("upd".into()), max_concurrent_pods: None,
-            is_enabled: Some(true), visibility: None,
-        };
-        let _ = c.update_runner(3, &data).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn delete_runner() {
-        let s = MockServer::start().await;
-        Mock::given(method("DELETE")).and(path("/api/v1/orgs/acme/runners/3"))
-            .respond_with(ok(json!({}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.delete_runner(3).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn create_runner_token() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/runners/grpc/tokens"))
-            .respond_with(ok(json!({"id":1}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::CreateRunnerTokenRequest {
-            name: Some("dev".into()), labels: None,
-            max_uses: None, expires_in_days: Some(30),
-        };
-        let _ = c.create_runner_token(&data).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_runner_tokens() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners/grpc/tokens"))
-            .respond_with(ok(json!({"tokens":[]}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.list_runner_tokens().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn delete_runner_token() {
-        let s = MockServer::start().await;
-        Mock::given(method("DELETE")).and(path("/api/v1/orgs/acme/runners/grpc/tokens/9"))
-            .respond_with(ok(json!({}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.delete_runner_token(9).await.unwrap();
-    }
-
-    #[tokio::test]
     async fn list_runner_pods() {
         let s = MockServer::start().await;
         Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners/3/pods"))
@@ -127,46 +53,6 @@ mod api_pod_runner_tests {
             .respond_with(ok(json!({"pods":[],"total":0}))).expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), Tok::org("acme"));
         let _ = c.list_runner_pods(3, Some("running"), Some(10), None).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn query_runner_sandboxes() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/runners/3/sandboxes/query"))
-            .respond_with(ok(json!({"sandboxes":[]}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::SandboxQueryRequest { pod_keys: vec!["p1".into()] };
-        let _ = c.query_runner_sandboxes(3, &data).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn upgrade_runner() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/runners/3/upgrade"))
-            .respond_with(ok(json!({}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::UpgradeRunnerRequest {
-            target_version: Some("1.2.0".into()), force: None,
-        };
-        let _ = c.upgrade_runner(3, &data).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn request_runner_log_upload() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/runners/3/logs/upload"))
-            .respond_with(ok(json!({}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.request_runner_log_upload(3).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_runner_logs() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/runners/3/logs"))
-            .respond_with(ok(json!({"logs":[]}))).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.list_runner_logs(3).await.unwrap();
     }
 
     #[tokio::test]

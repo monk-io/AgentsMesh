@@ -4,20 +4,19 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
 	runner "github.com/anthropics/agentsmesh/backend/internal/service/runner"
-	runnerlogservice "github.com/anthropics/agentsmesh/backend/internal/service/runnerlog"
 )
 
-// RunnerHandler handles runner-related requests
+// RunnerHandler handles runner-related requests.
+// Connect-RPC owns the org-scoped RunnerService surface (CRUD, Upgrade,
+// Logs, QuerySandboxes, tokens). The remaining REST handlers here back
+// routes_ext.go (third-party API key callers reading runners / available
+// runners / runner pods) and the runners_grpc*.go registration flow.
 type RunnerHandler struct {
-	runnerService        *runner.Service
-	podService           *agentpod.PodService
-	sandboxQueryService  *runner.SandboxQueryService
-	podCoordinator       *runner.PodCoordinator
-	versionChecker       *runner.VersionChecker
-	upgradeCommandSender runner.UpgradeCommandSender
-	logUploadSender      runner.LogUploadCommandSender
-	logUploadService     *runnerlogservice.Service
-	grantService         *grantservice.Service
+	runnerService  *runner.Service
+	podService     *agentpod.PodService
+	podCoordinator *runner.PodCoordinator
+	versionChecker *runner.VersionChecker
+	grantService   *grantservice.Service
 }
 
 // NewRunnerHandler creates a new runner handler
@@ -41,13 +40,6 @@ func WithPodServiceForRunner(ps *agentpod.PodService) RunnerHandlerOption {
 	}
 }
 
-// WithSandboxQueryService sets the sandbox query service for runner handler
-func WithSandboxQueryService(sqs *runner.SandboxQueryService) RunnerHandlerOption {
-	return func(h *RunnerHandler) {
-		h.sandboxQueryService = sqs
-	}
-}
-
 // WithPodCoordinatorForRunner sets the pod coordinator for runner handler
 func WithPodCoordinatorForRunner(pc *runner.PodCoordinator) RunnerHandlerOption {
 	return func(h *RunnerHandler) {
@@ -62,27 +54,6 @@ func WithVersionChecker(vc *runner.VersionChecker) RunnerHandlerOption {
 	}
 }
 
-// WithUpgradeCommandSender sets the upgrade command sender for runner handler
-func WithUpgradeCommandSender(ucs runner.UpgradeCommandSender) RunnerHandlerOption {
-	return func(h *RunnerHandler) {
-		h.upgradeCommandSender = ucs
-	}
-}
-
-// WithLogUploadSender sets the log upload command sender for runner handler
-func WithLogUploadSender(sender runner.LogUploadCommandSender) RunnerHandlerOption {
-	return func(h *RunnerHandler) {
-		h.logUploadSender = sender
-	}
-}
-
-// WithLogUploadService sets the log upload service for runner handler
-func WithLogUploadService(svc *runnerlogservice.Service) RunnerHandlerOption {
-	return func(h *RunnerHandler) {
-		h.logUploadService = svc
-	}
-}
-
 // WithGrantServiceForRunner sets the grant service for resource sharing
 func WithGrantServiceForRunner(gs *grantservice.Service) RunnerHandlerOption {
 	return func(h *RunnerHandler) {
@@ -90,23 +61,9 @@ func WithGrantServiceForRunner(gs *grantservice.Service) RunnerHandlerOption {
 	}
 }
 
-// UpdateRunnerRequest represents runner update request
-type UpdateRunnerRequest struct {
-	Description       *string  `json:"description"`
-	MaxConcurrentPods *int     `json:"max_concurrent_pods"`
-	IsEnabled         *bool    `json:"is_enabled"`
-	Visibility        *string  `json:"visibility"`
-	Tags              []string `json:"tags"`
-}
-
 // ListRunnerPodsRequest represents request for listing runner pods
 type ListRunnerPodsRequest struct {
 	Status string `form:"status"`
 	Limit  int    `form:"limit"`
 	Offset int    `form:"offset"`
-}
-
-// QuerySandboxesRequest represents request for querying sandbox status
-type QuerySandboxesRequest struct {
-	PodKeys []string `json:"pod_keys" binding:"required,min=1,max=100"`
 }

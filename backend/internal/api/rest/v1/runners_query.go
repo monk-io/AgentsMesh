@@ -70,7 +70,6 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 		return
 	}
 
-	// Default limit
 	limit := req.Limit
 	if limit == 0 {
 		limit = 50
@@ -94,71 +93,5 @@ func (h *RunnerHandler) ListRunnerPods(c *gin.Context) {
 		"total":  total,
 		"limit":  limit,
 		"offset": req.Offset,
-	})
-}
-
-// QuerySandboxes queries sandbox status for specified pod keys on a runner
-// POST /api/v1/organizations/:slug/runners/:id/sandboxes/query
-func (h *RunnerHandler) QuerySandboxes(c *gin.Context) {
-	if h.sandboxQueryService == nil {
-		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Sandbox query service not configured")
-		return
-	}
-
-	runnerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		apierr.InvalidInput(c, "Invalid runner ID")
-		return
-	}
-
-	var req QuerySandboxesRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apierr.ValidationError(c, err.Error())
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
-
-	r, err := h.runnerService.GetRunner(c.Request.Context(), runnerID)
-	if err != nil {
-		apierr.ResourceNotFound(c, "Runner not found")
-		return
-	}
-
-	if !policy.RunnerPolicy.AllowRead(sub, h.runnerResourceWithGrants(
-		c.Request.Context(), runnerID, r.OrganizationID, r.RegisteredByUserID, r.Visibility,
-	)) {
-		apierr.ForbiddenAccess(c)
-		return
-	}
-
-	// Check if runner is connected
-	if !h.sandboxQueryService.IsConnected(runnerID) {
-		apierr.ServiceUnavailable(c, apierr.SERVICE_UNAVAILABLE, "Runner is not connected")
-		return
-	}
-
-	// Query sandboxes
-	result, err := h.sandboxQueryService.QuerySandboxes(
-		c.Request.Context(),
-		runnerID,
-		req.PodKeys,
-	)
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	if result.Error != "" {
-		c.JSON(http.StatusOK, gin.H{
-			"error":     result.Error,
-			"sandboxes": result.Sandboxes,
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"sandboxes": result.Sandboxes,
 	})
 }

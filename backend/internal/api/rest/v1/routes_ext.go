@@ -73,9 +73,6 @@ func RegisterExtRoutes(rg *gin.RouterGroup, svc *Services) {
 
 	// Runner routes (read-only)
 	var runnerOpts []RunnerHandlerOption
-	if svc.SandboxQueryService != nil {
-		runnerOpts = append(runnerOpts, WithSandboxQueryService(svc.SandboxQueryService))
-	}
 	if svc.Pod != nil {
 		runnerOpts = append(runnerOpts, WithPodServiceForRunner(svc.Pod))
 	}

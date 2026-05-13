@@ -73,10 +73,7 @@ go_library(
         "runners_grpc_auth.go",
         "runners_grpc_token.go",
         "runners_grpc_types.go",
-        "runners_logs.go",
         "runners_query.go",
-        "runners_release.go",
-        "runners_upgrade.go",
         "support_tickets.go",
         "ticket_assignees.go",
         "ticket_board.go",
@@ -143,8 +140,6 @@ go_library(
         "@com_github_gin_gonic_gin//:gin",
         "@com_github_google_uuid//:uuid",
         "@com_github_redis_go_redis_v9//:go-redis",
-        "@org_golang_google_grpc//codes",
-        "@org_golang_google_grpc//status",
     ],
 )
 
@@ -170,7 +165,6 @@ go_test(
         "pod_terminate_test.go",
         "promocode_admin_test.go",
         "promocode_setup_test.go",
-        "runners_upgrade_test.go",
     ],
     embed = [":rest"],
     deps = [
@@ -196,7 +190,5 @@ go_test(
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@io_gorm_gorm//:gorm",
-        "@org_golang_google_grpc//codes",
-        "@org_golang_google_grpc//status",
     ],
 )
