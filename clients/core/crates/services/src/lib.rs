@@ -8,6 +8,7 @@ mod blockstore;
 mod blockstore_connect;
 mod channel;
 mod channel_connect;
+mod channel_proto_convert;
 mod error;
 mod extension;
 mod file;
