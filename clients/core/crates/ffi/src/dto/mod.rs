@@ -48,7 +48,9 @@ pub use misc::{
     ResourceGrantDto, ResourceGrantListResponseDto, ResourceGrantResponseDto,
     ResourceGrantUserBriefDto,
 };
-pub(crate) use misc::{create_invitation_req, create_resource_grant_req};
+pub(crate) use misc::{
+    invitation_list_from_proto, pending_invitation_list_from_proto, resource_grant_list_from_proto,
+};
 
 pub use channel::{
     ChannelDto, ChannelListResponseDto, ChannelMemberDto, ChannelMemberListResponseDto,
