@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::blockstore_state::BlockstoreState;
 use agentsmesh_types::{
-    ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, OpEnvelope, OpKind,
+    ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, OpEnvelope, OpKind,
     SearchHit, SemanticSearchRequest, Workspace,
 };
 use serde_json::Value;
@@ -144,6 +144,53 @@ impl BlockstoreService {
 
     pub fn set_last_op_id(&self, workspace_id: &str, id: i64) {
         self.state.write().unwrap().set_last_op_id(workspace_id, id);
+    }
+
+    // ── Bulk state population (consumed by JS Connect adapter callers
+    // who fetched via the binary wire and need to push results into the
+    // local cache). Each method accepts a JSON-serialized payload and
+    // upserts into the SSOT state in a single critical section.
+
+    pub fn replace_workspaces_json(&self, list_json: &str) -> Result<(), String> {
+        let list: Vec<Workspace> = serde_json::from_str(list_json)
+            .map_err(|e| format!("invalid workspaces JSON: {e}"))?;
+        self.state.write().unwrap().replace_workspaces(list);
+        Ok(())
+    }
+
+    pub fn upsert_workspace_json(&self, ws_json: &str) -> Result<(), String> {
+        let ws: Workspace = serde_json::from_str(ws_json)
+            .map_err(|e| format!("invalid workspace JSON: {e}"))?;
+        self.state.write().unwrap().upsert_workspace(ws);
+        Ok(())
+    }
+
+    pub fn upsert_blocks_json(&self, blocks_json: &str) -> Result<(), String> {
+        let blocks: Vec<Block> = serde_json::from_str(blocks_json)
+            .map_err(|e| format!("invalid blocks JSON: {e}"))?;
+        let mut state = self.state.write().unwrap();
+        for b in blocks { state.upsert_block(b); }
+        Ok(())
+    }
+
+    pub fn upsert_refs_json(&self, refs_json: &str) -> Result<(), String> {
+        let refs: Vec<BlockRef> = serde_json::from_str(refs_json)
+            .map_err(|e| format!("invalid refs JSON: {e}"))?;
+        let mut state = self.state.write().unwrap();
+        for r in refs { state.upsert_ref(r); }
+        Ok(())
+    }
+
+    /// Project an ApplyOps envelope/result pair into the local cache.
+    /// Mirrors `apply_ops`'s side effect so JS callers using the Connect
+    /// path can keep the same local-replay semantics.
+    pub fn project_local_ops(&self, req_json: &str, res_json: &str) -> Result<(), String> {
+        let req: ApplyOpsRequest = serde_json::from_str(req_json)
+            .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
+        let res: ApplyOpsResult = serde_json::from_str(res_json)
+            .map_err(|e| format!("invalid ApplyOpsResult JSON: {e}"))?;
+        self.apply_local_ops(&req, &res);
+        Ok(())
     }
 
     pub fn blocks_json(&self) -> String {

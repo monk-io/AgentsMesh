@@ -1,9 +1,16 @@
-import { readCurrentUser } from "@/stores/auth";
+import { readCurrentUser, readCurrentOrg } from "@/stores/auth";
 import { create } from "zustand";
-import { useMemo } from "react";
 import { getChannelService } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
-import { useAuthStore } from "./auth";
+import {
+  listChannelMessages,
+  sendChannelMessage,
+  editChannelMessage,
+  deleteChannelMessage,
+  getChannelUnreadCounts,
+  markChannelRead,
+  muteChannel as muteChannelConnect,
+} from "@/lib/api/channelConnect";
 import { getCache, updateCache } from "./channelMessageTypes";
 import type { ChannelMessageState } from "./channelMessageTypes";
 import type { ChannelMessage } from "@/lib/api/channel";
@@ -17,6 +24,10 @@ export const INITIAL_MESSAGE_LIMIT = 20;
 export const LOAD_MORE_MESSAGE_LIMIT = 30;
 
 const svc = () => getChannelService();
+
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
 
 export function readMessages(channelId: number): { messages: ChannelMessage[]; hasMore: boolean } {
   const raw = svc().get_messages_json(BigInt(channelId));
@@ -43,11 +54,15 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
     );
 
     try {
-      await svc().fetch_messages(
-        BigInt(channelId),
+      const { items, has_more } = await listChannelMessages(orgSlug(), channelId, {
+        beforeId,
         limit,
-        beforeId !== undefined ? BigInt(beforeId) : undefined,
-      );
+      });
+      if (isLoadMore) {
+        svc().prepend_messages(BigInt(channelId), JSON.stringify(items), has_more);
+      } else {
+        svc().set_messages(BigInt(channelId), JSON.stringify(items), has_more);
+      }
       set((state) => updateCache(state, channelId, {
         loading: false, loadingMore: false, error: null,
       }));
@@ -63,12 +78,12 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
 
   sendMessage: async (channelId, payload, podKey) => {
     try {
-      const req: Record<string, unknown> = { source: payload.source };
-      if (payload.mentions && Object.keys(payload.mentions).length > 0) req.mentions = payload.mentions;
-      if (payload.attachment_key) req.attachment_key = payload.attachment_key;
-      if (podKey) req.pod_key = podKey;
-      const json = await svc().send_message(BigInt(channelId), JSON.stringify(req));
-      const msg = JSON.parse(json) as ChannelMessage;
+      const msg = await sendChannelMessage(orgSlug(), channelId, {
+        source: payload.source,
+        mentions: payload.mentions && Object.keys(payload.mentions).length > 0 ? payload.mentions : undefined,
+        attachment_key: payload.attachment_key,
+        pod_key: podKey,
+      });
 
       // POST response may lack sender_user — backfill from auth store.
       if (!msg.sender_user && msg.sender_user_id) {
@@ -83,6 +98,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         }
       }
 
+      svc().add_message(BigInt(channelId), JSON.stringify(msg));
       bumpMessages();
       return msg;
     } catch (error: unknown) {
@@ -98,9 +114,11 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
 
   editMessage: async (channelId, messageId, payload) => {
     try {
-      const req: Record<string, unknown> = { source: payload.source };
-      if (payload.mentions && Object.keys(payload.mentions).length > 0) req.mentions = payload.mentions;
-      await svc().edit_message(BigInt(channelId), BigInt(messageId), JSON.stringify(req));
+      const updated = await editChannelMessage(orgSlug(), channelId, messageId, {
+        source: payload.source,
+        mentions: payload.mentions && Object.keys(payload.mentions).length > 0 ? payload.mentions : undefined,
+      });
+      svc().update_message_local(BigInt(channelId), JSON.stringify(updated));
       bumpMessages();
     } catch (error: unknown) {
       console.error("Failed to edit message:", getErrorMessage(error, "Unknown error"));
@@ -110,7 +128,8 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
 
   deleteMessage: async (channelId, messageId) => {
     try {
-      await svc().delete_message(BigInt(channelId), BigInt(messageId));
+      await deleteChannelMessage(orgSlug(), channelId, messageId);
+      svc().remove_message_local(BigInt(channelId), BigInt(messageId));
       bumpMessages();
     } catch (error: unknown) {
       console.error("Failed to delete message:", getErrorMessage(error, "Unknown error"));
@@ -130,7 +149,8 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
 
   fetchUnreadCounts: async () => {
     try {
-      await svc().fetch_unread_counts();
+      const unread = await getChannelUnreadCounts(orgSlug());
+      svc().set_unread_counts(JSON.stringify(unread));
       set((s) => ({ _unreadTick: s._unreadTick + 1 }));
     } catch (error: unknown) {
       console.error("Failed to fetch unread counts:", getErrorMessage(error, "Unknown error"));
@@ -139,7 +159,8 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
 
   markRead: async (channelId, messageId) => {
     try {
-      await svc().mark_read(BigInt(channelId), BigInt(messageId));
+      await markChannelRead(orgSlug(), channelId, messageId);
+      svc().clear_channel_unread(BigInt(channelId));
       set((s) => ({ _unreadTick: s._unreadTick + 1 }));
     } catch (error: unknown) {
       console.error("Failed to mark channel as read:", getErrorMessage(error, "Unknown error"));
@@ -148,7 +169,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
 
   muteChannel: async (channelId, muted) => {
     try {
-      await svc().mute_channel(BigInt(channelId), muted);
+      await muteChannelConnect(orgSlug(), channelId, muted);
     } catch (error: unknown) {
       console.error("Failed to update mute setting:", getErrorMessage(error, "Unknown error"));
       throw error;
@@ -166,51 +187,13 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
   },
 }));
 
-// ── Selectors: Rust is SSOT. These hooks subscribe to tick counters so
-// components re-render when Rust state mutates — no parallel JS copy.
-
-export interface ChannelMessagesView {
-  messages: ChannelMessage[];
-  hasMore: boolean;
-}
-
-const EMPTY_VIEW: ChannelMessagesView = { messages: [], hasMore: false };
-
-export function useChannelMessages(channelId: number | null | undefined): ChannelMessagesView {
-  const tick = useChannelMessageStore((s) => s._messagesTick);
-  return useMemo(() => {
-    if (channelId == null) return EMPTY_VIEW;
-    return readMessages(channelId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, channelId]);
-}
-
-export function useUnreadCounts(): Record<number, number> {
-  const tick = useChannelMessageStore((s) => s._unreadTick);
-  return useMemo(() => {
-    try {
-      return JSON.parse(svc().unread_counts_json()) as Record<number, number>;
-    } catch {
-      return {};
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick]);
-}
-
-export function useUnreadCount(channelId: number | null | undefined): number {
-  const tick = useChannelMessageStore((s) => s._unreadTick);
-  return useMemo(() => {
-    if (channelId == null) return 0;
-    return svc().get_unread_count(BigInt(channelId));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, channelId]);
-}
-
-export function useTotalUnreadCount(): number {
-  const tick = useChannelMessageStore((s) => s._unreadTick);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => svc().total_unread_count(), [tick]);
-}
+export {
+  useChannelMessages,
+  useUnreadCounts,
+  useUnreadCount,
+  useTotalUnreadCount,
+  type ChannelMessagesView,
+} from "./channelMessageSelectors";
 
 registerOrgScopedReset(() => {
   const ch = svc() as unknown as { set_unread_counts?: (json: string) => void };

@@ -170,6 +170,29 @@ impl WasmBlockstoreService {
         self.0.set_last_op_id(workspace_id, id);
     }
 
+    // ── Bulk state population (JS Connect adapter pushes server results
+    // here so the SSOT cache stays warm without the legacy fetch path).
+
+    pub fn replace_workspaces_json(&self, list_json: &str) -> Result<(), String> {
+        self.0.replace_workspaces_json(list_json)
+    }
+
+    pub fn upsert_workspace_json(&self, ws_json: &str) -> Result<(), String> {
+        self.0.upsert_workspace_json(ws_json)
+    }
+
+    pub fn upsert_blocks_json(&self, blocks_json: &str) -> Result<(), String> {
+        self.0.upsert_blocks_json(blocks_json)
+    }
+
+    pub fn upsert_refs_json(&self, refs_json: &str) -> Result<(), String> {
+        self.0.upsert_refs_json(refs_json)
+    }
+
+    pub fn project_local_ops(&self, req_json: &str, res_json: &str) -> Result<(), String> {
+        self.0.project_local_ops(req_json, res_json)
+    }
+
     pub fn blocks_json(&self) -> String { self.0.blocks_json() }
     pub fn refs_json(&self) -> String { self.0.refs_json() }
     pub fn nest_children_json(&self) -> String { self.0.nest_children_json() }

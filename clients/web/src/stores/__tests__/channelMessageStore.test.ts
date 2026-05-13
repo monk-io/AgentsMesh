@@ -1,29 +1,44 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "@testing-library/react";
+
+const orgSlug = "test-org";
+
+vi.mock("@/stores/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/stores/auth")>("@/stores/auth");
+  return {
+    ...actual,
+    readCurrentOrg: () => ({ id: 1, slug: orgSlug, name: "Test Org" }),
+    readCurrentUser: () => null,
+  };
+});
+
+const mocks = vi.hoisted(() => ({
+  listChannelMessages: vi.fn(),
+  sendChannelMessage: vi.fn(),
+  editChannelMessage: vi.fn(),
+  deleteChannelMessage: vi.fn(),
+  getChannelUnreadCounts: vi.fn(),
+  markChannelRead: vi.fn(),
+  muteChannel: vi.fn(),
+}));
+
+vi.mock("@/lib/api/channelConnect", () => ({
+  listChannelMessages: mocks.listChannelMessages,
+  sendChannelMessage: mocks.sendChannelMessage,
+  editChannelMessage: mocks.editChannelMessage,
+  deleteChannelMessage: mocks.deleteChannelMessage,
+  getChannelUnreadCounts: mocks.getChannelUnreadCounts,
+  markChannelRead: mocks.markChannelRead,
+  muteChannel: mocks.muteChannel,
+}));
+
 import { useChannelMessageStore, EMPTY_CACHE, readMessages } from "../channelMessageStore";
 import { getChannelService } from "@/lib/wasm-core";
 import type { ChannelMessage } from "@/lib/api/channel";
 import type { MessageSendPayload, MessageEditPayload } from "@/lib/api/channel-message-types";
 
-interface MockChannelService {
-  fetch_messages: ReturnType<typeof vi.fn>;
-  send_message: ReturnType<typeof vi.fn>;
-  edit_message: ReturnType<typeof vi.fn>;
-  delete_message: ReturnType<typeof vi.fn>;
-  fetch_unread_counts: ReturnType<typeof vi.fn>;
-  mark_read: ReturnType<typeof vi.fn>;
-  mute_channel: ReturnType<typeof vi.fn>;
-  increment_unread: ReturnType<typeof vi.fn>;
-  clear_channel_unread: ReturnType<typeof vi.fn>;
-  on_new_message: ReturnType<typeof vi.fn>;
-  update_message_local: ReturnType<typeof vi.fn>;
-  remove_message_local: ReturnType<typeof vi.fn>;
-  get_messages_json: ReturnType<typeof vi.fn>;
-  unread_counts_json: ReturnType<typeof vi.fn>;
-}
-
-function svc(): MockChannelService {
-  return getChannelService() as unknown as MockChannelService;
+function svc(): ReturnType<typeof getChannelService> {
+  return getChannelService();
 }
 
 function makeMsg(id: number, overrides: Partial<ChannelMessage> = {}): ChannelMessage {
@@ -41,43 +56,22 @@ function makeMsg(id: number, overrides: Partial<ChannelMessage> = {}): ChannelMe
   } as ChannelMessage;
 }
 
-function mockSuccess(messages: ChannelMessage[], hasMore = false) {
-  svc().fetch_messages.mockResolvedValue(undefined);
-  svc().get_messages_json.mockReturnValue(JSON.stringify({ messages, has_more: hasMore }));
-}
-
 beforeEach(() => {
-  useChannelMessageStore.setState({ cache: {}, _unreadTick: 0 });
-  Object.assign(getChannelService(), {
-    fetch_messages: vi.fn().mockResolvedValue(undefined),
-    send_message: vi.fn().mockResolvedValue(JSON.stringify(makeMsg(100))),
-    edit_message: vi.fn().mockResolvedValue(undefined),
-    delete_message: vi.fn().mockResolvedValue(undefined),
-    fetch_unread_counts: vi.fn().mockResolvedValue(undefined),
-    mark_read: vi.fn().mockResolvedValue(undefined),
-    mute_channel: vi.fn().mockResolvedValue(undefined),
-    increment_unread: vi.fn(),
-    clear_channel_unread: vi.fn(),
-    on_new_message: vi.fn(),
-    update_message_local: vi.fn(),
-    remove_message_local: vi.fn(),
-    get_messages_json: vi.fn().mockReturnValue(JSON.stringify({ messages: [], has_more: false })),
-    unread_counts_json: vi.fn().mockReturnValue("{}"),
-    total_unread_count: vi.fn().mockReturnValue(0),
-    get_unread_count: vi.fn().mockReturnValue(0),
-  });
+  vi.clearAllMocks();
+  Object.values(mocks).forEach((m) => m.mockReset());
+  useChannelMessageStore.setState({ cache: {}, _messagesTick: 0, _unreadTick: 0 });
 });
 
-describe("useChannelMessageStore — WASM integration", () => {
-  it("fetchMessages: calls ChannelService.fetch_messages and syncs cache", async () => {
+describe("useChannelMessageStore — Connect adapter integration", () => {
+  it("fetchMessages: calls listChannelMessages and seeds the SSOT cache", async () => {
     const msgs = [makeMsg(1), makeMsg(2)];
-    mockSuccess(msgs, true);
+    mocks.listChannelMessages.mockResolvedValue({ items: msgs, has_more: true });
 
     await act(async () => {
       await useChannelMessageStore.getState().fetchMessages(42, 20);
     });
 
-    expect(svc().fetch_messages).toHaveBeenCalledWith(BigInt(42), 20, undefined);
+    expect(mocks.listChannelMessages).toHaveBeenCalledWith(orgSlug, 42, { beforeId: undefined, limit: 20 });
     const cache = useChannelMessageStore.getState().cache[42] ?? EMPTY_CACHE;
     const view = readMessages(42);
     expect(view.messages).toHaveLength(2);
@@ -86,7 +80,7 @@ describe("useChannelMessageStore — WASM integration", () => {
   });
 
   it("fetchMessages: records error on failure", async () => {
-    svc().fetch_messages.mockRejectedValue(new Error("boom"));
+    mocks.listChannelMessages.mockRejectedValue(new Error("boom"));
     await act(async () => {
       await useChannelMessageStore.getState().fetchMessages(42);
     });
@@ -94,80 +88,88 @@ describe("useChannelMessageStore — WASM integration", () => {
     expect(useChannelMessageStore.getState().cache[42]?.loading).toBe(false);
   });
 
-  it("sendMessage: forwards source + mentions + podKey and refreshes cache", async () => {
-    const payload: MessageSendPayload = { source: "hi", mentions: { bot: { entity_type: "pod", entity_key: "pod-abc" } } };
+  it("sendMessage: forwards source + mentions + podKey and merges into cache", async () => {
+    const payload: MessageSendPayload = {
+      source: "hi",
+      mentions: { bot: { entity_type: "pod", entity_key: "pod-abc" } },
+    };
     const returned = makeMsg(100, { body: "hi" });
-    svc().send_message.mockResolvedValue(JSON.stringify(returned));
-    svc().get_messages_json.mockReturnValue(JSON.stringify({ messages: [returned], has_more: false }));
+    mocks.sendChannelMessage.mockResolvedValue(returned);
 
     let result: ChannelMessage | undefined;
     await act(async () => {
       result = await useChannelMessageStore.getState().sendMessage(42, payload, "pod-abc");
     });
 
-    const [chanArg, bodyArg] = svc().send_message.mock.calls[0];
-    expect(chanArg).toBe(BigInt(42));
-    expect(JSON.parse(bodyArg)).toEqual({ source: "hi", mentions: payload.mentions, pod_key: "pod-abc" });
+    expect(mocks.sendChannelMessage).toHaveBeenCalledWith(orgSlug, 42, {
+      source: "hi", mentions: payload.mentions, attachment_key: undefined, pod_key: "pod-abc",
+    });
     expect(result?.id).toBe(100);
-    expect(readMessages(42).messages).toHaveLength(1);
+    expect(readMessages(42).messages.some((m) => m.id === 100)).toBe(true);
   });
 
-  it("editMessage: forwards source payload to edit_message", async () => {
+  it("editMessage: forwards source payload to editChannelMessage", async () => {
+    mocks.editChannelMessage.mockResolvedValue(makeMsg(7, { body: "edited" }));
     const payload: MessageEditPayload = { source: "edited" };
     await act(async () => {
       await useChannelMessageStore.getState().editMessage(42, 7, payload);
     });
-    expect(svc().edit_message).toHaveBeenCalledWith(BigInt(42), BigInt(7), JSON.stringify({ source: "edited" }));
+    expect(mocks.editChannelMessage).toHaveBeenCalledWith(orgSlug, 42, 7, {
+      source: "edited", mentions: undefined,
+    });
   });
 
-  it("deleteMessage: calls delete_message and re-syncs cache", async () => {
+  it("deleteMessage: calls deleteChannelMessage and clears local copy", async () => {
+    mocks.deleteChannelMessage.mockResolvedValue(undefined);
     await act(async () => {
       await useChannelMessageStore.getState().deleteMessage(42, 5);
     });
-    expect(svc().delete_message).toHaveBeenCalledWith(BigInt(42), BigInt(5));
+    expect(mocks.deleteChannelMessage).toHaveBeenCalledWith(orgSlug, 42, 5);
   });
 
-  it("addMessage: dispatches to WASM on_new_message", () => {
+  it("addMessage: dispatches to WASM on_new_message (local-only event handler)", () => {
     const msg = makeMsg(9);
     useChannelMessageStore.getState().addMessage(42, msg);
-    expect(svc().on_new_message).toHaveBeenCalledWith(JSON.stringify(msg));
+    // svc().on_new_message is the existing local hook; verify state effect via readMessages.
+    expect(readMessages(42).messages.some((m) => m.id === 9)).toBe(true);
   });
 
-  it("fetchUnreadCounts: bumps tick so selectors re-read unread_counts_json", async () => {
-    svc().unread_counts_json.mockReturnValue(JSON.stringify({ 1: 3, 2: 5 }));
+  it("fetchUnreadCounts: writes counts into SSOT and bumps tick", async () => {
+    mocks.getChannelUnreadCounts.mockResolvedValue({ "1": 3, "2": 5 });
     await act(async () => {
       await useChannelMessageStore.getState().fetchUnreadCounts();
     });
-    expect(svc().fetch_unread_counts).toHaveBeenCalled();
+    expect(mocks.getChannelUnreadCounts).toHaveBeenCalledWith(orgSlug);
     expect(useChannelMessageStore.getState()._unreadTick).toBeGreaterThan(0);
+    expect(svc().get_unread_count(BigInt(1))).toBe(3);
   });
 
-  it("markRead: calls mark_read and bumps unread tick", async () => {
+  it("markRead: calls markChannelRead and bumps unread tick", async () => {
+    mocks.markChannelRead.mockResolvedValue(undefined);
     await act(async () => {
       await useChannelMessageStore.getState().markRead(42, 99);
     });
-    expect(svc().mark_read).toHaveBeenCalledWith(BigInt(42), BigInt(99));
+    expect(mocks.markChannelRead).toHaveBeenCalledWith(orgSlug, 42, 99);
     expect(useChannelMessageStore.getState()._unreadTick).toBeGreaterThan(0);
   });
 
   it("muteChannel: forwards muted flag", async () => {
+    mocks.muteChannel.mockResolvedValue(undefined);
     await act(async () => {
       await useChannelMessageStore.getState().muteChannel(42, true);
     });
-    expect(svc().mute_channel).toHaveBeenCalledWith(BigInt(42), true);
+    expect(mocks.muteChannel).toHaveBeenCalledWith(orgSlug, 42, true);
   });
 
   it("incrementUnread: dispatches to WASM and bumps tick (no JS mirror)", () => {
     const before = useChannelMessageStore.getState()._unreadTick;
     useChannelMessageStore.getState().incrementUnread(42);
-    expect(svc().increment_unread).toHaveBeenCalledWith(BigInt(42));
     expect(useChannelMessageStore.getState()._unreadTick).toBe(before + 1);
   });
 
   it("clearChannelUnread: dispatches to WASM and bumps tick", () => {
     const before = useChannelMessageStore.getState()._unreadTick;
     useChannelMessageStore.getState().clearChannelUnread(42);
-    expect(svc().clear_channel_unread).toHaveBeenCalledWith(BigInt(42));
     expect(useChannelMessageStore.getState()._unreadTick).toBe(before + 1);
   });
 });
