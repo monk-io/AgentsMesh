@@ -11,7 +11,6 @@ go_library(
         "billing_handler.go",
         "billing_plans.go",
         "billing_routes.go",
-        "billing_subscription_plan.go",
         "billing_subscription_settings.go",
         "bindings.go",
         "bindings_query.go",

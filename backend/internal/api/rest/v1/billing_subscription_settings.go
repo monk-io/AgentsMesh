@@ -11,47 +11,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ===========================================
-// Subscription Settings (Portal, Auto-Renew, Customer)
-// ===========================================
-
-// CreateStripeCustomerRequest represents the Stripe customer creation request
-type CreateStripeCustomerRequest struct {
-	Email string `json:"email" binding:"required,email"`
-	Name  string `json:"name" binding:"required"`
-}
-
-// CreateStripeCustomer creates a Stripe customer for the organization
-func (h *BillingHandler) CreateStripeCustomer(c *gin.Context) {
-	tenant := c.MustGet("tenant").(*middleware.TenantContext)
-
-	// Only owners can create Stripe customers
-	if tenant.UserRole != "owner" {
-		apierr.Forbidden(c, apierr.INSUFFICIENT_PERMISSIONS, "insufficient permissions")
-		return
-	}
-
-	var req CreateStripeCustomerRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apierr.ValidationError(c, err.Error())
-		return
-	}
-
-	customerID, err := h.billingService.CreateStripeCustomer(c.Request.Context(), tenant.OrganizationID, req.Email, req.Name)
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"customer_id": customerID})
-}
-
 // CustomerPortalRequest represents a customer portal request
 type CustomerPortalRequest struct {
 	ReturnURL string `json:"return_url" binding:"required"`
 }
 
-// GetCustomerPortal returns a customer portal URL (Stripe or LemonSqueezy)
+// GetCustomerPortal returns a customer portal URL (Stripe or LemonSqueezy).
+// REST-only — Stripe/LemonSqueezy customer portal redirects are
+// provider-owned URL flows, not a domain RPC. The proto SSOT doesn't
+// pin this surface.
 func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
 
@@ -78,37 +46,16 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 		return
 	}
 
-	// Determine which provider to use based on subscription IDs
-	var provider payment.Provider
-	var customerID string
-	var subscriptionID string
-
-	if sub.LemonSqueezyCustomerID != nil {
-		provider, err = factory.GetProvider(billing.PaymentProviderLemonSqueezy)
-		if err != nil {
-			apierr.ValidationError(c, err.Error())
-			return
-		}
-		customerID = *sub.LemonSqueezyCustomerID
-		if sub.LemonSqueezySubscriptionID != nil {
-			subscriptionID = *sub.LemonSqueezySubscriptionID
-		}
-	} else if sub.StripeCustomerID != nil {
-		provider, err = factory.GetProvider(billing.PaymentProviderStripe)
-		if err != nil {
-			apierr.ValidationError(c, err.Error())
-			return
-		}
-		customerID = *sub.StripeCustomerID
-		if sub.StripeSubscriptionID != nil {
-			subscriptionID = *sub.StripeSubscriptionID
-		}
-	} else {
+	provider, customerID, subscriptionID, err := resolveCustomerPortalProvider(factory, sub)
+	if err != nil {
+		apierr.ValidationError(c, err.Error())
+		return
+	}
+	if provider == nil {
 		apierr.BadRequest(c, apierr.VALIDATION_FAILED, "no payment provider associated with this subscription")
 		return
 	}
 
-	// Cast to SubscriptionProvider to access GetCustomerPortalURL
 	subProvider, ok := provider.(payment.SubscriptionProvider)
 	if !ok {
 		apierr.InternalError(c, "provider does not support customer portal")
@@ -128,4 +75,33 @@ func (h *BillingHandler) GetCustomerPortal(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"url": resp.URL})
+}
+
+// resolveCustomerPortalProvider picks the active payment provider based on
+// stored subscription IDs (LemonSqueezy first, then Stripe — matches the
+// historical REST ordering).
+func resolveCustomerPortalProvider(factory *payment.Factory, sub *billing.Subscription) (payment.Provider, string, string, error) {
+	if sub.LemonSqueezyCustomerID != nil {
+		provider, err := factory.GetProvider(billing.PaymentProviderLemonSqueezy)
+		if err != nil {
+			return nil, "", "", err
+		}
+		subscriptionID := ""
+		if sub.LemonSqueezySubscriptionID != nil {
+			subscriptionID = *sub.LemonSqueezySubscriptionID
+		}
+		return provider, *sub.LemonSqueezyCustomerID, subscriptionID, nil
+	}
+	if sub.StripeCustomerID != nil {
+		provider, err := factory.GetProvider(billing.PaymentProviderStripe)
+		if err != nil {
+			return nil, "", "", err
+		}
+		subscriptionID := ""
+		if sub.StripeSubscriptionID != nil {
+			subscriptionID = *sub.StripeSubscriptionID
+		}
+		return provider, *sub.StripeCustomerID, subscriptionID, nil
+	}
+	return nil, "", "", nil
 }

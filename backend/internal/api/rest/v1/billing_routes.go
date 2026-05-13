@@ -25,14 +25,9 @@ func RegisterBillingHandlers(rg *gin.RouterGroup, billingService *billingsvc.Ser
 	rg.POST("/quota", handler.SetCustomQuota)
 	rg.GET("/quota/check", handler.CheckQuota)
 
-	// Provider-side flows. Stripe customer creation + customer portal redirect
-	// are provider-owned, not a domain RPC — staying REST.
-	rg.POST("/stripe/customer", handler.CreateStripeCustomer)
+	// Provider-side flows. Stripe / LemonSqueezy customer-portal redirect is
+	// a provider-owned URL flow, not a domain RPC — staying REST.
 	rg.POST("/customer-portal", handler.GetCustomerPortal)
-
-	// Downgrade. The proto surface only carries Upgrade; downgrade has different
-	// effective-date semantics (end-of-period vs. immediate).
-	rg.POST("/subscription/downgrade", handler.DowngradeSubscription)
 }
 
 // RegisterPublicConfigRoutes registers public REST config routes — Connect's
