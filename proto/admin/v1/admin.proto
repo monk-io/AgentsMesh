@@ -1,0 +1,322 @@
+// AdminService — platform-admin (`is_system_admin=true`) management plane.
+//
+// Migrated from REST handlers in backend/internal/api/rest/v1/admin/* per
+// .claude/plans/proto-naming-conventions.md. Covers the batch-1 surface:
+//   * Dashboard           — system stats
+//   * Users               — list/get/update/disable/enable/grant/revoke admin
+//                           + verify/unverify email
+//   * Organizations       — list/get/members/delete
+//   * Runners             — list/get/disable/enable/delete (across all orgs)
+//   * AuditLogs           — list with filters
+//
+// Auth model (conventions §3.5 EXCEPTION — platform-admin scoped):
+//   Every RPC requires (1) a valid bearer JWT (standard auth interceptor)
+//   AND (2) the calling user's `is_system_admin = true` AND `is_active =
+//   true` flags. The Connect admin interceptor combines REST's
+//   `AuthMiddleware` + `AdminMiddleware` (backend/internal/middleware/admin.go)
+//   into a single pipeline step. Per conventions §3.5 exception #2, admin
+//   request messages do NOT carry `org_slug` at tag 1; tenant is the whole
+//   platform and is implied by the admin interceptor.
+//
+// Audit-log shape:
+//   REST handlers call `LogAdminAction` from a `gin.Context` to read the
+//   admin user ID + IP + user-agent. The Connect handler reads:
+//     * admin user ID  — from the auth interceptor's TenantContext
+//     * IP address     — from req.Peer().Addr (Connect's transport hook)
+//     * user-agent     — from req.Header().Get("User-Agent")
+//   so audit logging is parity-preserving across both transports.
+
+syntax = "proto3";
+
+package proto.admin.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/admin/v1;adminv1";
+
+service AdminService {
+  // Dashboard
+  rpc GetDashboardStats(GetDashboardStatsRequest) returns (DashboardStats);
+
+  // Users
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc GetUser(GetUserRequest) returns (AdminUser);
+  rpc UpdateUser(UpdateUserRequest) returns (AdminUser);
+  rpc DisableUser(DisableUserRequest) returns (AdminUser);
+  rpc EnableUser(EnableUserRequest) returns (AdminUser);
+  rpc GrantAdmin(GrantAdminRequest) returns (AdminUser);
+  rpc RevokeAdmin(RevokeAdminRequest) returns (AdminUser);
+  rpc VerifyUserEmail(VerifyUserEmailRequest) returns (AdminUser);
+  rpc UnverifyUserEmail(UnverifyUserEmailRequest) returns (AdminUser);
+
+  // Organizations
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc GetOrganization(GetOrganizationRequest) returns (AdminOrganization);
+  rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse);
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse);
+
+  // Runners
+  rpc ListRunners(ListRunnersRequest) returns (ListRunnersResponse);
+  rpc GetRunner(GetRunnerRequest) returns (AdminRunner);
+  rpc DisableRunner(DisableRunnerRequest) returns (AdminRunner);
+  rpc EnableRunner(EnableRunnerRequest) returns (AdminRunner);
+  rpc DeleteRunner(DeleteRunnerRequest) returns (DeleteRunnerResponse);
+
+  // Audit logs
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+}
+
+// --- Dashboard ---
+
+message GetDashboardStatsRequest {}
+
+message DashboardStats {
+  int64 total_users = 1;
+  int64 active_users = 2;
+  int64 total_organizations = 3;
+  int64 total_runners = 4;
+  int64 online_runners = 5;
+  int64 total_pods = 6;
+  int64 active_pods = 7;
+  int64 total_subscriptions = 8;
+  int64 active_subscriptions = 9;
+  int64 new_users_today = 10;
+  int64 new_users_this_week = 11;
+  int64 new_users_this_month = 12;
+}
+
+// --- Common nested types ---
+
+message AdminUser {
+  int64 id = 1;
+  string email = 2;
+  string username = 3;
+  optional string name = 4;
+  optional string avatar_url = 5;
+  bool is_active = 6;
+  bool is_system_admin = 7;
+  bool is_email_verified = 8;
+  // RFC 3339 timestamps; nullable last_login_at omitted when never logged in.
+  optional string last_login_at = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message AdminOrganization {
+  int64 id = 1;
+  string name = 2;
+  string slug = 3;
+  optional string logo_url = 4;
+  string subscription_plan = 5;
+  string subscription_status = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+// AdminOrganizationMember mirrors the REST `memberResponse` shape (nested
+// user identity, role, joined_at). The embedded user is optional because
+// `Preload("User")` may fail to load for orphaned memberships.
+message AdminOrganizationMember {
+  int64 id = 1;
+  int64 user_id = 2;
+  int64 org_id = 3;
+  string role = 4;
+  string joined_at = 5;
+  optional AdminUserSummary user = 6;
+}
+
+message AdminUserSummary {
+  int64 id = 1;
+  string email = 2;
+  string username = 3;
+  optional string name = 4;
+  optional string avatar_url = 5;
+}
+
+message AdminRunner {
+  int64 id = 1;
+  int64 organization_id = 2;
+  string node_id = 3;
+  optional string description = 4;
+  string status = 5;
+  bool is_enabled = 6;
+  optional string runner_version = 7;
+  int32 current_pods = 8;
+  int32 max_concurrent_pods = 9;
+  repeated string available_agents = 10;
+  // Free-form host metadata; JSON-serialized for binary parity with REST.
+  optional string host_info_json = 11;
+  optional string last_heartbeat = 12;
+  string created_at = 13;
+  string updated_at = 14;
+  // Optional embedded org summary (parity with runnerResponseWithOrg).
+  optional AdminOrganizationSummary organization = 15;
+}
+
+message AdminOrganizationSummary {
+  int64 id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message AdminAuditLog {
+  int64 id = 1;
+  int64 admin_user_id = 2;
+  string action = 3;
+  string target_type = 4;
+  int64 target_id = 5;
+  optional string old_data = 6;
+  optional string new_data = 7;
+  optional string ip_address = 8;
+  optional string user_agent = 9;
+  string created_at = 10;
+  optional AdminUserSummary admin_user = 11;
+}
+
+// --- Users ---
+
+message ListUsersRequest {
+  optional string search = 1;
+  optional bool is_active = 2;
+  optional bool is_admin = 3;
+  optional int32 page = 4;
+  optional int32 page_size = 5;
+}
+
+message ListUsersResponse {
+  repeated AdminUser items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message UpdateUserRequest {
+  int64 user_id = 1;
+  optional string name = 2;
+  optional string username = 3;
+  optional string email = 4;
+}
+
+message DisableUserRequest {
+  int64 user_id = 1;
+}
+
+message EnableUserRequest {
+  int64 user_id = 1;
+}
+
+message GrantAdminRequest {
+  int64 user_id = 1;
+}
+
+message RevokeAdminRequest {
+  int64 user_id = 1;
+}
+
+message VerifyUserEmailRequest {
+  int64 user_id = 1;
+}
+
+message UnverifyUserEmailRequest {
+  int64 user_id = 1;
+}
+
+// --- Organizations ---
+
+message ListOrganizationsRequest {
+  optional string search = 1;
+  optional int32 page = 2;
+  optional int32 page_size = 3;
+}
+
+message ListOrganizationsResponse {
+  repeated AdminOrganization items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message GetOrganizationRequest {
+  int64 org_id = 1;
+}
+
+message GetOrganizationMembersRequest {
+  int64 org_id = 1;
+}
+
+message GetOrganizationMembersResponse {
+  AdminOrganization organization = 1;
+  repeated AdminOrganizationMember members = 2;
+}
+
+message DeleteOrganizationRequest {
+  int64 org_id = 1;
+}
+
+message DeleteOrganizationResponse {
+  string message = 1;
+}
+
+// --- Runners ---
+
+message ListRunnersRequest {
+  optional string search = 1;
+  optional string status = 2;
+  optional int64 org_id = 3;
+  optional int32 page = 4;
+  optional int32 page_size = 5;
+}
+
+message ListRunnersResponse {
+  repeated AdminRunner items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message GetRunnerRequest {
+  int64 runner_id = 1;
+}
+
+message DisableRunnerRequest {
+  int64 runner_id = 1;
+}
+
+message EnableRunnerRequest {
+  int64 runner_id = 1;
+}
+
+message DeleteRunnerRequest {
+  int64 runner_id = 1;
+}
+
+message DeleteRunnerResponse {
+  string message = 1;
+}
+
+// --- Audit logs ---
+
+message ListAuditLogsRequest {
+  optional int64 admin_user_id = 1;
+  optional string action = 2;
+  optional string target_type = 3;
+  optional int64 target_id = 4;
+  // RFC 3339 timestamps; empty string = no bound.
+  optional string start_time = 5;
+  optional string end_time = 6;
+  optional int32 page = 7;
+  optional int32 page_size = 8;
+}
+
+message ListAuditLogsResponse {
+  repeated AdminAuditLog items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}

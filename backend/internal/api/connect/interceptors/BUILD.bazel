@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "interceptors",
     srcs = [
+        "admin.go",
         "auth.go",
         "claims.go",
         "org_scope.go",
@@ -10,6 +11,8 @@ go_library(
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors",
     visibility = ["//backend:__subpackages__"],
     deps = [
+        "//backend/internal/domain/user",
+        "//backend/internal/infra/database",
         "//backend/internal/middleware",
         "@com_connectrpc_connect//:connect",
         "@com_github_golang_jwt_jwt_v5//:jwt",
