@@ -18,7 +18,6 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/geo"
 	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/service/invitation"
-	"github.com/anthropics/agentsmesh/backend/internal/service/license"
 	loop "github.com/anthropics/agentsmesh/backend/internal/service/loop"
 	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
@@ -68,7 +67,6 @@ type Services struct {
 	Invitation         *invitation.Service              // Organization invitations
 	File               *fileservice.Service             // File storage service
 	PromoCode          *promocode.Service               // Promo code management
-	License            *license.Service                 // License service for OnPremise
 	APIKey             *apikeyservice.Service           // API key management for third-party access
 	APIKeyAdapter      *apikeyservice.MiddlewareAdapter // API key middleware adapter
 	// NOTE: GitProvider and SSHKey services have been removed (moved to user-level settings)

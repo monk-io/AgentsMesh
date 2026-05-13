@@ -187,7 +187,6 @@ func buildServicesContainer(
 		PromoCode:          services.promoCode,
 		AgentPodSettings:   services.agentpodSettings,
 		AgentPodAIProvider: services.agentpodAIProvider,
-		License:            services.license,
 		APIKey:             services.apikey,
 		APIKeyAdapter:      services.apikeyAdapter,
 		GRPCRunnerHandler:    grpcResult.handler,
