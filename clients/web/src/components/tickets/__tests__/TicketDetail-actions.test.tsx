@@ -1,14 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import { TicketDetail } from '../TicketDetail'
-import { getApiClient, getOrgApiService } from '@/lib/wasm-core'
+import { getApiClient } from '@/lib/wasm-core'
 import * as ticketRelations from '@/lib/api/ticketRelations'
+import * as org from '@/lib/api/org'
 
 vi.mock('@/lib/api/ticketRelations', () => ({
   listRelations: vi.fn(),
   listCommits: vi.fn(),
   listComments: vi.fn(),
   listMergeRequests: vi.fn(),
+}))
+
+vi.mock('@/lib/api/org', () => ({
+  listMembers: vi.fn(),
 }))
 
 // Mock next/navigation
@@ -143,7 +148,12 @@ describe('TicketDetail - Editing, Status & Delete', () => {
     })
     vi.mocked(ticketRelations.listMergeRequests).mockResolvedValue({ merge_requests: [] })
 
-    vi.mocked(getOrgApiService().list_members).mockResolvedValue(JSON.stringify({ members: [] }))
+    vi.mocked(org.listMembers).mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 0,
+      offset: 0,
+    })
   })
 
   // NOTE: after the ticket-detail redesign the following UI surfaces moved out
