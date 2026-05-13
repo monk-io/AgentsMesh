@@ -105,8 +105,10 @@ impl AppState {
         svc.remove_label_connect(&request).await.map_err(err)
     }
 
-    // REST-only: proto.ticket.v1 does not own ticket→pod lookup
-    // (that's MeshService). Stays JSON until MeshService migrates.
+    // ticket→pod lookup belongs to proto.mesh.v1 (MeshService), not
+    // proto.ticket.v1. TicketService.get_ticket_pods forwards to the
+    // Connect-RPC bridge then projects the proto MeshNode shape into
+    // legacy PodListResponse JSON for the renderer.
     #[napi]
     pub async fn ticket_get_ticket_pods(&self, slug: String, active_only: Option<bool>) -> napi::Result<String> {
         let svc = self.ticket.lock().await;

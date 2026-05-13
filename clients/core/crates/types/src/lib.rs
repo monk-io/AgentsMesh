@@ -317,11 +317,11 @@ pub mod proto_autopilot_v1 {
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.mesh.v1`. MeshService covers
-/// the topology aggregate read plus ticket→pod lookup (the latter stayed
-/// on REST through the ticket migration because it belongs to MeshService,
-/// not TicketService). Coexists with the legacy serde `MeshTopology` /
-/// `MeshNode` / `MeshEdge` / `MeshChannelInfo` / `MeshRunnerInfo` for the
-/// dual-track window.
+/// the topology aggregate read, ticket→pod lookup, and pod-for-ticket
+/// creation. The legacy serde `MeshTopology` / `MeshNode` / `MeshEdge` /
+/// `MeshChannelInfo` / `MeshRunnerInfo` in `mesh.rs` are no longer wire
+/// types — they remain as the in-memory cache shape that MeshState +
+/// WasmMeshService project for the renderer.
 pub mod proto_mesh_v1 {
     pub use super::mesh_proto::*;
 }

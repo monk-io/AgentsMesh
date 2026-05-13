@@ -51,17 +51,9 @@ mod api_core_tests {
     // (backend/internal/api/connect/billing).
 
     // ── mesh ────────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_mesh_topology() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/mesh/topology"))
-            .respond_with(ok(json!({"nodes":[],"edges":[],"channels":[],"runners":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let r = c.get_mesh_topology().await.unwrap();
-        assert!(r.nodes.is_empty());
-    }
+    // get_mesh_topology REST mock removed: REST surface eliminated;
+    // Connect handler tests in backend/internal/api/connect/mesh cover
+    // the same surface.
 
     // ── loop ────────────────────────────────────────────────────────────
 

@@ -42,7 +42,7 @@ pub use blocks_mesh::{
     OpKindDto, SearchHitDto, SemanticSearchRequestDto, SetNotificationPreferenceRequestDto,
     WorkspaceDto,
 };
-pub(crate) use blocks_mesh::notification_list_from_proto;
+pub(crate) use blocks_mesh::{mesh_topology_from_proto, notification_list_from_proto};
 pub use misc::{
     InvitationDto, InvitationListResponseDto, PresignRequestDto, PresignResponseDto,
     ResourceGrantDto, ResourceGrantListResponseDto, ResourceGrantResponseDto,

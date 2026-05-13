@@ -540,3 +540,68 @@ pub(crate) fn notification_list_from_proto(
             .collect(),
     }
 }
+
+// proto.mesh.v1 MeshTopology → MeshTopologyDto. The proto wire shape
+// uses primitive zeros for "absent" (runner_id=0, created_by_id=0,
+// empty strings) where the legacy DTO uses `Option<T>`; map those back
+// to None so Swift consumers see the same surface they did under REST.
+pub(crate) fn mesh_topology_from_proto(
+    t: agentsmesh_types::proto_mesh_v1::MeshTopology,
+) -> MeshTopologyDto {
+    use agentsmesh_types::PodStatus as LegacyPodStatus;
+    use agentsmesh_types::RunnerStatus as LegacyRunnerStatus;
+    fn parse_pod_status(s: &str) -> LegacyPodStatus {
+        serde_json::from_value::<LegacyPodStatus>(serde_json::Value::String(s.to_string()))
+            .unwrap_or_default()
+    }
+    fn parse_runner_status(s: &str) -> LegacyRunnerStatus {
+        serde_json::from_value::<LegacyRunnerStatus>(serde_json::Value::String(s.to_string()))
+            .unwrap_or_default()
+    }
+    MeshTopologyDto {
+        nodes: t.nodes.into_iter().map(|n| MeshNodeDto {
+            pod_key: n.pod_key,
+            alias: n.alias,
+            status: parse_pod_status(&n.status).into(),
+            agent_status: if n.agent_status.is_empty() { None } else { Some(n.agent_status) },
+            agent_slug: n.agent_slug,
+            runner_id: if n.runner_id == 0 { None } else { Some(n.runner_id) },
+            model: n.model,
+            title: n.title,
+            ticket_id: n.ticket_id,
+            ticket_slug: n.ticket_slug,
+            ticket_title: n.ticket_title,
+            repository_id: n.repository_id,
+            created_by_id: if n.created_by_id == 0 { None } else { Some(n.created_by_id) },
+            runner_node_id: if n.runner_node_id.is_empty() { None } else { Some(n.runner_node_id) },
+            runner_status: if n.runner_status.is_empty() { None } else { Some(n.runner_status) },
+            started_at: n.started_at,
+        }).collect(),
+        edges: t.edges.into_iter().map(|e| MeshEdgeDto {
+            id: if e.id == 0 { None } else { Some(e.id) },
+            source: e.source,
+            target: e.target,
+            binding_status: if e.status.is_empty() { None } else { Some(e.status.clone()) },
+            status: if e.status.is_empty() { None } else { Some(e.status) },
+            granted_scopes: if e.granted_scopes.is_empty() { None } else { Some(e.granted_scopes) },
+            pending_scopes: if e.pending_scopes.is_empty() { None } else { Some(e.pending_scopes) },
+        }).collect(),
+        channels: t.channels.into_iter().map(|c| MeshChannelInfoDto {
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            pod_keys: c.pod_keys,
+            message_count: Some(c.message_count as i64),
+            is_archived: Some(c.is_archived),
+        }).collect(),
+        runners: t.runners.into_iter().map(|r| MeshRunnerInfoDto {
+            id: r.id,
+            name: r.node_id.clone(),
+            status: parse_runner_status(&r.status).into(),
+            node_id: if r.node_id.is_empty() { None } else { Some(r.node_id) },
+            max_concurrent_pods: Some(r.max_concurrent_pods),
+            current_pods: Some(r.current_pods),
+            pod_keys: Vec::new(),
+        }).collect(),
+    }
+}

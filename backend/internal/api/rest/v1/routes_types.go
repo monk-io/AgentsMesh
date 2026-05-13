@@ -19,7 +19,6 @@ import (
 	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/service/invitation"
 	loop "github.com/anthropics/agentsmesh/backend/internal/service/loop"
-	"github.com/anthropics/agentsmesh/backend/internal/service/mesh"
 	"github.com/anthropics/agentsmesh/backend/internal/service/organization"
 	"github.com/anthropics/agentsmesh/backend/internal/service/promocode"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
@@ -56,7 +55,6 @@ type Services struct {
 	Channel            *channel.Service
 	Ticket             *ticket.Service
 	MRSync             *ticket.MRSyncService // MR sync for webhook events
-	Mesh               *mesh.Service
 	AgentPodSettings   *agentpod.SettingsService   // AgentPod user settings
 	AgentPodAIProvider *agentpod.AIProviderService // AgentPod AI provider management
 	Billing            *billing.Service

@@ -178,7 +178,6 @@ func buildServicesContainer(
 		Channel:            services.channel,
 		Ticket:             services.ticket,
 		MRSync:             services.mrSync,
-		Mesh:               services.mesh,
 		Billing:            services.billing,
 		Hub:                hub,
 		EventBus:           eventBus,

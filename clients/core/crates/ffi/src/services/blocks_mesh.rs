@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use agentsmesh_types::proto_mesh_v1 as mesh_proto;
 use agentsmesh_types::proto_notification_v1 as notification_proto;
 
 use crate::core::AgentsMeshCore;
 use crate::dto::{
-    notification_list_from_proto, BlockDto, ChildrenResultDto, MeshTopologyDto,
-    NotificationPreferenceListResponseDto, SearchHitDto, SemanticSearchRequestDto,
+    mesh_topology_from_proto, notification_list_from_proto, BlockDto, ChildrenResultDto,
+    MeshTopologyDto, NotificationPreferenceListResponseDto, SearchHitDto, SemanticSearchRequestDto,
     SetNotificationPreferenceRequestDto, WorkspaceDto,
 };
 use crate::error::CoreError;
@@ -13,14 +14,11 @@ use crate::error::CoreError;
 #[uniffi::export(async_runtime = "tokio")]
 impl AgentsMeshCore {
     // ── Mesh ──────────────────────────────────────────────
-    //
-    // proto.mesh.v1 has no Connect-RPC surface yet (the topology endpoint is
-    // a snapshot REST aggregator on the backend that splices pods + edges +
-    // channels + runners). Stays on REST until a proto MeshService lands.
 
     pub async fn get_mesh_topology(&self) -> Result<MeshTopologyDto, CoreError> {
-        let t = self.api.get_mesh_topology().await?;
-        Ok(t.into())
+        let req = mesh_proto::GetMeshTopologyRequest { org_slug: self.org_slug()? };
+        let resp = self.api.get_mesh_topology_connect(&req).await?;
+        Ok(mesh_topology_from_proto(resp))
     }
 
     // ── Notifications ─────────────────────────────────────
