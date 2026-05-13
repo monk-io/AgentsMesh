@@ -1,5 +1,6 @@
 import type { PodData } from "@/lib/api";
-import { getPodService } from "@/lib/wasm-core";
+import { createPod } from "@/lib/api/podConnect";
+import { readCurrentOrg } from "@/stores/auth";
 
 export interface CreatePodResult {
   pod: PodData;
@@ -16,7 +17,7 @@ export async function submitCreatePod(params: {
 }): Promise<CreatePodResult | null> {
   const { selectedAgent, alias, perpetual, selectedRunnerId, agentfileLayer, options } = params;
 
-  const raw = await getPodService().create_pod(JSON.stringify({
+  const result = await createPod(readCurrentOrg()?.slug ?? "", {
     agent_slug: selectedAgent,
     runner_id: selectedRunnerId || undefined,
     alias: alias.trim() || undefined,
@@ -25,9 +26,8 @@ export async function submitCreatePod(params: {
     rows: options?.rows,
     agentfile_layer: agentfileLayer || undefined,
     perpetual: perpetual || undefined,
-  }));
+  });
 
-  const parsed = JSON.parse(raw) as { pod: PodData; warning?: string };
-  if (!parsed?.pod) return null;
-  return { pod: parsed.pod, warning: parsed.warning };
+  if (!result?.pod) return null;
+  return { pod: result.pod, warning: result.warning };
 }

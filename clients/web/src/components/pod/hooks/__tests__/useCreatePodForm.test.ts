@@ -1,6 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getPodService, getUserCredentialService } from "@/lib/wasm-core";
+import { getUserCredentialService } from "@/lib/wasm-core";
+import * as podConnect from "@/lib/api/podConnect";
 
 vi.mock("@/stores/podCreation", () => ({
   usePodCreationStore: () => ({
@@ -15,25 +16,26 @@ vi.mock("@/stores/podCreation", () => ({
   }),
 }));
 
+vi.mock("@/lib/api/podConnect", () => ({
+  createPod: vi.fn(),
+}));
+
 import { useCreatePodForm, RUNNER_HOST_PROFILE_ID } from "../useCreatePodForm";
 
 const mockAgents = [
   { name: "Claude Code", slug: "claude-code", is_builtin: true, is_active: true },
 ];
 
-const mockCreatePod = vi.fn();
 const mockListCredentials = vi.fn();
 
 function setupMocks() {
-  // podState is a stable singleton — mutate its create_pod
-  const podSvc = getPodService();
-  (podSvc as unknown as Record<string, unknown>).create_pod = mockCreatePod;
-
   // userCredentialService creates new objects each call — override the getter
   vi.mocked(getUserCredentialService).mockReturnValue({
     list_agent_credentials_for_agent: mockListCredentials,
   } as unknown as ReturnType<typeof getUserCredentialService>);
 }
+
+const mockCreatePod = vi.mocked(podConnect.createPod);
 
 describe("useCreatePodForm - credential via agentfile_layer (SSOT)", () => {
   beforeEach(() => {
@@ -45,9 +47,9 @@ describe("useCreatePodForm - credential via agentfile_layer (SSOT)", () => {
   });
 
   it("should omit CREDENTIAL from agentfile_layer when RunnerHost is selected", async () => {
-    mockCreatePod.mockResolvedValue(
-      JSON.stringify({ pod: { pod_key: "test-pod", id: 1, status: "initializing", agent_status: "idle" } })
-    );
+    mockCreatePod.mockResolvedValue({
+      pod: { pod_key: "test-pod", id: 1, status: "initializing", agent_status: "idle" },
+    });
 
     const { result } = renderHook(() => useCreatePodForm(mockAgents, []));
 
@@ -63,7 +65,7 @@ describe("useCreatePodForm - credential via agentfile_layer (SSOT)", () => {
     });
 
     expect(mockCreatePod).toHaveBeenCalledTimes(1);
-    const createArg = JSON.parse(mockCreatePod.mock.calls[0][0]);
+    const [, createArg] = mockCreatePod.mock.calls[0];
     expect(createArg).not.toHaveProperty("credential_profile_id");
     const layer = createArg.agentfile_layer ?? "";
     expect(layer).not.toContain("CREDENTIAL");
@@ -74,9 +76,9 @@ describe("useCreatePodForm - credential via agentfile_layer (SSOT)", () => {
     mockListCredentials.mockResolvedValue(
       JSON.stringify({ profiles: [customProfile], runner_host: { available: true } })
     );
-    mockCreatePod.mockResolvedValue(
-      JSON.stringify({ pod: { pod_key: "test-pod", id: 1, status: "initializing", agent_status: "idle" } })
-    );
+    mockCreatePod.mockResolvedValue({
+      pod: { pod_key: "test-pod", id: 1, status: "initializing", agent_status: "idle" },
+    });
 
     const { result } = renderHook(() => useCreatePodForm(mockAgents, []));
 
@@ -94,15 +96,15 @@ describe("useCreatePodForm - credential via agentfile_layer (SSOT)", () => {
     });
 
     expect(mockCreatePod).toHaveBeenCalledTimes(1);
-    const createArg = JSON.parse(mockCreatePod.mock.calls[0][0]);
+    const [, createArg] = mockCreatePod.mock.calls[0];
     expect(createArg).not.toHaveProperty("credential_profile_id");
     expect(createArg.agentfile_layer).toContain('CREDENTIAL "My API Key"');
   });
 
   it("should always send agentfile_layer via API (SSOT)", async () => {
-    mockCreatePod.mockResolvedValue(
-      JSON.stringify({ pod: { pod_key: "test-pod", id: 1, status: "initializing", agent_status: "idle" } })
-    );
+    mockCreatePod.mockResolvedValue({
+      pod: { pod_key: "test-pod", id: 1, status: "initializing", agent_status: "idle" },
+    });
 
     const { result } = renderHook(() => useCreatePodForm(mockAgents, []));
 
@@ -114,7 +116,7 @@ describe("useCreatePodForm - credential via agentfile_layer (SSOT)", () => {
       await result.current.submit(1, {}, { cols: 80, rows: 24 });
     });
 
-    const createArg = JSON.parse(mockCreatePod.mock.calls[0][0]);
+    const [, createArg] = mockCreatePod.mock.calls[0];
     expect(createArg).toHaveProperty("agent_slug", "claude-code");
     expect(createArg).not.toHaveProperty("credential_profile_id");
     expect(createArg).not.toHaveProperty("repository_id");
