@@ -12,7 +12,6 @@ import (
 	apikeyservice "github.com/anthropics/agentsmesh/backend/internal/service/apikey"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
-	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
@@ -56,7 +55,6 @@ type Services struct {
 	PodOrchestrator    *agentpod.PodOrchestrator            // Unified Pod creation orchestrator
 	Autopilot          *agentpod.AutopilotControllerService // AutopilotController automation service
 	Channel            *channel.Service
-	Binding            *binding.Service
 	Ticket             *ticket.Service
 	MRSync             *ticket.MRSyncService // MR sync for webhook events
 	Mesh               *mesh.Service

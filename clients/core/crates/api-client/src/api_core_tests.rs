@@ -165,29 +165,6 @@ mod api_core_tests {
         let _ = c.get_public_deployment_info().await.unwrap();
     }
 
-    // ── binding ─────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_bindings() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/bindings"))
-            .and(query_param("status", "active"))
-            .respond_with(ok(json!({"bindings":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_bindings(Some("active")).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_pending_bindings() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/bindings/pending"))
-            .respond_with(ok(json!({"bindings":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_pending_bindings().await.unwrap();
-    }
-
     // ── file ────────────────────────────────────────────────────────────
 
     #[tokio::test]

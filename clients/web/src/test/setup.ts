@@ -801,16 +801,6 @@ vi.mock('@/lib/wasm-core', () => {
       deleteApiKeyConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getBindingService: fn(() => ({
-      request_binding: fn().mockResolvedValue('{}'),
-      accept_binding: fn().mockResolvedValue('{}'),
-      reject_binding: fn().mockResolvedValue(undefined),
-      request_scopes: fn().mockResolvedValue('{}'),
-      approve_scopes: fn().mockResolvedValue('{}'),
-      unbind: fn().mockResolvedValue(undefined),
-      list_bindings: fn().mockResolvedValue('{"bindings":[]}'),
-      get_pending_bindings: fn().mockResolvedValue('{"bindings":[]}'),
-      get_bound_pods: fn().mockResolvedValue('{"pods":[]}'),
-      check_binding: fn().mockResolvedValue('{}'),
       // Connect-RPC (binary wire) — return empty Uint8Array for tests
       requestBindingConnect: fn().mockResolvedValue(new Uint8Array()),
       acceptBindingConnect: fn().mockResolvedValue(new Uint8Array()),

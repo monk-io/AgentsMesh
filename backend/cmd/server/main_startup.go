@@ -176,7 +176,6 @@ func buildServicesContainer(
 		PodOrchestrator:    podOrchestrator,
 		Autopilot:          services.autopilot,
 		Channel:            services.channel,
-		Binding:            services.binding,
 		Ticket:             services.ticket,
 		MRSync:             services.mrSync,
 		Mesh:               services.mesh,

@@ -1,93 +1,91 @@
-use std::collections::HashMap;
+// proto.binding.v1.BindingService Connect-RPC client bindings. Procedure
+// paths derive from `proto.binding.v1.BindingService.<Method>` (conventions
+// §12). The legacy REST surface was retired; Connect handlers in
+// backend/internal/api/connect/binding/ now own the data plane.
 
 use crate::ApiClient;
+use crate::connect_call::connect_call;
 use crate::error::ApiError;
-use crate::request::RequestOptions;
-use agentsmesh_types::*;
-use reqwest::Method;
+use agentsmesh_types::proto_binding_v1 as bp;
 
 impl ApiClient {
-    pub async fn request_binding(
+    pub async fn request_binding_connect(
         &self,
-        data: &CreateBindingRequest,
-        pod_key: Option<&str>,
-    ) -> Result<Binding, ApiError> {
-        let mut opts = RequestOptions {
-            body: Some(serde_json::to_value(data)?),
-            ..Default::default()
-        };
-        if let Some(key) = pod_key {
-            let mut headers = HashMap::new();
-            headers.insert("X-Pod-Key".to_string(), key.to_string());
-            opts.headers = Some(headers);
-        }
-        self.request(Method::POST, &self.org_path("/bindings"), opts)
-            .await
-    }
-
-    pub async fn accept_binding(
-        &self,
-        data: &AcceptBindingRequest,
-    ) -> Result<Binding, ApiError> {
-        self.post(&self.org_path("/bindings/accept"), data).await
-    }
-
-    pub async fn reject_binding(
-        &self,
-        data: &RejectBindingRequest,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.post(&self.org_path("/bindings/reject"), data).await
-    }
-
-    pub async fn request_binding_scopes(
-        &self,
-        binding_id: i64,
-        data: &RequestScopesBody,
-    ) -> Result<Binding, ApiError> {
-        self.post(
-            &self.org_path(&format!("/bindings/{binding_id}/scopes")),
-            data,
+        req: &bp::RequestBindingRequest,
+    ) -> Result<bp::PodBinding, ApiError> {
+        connect_call(
+            self,
+            "/proto.binding.v1.BindingService/RequestBinding",
+            req,
         )
         .await
     }
 
-    pub async fn approve_binding_scopes(
+    pub async fn accept_binding_connect(
         &self,
-        binding_id: i64,
-        data: &ApproveScopesBody,
-    ) -> Result<Binding, ApiError> {
-        self.post(
-            &self.org_path(&format!("/bindings/{binding_id}/scopes/approve")),
-            data,
+        req: &bp::AcceptBindingRequest,
+    ) -> Result<bp::PodBinding, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/AcceptBinding", req).await
+    }
+
+    pub async fn reject_binding_connect(
+        &self,
+        req: &bp::RejectBindingRequest,
+    ) -> Result<bp::PodBinding, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/RejectBinding", req).await
+    }
+
+    pub async fn unbind_connect(
+        &self,
+        req: &bp::UnbindRequest,
+    ) -> Result<bp::UnbindResponse, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/Unbind", req).await
+    }
+
+    pub async fn request_binding_scopes_connect(
+        &self,
+        req: &bp::RequestScopesRequest,
+    ) -> Result<bp::PodBinding, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/RequestScopes", req).await
+    }
+
+    pub async fn approve_binding_scopes_connect(
+        &self,
+        req: &bp::ApproveScopesRequest,
+    ) -> Result<bp::PodBinding, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/ApproveScopes", req).await
+    }
+
+    pub async fn list_bindings_connect(
+        &self,
+        req: &bp::ListBindingsRequest,
+    ) -> Result<bp::ListBindingsResponse, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/ListBindings", req).await
+    }
+
+    pub async fn get_pending_bindings_connect(
+        &self,
+        req: &bp::GetPendingBindingsRequest,
+    ) -> Result<bp::ListBindingsResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.binding.v1.BindingService/GetPendingBindings",
+            req,
         )
         .await
     }
 
-    pub async fn unbind(&self, data: &UnbindRequest) -> Result<EmptyResponse, ApiError> {
-        self.post(&self.org_path("/bindings/unbind"), data).await
-    }
-
-    pub async fn list_bindings(
+    pub async fn get_bound_pods_connect(
         &self,
-        status: Option<&str>,
-    ) -> Result<BindingListResponse, ApiError> {
-        let mut path = self.org_path("/bindings");
-        if let Some(s) = status {
-            path = format!("{path}?status={s}");
-        }
-        self.get(&path).await
+        req: &bp::GetBoundPodsRequest,
+    ) -> Result<bp::GetBoundPodsResponse, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/GetBoundPods", req).await
     }
 
-    pub async fn get_pending_bindings(&self) -> Result<BindingListResponse, ApiError> {
-        self.get(&self.org_path("/bindings/pending")).await
-    }
-
-    pub async fn get_bound_pods(&self) -> Result<BoundPodsResponse, ApiError> {
-        self.get(&self.org_path("/bindings/pods")).await
-    }
-
-    pub async fn check_binding(&self, target_pod: &str) -> Result<Binding, ApiError> {
-        self.get(&self.org_path(&format!("/bindings/check/{target_pod}")))
-            .await
+    pub async fn check_binding_connect(
+        &self,
+        req: &bp::CheckBindingRequest,
+    ) -> Result<bp::CheckBindingResponse, ApiError> {
+        connect_call(self, "/proto.binding.v1.BindingService/CheckBinding", req).await
     }
 }

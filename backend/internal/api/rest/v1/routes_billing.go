@@ -10,23 +10,6 @@ func registerBillingRoutes(rg *gin.RouterGroup, svc *Services) {
 	RegisterBillingHandlers(rg.Group("/billing"), svc.Billing)
 }
 
-func registerBindingRoutes(rg *gin.RouterGroup, svc *Services) {
-	bindingHandler := NewBindingHandler(svc.Binding)
-	bindings := rg.Group("/bindings")
-	{
-		bindings.POST("", bindingHandler.RequestBinding)
-		bindings.GET("", bindingHandler.ListBindings)
-		bindings.POST("/accept", bindingHandler.AcceptBinding)
-		bindings.POST("/reject", bindingHandler.RejectBinding)
-		bindings.POST("/unbind", bindingHandler.Unbind)
-		bindings.GET("/pending", bindingHandler.GetPendingBindings)
-		bindings.GET("/pods", bindingHandler.GetBoundPods)
-		bindings.GET("/check/:target_pod", bindingHandler.CheckBinding)
-		bindings.POST("/:id/scopes", bindingHandler.RequestScopes)
-		bindings.POST("/:id/scopes/approve", bindingHandler.ApproveScopes)
-	}
-}
-
 func registerInvitationRoutes(rg *gin.RouterGroup, svc *Services) {
 	if svc.Invitation != nil {
 		invitationHandler := NewInvitationHandler(svc.Invitation, svc.Org, svc.User, svc.Billing)
