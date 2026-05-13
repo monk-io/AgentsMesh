@@ -75,16 +75,8 @@ mod api_core_tests {
     }
 
     // ── billing ─────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_billing_overview() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/billing/overview"))
-            .respond_with(ok(json!({"plan":"pro"})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_billing_overview().await.unwrap();
-    }
+    // get_billing_overview removed — Connect handler tests cover it
+    // (backend/internal/api/connect/billing).
 
     // ── mesh ────────────────────────────────────────────────────────────
 

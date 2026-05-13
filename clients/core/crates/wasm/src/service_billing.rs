@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_types::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -15,133 +14,100 @@ impl WasmBillingService {
         Self { client }
     }
 
+    // Legacy JSON-shaped methods kept as thin wrappers over the Rust
+    // `BillingService` (which talks Connect-RPC under the hood). The web
+    // renderer has migrated to the `*_connect` binary methods, but desktop
+    // node-bridge + iOS FFI still call these to preserve the legacy JSON
+    // wire shape across the wasm/NAPI boundary.
+
     pub async fn get_overview(&self) -> Result<String, String> {
-        let resp = self.client.get_billing_overview().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_overview().await
     }
 
     pub async fn get_subscription(&self) -> Result<String, String> {
-        let resp = self.client.get_billing_subscription().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_subscription().await
     }
 
     pub async fn create_subscription(&self, json: &str) -> Result<String, String> {
-        let req: CreateSubscriptionRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.create_billing_subscription(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).create_subscription(json).await
     }
 
     pub async fn cancel_subscription(&self) -> Result<String, String> {
-        let resp = self.client.cancel_billing_subscription().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).cancel_subscription().await
     }
 
     pub async fn update_subscription(&self, json: &str) -> Result<String, String> {
-        let req: UpdateSubscriptionRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.update_billing_subscription(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).update_subscription(json).await
     }
 
     pub async fn list_plans(&self) -> Result<String, String> {
-        let resp = self.client.list_billing_plans().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).list_plans().await
     }
 
     pub async fn get_usage(&self, usage_type: Option<String>) -> Result<String, String> {
-        let resp = self.client
-            .get_billing_usage(usage_type.as_deref())
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_usage(usage_type).await
     }
 
     pub async fn check_quota(&self, resource: &str, amount: Option<u32>) -> Result<String, String> {
-        let resp = self.client
-            .check_billing_quota(resource, amount)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).check_quota(resource, amount).await
     }
 
     pub async fn create_checkout(&self, json: &str) -> Result<String, String> {
-        let req: CheckoutRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.create_billing_checkout(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).create_checkout(json).await
     }
 
     pub async fn get_checkout_status(&self, order_no: &str) -> Result<String, String> {
-        let resp = self.client
-            .get_billing_checkout_status(order_no)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_checkout_status(order_no).await
     }
 
     pub async fn request_cancel(&self, json: &str) -> Result<String, String> {
-        let req: CancelSubscriptionRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.request_cancel_subscription(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).request_cancel(json).await
     }
 
     pub async fn reactivate(&self) -> Result<String, String> {
-        let resp = self.client.reactivate_subscription().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).reactivate().await
     }
 
     pub async fn upgrade(&self, json: &str) -> Result<String, String> {
-        let req: UpgradeSubscriptionRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.upgrade_subscription(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).upgrade(json).await
     }
 
     pub async fn change_cycle(&self, json: &str) -> Result<String, String> {
-        let req: ChangeBillingCycleRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.change_billing_cycle(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).change_cycle(json).await
     }
 
     pub async fn update_auto_renew(&self, json: &str) -> Result<String, String> {
-        let req: UpdateAutoRenewRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.update_auto_renew(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).update_auto_renew(json).await
     }
 
     pub async fn get_seat_usage(&self) -> Result<String, String> {
-        let resp = self.client.get_seat_usage().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_seat_usage().await
     }
 
     pub async fn purchase_seats(&self, json: &str) -> Result<String, String> {
-        let req: PurchaseSeatsRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.purchase_seats(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).purchase_seats(json).await
     }
 
     pub async fn list_invoices(
         &self, limit: Option<u32>, offset: Option<u32>,
     ) -> Result<String, String> {
-        let resp = self.client
-            .list_billing_invoices(limit, offset)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).list_invoices(limit, offset).await
     }
 
     pub async fn get_customer_portal(&self, json: &str) -> Result<String, String> {
-        let req: CustomerPortalRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.get_customer_portal(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_customer_portal(json).await
     }
 
     pub async fn get_deployment_info(&self) -> Result<String, String> {
-        let resp = self.client.get_billing_deployment_info().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_deployment_info().await
     }
 
     pub async fn get_public_pricing(&self) -> Result<String, String> {
-        let resp = self.client.get_public_pricing().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_public_pricing().await
     }
 
     pub async fn get_public_deployment_info(&self) -> Result<String, String> {
-        let resp = self.client.get_public_deployment_info().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+        agentsmesh_services::BillingService::new(self.client.clone()).get_public_deployment_info().await
     }
 
     // -------- Connect-RPC (binary wire) --------

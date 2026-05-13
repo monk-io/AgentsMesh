@@ -21,19 +21,6 @@ func NewBillingHandler(billingService *billingsvc.Service) *BillingHandler {
 	return &BillingHandler{billingService: billingService}
 }
 
-// GetOverview returns the billing overview for the organization
-func (h *BillingHandler) GetOverview(c *gin.Context) {
-	tenant := c.MustGet("tenant").(*middleware.TenantContext)
-
-	overview, err := h.billingService.GetBillingOverview(c.Request.Context(), tenant.OrganizationID)
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"overview": overview})
-}
-
 // GetUsage returns usage statistics for the current period
 func (h *BillingHandler) GetUsage(c *gin.Context) {
 	tenant := c.MustGet("tenant").(*middleware.TenantContext)
@@ -146,27 +133,4 @@ func handleQuotaError(c *gin.Context, err error) {
 	default:
 		apierr.InternalError(c, err.Error())
 	}
-}
-
-// ListInvoices returns invoice history
-func (h *BillingHandler) ListInvoices(c *gin.Context) {
-	tenant := c.MustGet("tenant").(*middleware.TenantContext)
-
-	limitStr := c.DefaultQuery("limit", "20")
-	offsetStr := c.DefaultQuery("offset", "0")
-
-	limit, _ := strconv.Atoi(limitStr)
-	offset, _ := strconv.Atoi(offsetStr)
-
-	if limit < 1 || limit > 100 {
-		limit = 20
-	}
-
-	invoices, err := h.billingService.GetInvoicesByOrg(c.Request.Context(), tenant.OrganizationID, limit, offset)
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"invoices": invoices})
 }

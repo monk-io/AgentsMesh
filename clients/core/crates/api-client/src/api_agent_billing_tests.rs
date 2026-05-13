@@ -209,50 +209,10 @@ mod api_agent_billing_tests {
     }
 
     // ── billing ─────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_billing_subscription() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/billing/subscription"))
-            .respond_with(ok(json!({"plan_name":"pro","status":"active"})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_billing_subscription().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn create_billing_subscription() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/billing/subscription"))
-            .respond_with(ok(json!({"plan_name":"pro","status":"active"})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let data = agentsmesh_types::CreateSubscriptionRequest {
-            plan_name: "pro".into(),
-            billing_cycle: None,
-        };
-        let _ = c.create_billing_subscription(&data).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn cancel_billing_subscription() {
-        let s = MockServer::start().await;
-        Mock::given(method("DELETE")).and(path("/api/v1/orgs/acme/billing/subscription"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.cancel_billing_subscription().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_billing_plans() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/billing/plans"))
-            .respond_with(ok(json!({"plans":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_billing_plans().await.unwrap();
-    }
+    // Tests for REST endpoints owned by Connect-RPC removed
+    // (subscription / plans / invoices / seats / overview). Connect handler
+    // tests in backend/internal/api/connect/billing cover the same surface.
+    // Only the remaining REST gaps (usage + quota) retain wiremock coverage.
 
     #[tokio::test]
     async fn get_billing_usage() {
@@ -275,37 +235,5 @@ mod api_agent_billing_tests {
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
         let _ = c.check_billing_quota("pods", Some(5)).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_billing_invoices() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/billing/invoices"))
-            .and(query_param("limit", "10"))
-            .respond_with(ok(json!({"invoices":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_billing_invoices(Some(10), None).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_seat_usage() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/billing/seats"))
-            .respond_with(ok(json!({"used":3,"total":10})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_seat_usage().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn purchase_seats() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/billing/seats/purchase"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let data = agentsmesh_types::PurchaseSeatsRequest { seats: 5 };
-        let _ = c.purchase_seats(&data).await.unwrap();
     }
 }

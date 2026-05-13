@@ -5,61 +5,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RegisterBillingHandlers registers billing routes with actual handlers
+// RegisterBillingHandlers registers REST billing routes that have no Connect-RPC
+// equivalent. Connect-RPC owns the subscription / checkout / seats / overview /
+// invoices / plans / public-pricing / deployment-info surface; the routes here
+// are the remaining gaps until proto coverage catches up.
 func RegisterBillingHandlers(rg *gin.RouterGroup, billingService *billingsvc.Service) {
 	handler := NewBillingHandler(billingService)
 
-	// Basic billing info
-	rg.GET("/overview", handler.GetOverview)
-	rg.GET("/subscription", handler.GetSubscription)
-	rg.POST("/subscription", handler.CreateSubscription)
-	rg.PUT("/subscription", handler.UpdateSubscription)
-	rg.DELETE("/subscription", handler.CancelSubscription)
-	rg.GET("/plans", handler.ListPlans)
-	rg.GET("/plans/prices", handler.ListPlansWithPrices)        // List all plans with prices for currency
-	rg.GET("/plans/:name/prices", handler.GetPlanPrices)        // Get prices for specific plan
-	rg.GET("/plans/:name/all-prices", handler.GetAllPlanPrices) // Get all currency prices for specific plan
+	// Plan pricing (multi-currency). Connect's ListPlans returns flat plan
+	// records; the per-currency price tables stay on REST.
+	rg.GET("/plans/prices", handler.ListPlansWithPrices)
+	rg.GET("/plans/:name/prices", handler.GetPlanPrices)
+	rg.GET("/plans/:name/all-prices", handler.GetAllPlanPrices)
+
+	// Usage + quota. No Connect mirror — usage rolls up into GetOverview but
+	// the granular endpoints stay here for the dashboard drilldown.
 	rg.GET("/usage", handler.GetUsage)
 	rg.GET("/usage/history", handler.GetUsageHistory)
 	rg.POST("/quota", handler.SetCustomQuota)
 	rg.GET("/quota/check", handler.CheckQuota)
+
+	// Provider-side flows. Stripe customer creation + customer portal redirect
+	// are provider-owned, not a domain RPC — staying REST.
 	rg.POST("/stripe/customer", handler.CreateStripeCustomer)
-
-	// Payment checkout
-	rg.POST("/checkout", handler.CreateCheckout)
-	rg.GET("/checkout/:order_no", handler.GetCheckoutStatus)
-
-	// Subscription management
-	rg.POST("/subscription/cancel", handler.RequestCancelSubscription)
-	rg.POST("/subscription/reactivate", handler.ReactivateSubscription)
-	rg.POST("/subscription/change-cycle", handler.ChangeBillingCycle)
-	rg.POST("/subscription/upgrade", handler.UpgradeSubscription)
-	rg.POST("/subscription/downgrade", handler.DowngradeSubscription)
-	rg.PUT("/subscription/auto-renew", handler.UpdateAutoRenew)
-
-	// Seat management
-	rg.GET("/seats", handler.GetSeatUsage)
-	rg.POST("/seats/purchase", handler.PurchaseSeats)
-
-	// Invoice history
-	rg.GET("/invoices", handler.ListInvoices)
-
-	// Customer portal (Stripe only)
 	rg.POST("/customer-portal", handler.GetCustomerPortal)
 
-	// Deployment info
-	rg.GET("/deployment", handler.GetDeploymentInfo)
+	// Downgrade. The proto surface only carries Upgrade; downgrade has different
+	// effective-date semantics (end-of-period vs. immediate).
+	rg.POST("/subscription/downgrade", handler.DowngradeSubscription)
 }
 
-// RegisterPublicConfigRoutes registers public config routes that don't require authentication
-// These endpoints provide deployment configuration information for the frontend
+// RegisterPublicConfigRoutes registers public REST config routes — Connect's
+// BillingPublicService.GetPublicDeploymentInfo owns this in the new wire, but
+// the renderer pricing card still reads the legacy `/api/v1/config/deployment`
+// during the dual-track window. Delete this once the renderer is on Connect.
 func RegisterPublicConfigRoutes(rg *gin.RouterGroup, billingService *billingsvc.Service) {
 	handler := NewBillingHandler(billingService)
-
-	// Deployment info - returns deployment type (global/cn/onpremise) and available payment providers
 	rg.GET("/deployment", handler.GetDeploymentInfo)
-
-	// Public pricing info - returns all plans with prices for landing page (no auth required)
-	// This is the Single Source of Truth for pricing display
-	rg.GET("/pricing", handler.GetPublicPricing)
 }

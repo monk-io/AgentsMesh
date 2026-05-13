@@ -4,22 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
-
-// ListPlans returns all available subscription plans
-func (h *BillingHandler) ListPlans(c *gin.Context) {
-	plans, err := h.billingService.ListPlans(c.Request.Context())
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"plans": plans})
-}
 
 // ListPlansWithPrices returns all available subscription plans with prices in specified currency
 // GET /api/v1/billing/plans/prices?currency=USD
@@ -76,64 +64,11 @@ func (h *BillingHandler) GetAllPlanPrices(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"prices": prices})
 }
 
-// GetDeploymentInfo returns deployment type and available payment providers
+// GetDeploymentInfo returns deployment type and available payment providers.
+// REST-only — kept for the public `/api/v1/config/deployment` endpoint used
+// by the marketing/landing pages (no auth). Connect's BillingPublicService
+// will own this once the renderer fully migrates.
 func (h *BillingHandler) GetDeploymentInfo(c *gin.Context) {
 	info := h.billingService.GetDeploymentInfo()
 	c.JSON(http.StatusOK, info)
-}
-
-// PublicPricingResponse represents pricing data for public display
-type PublicPricingResponse struct {
-	DeploymentType string              `json:"deployment_type"`
-	Currency       string              `json:"currency"`
-	Plans          []PublicPlanPricing `json:"plans"`
-}
-
-// PublicPlanPricing represents a plan's pricing for public display
-type PublicPlanPricing struct {
-	Name              string  `json:"name"`
-	DisplayName       string  `json:"display_name"`
-	PriceMonthly      float64 `json:"price_monthly"`
-	PriceYearly       float64 `json:"price_yearly"`
-	MaxUsers          int     `json:"max_users"`
-	MaxRunners        int     `json:"max_runners"`
-	MaxRepositories   int     `json:"max_repositories"`
-	MaxConcurrentPods int     `json:"max_concurrent_pods"`
-}
-
-// GetPublicPricing returns pricing information for public display (no auth required)
-// GET /api/v1/config/pricing
-func (h *BillingHandler) GetPublicPricing(c *gin.Context) {
-	info := h.billingService.GetDeploymentInfo()
-
-	currency := billing.CurrencyUSD
-	if info.DeploymentType == "cn" {
-		currency = billing.CurrencyCNY
-	}
-
-	plansWithPrices, err := h.billingService.ListPlansWithPrices(c.Request.Context(), currency)
-	if err != nil {
-		apierr.InternalError(c, err.Error())
-		return
-	}
-
-	plans := make([]PublicPlanPricing, 0, len(plansWithPrices))
-	for _, pwp := range plansWithPrices {
-		plans = append(plans, PublicPlanPricing{
-			Name:              pwp.Plan.Name,
-			DisplayName:       pwp.Plan.DisplayName,
-			PriceMonthly:      pwp.Price.PriceMonthly,
-			PriceYearly:       pwp.Price.PriceYearly,
-			MaxUsers:          pwp.Plan.MaxUsers,
-			MaxRunners:        pwp.Plan.MaxRunners,
-			MaxRepositories:   pwp.Plan.MaxRepositories,
-			MaxConcurrentPods: pwp.Plan.MaxConcurrentPods,
-		})
-	}
-
-	c.JSON(http.StatusOK, PublicPricingResponse{
-		DeploymentType: info.DeploymentType,
-		Currency:       currency,
-		Plans:          plans,
-	})
 }
