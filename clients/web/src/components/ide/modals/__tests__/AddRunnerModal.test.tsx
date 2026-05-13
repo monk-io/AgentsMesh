@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { getRunnerService } from "@/lib/wasm-core";
 import { AddRunnerModal } from "../AddRunnerModal";
 
 vi.mock("@/hooks/useServerUrl", () => ({
@@ -11,7 +10,14 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => ({ slug: "test-org" }),
+}));
+
 const mockCreateToken = vi.fn();
+vi.mock("@/lib/api/runnerConnect", () => ({
+  createRunnerToken: (...args: unknown[]) => mockCreateToken(...args),
+}));
 
 describe("AddRunnerModal", () => {
   const mockOnClose = vi.fn();
@@ -19,11 +25,6 @@ describe("AddRunnerModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getRunnerService).mockReturnValue({
-      ...vi.mocked(getRunnerService)(),
-      create_token: mockCreateToken,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
   });
 
   describe("rendering", () => {
@@ -53,11 +54,11 @@ describe("AddRunnerModal", () => {
 
   describe("token generation", () => {
     it("should call create_token when generate button is clicked", async () => {
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: "test-token-12345",
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -72,11 +73,11 @@ describe("AddRunnerModal", () => {
 
     it("should display token after generation", async () => {
       const testToken = "test-token-12345";
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: testToken,
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -90,11 +91,11 @@ describe("AddRunnerModal", () => {
     });
 
     it("should show warning after token is generated", async () => {
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: "test-token-12345",
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -108,11 +109,11 @@ describe("AddRunnerModal", () => {
     });
 
     it("should show usage instructions after token is generated", async () => {
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: "test-token-12345",
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -127,11 +128,11 @@ describe("AddRunnerModal", () => {
 
     it("should show generating state while loading", async () => {
       mockCreateToken.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(JSON.stringify({
+        () => new Promise((resolve) => setTimeout(() => resolve({
           token: "test-token",
           expires_at: "2024-12-31T23:59:59Z",
           message: "Token created",
-        })), 100))
+        }), 100))
       );
 
       render(
@@ -169,11 +170,11 @@ describe("AddRunnerModal", () => {
 
     it("should copy token to clipboard when copy button is clicked", async () => {
       const testToken = "test-token-12345";
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: testToken,
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -198,11 +199,11 @@ describe("AddRunnerModal", () => {
 
     it("should copy command to clipboard when copy command button is clicked", async () => {
       const testToken = "test-token-12345";
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: testToken,
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -239,11 +240,11 @@ describe("AddRunnerModal", () => {
     });
 
     it("should call onCreated and onClose when done button is clicked", async () => {
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: "test-token-12345",
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
@@ -262,11 +263,11 @@ describe("AddRunnerModal", () => {
     });
 
     it("should reset state when closing after token generation", async () => {
-      mockCreateToken.mockResolvedValue(JSON.stringify({
+      mockCreateToken.mockResolvedValue({
         token: "test-token-12345",
         expires_at: "2024-12-31T23:59:59Z",
         message: "Token created",
-      }));
+      });
 
       const { rerender } = render(
         <AddRunnerModal open={true} onClose={mockOnClose} onCreated={mockOnCreated} />
