@@ -13,9 +13,10 @@ mod channel;
 mod message;
 mod misc;
 mod pod;
+mod repository_dto;
+mod runner_dto;
 mod ticket;
 mod user;
-mod workspace;
 
 pub use automation::{
     AutopilotControllerDto, AutopilotIterationDto, AutopilotIterationListResponseDto,
@@ -69,10 +70,16 @@ pub use user::{
     AuthSessionDto, AuthTokensDto, BootstrapCleanupReasonDto, BootstrapResultDto,
     OrganizationDto, SSOConfigDto, UserDto, UserIdentityDto,
 };
-pub use workspace::{
-    AuthorizeRunnerRequestDto, BranchDto, CreateRepositoryRequestDto, CreateRunnerTokenRequestDto,
-    GrpcRegistrationTokenDto, MergeRequestListResponseDto, RepositoryDto, RepositoryListResponseDto,
-    RepositoryMergeRequestDto, RunnerAuthStatusDto, RunnerDto, RunnerListResponseDto, RunnerLogDto,
-    RunnerLogListResponseDto, RunnerStatusDto, RunnerTokenListResponseDto, UpdateRepositoryRequestDto,
-    UpdateRunnerRequestDto, UpgradeRunnerRequestDto, WebhookSecretDto, WebhookStatusDto,
+pub use repository_dto::{
+    BranchDto, CreateRepositoryRequestDto, MergeRequestListResponseDto, RepositoryDto,
+    RepositoryListResponseDto, RepositoryMergeRequestDto, UpdateRepositoryRequestDto,
+    WebhookSecretDto, WebhookStatusDto,
+};
+pub use runner_dto::{
+    AuthorizeRunnerRequestDto, CreateRunnerTokenRequestDto, GrpcRegistrationTokenDto,
+    RunnerAuthStatusDto, RunnerDto, RunnerListResponseDto, RunnerLogDto, RunnerLogListResponseDto,
+    RunnerStatusDto, RunnerTokenListResponseDto, UpdateRunnerRequestDto, UpgradeRunnerRequestDto,
+};
+pub(crate) use runner_dto::{
+    runner_list_from_proto, runner_log_list_from_proto, runner_token_list_from_proto,
 };
