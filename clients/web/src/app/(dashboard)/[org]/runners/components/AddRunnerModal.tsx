@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { getRunnerService } from "@/lib/wasm-core";
+import { createRunnerToken } from "@/lib/api/runnerConnect";
 import { isApiErrorCode, getLocalizedErrorMessage } from "@/lib/api/errors";
 import { Copy, AlertCircle, Terminal, Check, ShieldAlert } from "lucide-react";
 
@@ -17,6 +18,8 @@ interface AddRunnerModalProps {
  * AddRunnerModal - Modal for generating a new runner registration token
  */
 export function AddRunnerModal({ t, onClose, onCreated, serverUrl }: AddRunnerModalProps) {
+  const params = useParams();
+  const orgSlug = String(params.org ?? "");
   const [loading, setLoading] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -26,8 +29,8 @@ export function AddRunnerModal({ t, onClose, onCreated, serverUrl }: AddRunnerMo
     setLoading(true);
     setError(null);
     try {
-      const res = JSON.parse(await getRunnerService().create_token(JSON.stringify({})));
-      setGeneratedToken(res.token);
+      const res = await createRunnerToken(orgSlug);
+      setGeneratedToken(res.token ?? null);
     } catch (err) {
       if (isApiErrorCode(err, "ADMIN_REQUIRED") || isApiErrorCode(err, "INSUFFICIENT_PERMISSIONS")) {
         setError(t("apiErrors.INSUFFICIENT_PERMISSIONS"));
