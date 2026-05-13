@@ -52,17 +52,10 @@ func RegisterUserRoutes(rg *gin.RouterGroup, userSvc *user.Service, orgSvc *orga
 		}
 	}
 
-	// User Repository Providers (for importing repositories)
-	repositoryProviderHandler := NewUserRepositoryProviderHandler(userSvc)
-	repositoryProviderHandler.RegisterRoutes(rg)
-
-	// User Git Credentials (for Git operations)
-	gitCredentialHandler := NewUserGitCredentialHandler(userSvc)
-	gitCredentialHandler.RegisterRoutes(rg)
-
-	// User Agent Credential Profiles (for agent API credentials)
-	agentCredentialHandler := NewUserAgentCredentialHandler(credentialSvc)
-	agentCredentialHandler.RegisterRoutes(rg)
+	// User Repository Providers, Git Credentials, and Agent Credential Profiles
+	// migrated to Connect-RPC proto.user_credential.v1 — see
+	// backend/internal/api/connect/user_credential. The REST handlers were
+	// removed in the dual-track cleanup.
 
 	// User search
 	rg.GET("/search", userHandler.SearchUsers)
