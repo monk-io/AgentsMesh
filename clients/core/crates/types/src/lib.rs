@@ -167,11 +167,11 @@ pub mod proto_user_v1 {
 
 /// Connect-RPC binary-wire DTOs for `proto.ticket_relations.v1`. Bundles
 /// relations / comments / commits / merge-requests under one module — they
-/// share the `ticket_slug` lookup, so the proto file is one. Coexists with
-/// the legacy serde `TicketRelation` / `TicketComment` / `TicketCommit` /
-/// `MergeRequest` for the dual-track window. PR 986a38ca6 reconciliation:
-/// the comment list envelope (`{items, total, limit, offset}`) survives
-/// the wire — the adapter remaps to the legacy `{comments, ...}` shape.
+/// share the `ticket_slug` lookup, so the proto file is one. Connect-RPC is
+/// the SSOT for this domain; the legacy REST/serde DTOs were removed once
+/// every consumer migrated to the prost types. PR 986a38ca6 reconciliation:
+/// the comment list envelope (`{items, total, limit, offset}`) survives the
+/// wire — the adapter remaps to the legacy `{comments, ...}` shape.
 pub mod proto_ticket_relations_v1 {
     pub use super::ticket_relations_proto::*;
 }

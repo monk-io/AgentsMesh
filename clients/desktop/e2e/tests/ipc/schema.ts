@@ -3506,165 +3506,125 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "String"
   },
   {
-    "name": "ticket_relations_list_relations",
+    "name": "ticket_relations_list_relations_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_create_relation",
+    "name": "ticket_relations_create_relation_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_delete_relation",
+    "name": "ticket_relations_delete_relation_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "relation_id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_list_commits",
+    "name": "ticket_relations_list_commits_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_link_commit",
+    "name": "ticket_relations_link_commit_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_unlink_commit",
+    "name": "ticket_relations_unlink_commit_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "commit_id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_list_merge_requests",
+    "name": "ticket_relations_list_merge_requests_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_list_comments",
+    "name": "ticket_relations_list_comments_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "limit",
-        "type": "Option<u32>"
-      },
-      {
-        "name": "offset",
-        "type": "Option<u32>"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_create_comment",
+    "name": "ticket_relations_create_comment_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_update_comment",
+    "name": "ticket_relations_update_comment_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "comment_id",
-        "type": "i64"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "ticket_relations_delete_comment",
+    "name": "ticket_relations_delete_comment_connect",
     "group": "ticket_relations",
     "params": [
       {
-        "name": "slug",
-        "type": "String"
-      },
-      {
-        "name": "comment_id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
     "name": "user_get_me_connect",

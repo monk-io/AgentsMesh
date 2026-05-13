@@ -1,13 +1,8 @@
 use agentsmesh_types::{
     AddAssigneeRequest, AddTicketLabelRequest, BoardColumn, BoardResponse, CreateLabelRequest,
-    CreateTicketCommentRequest, CreateTicketRelationRequest, CreateTicketRequest, Label,
-    LabelListResponse, LinkTicketCommitRequest, Ticket, TicketComment, TicketCommentListResponse,
-    TicketCommit, TicketCommitListResponse, TicketListResponse, TicketPriority, TicketRelation,
-    TicketRelationListResponse, TicketStatus, UpdateLabelRequest, UpdateTicketCommentRequest,
-    UpdateTicketRequest, UpdateTicketStatusRequest,
+    CreateTicketRequest, Label, LabelListResponse, Ticket, TicketListResponse, TicketPriority,
+    TicketStatus, UpdateLabelRequest, UpdateTicketRequest, UpdateTicketStatusRequest,
 };
-
-use super::UserDto;
 
 // ── Enums ─────────────────────────────────────────────────
 
@@ -200,132 +195,6 @@ impl From<LabelListResponse> for LabelListResponseDto {
     }
 }
 
-// ── Ticket Comment ────────────────────────────────────────
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct TicketCommentDto {
-    pub id: i64,
-    pub ticket_slug: Option<String>,
-    pub content: String,
-    pub parent_id: Option<i64>,
-    pub author: Option<UserDto>,
-    pub mentions: Option<Vec<String>>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
-}
-
-impl From<TicketComment> for TicketCommentDto {
-    fn from(c: TicketComment) -> Self {
-        Self {
-            id: c.id,
-            ticket_slug: c.ticket_slug,
-            content: c.content,
-            parent_id: c.parent_id,
-            author: c.author.map(UserDto::from),
-            mentions: c.mentions,
-            created_at: c.created_at,
-            updated_at: c.updated_at,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct TicketCommentListResponseDto {
-    pub comments: Vec<TicketCommentDto>,
-    pub total: Option<i64>,
-    pub limit: Option<i64>,
-    pub offset: Option<i64>,
-}
-
-impl From<TicketCommentListResponse> for TicketCommentListResponseDto {
-    fn from(r: TicketCommentListResponse) -> Self {
-        Self {
-            comments: r.comments.into_iter().map(TicketCommentDto::from).collect(),
-            total: r.total,
-            limit: r.limit,
-            offset: r.offset,
-        }
-    }
-}
-
-// ── Ticket Relation ───────────────────────────────────────
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct TicketRelationDto {
-    pub id: i64,
-    pub source_slug: Option<String>,
-    pub target_slug: Option<String>,
-    pub relation_type: Option<String>,
-    pub created_at: Option<String>,
-}
-
-impl From<TicketRelation> for TicketRelationDto {
-    fn from(r: TicketRelation) -> Self {
-        Self {
-            id: r.id,
-            source_slug: r.source_slug,
-            target_slug: r.target_slug,
-            relation_type: r.relation_type,
-            created_at: r.created_at,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct TicketRelationListResponseDto {
-    pub relations: Vec<TicketRelationDto>,
-}
-
-impl From<TicketRelationListResponse> for TicketRelationListResponseDto {
-    fn from(r: TicketRelationListResponse) -> Self {
-        Self {
-            relations: r.relations.into_iter().map(TicketRelationDto::from).collect(),
-        }
-    }
-}
-
-// ── Ticket Commit ─────────────────────────────────────────
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct TicketCommitDto {
-    pub id: i64,
-    pub ticket_slug: Option<String>,
-    pub commit_sha: String,
-    pub commit_message: Option<String>,
-    pub commit_url: Option<String>,
-    pub author_name: Option<String>,
-    pub author_email: Option<String>,
-    pub committed_at: Option<String>,
-}
-
-impl From<TicketCommit> for TicketCommitDto {
-    fn from(c: TicketCommit) -> Self {
-        Self {
-            id: c.id,
-            ticket_slug: c.ticket_slug,
-            commit_sha: c.commit_sha,
-            commit_message: c.commit_message,
-            commit_url: c.commit_url,
-            author_name: c.author_name,
-            author_email: c.author_email,
-            committed_at: c.committed_at,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct TicketCommitListResponseDto {
-    pub commits: Vec<TicketCommitDto>,
-}
-
-impl From<TicketCommitListResponse> for TicketCommitListResponseDto {
-    fn from(r: TicketCommitListResponse) -> Self {
-        Self {
-            commits: r.commits.into_iter().map(TicketCommitDto::from).collect(),
-        }
-    }
-}
-
 // ── Request DTOs ──────────────────────────────────────────
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -406,72 +275,6 @@ impl From<UpdateLabelRequestDto> for UpdateLabelRequest {
         Self {
             name: d.name,
             color: d.color,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct CreateTicketCommentRequestDto {
-    pub content: String,
-    pub parent_id: Option<i64>,
-    pub mentions: Option<Vec<String>>,
-}
-
-impl From<CreateTicketCommentRequestDto> for CreateTicketCommentRequest {
-    fn from(d: CreateTicketCommentRequestDto) -> Self {
-        Self {
-            content: d.content,
-            parent_id: d.parent_id,
-            mentions: d.mentions,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct UpdateTicketCommentRequestDto {
-    pub content: String,
-}
-
-impl From<UpdateTicketCommentRequestDto> for UpdateTicketCommentRequest {
-    fn from(d: UpdateTicketCommentRequestDto) -> Self {
-        Self { content: d.content }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct CreateTicketRelationRequestDto {
-    pub target_slug: String,
-    pub relation_type: String,
-}
-
-impl From<CreateTicketRelationRequestDto> for CreateTicketRelationRequest {
-    fn from(d: CreateTicketRelationRequestDto) -> Self {
-        Self {
-            target_slug: d.target_slug,
-            relation_type: d.relation_type,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct LinkTicketCommitRequestDto {
-    pub commit_sha: String,
-    pub commit_message: Option<String>,
-    pub commit_url: Option<String>,
-    pub author_name: Option<String>,
-    pub author_email: Option<String>,
-    pub committed_at: Option<String>,
-}
-
-impl From<LinkTicketCommitRequestDto> for LinkTicketCommitRequest {
-    fn from(d: LinkTicketCommitRequestDto) -> Self {
-        Self {
-            commit_sha: d.commit_sha,
-            commit_message: d.commit_message,
-            commit_url: d.commit_url,
-            author_name: d.author_name,
-            author_email: d.author_email,
-            committed_at: d.committed_at,
         }
     }
 }

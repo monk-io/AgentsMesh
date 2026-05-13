@@ -132,9 +132,11 @@ describe('TicketDetail Component', () => {
 
     const client = getApiClient()
     vi.mocked(client.get).mockResolvedValue(JSON.stringify({ sub_tickets: [], pods: [] }))
-    vi.mocked(getTicketRelationsService().list_relations).mockResolvedValue(JSON.stringify({ relations: [] }))
-    vi.mocked(getTicketRelationsService().list_commits).mockResolvedValue(JSON.stringify({ commits: [] }))
-    vi.mocked(getTicketRelationsService().list_comments).mockResolvedValue(JSON.stringify({ comments: [], total: 0 }))
+    // Empty Uint8Array decodes to the default proto message — empty list, no
+    // pagination fields — which is what every ticket_relations list RPC needs.
+    vi.mocked(getTicketRelationsService().list_relations_connect).mockResolvedValue(new Uint8Array())
+    vi.mocked(getTicketRelationsService().list_commits_connect).mockResolvedValue(new Uint8Array())
+    vi.mocked(getTicketRelationsService().list_comments_connect).mockResolvedValue(new Uint8Array())
 
     vi.mocked(getOrgApiService().list_members).mockResolvedValue(JSON.stringify({ members: [] }))
   })

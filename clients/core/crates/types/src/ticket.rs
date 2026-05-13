@@ -38,39 +38,6 @@ pub struct Label {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TicketComment {
-    pub id: i64,
-    pub ticket_slug: Option<String>,
-    pub content: String,
-    pub parent_id: Option<i64>,
-    pub author: Option<crate::User>,
-    pub mentions: Option<Vec<String>>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TicketRelation {
-    pub id: i64,
-    pub source_slug: Option<String>,
-    pub target_slug: Option<String>,
-    pub relation_type: Option<String>,
-    pub created_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TicketCommit {
-    pub id: i64,
-    pub ticket_slug: Option<String>,
-    pub commit_sha: String,
-    pub commit_message: Option<String>,
-    pub commit_url: Option<String>,
-    pub author_name: Option<String>,
-    pub author_email: Option<String>,
-    pub committed_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TicketListResponse {
     pub tickets: Vec<Ticket>,
     pub total: Option<i64>,

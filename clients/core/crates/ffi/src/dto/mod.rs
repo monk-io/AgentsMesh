@@ -62,12 +62,9 @@ pub use message::{
 };
 pub(crate) use message::mark_messages_read_req;
 pub use ticket::{
-    BoardColumnDto, BoardResponseDto, CreateLabelRequestDto, CreateTicketCommentRequestDto,
-    CreateTicketRelationRequestDto, CreateTicketRequestDto, LabelDto, LabelListResponseDto,
-    LinkTicketCommitRequestDto, TicketCommentDto, TicketCommentListResponseDto, TicketCommitDto,
-    TicketCommitListResponseDto, TicketDto, TicketListResponseDto, TicketPriorityDto,
-    TicketRelationDto, TicketRelationListResponseDto, TicketStatusDto, UpdateLabelRequestDto,
-    UpdateTicketCommentRequestDto, UpdateTicketRequestDto,
+    BoardColumnDto, BoardResponseDto, CreateLabelRequestDto, CreateTicketRequestDto, LabelDto,
+    LabelListResponseDto, TicketDto, TicketListResponseDto, TicketPriorityDto, TicketStatusDto,
+    UpdateLabelRequestDto, UpdateTicketRequestDto,
 };
 pub(crate) use ticket::{add_assignee_req, add_ticket_label_req, update_ticket_status_req};
 

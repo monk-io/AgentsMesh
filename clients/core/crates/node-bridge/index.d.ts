@@ -370,17 +370,17 @@ export declare class AppState {
   ticketGetTicketPods(slug: string, activeOnly?: boolean | undefined | null): Promise<string>
   ticketTicketPodsJson(slug: string): Promise<string>
   ticketGetSubTickets(slug: string): Promise<string>
-  ticketRelationsListRelations(slug: string): Promise<string>
-  ticketRelationsCreateRelation(slug: string, json: string): Promise<string>
-  ticketRelationsDeleteRelation(slug: string, relationId: number): Promise<void>
-  ticketRelationsListCommits(slug: string): Promise<string>
-  ticketRelationsLinkCommit(slug: string, json: string): Promise<string>
-  ticketRelationsUnlinkCommit(slug: string, commitId: number): Promise<void>
-  ticketRelationsListMergeRequests(slug: string): Promise<string>
-  ticketRelationsListComments(slug: string, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  ticketRelationsCreateComment(slug: string, json: string): Promise<string>
-  ticketRelationsUpdateComment(slug: string, commentId: number, json: string): Promise<string>
-  ticketRelationsDeleteComment(slug: string, commentId: number): Promise<void>
+  ticketRelationsListRelationsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsCreateRelationConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsDeleteRelationConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsListCommitsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsLinkCommitConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsUnlinkCommitConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsListMergeRequestsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsListCommentsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsCreateCommentConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsUpdateCommentConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsDeleteCommentConnect(request: Array<number>): Promise<Array<number>>
   tokenUsageGetDashboard(startTime?: string | undefined | null, endTime?: string | undefined | null, agentSlug?: string | undefined | null, userId?: number | undefined | null, model?: string | undefined | null, granularity?: string | undefined | null): Promise<string>
   userGetMeConnect(request: Array<number>): Promise<Array<number>>
   userUpdateMeConnect(request: Array<number>): Promise<Array<number>>

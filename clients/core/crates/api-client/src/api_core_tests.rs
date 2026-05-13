@@ -346,40 +346,8 @@ mod api_core_tests {
     }
 
     // ── ticket_relations ────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_ticket_relations() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/api/v1/orgs/acme/tickets/TK-1/relations"))
-            .respond_with(ok(json!({"relations":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_ticket_relations("TK-1").await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_ticket_comments() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/api/v1/orgs/acme/tickets/TK-1/comments"))
-            .and(query_param("limit", "10"))
-            .respond_with(ok(json!({"comments":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_ticket_comments("TK-1", Some(10), None).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_ticket_commits() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/api/v1/orgs/acme/tickets/TK-1/commits"))
-            .respond_with(ok(json!({"commits":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_ticket_commits("TK-1").await.unwrap();
-    }
+    // REST mocks removed: REST surface eliminated; Connect handler tests in
+    // backend/internal/api/connect/ticket_relations cover the same surface.
 
     // ── token_usage ─────────────────────────────────────────────────────
 

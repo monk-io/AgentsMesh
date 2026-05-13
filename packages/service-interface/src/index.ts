@@ -618,17 +618,20 @@ export interface ISupportTicketService {
 }
 
 export interface ITicketRelationsService {
-  create_comment(slug: string, json: string): Promise<string>;
-  create_relation(slug: string, json: string): Promise<string>;
-  delete_comment(slug: string, comment_id: bigint): Promise<void>;
-  delete_relation(slug: string, relation_id: bigint): Promise<void>;
-  link_commit(slug: string, json: string): Promise<string>;
-  list_comments(slug: string, limit?: number | null, offset?: number | null): Promise<string>;
-  list_commits(slug: string): Promise<string>;
-  list_merge_requests(slug: string): Promise<string>;
-  list_relations(slug: string): Promise<string>;
-  unlink_commit(slug: string, commit_id: bigint): Promise<void>;
-  update_comment(slug: string, comment_id: bigint, json: string): Promise<string>;
+  // Connect-RPC binary wire — each method takes prost-encoded request bytes
+  // and returns prost-encoded response bytes. Encoders / decoders live in
+  // clients/web/src/lib/api/ticketRelations.ts.
+  list_relations_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_relation_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_relation_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_commits_connect(request: Uint8Array): Promise<Uint8Array>;
+  link_commit_connect(request: Uint8Array): Promise<Uint8Array>;
+  unlink_commit_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_merge_requests_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_comments_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_comment_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_comment_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_comment_connect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ITicketService {

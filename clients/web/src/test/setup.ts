@@ -921,17 +921,20 @@ vi.mock('@/lib/wasm-core', () => {
       delete_user_agent_config_connect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getTicketRelationsService: fn(() => ({
-      list_relations: fn().mockResolvedValue('{"relations":[]}'),
-      create_relation: fn().mockResolvedValue('{}'),
-      delete_relation: fn().mockResolvedValue(undefined),
-      list_commits: fn().mockResolvedValue('{"commits":[]}'),
-      link_commit: fn().mockResolvedValue('{}'),
-      unlink_commit: fn().mockResolvedValue(undefined),
-      list_merge_requests: fn().mockResolvedValue('{"merge_requests":[]}'),
-      list_comments: fn().mockResolvedValue('{"comments":[]}'),
-      create_comment: fn().mockResolvedValue('{}'),
-      update_comment: fn().mockResolvedValue('{}'),
-      delete_comment: fn().mockResolvedValue(undefined),
+      // Connect-RPC (binary wire) — empty Uint8Array decodes to default
+      // proto messages so call sites that don't override get sensible
+      // defaults instead of TypeErrors.
+      list_relations_connect: fn().mockResolvedValue(new Uint8Array()),
+      create_relation_connect: fn().mockResolvedValue(new Uint8Array()),
+      delete_relation_connect: fn().mockResolvedValue(new Uint8Array()),
+      list_commits_connect: fn().mockResolvedValue(new Uint8Array()),
+      link_commit_connect: fn().mockResolvedValue(new Uint8Array()),
+      unlink_commit_connect: fn().mockResolvedValue(new Uint8Array()),
+      list_merge_requests_connect: fn().mockResolvedValue(new Uint8Array()),
+      list_comments_connect: fn().mockResolvedValue(new Uint8Array()),
+      create_comment_connect: fn().mockResolvedValue(new Uint8Array()),
+      update_comment_connect: fn().mockResolvedValue(new Uint8Array()),
+      delete_comment_connect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getFileService: fn(() => ({
       presign_upload: fn().mockResolvedValue('{}'),
