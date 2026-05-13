@@ -20,6 +20,7 @@ import (
 	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
+	licenseconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/license"
 	loopconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/loop"
 	notificationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/notification"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
@@ -134,6 +135,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountAutopilotService(mux, svc, rest, opts)
 	mountNotificationService(mux, svc, opts)
 	mountLoopService(mux, svc, rest, opts)
+	mountLicenseService(mux, svc, opts)
 }
 
 // mountAuthService wires both AuthService (PUBLIC — no auth interceptor)
@@ -347,4 +349,22 @@ func mountLoopService(mux *http.ServeMux, svc *serviceContainer, rest *v1.Servic
 	}
 	srv := loopconnect.NewServer(svc.loop, svc.loopRun, rest.LoopOrchestrator, svc.org, podTerm)
 	loopconnect.Mount(mux, srv, opts...)
+}
+
+// mountLicenseService wires both LicenseService (auth-required: Activate /
+// Refresh / Validate) and LicensePublicService (no auth: GetStatus /
+// GetLimits / CheckFeature) onto the mux. The public service intentionally
+// mounts WITHOUT `opts` — the auth interceptor would reject the unauthenticated
+// status check the login page hits before any token exists. Conventions §3.5
+// exception #1 (system-wide config, not org-scoped).
+//
+// Skips when the license service is nil — non-OnPremise deployments don't
+// initialize the subsystem (services_init_helpers.go:initializeLicenseService),
+// so neither the auth-required nor the public surface should advertise itself.
+func mountLicenseService(mux *http.ServeMux, svc *serviceContainer, opts []connect.HandlerOption) {
+	if svc.license == nil {
+		return
+	}
+	licenseconnect.Mount(mux, licenseconnect.NewServer(svc.license), opts...)
+	licenseconnect.MountPublic(mux, licenseconnect.NewPublicServer(svc.license))
 }
