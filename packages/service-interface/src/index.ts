@@ -603,8 +603,8 @@ export interface IRunnerState {
 }
 
 export interface ISSOService {
-  discover(email: string): Promise<string>;
-  ldap_auth(domain: string, json: string): Promise<string>;
+  discoverConnect(request: Uint8Array): Promise<Uint8Array>;
+  ldapAuthConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ISupportTicketService {

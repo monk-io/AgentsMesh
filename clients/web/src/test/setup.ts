@@ -832,14 +832,10 @@ vi.mock('@/lib/wasm-core', () => {
       get_dashboard: fn().mockResolvedValue('{}'),
     })),
     getSSOService: fn(() => ({
-      discover: fn().mockResolvedValue('{}'),
-      ldap_auth: fn().mockResolvedValue('{}'),
       discoverConnect: fn().mockResolvedValue(new Uint8Array()),
       ldapAuthConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getUserApiService: fn(() => ({
-      get_me: fn().mockResolvedValue('{}'),
-      get_organizations: fn().mockResolvedValue('{"organizations":[]}'),
       getMeConnect: fn().mockResolvedValue(new Uint8Array()),
       updateMeConnect: fn().mockResolvedValue(new Uint8Array()),
       changePasswordConnect: fn().mockResolvedValue(new Uint8Array()),
