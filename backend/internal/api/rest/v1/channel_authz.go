@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/channel"
-	channelService "github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	channelService "github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
@@ -50,21 +50,4 @@ func (h *ChannelHandler) requireChannelAccess(c *gin.Context) (*channel.Channel,
 	}
 
 	return ch, true
-}
-
-func handleChannelServiceError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, channelService.ErrNotMember):
-		apierr.ForbiddenAccess(c)
-	case errors.Is(err, channelService.ErrChannelPrivate):
-		apierr.ForbiddenAccess(c)
-	case errors.Is(err, channelService.ErrNotCreator):
-		apierr.ForbiddenAccess(c)
-	case errors.Is(err, channelService.ErrChannelArchived):
-		apierr.Conflict(c, apierr.ALREADY_EXISTS, "Channel is archived")
-	case errors.Is(err, channelService.ErrChannelNotFound):
-		apierr.ResourceNotFound(c, "Channel not found")
-	default:
-		apierr.InternalError(c, "Operation failed")
-	}
 }

@@ -12,7 +12,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ChannelHandler handles channel-related requests
+// ChannelHandler handles channel-related requests.
+// Connect-RPC owns the full ChannelService surface; this REST shell remains
+// only to back routes_ext.go (third-party API key callers listing/creating/
+// updating channels and listing/sending messages).
 type ChannelHandler struct {
 	channelService *channel.Service
 	ticketService  *ticket.Service

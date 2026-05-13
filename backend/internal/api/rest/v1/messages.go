@@ -4,28 +4,17 @@ import (
 	agentSvc "github.com/anthropics/agentsmesh/backend/internal/service/agent"
 )
 
-// MessageHandler handles agent message API endpoints
+// MessageHandler backs the agent-message DLQ admin endpoints only. The
+// agent-message send/get/mark-read REST surface was dropped — proto.channel.v1
+// owns the channel messaging wire and proto-driven pod messaging has its own
+// service. The DLQ stays REST-only because it's an ops/debug surface with no
+// client-side mirror.
 type MessageHandler struct {
 	msgSvc *agentSvc.MessageService
 }
 
-// NewMessageHandler creates a new message handler
 func NewMessageHandler(msgSvc *agentSvc.MessageService) *MessageHandler {
 	return &MessageHandler{
 		msgSvc: msgSvc,
 	}
-}
-
-// AgentSendMessageRequest represents a request to send an agent message
-type AgentSendMessageRequest struct {
-	ReceiverPod   string                 `json:"receiver_pod" binding:"required"`
-	MessageType   string                 `json:"message_type" binding:"required"`
-	Content       map[string]interface{} `json:"content" binding:"required"`
-	CorrelationID *string                `json:"correlation_id,omitempty"`
-	ReplyToID     *int64                 `json:"reply_to_id,omitempty"`
-}
-
-// MarkReadRequest represents a request to mark messages as read
-type MarkReadRequest struct {
-	MessageIDs []int64 `json:"message_ids" binding:"required"`
 }
