@@ -412,6 +412,6 @@ export declare class AppState {
   userCredentialSetDefaultRepoProvider(id: number): Promise<void>
   userCredentialTestRepoProvider(id: number): Promise<void>
   userCredentialListProviderRepositories(id: number, page?: number | undefined | null, perPage?: number | undefined | null, search?: string | undefined | null): Promise<string>
-  ssoDiscover(email: string): Promise<string>
-  ssoLdapAuth(domain: string, json: string): Promise<string>
+  ssoDiscoverConnect(request: Array<number>): Promise<Array<number>>
+  ssoLdapAuthConnect(request: Array<number>): Promise<Array<number>>
 }
