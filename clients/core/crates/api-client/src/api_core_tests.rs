@@ -299,29 +299,6 @@ mod api_core_tests {
         let _ = c.get_pending_bindings().await.unwrap();
     }
 
-    // ── extension ───────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_skill_registries() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/skill-registries"))
-            .respond_with(ok(json!({"skill_registries":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_skill_registries().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_market_skills() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/market/skills"))
-            .and(query_param("q", "git"))
-            .respond_with(ok(json!({"skills":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_market_skills(Some("git"), None).await.unwrap();
-    }
-
     // ── file ────────────────────────────────────────────────────────────
 
     #[tokio::test]

@@ -755,14 +755,14 @@ vi.mock('@/lib/wasm-core', () => {
       installSkillFromGithubConnect: fn().mockResolvedValue(new Uint8Array()),
       updateSkillConnect: fn().mockResolvedValue(new Uint8Array()),
       uninstallSkillConnect: fn().mockResolvedValue(new Uint8Array()),
-      // Legacy REST: multipart upload stays REST (Connect doesn't do multipart);
-      // repo MCP install still pending migration.
+      // RepoMcpService — Connect-RPC (binary wire)
+      listRepoMcpServersConnect: fn().mockResolvedValue(new Uint8Array()),
+      installMcpFromMarketConnect: fn().mockResolvedValue(new Uint8Array()),
+      installCustomMcpServerConnect: fn().mockResolvedValue(new Uint8Array()),
+      updateMcpServerConnect: fn().mockResolvedValue(new Uint8Array()),
+      uninstallMcpServerConnect: fn().mockResolvedValue(new Uint8Array()),
+      // Multipart upload stays REST forever (Connect doesn't do multipart).
       install_skill_from_upload: fn().mockResolvedValue('{}'),
-      list_repo_mcp_servers: fn().mockResolvedValue('{"installs":[]}'),
-      install_mcp_from_market: fn().mockResolvedValue('{}'),
-      install_custom_mcp_server: fn().mockResolvedValue('{}'),
-      update_mcp_server: fn().mockResolvedValue('{}'),
-      uninstall_mcp_server: fn().mockResolvedValue(undefined),
     })),
     getInvitationService: fn(() => ({
       list: fn().mockResolvedValue('{"invitations":[]}'),

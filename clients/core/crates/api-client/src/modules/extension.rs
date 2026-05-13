@@ -1,16 +1,11 @@
 use crate::ApiClient;
 use crate::connect_call::connect_call;
 use crate::error::ApiError;
-use agentsmesh_types::*;
 use agentsmesh_types::proto_extension_v1 as ext_proto;
 
-// =============================================================================
 // Connect-RPC (binary wire). See proto-naming-conventions.md §2.5.
-// =============================================================================
-//
-// These methods call the Connect handlers in
-// backend/internal/api/connect/extension/. Procedure paths derive from
-// `proto.extension.v1.SkillRegistryService.<Method>` (conventions §12).
+// These methods call the Connect handlers in backend/internal/api/connect/extension/.
+// Procedure paths derive from `proto.extension.v1.<Service>.<Method>` (conventions §12).
 
 impl ApiClient {
     pub async fn list_skill_registries_connect(
@@ -232,70 +227,6 @@ impl ApiClient {
             "/proto.extension.v1.RepoMcpService/UninstallMcpServer",
             req,
         )
-        .await
-    }
-}
-
-// =============================================================================
-// Legacy REST methods — preserved for not-yet-migrated repo MCP install routes
-// + multipart skill upload (multipart stays REST forever).
-// =============================================================================
-
-impl ApiClient {
-    pub async fn list_repo_mcp_servers(
-        &self,
-        repo_id: i64,
-        scope: Option<&str>,
-    ) -> Result<RepoMcpServerInstallListResponse, ApiError> {
-        let mut path = self.org_path(&format!("/repositories/{repo_id}/mcp-servers"));
-        if let Some(s) = scope {
-            path = format!("{path}?scope={s}");
-        }
-        self.get(&path).await
-    }
-
-    pub async fn install_mcp_from_market(
-        &self,
-        repo_id: i64,
-        data: &InstallMarketMcpRequest,
-    ) -> Result<RepoMcpServerInstall, ApiError> {
-        self.post_resource(
-            &self.org_path(&format!("/repositories/{repo_id}/mcp-servers/install-from-market")),
-            data, "mcp_server",
-        ).await
-    }
-
-    pub async fn install_custom_mcp_server(
-        &self,
-        repo_id: i64,
-        data: &InstallCustomMcpRequest,
-    ) -> Result<RepoMcpServerInstall, ApiError> {
-        self.post_resource(
-            &self.org_path(&format!("/repositories/{repo_id}/mcp-servers/install-custom")),
-            data, "mcp_server",
-        ).await
-    }
-
-    pub async fn update_mcp_install(
-        &self,
-        repo_id: i64,
-        install_id: i64,
-        data: &UpdateMcpInstallRequest,
-    ) -> Result<RepoMcpServerInstall, ApiError> {
-        self.put_resource(
-            &self.org_path(&format!("/repositories/{repo_id}/mcp-servers/{install_id}")),
-            data, "mcp_server",
-        ).await
-    }
-
-    pub async fn uninstall_mcp_server(
-        &self,
-        repo_id: i64,
-        install_id: i64,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.delete(&self.org_path(&format!(
-            "/repositories/{repo_id}/mcp-servers/{install_id}"
-        )))
         .await
     }
 }

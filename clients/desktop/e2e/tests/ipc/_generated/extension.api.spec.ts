@@ -94,38 +94,38 @@ test.describe("IPC · extension", () => {
     expect(result).toBeDefined();
   });
 
-  test("extension_list_repo_mcp_servers", async ({ page }) => {
+  test("extension_list_repo_mcp_servers_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_list_repo_mcp_servers", 0, "").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_list_repo_mcp_servers_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_install_mcp_from_market", async ({ page }) => {
+  test("extension_install_mcp_from_market_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_install_mcp_from_market", 0, "").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_install_mcp_from_market_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_install_custom_mcp_server", async ({ page }) => {
+  test("extension_install_custom_mcp_server_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_install_custom_mcp_server", 0, "").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_install_custom_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_update_mcp_server", async ({ page }) => {
+  test("extension_update_mcp_server_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_update_mcp_server", 0, 0, "").catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_update_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 
-  test("extension_uninstall_mcp_server", async ({ page }) => {
+  test("extension_uninstall_mcp_server_connect", async ({ page }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "extension_uninstall_mcp_server", 0, 0).catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(page, "extension_uninstall_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 

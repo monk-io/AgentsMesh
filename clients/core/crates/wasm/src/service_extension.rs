@@ -119,37 +119,7 @@ impl WasmExtensionService {
         self.0.uninstall_mcp_server_connect(request).await
     }
 
-    // -------- Legacy REST JSON methods (preserved for not-yet-migrated routes) --------
-
-    pub async fn list_repo_mcp_servers(
-        &self, repo_id: i64, scope: Option<String>,
-    ) -> Result<String, String> {
-        self.0.list_repo_mcp_servers(repo_id, scope).await
-    }
-
-    pub async fn install_mcp_from_market(
-        &self, repo_id: i64, json: &str,
-    ) -> Result<String, String> {
-        self.0.install_mcp_from_market(repo_id, json).await
-    }
-
-    pub async fn install_custom_mcp_server(
-        &self, repo_id: i64, json: &str,
-    ) -> Result<String, String> {
-        self.0.install_custom_mcp_server(repo_id, json).await
-    }
-
-    pub async fn update_mcp_server(
-        &self, repo_id: i64, install_id: i64, json: &str,
-    ) -> Result<String, String> {
-        self.0.update_mcp_server(repo_id, install_id, json).await
-    }
-
-    pub async fn uninstall_mcp_server(
-        &self, repo_id: i64, install_id: i64,
-    ) -> Result<(), String> {
-        self.0.uninstall_mcp_server(repo_id, install_id).await
-    }
+    // -------- Multipart upload (stays REST forever — Connect doesn't do multipart) --------
 
     pub async fn install_skill_from_upload(
         &self, repo_id: i64, file_data: js_sys::Uint8Array,

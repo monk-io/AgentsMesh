@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import type { InstalledSkill, InstalledMcpServer } from "@/lib/api/extensionTypes";
-import { getExtensionService } from "@/lib/wasm-core";
 import { listRepoSkills, updateSkill, uninstallSkill } from "@/lib/api/repoSkillExtension";
+import { listRepoMcpServers, updateMcpServer, uninstallMcpServer } from "@/lib/api/repoMcpExtension";
 import { useCurrentOrg } from "@/stores/auth";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -39,19 +39,20 @@ export function useCapabilitiesData(repositoryId: number) {
   }, [orgSlug, repositoryId, t]);
 
   const loadMcpServers = useCallback(async (mounted?: { current: boolean }) => {
+    if (!orgSlug) return;
     try {
       const [orgRes, userRes] = await Promise.all([
-        getExtensionService().list_repo_mcp_servers(BigInt(repositoryId), "org").then((j: string) => JSON.parse(j)),
-        getExtensionService().list_repo_mcp_servers(BigInt(repositoryId), "user").then((j: string) => JSON.parse(j)),
+        listRepoMcpServers(orgSlug, repositoryId, { scope: "org" }),
+        listRepoMcpServers(orgSlug, repositoryId, { scope: "user" }),
       ]);
       if (mounted && !mounted.current) return;
-      setOrgMcpServers(orgRes.mcp_servers || []);
-      setUserMcpServers(userRes.mcp_servers || []);
+      setOrgMcpServers(orgRes.items);
+      setUserMcpServers(userRes.items);
     } catch (error) {
       if (mounted && !mounted.current) return;
       toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToLoadMcpServers")));
     }
-  }, [repositoryId, t]);
+  }, [orgSlug, repositoryId, t]);
 
   useEffect(() => {
     const mounted = { current: true };
@@ -83,20 +84,22 @@ export function useCapabilitiesData(repositoryId: number) {
   }, [orgSlug, repositoryId, loadSkills, t, confirm]);
 
   const handleToggleMcp = useCallback(async (mcp: InstalledMcpServer) => {
-    try { await getExtensionService().update_mcp_server(BigInt(repositoryId), BigInt(mcp.id), JSON.stringify({ is_enabled: !mcp.is_enabled })); await loadMcpServers(); }
+    if (!orgSlug) return;
+    try { await updateMcpServer(orgSlug, repositoryId, mcp.id, { isEnabled: !mcp.is_enabled }); await loadMcpServers(); }
     catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToUpdate"))); }
-  }, [repositoryId, loadMcpServers, t]);
+  }, [orgSlug, repositoryId, loadMcpServers, t]);
 
   const handleDeleteMcp = useCallback(async (mcp: InstalledMcpServer) => {
+    if (!orgSlug) return;
     const confirmed = await confirm({
       title: t("extensions.confirmUninstallMcp"),
       description: t("extensions.uninstallMcpDescription", { name: mcp.name || mcp.slug }),
       variant: "destructive", confirmText: t("extensions.uninstall"), cancelText: t("extensions.cancel"),
     });
     if (!confirmed) return;
-    try { await getExtensionService().uninstall_mcp_server(BigInt(repositoryId), BigInt(mcp.id)); toast.success(t("extensions.uninstalled")); await loadMcpServers(); }
+    try { await uninstallMcpServer(orgSlug, repositoryId, mcp.id); toast.success(t("extensions.uninstalled")); await loadMcpServers(); }
     catch (error) { toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToUninstall"))); }
-  }, [repositoryId, loadMcpServers, t, confirm]);
+  }, [orgSlug, repositoryId, loadMcpServers, t, confirm]);
 
   return {
     orgSkills, userSkills, orgMcpServers, userMcpServers, loading,

@@ -16,7 +16,6 @@ mod channel;
 mod channel_proto;
 mod common;
 mod enums;
-mod extension;
 mod extension_market_proto;
 mod extension_proto;
 mod extension_repo_mcp_proto;
@@ -85,7 +84,6 @@ pub mod proto_blockstore_v1 {
 pub use channel::*;
 pub use common::*;
 pub use enums::*;
-pub use extension::*;
 
 /// Connect-RPC binary-wire DTOs for `proto.channel.v1`. Re-exported as a
 /// distinct module so the legacy serde `Channel` (REST path) and the prost

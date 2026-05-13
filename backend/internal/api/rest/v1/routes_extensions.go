@@ -20,14 +20,5 @@ func registerExtensionRoutes(rg *gin.RouterGroup, svc *Services) {
 		repoSkills.POST("/install-from-upload", handler.InstallSkillFromUpload)
 	}
 
-	repoMcp := rg.Group("/repositories/:id/mcp-servers")
-	{
-		repoMcp.GET("", handler.ListRepoMcpServers)
-		repoMcp.POST("/install-from-market", handler.InstallMcpFromMarket)
-		repoMcp.POST("/install-custom", handler.InstallCustomMcpServer)
-		repoMcp.PUT("/:installId", handler.UpdateMcpServer)
-		repoMcp.DELETE("/:installId", handler.UninstallMcpServer)
-	}
-
 	slog.Info("Extension routes registered")
 }

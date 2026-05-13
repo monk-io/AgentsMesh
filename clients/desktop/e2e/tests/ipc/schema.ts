@@ -1592,83 +1592,59 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_list_repo_mcp_servers",
+    "name": "extension_list_repo_mcp_servers_connect",
     "group": "extension",
     "params": [
       {
-        "name": "repo_id",
-        "type": "i64"
-      },
-      {
-        "name": "scope",
-        "type": "Option<String>"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_install_mcp_from_market",
+    "name": "extension_install_mcp_from_market_connect",
     "group": "extension",
     "params": [
       {
-        "name": "repo_id",
-        "type": "i64"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_install_custom_mcp_server",
+    "name": "extension_install_custom_mcp_server_connect",
     "group": "extension",
     "params": [
       {
-        "name": "repo_id",
-        "type": "i64"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_update_mcp_server",
+    "name": "extension_update_mcp_server_connect",
     "group": "extension",
     "params": [
       {
-        "name": "repo_id",
-        "type": "i64"
-      },
-      {
-        "name": "install_id",
-        "type": "i64"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "extension_uninstall_mcp_server",
+    "name": "extension_uninstall_mcp_server_connect",
     "group": "extension",
     "params": [
       {
-        "name": "repo_id",
-        "type": "i64"
-      },
-      {
-        "name": "install_id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
     "name": "extension_install_skill_from_upload",

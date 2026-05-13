@@ -43,7 +43,6 @@ go_library(
         "channel_read.go",
         "channels.go",
         "extension.go",
-        "extension_mcp.go",
         "extension_skills.go",
         "files.go",
         "invitations.go",

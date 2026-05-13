@@ -82,33 +82,33 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn extension_list_repo_mcp_servers(&self, repo_id: i64, scope: Option<String>) -> napi::Result<String> {
+    pub async fn extension_list_repo_mcp_servers_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.list_repo_mcp_servers(repo_id, scope).await.map_err(err)
+        svc.list_repo_mcp_servers_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_install_mcp_from_market(&self, repo_id: i64, json: String) -> napi::Result<String> {
+    pub async fn extension_install_mcp_from_market_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.install_mcp_from_market(repo_id, &json).await.map_err(err)
+        svc.install_mcp_from_market_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_install_custom_mcp_server(&self, repo_id: i64, json: String) -> napi::Result<String> {
+    pub async fn extension_install_custom_mcp_server_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.install_custom_mcp_server(repo_id, &json).await.map_err(err)
+        svc.install_custom_mcp_server_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_update_mcp_server(&self, repo_id: i64, install_id: i64, json: String) -> napi::Result<String> {
+    pub async fn extension_update_mcp_server_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.update_mcp_server(repo_id, install_id, &json).await.map_err(err)
+        svc.update_mcp_server_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn extension_uninstall_mcp_server(&self, repo_id: i64, install_id: i64) -> napi::Result<()> {
+    pub async fn extension_uninstall_mcp_server_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
-            svc.uninstall_mcp_server(repo_id, install_id).await.map_err(err)
+        svc.uninstall_mcp_server_connect(&request).await.map_err(err)
     }
 
     #[napi]

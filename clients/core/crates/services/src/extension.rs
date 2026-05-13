@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_types::*;
 use agentsmesh_types::proto_extension_v1 as ext_proto;
 use prost::Message;
 
@@ -156,55 +155,7 @@ impl ExtensionService {
         Ok(resp.encode_to_vec())
     }
 
-    // -------- Legacy REST (JSON wire) — preserved for not-yet-migrated routes --------
-
-    pub async fn list_repo_mcp_servers(
-        &self, repo_id: i64, scope: Option<String>,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .list_repo_mcp_servers(repo_id, scope.as_deref())
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn install_mcp_from_market(
-        &self, repo_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: InstallMarketMcpRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .install_mcp_from_market(repo_id, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn install_custom_mcp_server(
-        &self, repo_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: InstallCustomMcpRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .install_custom_mcp_server(repo_id, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn update_mcp_server(
-        &self, repo_id: i64, install_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: UpdateMcpInstallRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .update_mcp_install(repo_id, install_id, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn uninstall_mcp_server(
-        &self, repo_id: i64, install_id: i64,
-    ) -> Result<(), String> {
-        self.client
-            .uninstall_mcp_server(repo_id, install_id)
-            .await.map_err(crate::wire)?;
-        Ok(())
-    }
+    // -------- Multipart upload (stays REST forever — Connect doesn't do multipart) --------
 
     pub async fn install_skill_from_upload(
         &self, repo_id: i64, file_data: Vec<u8>,
