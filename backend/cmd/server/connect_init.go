@@ -117,6 +117,9 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	channelconnect.Mount(mux, channelconnect.NewServer(svc.channel, svc.ticket, svc.org), opts...)
 	ticketconnect.Mount(mux, ticketconnect.NewServer(svc.ticket, svc.org), opts...)
 	meshconnect.Mount(mux, meshconnect.NewServer(svc.mesh, svc.ticket, svc.org), opts...)
+	if svc.message != nil {
+		meshconnect.MountMessages(mux, meshconnect.NewMessageServer(svc.message, svc.org), opts...)
+	}
 	mountRunnerService(mux, svc, rest, cfg, opts)
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)

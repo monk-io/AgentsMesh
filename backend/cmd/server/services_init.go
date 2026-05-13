@@ -62,6 +62,7 @@ type serviceContainer struct {
 	billing           *billing.Service
 	binding           *binding.Service
 	mesh              *mesh.Service
+	message           *agent.MessageService
 	invitation        *invitation.Service
 	file              *fileservice.Service
 	promoCode         *promocode.Service
@@ -155,6 +156,8 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	bindingSvc := binding.NewService(bindingRepo, podSvc)
 	meshRepo := infra.NewMeshRepository(db)
 	meshSvc := mesh.NewService(meshRepo, podSvc, channelSvc, bindingSvc)
+	agentMessageRepo := infra.NewAgentMessageRepository(db)
+	messageSvc := agent.NewMessageService(agentMessageRepo)
 
 	emailSvc := email.NewService(email.Config{
 		Provider:    cfg.Email.Provider,
@@ -222,6 +225,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		billing:            billingSvc,
 		binding:            bindingSvc,
 		mesh:               meshSvc,
+		message:            messageSvc,
 		invitation:         invitationSvc,
 		file:               fileSvc,
 		promoCode:          promoCodeSvc,

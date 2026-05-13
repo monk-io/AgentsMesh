@@ -210,6 +210,7 @@ func buildServicesContainer(
 		SupportTicket:       services.supportTicket,
 		TokenUsage:            services.tokenUsage,
 		Grant:                 services.grant,
+		Message:               services.message,
 		Redis:                 redisClient,
 	}
 }
