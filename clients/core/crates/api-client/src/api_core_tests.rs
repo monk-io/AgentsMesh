@@ -47,39 +47,8 @@ mod api_core_tests {
     }
 
     // ── pod ─────────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_pods_with_filters() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/pods"))
-            .and(query_param("status", "running")).and(query_param("limit", "10"))
-            .respond_with(ok(json!({"pods":[],"total":0})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let r = c.list_pods(Some("running"), None, None, Some(10), None).await.unwrap();
-        assert_eq!(r.total, Some(0));
-    }
-
-    #[tokio::test]
-    async fn list_pods_no_filters() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/pods"))
-            .respond_with(ok(json!({"pods":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let r = c.list_pods(None, None, None, None, None).await.unwrap();
-        assert!(r.pods.is_empty());
-    }
-
-    #[tokio::test]
-    async fn terminate_pod() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/pods/pod-abc/terminate"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.terminate_pod("pod-abc").await.unwrap();
-    }
+    // Pod tests removed: REST surface eliminated; Connect handler tests in
+    // backend/internal/api/connect/pod cover the same surface.
 
     // ── channel ─────────────────────────────────────────────────────────
 

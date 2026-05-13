@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
@@ -13,23 +12,14 @@ import (
 type PodHandler struct {
 	podService     PodServiceForHandler            // Pod CRUD operations (ListPods, GetPod, TerminatePod, etc.)
 	runnerService  *runner.Service                 // Runner management
-	runnerConnMgr  *runner.RunnerConnectionManager // Runner gRPC connections
 	podCoordinator *runner.PodCoordinator          // Pod coordination (TerminatePod, terminal routing)
-	orchestrator         *agentpod.PodOrchestrator       // Unified Pod creation logic
-	eventBus             *eventbus.EventBus              // Event bus for real-time events
-	commandSender        runner.RunnerCommandSender      // Unified command sender (PTY + ACP)
-	grantService         *grantservice.Service           // Resource grant/sharing service
+	orchestrator   *agentpod.PodOrchestrator       // Unified Pod creation logic
+	commandSender  runner.RunnerCommandSender      // Unified command sender (PTY + ACP)
+	grantService   *grantservice.Service           // Resource grant/sharing service
 }
 
 // PodHandlerOption is a functional option for configuring PodHandler
 type PodHandlerOption func(*PodHandler)
-
-// WithRunnerConnectionManager sets the runner connection manager
-func WithRunnerConnectionManager(cm *runner.RunnerConnectionManager) PodHandlerOption {
-	return func(h *PodHandler) {
-		h.runnerConnMgr = cm
-	}
-}
 
 // WithPodCoordinator sets the pod coordinator
 func WithPodCoordinator(pc *runner.PodCoordinator) PodHandlerOption {
@@ -42,13 +32,6 @@ func WithPodCoordinator(pc *runner.PodCoordinator) PodHandlerOption {
 func WithPodService(ps PodServiceForHandler) PodHandlerOption {
 	return func(h *PodHandler) {
 		h.podService = ps
-	}
-}
-
-// WithEventBus sets the event bus for publishing real-time events
-func WithEventBus(eb *eventbus.EventBus) PodHandlerOption {
-	return func(h *PodHandler) {
-		h.eventBus = eb
 	}
 }
 

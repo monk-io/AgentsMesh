@@ -215,11 +215,6 @@ pub struct CreatePodResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdatePodAliasRequest {
-    pub alias: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PodListResponse {
     pub pods: Vec<Pod>,
     pub total: Option<i64>,

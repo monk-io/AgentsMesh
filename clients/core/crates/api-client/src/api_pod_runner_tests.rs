@@ -24,10 +24,6 @@ mod api_pod_runner_tests {
         ResponseTemplate::new(200).set_body_json(b)
     }
 
-    fn pod_json(key: &str, status: &str) -> serde_json::Value {
-        json!({"key": key, "status": status, "agent_slug": "claude"})
-    }
-
     fn runner_json(id: i64) -> serde_json::Value {
         json!({
             "id": id, "name": "r1", "status": "online",
@@ -35,66 +31,8 @@ mod api_pod_runner_tests {
         })
     }
 
-    fn conn_json() -> serde_json::Value {
-        json!({"relay_url":"wss://r.example.com","token":"t","pod_key":"p"})
-    }
-
-    #[tokio::test]
-    async fn get_pod() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/pods/pod-abc"))
-            .respond_with(ok(pod_json("pod-abc", "running")))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let r = c.get_pod("pod-abc").await.unwrap();
-        assert_eq!(r.key, "pod-abc");
-    }
-
-    #[tokio::test]
-    async fn create_pod() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/pods"))
-            .respond_with(ok(json!({"pod": pod_json("pod-new", "creating")})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::CreatePodRequest {
-            agent_slug: "claude".into(), agentfile_layer: None,
-            runner_id: Some(1), alias: None, ticket_slug: None,
-            cols: Some(80), rows: Some(24), source_pod_key: None,
-            resume_agent_session: None, perpetual: None,
-        };
-        let r = c.create_pod(&data).await.unwrap();
-        assert_eq!(r.pod.key, "pod-new");
-    }
-
-    #[tokio::test]
-    async fn get_pod_connection_info() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/pods/p1/connect"))
-            .respond_with(ok(conn_json())).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.get_pod_connection_info("p1").await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_pod_relay_connection() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/pods/p1/relay/connect"))
-            .respond_with(ok(conn_json())).expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.get_pod_relay_connection("p1").await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn update_pod_alias() {
-        let s = MockServer::start().await;
-        Mock::given(method("PATCH")).and(path("/api/v1/orgs/acme/pods/p1/alias"))
-            .respond_with(ok(pod_json("p1", "running")))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::UpdatePodAliasRequest { alias: Some("my".into()) };
-        let _ = c.update_pod_alias("p1", &data).await.unwrap();
-    }
+    // Pod tests removed: REST surface eliminated; Connect handler tests in
+    // backend/internal/api/connect/pod cover the same surface.
 
     #[tokio::test]
     async fn redeem_promo_code() {
