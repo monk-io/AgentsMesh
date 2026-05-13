@@ -20,6 +20,7 @@ pub mod license;
 pub mod loop_api;
 pub mod loop_connect;
 pub mod mesh;
+pub mod mesh_connect;
 pub mod message;
 pub mod notification;
 pub mod notification_connect;

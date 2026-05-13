@@ -1,0 +1,171 @@
+// MeshService — pod-to-pod topology + ticket-pod lookup.
+//
+// Migrated from REST handlers in backend/internal/api/rest/v1/mesh.go per
+// .claude/plans/proto-naming-conventions.md. Conventions enforced:
+//   * package proto.mesh.v1 + go_package suffix for dispatch
+//   * service name = <Domain>Service, methods PascalCase verbs
+//   * snake_case fields, no json_name annotations
+//   * org_slug at field 1 of every request (no path params on Connect URLs)
+//   * timestamps as string ISO-8601 (no google.protobuf.Timestamp)
+//   * list response = {items, total, limit, offset} uniform envelope where
+//     pagination applies (GetTopology returns a single object, not a list)
+//
+// Field set reconciled across three layers (runbook §1.5):
+//   - backend domain/mesh/mesh.go              (18 fields on MeshNode incl.
+//     position; ChannelInfo with 6; RunnerInfo with 5)
+//   - clients/core/crates/types/src/mesh.rs    (drifted: MeshNode +agent_slug
+//     missing from Go; Go +position not on Rust; MeshRunnerInfo +pod_keys
+//     not on Go but populated by web at runtime; MeshEdge +binding_status
+//     alias on Rust but absent on Go)
+//   - clients/web/src/stores/mesh.ts           (TS interfaces re-state both
+//     legacy shapes; UI reads pod_key/status/runner_id/ticket_id directly)
+//
+// Tag layout reconciliation: this PR adopts the **union** of the three
+// shapes — every field that any layer reads survives. Drifted aliases
+// collapse to the canonical name (initiator/target on edges; pod_key on
+// nodes; pod_keys on runner info). The reference is .proto SSOT going
+// forward — Rust + Go must mirror its field set exactly.
+//
+// Auth model: standard Bearer + ResolveOrgScope across all RPCs. No
+// pod-scoped auth deviation (cf. binding.proto §"Auth model").
+
+syntax = "proto3";
+
+package proto.mesh.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/mesh/v1;meshv1";
+
+service MeshService {
+  // Topology — aggregate view of active pods + bindings + channels + runners
+  // for the org. Single point of read in the Mesh dashboard.
+  rpc GetMeshTopology(GetMeshTopologyRequest) returns (MeshTopology);
+
+  // Ticket→pod lookup. Migrated from MeshHandler.GetTicketPods (REST
+  // /tickets/:slug/pods). Stayed on REST throughout the ticket migration
+  // because it belongs to MeshService, not TicketService.
+  rpc GetTicketPods(GetTicketPodsRequest) returns (GetTicketPodsResponse);
+
+  // Batch ticket→pod lookup — used by the ticket board's "pods per card"
+  // overlay. Migrated from MeshHandler.BatchGetTicketPods (REST
+  // POST /tickets/batch-pods).
+  rpc BatchGetTicketPods(BatchGetTicketPodsRequest) returns (BatchGetTicketPodsResponse);
+
+  // Pod-for-ticket creation. Migrated from MeshHandler.CreatePodForTicket
+  // (REST POST /tickets/:slug/pods). The created pod returns as a MeshNode
+  // (same projection the topology uses) so callers stay on one shape.
+  rpc CreatePodForTicket(CreatePodForTicketRequest) returns (MeshNode);
+}
+
+// MeshNode — a pod projected for topology display. Mirrors
+// backend/internal/domain/mesh/mesh.go:MeshNode. Field names align with the
+// Rust DTO and the TS store interface; aliases collapsed to the canonical
+// name (pod_key, not key).
+message MeshNode {
+  string pod_key = 1;
+  string status = 2;
+  string agent_status = 3;
+  optional string model = 4;
+  optional string title = 5;
+  optional string alias = 6;
+  // Agent slug (Claude, Codex, Aider, …). Populated for renderer display;
+  // absent on the Go domain projection today, present on Rust.
+  string agent_slug = 7;
+  optional int64 ticket_id = 8;
+  optional string ticket_slug = 9;
+  optional string ticket_title = 10;
+  optional int64 repository_id = 11;
+  // CreatedByID is non-optional on the Go domain (zero is "unknown"). Keep
+  // as required scalar to match REST wire.
+  int64 created_by_id = 12;
+  // Runner association — set when the pod is scheduled. zero = unassigned.
+  int64 runner_id = 13;
+  // Runner display info (preloaded on the topology projection).
+  string runner_node_id = 14;
+  string runner_status = 15;
+  optional string started_at = 16;
+}
+
+// MeshEdge — a binding edge between two pods. Mirrors
+// backend/internal/domain/mesh/mesh.go:MeshEdge.
+message MeshEdge {
+  int64 id = 1;
+  string source = 2;
+  string target = 3;
+  repeated string granted_scopes = 4;
+  repeated string pending_scopes = 5;
+  string status = 6;
+}
+
+// ChannelInfo — channel projection for topology display. Mirrors
+// backend/internal/domain/mesh/mesh.go:ChannelInfo.
+message ChannelInfo {
+  int64 id = 1;
+  string name = 2;
+  optional string description = 3;
+  repeated string pod_keys = 4;
+  int32 message_count = 5;
+  bool is_archived = 6;
+}
+
+// RunnerInfo — runner projection for topology display. Mirrors
+// backend/internal/domain/mesh/mesh.go:RunnerInfo. Includes max/current
+// pod counts used by the topology's capacity badges.
+message RunnerInfo {
+  int64 id = 1;
+  string node_id = 2;
+  string status = 3;
+  int32 max_concurrent_pods = 4;
+  int32 current_pods = 5;
+}
+
+// MeshTopology — aggregate response from GetMeshTopology.
+message MeshTopology {
+  repeated MeshNode nodes = 1;
+  repeated MeshEdge edges = 2;
+  repeated ChannelInfo channels = 3;
+  repeated RunnerInfo runners = 4;
+}
+
+// --- Requests ---
+
+message GetMeshTopologyRequest {
+  string org_slug = 1;
+}
+
+message GetTicketPodsRequest {
+  string org_slug = 1;
+  string ticket_slug = 2;
+  // When true, only active pods (status running / creating) are returned.
+  // Mirrors the REST `?active=true` query param.
+  optional bool active_only = 3;
+}
+
+message GetTicketPodsResponse {
+  repeated MeshNode pods = 1;
+}
+
+message BatchGetTicketPodsRequest {
+  string org_slug = 1;
+  // Capped at 100 server-side (mirrors REST limit). Empty rejected.
+  repeated int64 ticket_ids = 2;
+}
+
+// BatchGetTicketPodsResponse — pods grouped by ticket id. Every requested
+// ticket_id is present in `ticket_pods` even if its pod list is empty
+// (parity with REST).
+message BatchGetTicketPodsResponse {
+  map<int64, TicketPodList> ticket_pods = 1;
+}
+
+message TicketPodList {
+  repeated MeshNode pods = 1;
+}
+
+message CreatePodForTicketRequest {
+  string org_slug = 1;
+  string ticket_slug = 2;
+  int64 runner_id = 3;
+  optional string prompt = 4;
+  optional string model = 5;
+  optional string permission_mode = 6;
+}

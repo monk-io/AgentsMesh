@@ -17,6 +17,7 @@ mod grant;
 mod invitation;
 mod loop_service;
 mod mesh;
+mod mesh_connect;
 mod message;
 mod notification;
 mod org;

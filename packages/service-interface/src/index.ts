@@ -419,6 +419,13 @@ export interface IMeshService {
   selected_node(): any;
   set_topology(json: string): void;
   topology_json(): any;
+  // Connect-RPC: proto.mesh.v1.MeshService. Binary wire (Uint8Array in,
+  // Uint8Array out). Callers encode/decode via @bufbuild/protobuf — see
+  // clients/web/src/lib/api/meshConnect.ts for the adapter.
+  batchGetTicketPodsConnect(request: Uint8Array): Promise<Uint8Array>;
+  createPodForTicketConnect(request: Uint8Array): Promise<Uint8Array>;
+  getMeshTopologyConnect(request: Uint8Array): Promise<Uint8Array>;
+  getTicketPodsConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IMeshState {

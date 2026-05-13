@@ -58,4 +58,25 @@ export class ElectronMeshService implements IMeshService {
     this._topologyCache = result;
     return result;
   }
+
+  // Connect-RPC: proto.mesh.v1.MeshService. Binary wire — every method
+  // forwards a Uint8Array request to the matching napi handler
+  // (commands/mesh.rs) and gets a Uint8Array response back. Callers wrap
+  // with @bufbuild/protobuf .toBinary() / .fromBinary().
+
+  async getMeshTopologyConnect(request: Uint8Array): Promise<Uint8Array> {
+    return invoke<Uint8Array>("meshGetMeshTopologyConnect", request);
+  }
+
+  async getTicketPodsConnect(request: Uint8Array): Promise<Uint8Array> {
+    return invoke<Uint8Array>("meshGetTicketPodsConnect", request);
+  }
+
+  async batchGetTicketPodsConnect(request: Uint8Array): Promise<Uint8Array> {
+    return invoke<Uint8Array>("meshBatchGetTicketPodsConnect", request);
+  }
+
+  async createPodForTicketConnect(request: Uint8Array): Promise<Uint8Array> {
+    return invoke<Uint8Array>("meshCreatePodForTicketConnect", request);
+  }
 }

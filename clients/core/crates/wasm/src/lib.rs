@@ -23,6 +23,7 @@ mod service_grant;
 mod service_invitation;
 mod service_loop;
 mod service_mesh;
+mod service_mesh_connect;
 mod service_message;
 mod service_notification;
 mod service_org;

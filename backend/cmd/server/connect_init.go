@@ -22,6 +22,7 @@ import (
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
 	licenseconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/license"
 	loopconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/loop"
+	meshconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/mesh"
 	notificationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/notification"
 	orgconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/org"
 	podconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/pod"
@@ -115,6 +116,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	ticketrelationsconnect.Mount(mux, ticketrelationsconnect.NewServer(svc.ticket, svc.org), opts...)
 	channelconnect.Mount(mux, channelconnect.NewServer(svc.channel, svc.ticket, svc.org), opts...)
 	ticketconnect.Mount(mux, ticketconnect.NewServer(svc.ticket, svc.org), opts...)
+	meshconnect.Mount(mux, meshconnect.NewServer(svc.mesh, svc.ticket, svc.org), opts...)
 	mountRunnerService(mux, svc, rest, cfg, opts)
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)
