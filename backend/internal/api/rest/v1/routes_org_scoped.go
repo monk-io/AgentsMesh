@@ -17,7 +17,6 @@ func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 	registerMessageRoutes(rg, svc)
 	registerInvitationRoutes(rg, svc)
 	registerFileRoutes(rg, svc)
-	registerAPIKeyManagementRoutes(rg, svc)
 	registerExtensionRoutes(rg, svc)
 	registerLoopRoutes(rg, svc)
 	registerNotificationRoutes(rg, svc)

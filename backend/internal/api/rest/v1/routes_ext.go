@@ -5,25 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// registerAPIKeyManagementRoutes registers API key CRUD routes (JWT auth, owner/admin only)
-func registerAPIKeyManagementRoutes(rg *gin.RouterGroup, svc *Services) {
-	if svc.APIKey == nil {
-		return
-	}
-
-	apiKeyHandler := NewAPIKeyHandler(svc.APIKey)
-	apiKeys := rg.Group("/api-keys")
-	apiKeys.Use(middleware.RequireAdmin())
-	{
-		apiKeys.POST("", apiKeyHandler.CreateAPIKey)
-		apiKeys.GET("", apiKeyHandler.ListAPIKeys)
-		apiKeys.GET("/:id", apiKeyHandler.GetAPIKey)
-		apiKeys.PUT("/:id", apiKeyHandler.UpdateAPIKey)
-		apiKeys.DELETE("/:id", apiKeyHandler.DeleteAPIKey)
-		apiKeys.POST("/:id/revoke", apiKeyHandler.RevokeAPIKey)
-	}
-}
-
 // RegisterExtRoutes registers third-party API key-authenticated routes.
 // These routes reuse existing handler instances with scope-based access control.
 func RegisterExtRoutes(rg *gin.RouterGroup, svc *Services) {

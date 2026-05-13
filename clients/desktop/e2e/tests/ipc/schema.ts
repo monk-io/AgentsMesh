@@ -139,69 +139,70 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "()"
   },
   {
-    "name": "apikey_list",
-    "group": "apikey",
-    "params": [],
-    "returnType": "String"
-  },
-  {
-    "name": "apikey_get",
+    "name": "apikey_list_connect",
     "group": "apikey",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "apikey_create",
+    "name": "apikey_get_connect",
     "group": "apikey",
     "params": [
       {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "apikey_update",
+    "name": "apikey_create_connect",
     "group": "apikey",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
-      },
-      {
-        "name": "json",
-        "type": "String"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "String"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "apikey_delete",
+    "name": "apikey_update_connect",
     "group": "apikey",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
   },
   {
-    "name": "apikey_revoke",
+    "name": "apikey_delete_connect",
     "group": "apikey",
     "params": [
       {
-        "name": "id",
-        "type": "i64"
+        "name": "request",
+        "type": "Vec<u8>"
       }
     ],
-    "returnType": "()"
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "apikey_revoke_connect",
+    "group": "apikey",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
   },
   {
     "name": "auth_api_register",

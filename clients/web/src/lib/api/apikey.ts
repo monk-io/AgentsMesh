@@ -11,7 +11,6 @@
 // PR #345 lineage: `createApiKey` returns `{ apiKey, rawKey }` (multi-field
 // per conventions §9 exception). The wire carries both tag 1 and tag 2;
 // the secret cannot be silently dropped on the wasm hop.
-
 import {
   ApiKeySchema,
   CreateApiKeyRequestSchema,
@@ -135,25 +134,3 @@ export async function deleteApiKey(orgSlug: string, id: number): Promise<void> {
   const respBytes = await getApiKeyService().deleteApiKeyConnect(bytes);
   fromBinary(DeleteApiKeyResponseSchema, new Uint8Array(respBytes));
 }
-
-// Legacy `apiKeyApi` shape — preserved so existing call sites keep working
-// during dual-track. Each call now goes through the Connect path under the
-// hood; `orgSlug` is sourced from the page params at the call site.
-export const apiKeyApi = {
-  list: async (orgSlug: string) => {
-    const resp = await listApiKeys(orgSlug);
-    return { api_keys: resp.items, total: resp.total };
-  },
-  create: async (orgSlug: string, data: CreateAPIKeyRequest) => {
-    return createApiKey(orgSlug, data);
-  },
-  update: async (orgSlug: string, id: number, data: UpdateAPIKeyRequest) => {
-    return updateApiKey(orgSlug, id, data);
-  },
-  revoke: async (orgSlug: string, id: number) => {
-    await revokeApiKey(orgSlug, id);
-  },
-  remove: async (orgSlug: string, id: number) => {
-    await deleteApiKey(orgSlug, id);
-  },
-};

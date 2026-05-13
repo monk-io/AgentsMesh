@@ -10,9 +10,7 @@ import (
 	apikeyservice "github.com/anthropics/agentsmesh/backend/internal/service/apikey"
 )
 
-// requireOrgAdmin gates write/read access at the connect handler layer
-// — apikeys are sensitive secrets, REST uses the same admin gate
-// (apikey_routes.go).
+// requireOrgAdmin gates write/read access — apikeys are sensitive secrets.
 func requireOrgAdmin(ctx context.Context) error {
 	tenant := middleware.GetTenant(ctx)
 	if tenant == nil {
@@ -27,8 +25,7 @@ func requireOrgAdmin(ctx context.Context) error {
 	return nil
 }
 
-// mapServiceError mirrors handleAPIKeyServiceError (apikeys.go:163).
-// Translates apikey-domain sentinels to Connect codes per conventions §10.
+// mapServiceError translates apikey-domain sentinels to Connect codes per conventions §10.
 func mapServiceError(err error) error {
 	switch {
 	case errors.Is(err, apikeyservice.ErrAPIKeyNotFound):

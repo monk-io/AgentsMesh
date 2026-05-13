@@ -41,7 +41,6 @@ export { grantApi } from "./grant";
 export type { ResourceGrant } from "./grant";
 export { invitationApi } from "./invitation";
 export { agentApi } from "./agent";
-export { apiKeyApi } from "./apikey";
 export { billingApi } from "./billing";
 export { channelApi } from "./channel";
 export { extensionApi } from "./extension";

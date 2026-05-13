@@ -150,65 +150,6 @@ mod api_agent_billing_tests {
         let _ = c.set_default_agentpod_provider(3).await.unwrap();
     }
 
-    // ── apikey ──────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_api_key() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/api-keys/7"))
-            .respond_with(ok(json!({"id":7,"name":"my-key"})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_api_key(7).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn create_api_key() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/api-keys"))
-            .respond_with(ok(json!({
-                "api_key": {"id":1,"name":"new-key"},
-                "raw_key": "amk_secret_value_here"
-            })))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let data = agentsmesh_types::CreateApiKeyRequest {
-            name: "new-key".into(),
-            description: None,
-            scopes: None,
-            expires_in: None,
-        };
-        // Verify raw_key is preserved end-to-end (issue #345 regression guard)
-        let resp = c.create_api_key(&data).await.unwrap();
-        assert_eq!(resp.raw_key, "amk_secret_value_here");
-        assert_eq!(resp.api_key.id, 1);
-    }
-
-    #[tokio::test]
-    async fn update_api_key() {
-        let s = MockServer::start().await;
-        Mock::given(method("PUT")).and(path("/api/v1/orgs/acme/api-keys/7"))
-            .respond_with(ok(json!({"id":7,"name":"renamed"})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let data = agentsmesh_types::UpdateApiKeyRequest {
-            name: Some("renamed".into()),
-            description: None,
-            scopes: None,
-        };
-        let _ = c.update_api_key(7, &data).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn delete_api_key() {
-        let s = MockServer::start().await;
-        Mock::given(method("DELETE")).and(path("/api/v1/orgs/acme/api-keys/7"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.delete_api_key(7).await.unwrap();
-    }
-
     // ── autopilot ───────────────────────────────────────────────────────
 
     #[tokio::test]

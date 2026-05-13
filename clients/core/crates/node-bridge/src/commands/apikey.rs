@@ -1,42 +1,44 @@
 use napi_derive::napi;
 use crate::{AppState, err};
 
+// Binary-wire Connect bridge — TS encodes/decodes via @bufbuild/protobuf;
+// node-bridge just forwards bytes.
+
 #[napi]
 impl AppState {
     #[napi]
-    pub async fn apikey_list(&self) -> napi::Result<String> {
+    pub async fn apikey_list_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.apikey.lock().await;
-            svc.list().await.map_err(err)
+        svc.list_api_keys_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn apikey_get(&self, id: i64) -> napi::Result<String> {
+    pub async fn apikey_get_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.apikey.lock().await;
-            svc.get(id).await.map_err(err)
+        svc.get_api_key_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn apikey_create(&self, json: String) -> napi::Result<String> {
+    pub async fn apikey_create_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.apikey.lock().await;
-            svc.create(&json).await.map_err(err)
+        svc.create_api_key_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn apikey_update(&self, id: i64, json: String) -> napi::Result<String> {
+    pub async fn apikey_update_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.apikey.lock().await;
-            svc.update(id, &json).await.map_err(err)
+        svc.update_api_key_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn apikey_delete(&self, id: i64) -> napi::Result<()> {
+    pub async fn apikey_delete_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.apikey.lock().await;
-            svc.delete(id).await.map_err(err)
+        svc.delete_api_key_connect(&request).await.map_err(err)
     }
 
     #[napi]
-    pub async fn apikey_revoke(&self, id: i64) -> napi::Result<()> {
+    pub async fn apikey_revoke_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.apikey.lock().await;
-            svc.revoke(id).await.map_err(err)
+        svc.revoke_api_key_connect(&request).await.map_err(err)
     }
-
 }

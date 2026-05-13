@@ -229,28 +229,6 @@ mod api_core_tests {
         let _ = c.list_agentpod_providers().await.unwrap();
     }
 
-    // ── apikey ──────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_api_keys() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/api-keys"))
-            .respond_with(ok(json!({"api_keys":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_api_keys().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn revoke_api_key() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/api-keys/7/revoke"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.revoke_api_key(7).await.unwrap();
-    }
-
     // ── autopilot ───────────────────────────────────────────────────────
 
     #[tokio::test]

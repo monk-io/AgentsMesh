@@ -2,7 +2,6 @@ mod agent;
 mod agent_proto;
 mod agentpod_settings;
 mod agentpod_settings_proto;
-mod apikey;
 mod apikey_proto;
 mod auth;
 mod auth_proto;
@@ -62,7 +61,6 @@ mod user_proto;
 
 pub use agent::*;
 pub use agentpod_settings::*;
-pub use apikey::*;
 pub use auth::*;
 pub use autopilot::*;
 pub use billing::*;
@@ -113,9 +111,7 @@ pub mod proto_extension_v1 {
     pub use super::extension_repo_skill_proto::*;
 }
 
-/// Connect-RPC binary-wire DTOs for `proto.apikey.v1`. Re-exported as a
-/// distinct module so the legacy serde `ApiKey` (REST path) and the
-/// prost `ApiKey` (Connect path) coexist during dual-track migration.
+/// Connect-RPC binary-wire DTOs for `proto.apikey.v1`.
 pub mod proto_apikey_v1 {
     pub use super::apikey_proto::*;
 }

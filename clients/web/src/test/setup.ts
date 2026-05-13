@@ -776,12 +776,13 @@ vi.mock('@/lib/wasm-core', () => {
       getInvitationByTokenConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getApiKeyService: fn(() => ({
-      list: fn().mockResolvedValue('{"api_keys":[]}'),
-      get: fn().mockResolvedValue('{}'),
-      create: fn().mockResolvedValue('{}'),
-      update: fn().mockResolvedValue('{}'),
-      delete: fn().mockResolvedValue(undefined),
-      revoke: fn().mockResolvedValue(undefined),
+      // Connect-RPC (binary wire) — return empty Uint8Array for tests
+      listApiKeysConnect: fn().mockResolvedValue(new Uint8Array()),
+      getApiKeyConnect: fn().mockResolvedValue(new Uint8Array()),
+      createApiKeyConnect: fn().mockResolvedValue(new Uint8Array()),
+      updateApiKeyConnect: fn().mockResolvedValue(new Uint8Array()),
+      revokeApiKeyConnect: fn().mockResolvedValue(new Uint8Array()),
+      deleteApiKeyConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getBindingService: fn(() => ({
       request_binding: fn().mockResolvedValue('{}'),

@@ -1,8 +1,5 @@
 // Package apikeyconnect hosts Connect-RPC handlers for the apikey
-// domain. Mirrors backend/internal/api/rest/v1/apikeys.go but exposes
-// the data plane via Connect (binary protobuf wire, see conventions.md
-// §2.5). REST stays mounted in parallel; the migration runs dual-track
-// until all 26 services have flipped.
+// domain. Binary protobuf wire (conventions.md §2.5).
 //
 // PR #345 lineage: CreateApiKey returns the multi-field
 // {api_key, raw_key} envelope intentionally (conventions §9 exception)
@@ -32,8 +29,7 @@ const (
 	DeleteApiKeyProcedure = "/" + ServiceName + "/DeleteApiKey"
 )
 
-// Server implements the ApiKeyService contract. Mirrors REST's
-// APIKeyHandler dependencies (apikeys.go:15).
+// Server implements the ApiKeyService contract.
 type Server struct {
 	apiKeySvc apikeyservice.Interface
 	orgSvc    middleware.OrganizationService
