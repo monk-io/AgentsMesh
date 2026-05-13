@@ -25,7 +25,6 @@ pub use automation::{
     LoopDataDto, LoopListResponseDto, LoopRunDataDto, LoopRunListResponseDto, LoopRunStatusDto,
     UpdateLoopRequestDto,
 };
-pub(crate) use automation::approve_autopilot_req;
 pub use billing_dto::{
     BillingOverviewDto, ChangeBillingCycleRequestDto, CheckoutStatusDto,
     CreateCheckoutRequestDto, CreateCheckoutResponseDto, CreateSubscriptionRequestDto,

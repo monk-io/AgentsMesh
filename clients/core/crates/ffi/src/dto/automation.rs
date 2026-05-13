@@ -1,7 +1,7 @@
 use agentsmesh_types::{
-    ApproveAutopilotRequest, AutopilotController, AutopilotIteration, AutopilotListResponse,
-    AutopilotStatus, CreateAutopilotRequest, CreateLoopRequest, LoopData, LoopListResponse,
-    LoopRunData, LoopRunListResponse, LoopRunStatus, UpdateLoopRequest,
+    AutopilotController, AutopilotIteration, AutopilotListResponse, AutopilotStatus,
+    CreateAutopilotRequest, CreateLoopRequest, LoopData, LoopListResponse, LoopRunData,
+    LoopRunListResponse, LoopRunStatus, UpdateLoopRequest,
 };
 
 // ── Enums ─────────────────────────────────────────────────
@@ -184,16 +184,6 @@ impl From<CreateAutopilotRequestDto> for CreateAutopilotRequest {
             control_prompt_template: d.control_prompt_template,
             mcp_config_json: d.mcp_config_json,
         }
-    }
-}
-
-pub(crate) fn approve_autopilot_req(
-    continue_execution: Option<bool>,
-    additional_iterations: Option<i64>,
-) -> ApproveAutopilotRequest {
-    ApproveAutopilotRequest {
-        continue_execution,
-        additional_iterations,
     }
 }
 
