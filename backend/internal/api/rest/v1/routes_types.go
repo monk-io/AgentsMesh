@@ -13,7 +13,6 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
-	blockstoreservice "github.com/anthropics/agentsmesh/backend/internal/service/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
@@ -124,8 +123,6 @@ type Services struct {
 	// Resource grant/sharing service
 	Grant *grantservice.Service
 
-	// Block Store service (Phase 1 — block + ref two-primitive data platform)
-	Blockstore *blockstoreservice.Service
 	// Redis is optional — when non-nil, route-level rate limiters can use it.
 	// Nil in tests or minimal deployments; middleware treats nil as no-op.
 	Redis *redis.Client

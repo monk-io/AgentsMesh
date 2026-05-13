@@ -212,7 +212,6 @@ func buildServicesContainer(
 		SSO:                  services.sso,
 		SupportTicket:       services.supportTicket,
 		TokenUsage:            services.tokenUsage,
-		Blockstore:            services.blockstore,
 		Grant:                 services.grant,
 		Redis:                 redisClient,
 	}
