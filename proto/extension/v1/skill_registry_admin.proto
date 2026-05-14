@@ -1,0 +1,92 @@
+// SkillRegistryAdminService — platform-admin skill registry management.
+//
+// Migrated from REST handlers in
+// backend/internal/api/rest/v1/admin/skill_registries.go. The org-scoped
+// SkillRegistryService lives next door in skill_registry.proto. The split
+// exists because of auth surface: SkillRegistryService runs through
+// ResolveOrgScope + org membership; this admin service runs through the
+// system-admin interceptor (TenantContext.UserID + is_system_admin DB
+// lookup). Any drift between the two membership checks would be a
+// security bug if they shared transport plumbing.
+//
+// Platform-level scope: registries managed here have OrganizationID = nil
+// and are visible to every org. Per conventions §3.5 exception #2, admin
+// request messages do NOT carry org_slug — tenant is the whole platform
+// and is implied by the admin interceptor.
+//
+// Field shape mirrors the org-scoped SkillRegistry from skill_registry.proto
+// (no import — keeps the file standalone, same pattern as
+// billing_admin.proto). Sync responses wrap the registry with a status
+// message to preserve the REST `{message, registry}` payload web-admin
+// currently displays.
+
+syntax = "proto3";
+
+package proto.extension.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/extension/v1;extensionv1";
+
+service SkillRegistryAdminService {
+  rpc ListSkillRegistries(ListAdminSkillRegistriesRequest) returns (ListAdminSkillRegistriesResponse);
+  rpc CreateSkillRegistry(CreateAdminSkillRegistryRequest) returns (AdminSkillRegistry);
+  rpc SyncSkillRegistry(SyncAdminSkillRegistryRequest) returns (SyncAdminSkillRegistryResponse);
+  rpc DeleteSkillRegistry(DeleteAdminSkillRegistryRequest) returns (DeleteAdminSkillRegistryResponse);
+}
+
+// AdminSkillRegistry mirrors the org-scoped SkillRegistry (skill_registry.proto)
+// but stays a separate message so an .proto-only admin client can ship without
+// pulling the org surface. organization_id is intentionally absent: every entry
+// is platform-level (OrganizationID = nil on the wire).
+message AdminSkillRegistry {
+  int64 id = 1;
+  string repository_url = 2;
+  string branch = 3;
+  // auto / collection / single — user-declared source flavor.
+  string source_type = 4;
+  // collection / single — detected by importer, may differ from source_type.
+  optional string detected_type = 5;
+  // Agent whitelist, e.g. ["claude-code", "codex"]. Empty = all agents.
+  repeated string compatible_agents = 6;
+  // none / github_pat / gitlab_pat / ssh_key.
+  string auth_type = 7;
+  // RFC 3339, nullable before first sync.
+  optional string last_synced_at = 8;
+  optional string last_commit_sha = 9;
+  // pending / syncing / success / failed.
+  string sync_status = 10;
+  optional string sync_error = 11;
+  int32 skill_count = 12;
+  bool is_active = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message ListAdminSkillRegistriesRequest {}
+
+message ListAdminSkillRegistriesResponse {
+  repeated AdminSkillRegistry items = 1;
+  int64 total = 2;
+}
+
+message CreateAdminSkillRegistryRequest {
+  string repository_url = 1;
+  optional string branch = 2;
+}
+
+message SyncAdminSkillRegistryRequest {
+  int64 id = 1;
+}
+
+// SyncAdminSkillRegistryResponse preserves REST's `{message, registry}` envelope.
+// The handler runs SyncSingle synchronously (so callers see the resulting status)
+// then re-reads the row to return the updated entity.
+message SyncAdminSkillRegistryResponse {
+  string message = 1;
+  AdminSkillRegistry registry = 2;
+}
+
+message DeleteAdminSkillRegistryRequest {
+  int64 id = 1;
+}
+
+message DeleteAdminSkillRegistryResponse {}

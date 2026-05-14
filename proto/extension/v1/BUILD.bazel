@@ -22,6 +22,7 @@ proto_library(
         "repo_mcp.proto",
         "repo_skill.proto",
         "skill_registry.proto",
+        "skill_registry_admin.proto",
     ],
     visibility = ["//visibility:public"],
 )
