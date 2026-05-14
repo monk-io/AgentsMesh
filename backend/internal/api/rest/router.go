@@ -206,7 +206,6 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			Auth:          svc.Auth,
 			Admin:         adminSvc,
 			Billing:       svc.Billing,
-			SSO:           svc.SSO,
 			SupportTicket: svc.SupportTicket,
 		})
 	}

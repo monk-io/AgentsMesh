@@ -7,7 +7,6 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
-	ssoservice "github.com/anthropics/agentsmesh/backend/internal/service/sso"
 	"github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +17,6 @@ type Services struct {
 	Auth          *auth.Service
 	Admin         *admin.Service
 	Billing       *billing.Service
-	SSO           *ssoservice.Service
 	SupportTicket *supportticket.Service
 }
 
@@ -74,11 +72,10 @@ func RegisterRoutes(router *gin.Engine, cfg *config.Config, db database.DB, svc 
 	// proto.extension.v1.SkillRegistryAdminService). The mount keeps the
 	// same ExtensionRepo != nil gate via mountAdminServices in cmd/server.
 
-	// SSO Configs (optional - only if SSO service is available)
-	if svc.SSO != nil {
-		ssoHandler := NewSSOHandler(svc.SSO, svc.Admin)
-		ssoHandler.RegisterRoutes(protected)
-	}
+	// SSO Configs moved to Connect-RPC
+	// (backend/internal/api/connect/admin/sso/server.go,
+	// proto.sso.v1.SSOAdminService). The mount keeps the same SSO != nil
+	// gate via mountAdminServices in cmd/server.
 
 	// Support Tickets (optional - only if support ticket service is available)
 	if svc.SupportTicket != nil {
