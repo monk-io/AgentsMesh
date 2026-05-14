@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "admin",
+    srcs = [
+        "audit.go",
+        "convert.go",
+        "handlers_orgs.go",
+        "handlers_users_actions.go",
+        "handlers_users_query.go",
+        "server.go",
+    ],
+    importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/internal/api/connect/interceptors",
+        "//backend/internal/domain/admin",
+        "//backend/internal/domain/organization",
+        "//backend/internal/domain/user",
+        "//backend/internal/infra/database",
+        "//backend/internal/service/admin",
+        "//proto/admin/v1:admin_go_proto",
+        "@com_connectrpc_connect//:connect",
+    ],
+)

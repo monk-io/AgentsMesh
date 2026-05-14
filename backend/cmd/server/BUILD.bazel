@@ -29,6 +29,7 @@ go_library(
     deps = [
         "//backend/internal/api/connect/agent",
         "//backend/internal/api/connect/agentpod_settings",
+        "//backend/internal/api/connect/admin",
         "//backend/internal/api/connect/admin/promocode",
         "//backend/internal/api/connect/apikey",
         "//backend/internal/api/connect/auth",

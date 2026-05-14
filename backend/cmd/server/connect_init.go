@@ -8,6 +8,7 @@ import (
 
 	agentconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agent"
 	agentpodsettingsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings"
+	adminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin"
 	promocodeadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/promocode"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	authconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/auth"
@@ -154,6 +155,7 @@ func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, opts []connec
 	if svc.admin == nil {
 		return
 	}
+	adminconnect.Mount(mux, adminconnect.NewServer(svc.admin, svc.adminDB), opts...)
 	promocodeadminconnect.Mount(mux, promocodeadminconnect.NewServer(svc.admin, svc.adminDB), opts...)
 }
 

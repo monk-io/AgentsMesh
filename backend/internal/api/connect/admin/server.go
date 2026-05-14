@@ -1,36 +1,39 @@
 // Package adminconnect hosts Connect-RPC handlers for the platform-admin
 // management plane (system administrators with `is_system_admin = true`).
 //
-// Mirrors backend/internal/api/rest/v1/admin/* one-for-one for the batch
-// 1 surface: dashboard, users, organizations, runners, audit logs. REST
-// handlers ship in parallel during the migration window — drop after
-// every web-admin call-site flips lane.
+// Migrated from REST handlers in backend/internal/api/rest/v1/admin/*. The
+// REST surface gets deleted as call sites flip to Connect; the per-resource
+// org-scoped Connect surfaces (org/runner/etc.) stay parallel.
 //
-// Auth deviation vs REST: REST chains AuthMiddleware (cmd parses bearer)
-// + AdminMiddleware (db lookup + is_system_admin gate). Connect wires
-// the equivalent via NewAuthInterceptor + NewAdminInterceptor (see
-// backend/internal/api/connect/interceptors/admin.go). The combined
-// pipeline preserves all 3 REST rejection paths:
-//   * no bearer / invalid JWT      → CodeUnauthenticated
-//   * is_system_admin = false      → CodePermissionDenied
-//   * is_active       = false      → CodePermissionDenied
-// Audit-log writer reads admin user id from interceptors.AdminContext —
-// no `gin.Context` dependency leaks into business logic.
+// Auth model: every RPC calls interceptors.ResolveSystemAdmin to mirror
+// REST's AdminMiddleware (is_system_admin + is_active checks). Per
+// conventions §3.5 exception #2, admin requests do NOT carry `org_slug` —
+// tenant is the whole platform.
+//
+// Split rationale (CLAUDE.md 200-line rule):
+//   - server.go               — service scaffolding + Mount (this file)
+//   - convert.go              — domain ↔ proto field translation
+//   - audit.go                — Connect-context audit log helper
+//   - handlers_users_query.go — ListUsers / GetUser / UpdateUser
+//   - handlers_users_actions.go — Disable / Enable / GrantAdmin / RevokeAdmin /
+//                                 VerifyUserEmail / UnverifyUserEmail
+//   - handlers_orgs.go        — ListOrganizations / GetOrganization /
+//                               GetOrganizationMembers / DeleteOrganization
 package adminconnect
 
 import (
+	"errors"
 	"net/http"
 
 	"connectrpc.com/connect"
 
+	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 )
 
 const ServiceName = "proto.admin.v1.AdminService"
 
 const (
-	GetDashboardStatsProcedure = "/" + ServiceName + "/GetDashboardStats"
-
 	ListUsersProcedure         = "/" + ServiceName + "/ListUsers"
 	GetUserProcedure           = "/" + ServiceName + "/GetUser"
 	UpdateUserProcedure        = "/" + ServiceName + "/UpdateUser"
@@ -45,33 +48,25 @@ const (
 	GetOrganizationProcedure        = "/" + ServiceName + "/GetOrganization"
 	GetOrganizationMembersProcedure = "/" + ServiceName + "/GetOrganizationMembers"
 	DeleteOrganizationProcedure     = "/" + ServiceName + "/DeleteOrganization"
-
-	ListRunnersProcedure   = "/" + ServiceName + "/ListRunners"
-	GetRunnerProcedure     = "/" + ServiceName + "/GetRunner"
-	DisableRunnerProcedure = "/" + ServiceName + "/DisableRunner"
-	EnableRunnerProcedure  = "/" + ServiceName + "/EnableRunner"
-	DeleteRunnerProcedure  = "/" + ServiceName + "/DeleteRunner"
-
-	ListAuditLogsProcedure = "/" + ServiceName + "/ListAuditLogs"
 )
 
-// Server implements proto.admin.v1.AdminService.
+// Server implements the user + organization slice of proto.admin.v1.AdminService.
+// Dashboard / Runner / AuditLog RPCs live in the same proto service but stay
+// on REST until follow-up PRs migrate them.
 type Server struct {
-	adminSvc *adminservice.Service
+	svc *adminservice.Service
+	db  database.DB
 }
 
-func NewServer(adminSvc *adminservice.Service) *Server {
-	return &Server{adminSvc: adminSvc}
+func NewServer(svc *adminservice.Service, db database.DB) *Server {
+	return &Server{svc: svc, db: db}
 }
 
-// Mount registers every AdminService procedure on mux. Caller in
-// cmd/server/connect_init.go threads the combined auth+admin interceptor
-// via `opts`; this package never enforces auth itself.
+// Mount wires each implemented AdminService procedure onto mux. The auth
+// interceptor in opts validates the JWT; per-handler ResolveSystemAdmin
+// enforces is_system_admin (handler-level so the interceptor stays generic
+// across user-scoped + admin-scoped services).
 func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
-	mux.Handle(GetDashboardStatsProcedure, connect.NewUnaryHandler(
-		GetDashboardStatsProcedure, srv.GetDashboardStats, opts...,
-	))
-
 	mux.Handle(ListUsersProcedure, connect.NewUnaryHandler(
 		ListUsersProcedure, srv.ListUsers, opts...,
 	))
@@ -112,24 +107,23 @@ func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 	mux.Handle(DeleteOrganizationProcedure, connect.NewUnaryHandler(
 		DeleteOrganizationProcedure, srv.DeleteOrganization, opts...,
 	))
+}
 
-	mux.Handle(ListRunnersProcedure, connect.NewUnaryHandler(
-		ListRunnersProcedure, srv.ListRunners, opts...,
-	))
-	mux.Handle(GetRunnerProcedure, connect.NewUnaryHandler(
-		GetRunnerProcedure, srv.GetRunner, opts...,
-	))
-	mux.Handle(DisableRunnerProcedure, connect.NewUnaryHandler(
-		DisableRunnerProcedure, srv.DisableRunner, opts...,
-	))
-	mux.Handle(EnableRunnerProcedure, connect.NewUnaryHandler(
-		EnableRunnerProcedure, srv.EnableRunner, opts...,
-	))
-	mux.Handle(DeleteRunnerProcedure, connect.NewUnaryHandler(
-		DeleteRunnerProcedure, srv.DeleteRunner, opts...,
-	))
-
-	mux.Handle(ListAuditLogsProcedure, connect.NewUnaryHandler(
-		ListAuditLogsProcedure, srv.ListAuditLogs, opts...,
-	))
+// mapServiceError translates admin-service sentinels to Connect codes,
+// mirroring apierr translation in REST handlers.
+func mapServiceError(err error) error {
+	switch {
+	case errors.Is(err, adminservice.ErrUserNotFound),
+		errors.Is(err, adminservice.ErrOrganizationNotFound):
+		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, adminservice.ErrUsernameAlreadyExists),
+		errors.Is(err, adminservice.ErrEmailAlreadyExists),
+		errors.Is(err, adminservice.ErrOrganizationHasActiveRunner):
+		return connect.NewError(connect.CodeAlreadyExists, err)
+	case errors.Is(err, adminservice.ErrCannotRevokeOwnAdmin),
+		errors.Is(err, adminservice.ErrCannotDisableSelf):
+		return connect.NewError(connect.CodeInvalidArgument, err)
+	default:
+		return connect.NewError(connect.CodeInternal, err)
+	}
 }
