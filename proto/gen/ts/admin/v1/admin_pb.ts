@@ -8,6 +8,16 @@
 //   * Organizations       — list/get/members/delete
 //   * Runners             — list/get/disable/enable/delete (across all orgs)
 //   * AuditLogs           — list with filters
+//   * Relays              — list/get/stats/force-unregister
+//   * SupportTickets      — list/get/stats/list-messages/status/assign/attachment-url
+//                           (Reply with multipart attachments stays on REST)
+//
+// AdminAuthService — admin-console login flow.
+//
+// Mirrors backend/internal/api/rest/v1/admin/auth.go. The login RPC is
+// PUBLIC (no auth interceptor) because the caller does not yet hold a
+// bearer; the handler enforces is_system_admin + is_active server-side.
+// GetMe lives on AdminAuthSessionService (auth-required).
 //
 // Auth model (conventions §3.5 EXCEPTION — platform-admin scoped):
 //   Every RPC requires (1) a valid bearer JWT (standard auth interceptor)
@@ -38,7 +48,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file admin/v1/admin.proto.
  */
 export const file_admin_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("ChRhZG1pbi92MS9hZG1pbi5wcm90bxIOcHJvdG8uYWRtaW4udjEiGgoYR2V0RGFzaGJvYXJkU3RhdHNSZXF1ZXN0Ir8CCg5EYXNoYm9hcmRTdGF0cxITCgt0b3RhbF91c2VycxgBIAEoAxIUCgxhY3RpdmVfdXNlcnMYAiABKAMSGwoTdG90YWxfb3JnYW5pemF0aW9ucxgDIAEoAxIVCg10b3RhbF9ydW5uZXJzGAQgASgDEhYKDm9ubGluZV9ydW5uZXJzGAUgASgDEhIKCnRvdGFsX3BvZHMYBiABKAMSEwoLYWN0aXZlX3BvZHMYByABKAMSGwoTdG90YWxfc3Vic2NyaXB0aW9ucxgIIAEoAxIcChRhY3RpdmVfc3Vic2NyaXB0aW9ucxgJIAEoAxIXCg9uZXdfdXNlcnNfdG9kYXkYCiABKAMSGwoTbmV3X3VzZXJzX3RoaXNfd2VlaxgLIAEoAxIcChRuZXdfdXNlcnNfdGhpc19tb250aBgMIAEoAyKZAgoJQWRtaW5Vc2VyEgoKAmlkGAEgASgDEg0KBWVtYWlsGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhEKBG5hbWUYBCABKAlIAIgBARIXCgphdmF0YXJfdXJsGAUgASgJSAGIAQESEQoJaXNfYWN0aXZlGAYgASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgHIAEoCBIZChFpc19lbWFpbF92ZXJpZmllZBgIIAEoCBIaCg1sYXN0X2xvZ2luX2F0GAkgASgJSAKIAQESEgoKY3JlYXRlZF9hdBgKIAEoCRISCgp1cGRhdGVkX2F0GAsgASgJQgcKBV9uYW1lQg0KC19hdmF0YXJfdXJsQhAKDl9sYXN0X2xvZ2luX2F0Ir8BChFBZG1pbk9yZ2FuaXphdGlvbhIKCgJpZBgBIAEoAxIMCgRuYW1lGAIgASgJEgwKBHNsdWcYAyABKAkSFQoIbG9nb191cmwYBCABKAlIAIgBARIZChFzdWJzY3JpcHRpb25fcGxhbhgFIAEoCRIbChNzdWJzY3JpcHRpb25fc3RhdHVzGAYgASgJEhIKCmNyZWF0ZWRfYXQYByABKAkSEgoKdXBkYXRlZF9hdBgIIAEoCUILCglfbG9nb191cmwipQEKF0FkbWluT3JnYW5pemF0aW9uTWVtYmVyEgoKAmlkGAEgASgDEg8KB3VzZXJfaWQYAiABKAMSDgoGb3JnX2lkGAMgASgDEgwKBHJvbGUYBCABKAkSEQoJam9pbmVkX2F0GAUgASgJEjMKBHVzZXIYBiABKAsyIC5wcm90by5hZG1pbi52MS5BZG1pblVzZXJTdW1tYXJ5SACIAQFCBwoFX3VzZXIigwEKEEFkbWluVXNlclN1bW1hcnkSCgoCaWQYASABKAMSDQoFZW1haWwYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSEQoEbmFtZRgEIAEoCUgAiAEBEhcKCmF2YXRhcl91cmwYBSABKAlIAYgBAUIHCgVfbmFtZUINCgtfYXZhdGFyX3VybCLsAwoLQWRtaW5SdW5uZXISCgoCaWQYASABKAMSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgDEg8KB25vZGVfaWQYAyABKAkSGAoLZGVzY3JpcHRpb24YBCABKAlIAIgBARIOCgZzdGF0dXMYBSABKAkSEgoKaXNfZW5hYmxlZBgGIAEoCBIbCg5ydW5uZXJfdmVyc2lvbhgHIAEoCUgBiAEBEhQKDGN1cnJlbnRfcG9kcxgIIAEoBRIbChNtYXhfY29uY3VycmVudF9wb2RzGAkgASgFEhgKEGF2YWlsYWJsZV9hZ2VudHMYCiADKAkSGwoOaG9zdF9pbmZvX2pzb24YCyABKAlIAogBARIbCg5sYXN0X2hlYXJ0YmVhdBgMIAEoCUgDiAEBEhIKCmNyZWF0ZWRfYXQYDSABKAkSEgoKdXBkYXRlZF9hdBgOIAEoCRJDCgxvcmdhbml6YXRpb24YDyABKAsyKC5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvblN1bW1hcnlIBIgBAUIOCgxfZGVzY3JpcHRpb25CEQoPX3J1bm5lcl92ZXJzaW9uQhEKD19ob3N0X2luZm9fanNvbkIRCg9fbGFzdF9oZWFydGJlYXRCDwoNX29yZ2FuaXphdGlvbiJCChhBZG1pbk9yZ2FuaXphdGlvblN1bW1hcnkSCgoCaWQYASABKAMSDAoEbmFtZRgCIAEoCRIMCgRzbHVnGAMgASgJIuACCg1BZG1pbkF1ZGl0TG9nEgoKAmlkGAEgASgDEhUKDWFkbWluX3VzZXJfaWQYAiABKAMSDgoGYWN0aW9uGAMgASgJEhMKC3RhcmdldF90eXBlGAQgASgJEhEKCXRhcmdldF9pZBgFIAEoAxIVCghvbGRfZGF0YRgGIAEoCUgAiAEBEhUKCG5ld19kYXRhGAcgASgJSAGIAQESFwoKaXBfYWRkcmVzcxgIIAEoCUgCiAEBEhcKCnVzZXJfYWdlbnQYCSABKAlIA4gBARISCgpjcmVhdGVkX2F0GAogASgJEjkKCmFkbWluX3VzZXIYCyABKAsyIC5wcm90by5hZG1pbi52MS5BZG1pblVzZXJTdW1tYXJ5SASIAQFCCwoJX29sZF9kYXRhQgsKCV9uZXdfZGF0YUINCgtfaXBfYWRkcmVzc0INCgtfdXNlcl9hZ2VudEINCgtfYWRtaW5fdXNlciK+AQoQTGlzdFVzZXJzUmVxdWVzdBITCgZzZWFyY2gYASABKAlIAIgBARIWCglpc19hY3RpdmUYAiABKAhIAYgBARIVCghpc19hZG1pbhgDIAEoCEgCiAEBEhEKBHBhZ2UYBCABKAVIA4gBARIWCglwYWdlX3NpemUYBSABKAVIBIgBAUIJCgdfc2VhcmNoQgwKCl9pc19hY3RpdmVCCwoJX2lzX2FkbWluQgcKBV9wYWdlQgwKCl9wYWdlX3NpemUiggEKEUxpc3RVc2Vyc1Jlc3BvbnNlEigKBWl0ZW1zGAEgAygLMhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyEg0KBXRvdGFsGAIgASgDEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFEhMKC3RvdGFsX3BhZ2VzGAUgASgFIiEKDkdldFVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMiggEKEVVwZGF0ZVVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMSEQoEbmFtZRgCIAEoCUgAiAEBEhUKCHVzZXJuYW1lGAMgASgJSAGIAQESEgoFZW1haWwYBCABKAlIAogBAUIHCgVfbmFtZUILCglfdXNlcm5hbWVCCAoGX2VtYWlsIiUKEkRpc2FibGVVc2VyUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgDIiQKEUVuYWJsZVVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMiJAoRR3JhbnRBZG1pblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoAyIlChJSZXZva2VBZG1pblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoAyIpChZWZXJpZnlVc2VyRW1haWxSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMiKwoYVW52ZXJpZnlVc2VyRW1haWxSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMifAoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUgAiAEBEhEKBHBhZ2UYAiABKAVIAYgBARIWCglwYWdlX3NpemUYAyABKAVIAogBAUIJCgdfc2VhcmNoQgcKBV9wYWdlQgwKCl9wYWdlX3NpemUikgEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USMAoFaXRlbXMYASADKAsyIS5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvbhINCgV0b3RhbBgCIAEoAxIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBRITCgt0b3RhbF9wYWdlcxgFIAEoBSIoChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0Eg4KBm9yZ19pZBgBIAEoAyIvCh1HZXRPcmdhbml6YXRpb25NZW1iZXJzUmVxdWVzdBIOCgZvcmdfaWQYASABKAMikwEKHkdldE9yZ2FuaXphdGlvbk1lbWJlcnNSZXNwb25zZRI3Cgxvcmdhbml6YXRpb24YASABKAsyIS5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvbhI4CgdtZW1iZXJzGAIgAygLMicucHJvdG8uYWRtaW4udjEuQWRtaW5Pcmdhbml6YXRpb25NZW1iZXIiKwoZRGVsZXRlT3JnYW5pemF0aW9uUmVxdWVzdBIOCgZvcmdfaWQYASABKAMiLQoaRGVsZXRlT3JnYW5pemF0aW9uUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSK2AQoSTGlzdFJ1bm5lcnNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUgAiAEBEhMKBnN0YXR1cxgCIAEoCUgBiAEBEhMKBm9yZ19pZBgDIAEoA0gCiAEBEhEKBHBhZ2UYBCABKAVIA4gBARIWCglwYWdlX3NpemUYBSABKAVIBIgBAUIJCgdfc2VhcmNoQgkKB19zdGF0dXNCCQoHX29yZ19pZEIHCgVfcGFnZUIMCgpfcGFnZV9zaXplIoYBChNMaXN0UnVubmVyc1Jlc3BvbnNlEioKBWl0ZW1zGAEgAygLMhsucHJvdG8uYWRtaW4udjEuQWRtaW5SdW5uZXISDQoFdG90YWwYAiABKAMSDAoEcGFnZRgDIAEoBRIRCglwYWdlX3NpemUYBCABKAUSEwoLdG90YWxfcGFnZXMYBSABKAUiJQoQR2V0UnVubmVyUmVxdWVzdBIRCglydW5uZXJfaWQYASABKAMiKQoURGlzYWJsZVJ1bm5lclJlcXVlc3QSEQoJcnVubmVyX2lkGAEgASgDIigKE0VuYWJsZVJ1bm5lclJlcXVlc3QSEQoJcnVubmVyX2lkGAEgASgDIigKE0RlbGV0ZVJ1bm5lclJlcXVlc3QSEQoJcnVubmVyX2lkGAEgASgDIicKFERlbGV0ZVJ1bm5lclJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiwgIKFExpc3RBdWRpdExvZ3NSZXF1ZXN0EhoKDWFkbWluX3VzZXJfaWQYASABKANIAIgBARITCgZhY3Rpb24YAiABKAlIAYgBARIYCgt0YXJnZXRfdHlwZRgDIAEoCUgCiAEBEhYKCXRhcmdldF9pZBgEIAEoA0gDiAEBEhcKCnN0YXJ0X3RpbWUYBSABKAlIBIgBARIVCghlbmRfdGltZRgGIAEoCUgFiAEBEhEKBHBhZ2UYByABKAVIBogBARIWCglwYWdlX3NpemUYCCABKAVIB4gBAUIQCg5fYWRtaW5fdXNlcl9pZEIJCgdfYWN0aW9uQg4KDF90YXJnZXRfdHlwZUIMCgpfdGFyZ2V0X2lkQg0KC19zdGFydF90aW1lQgsKCV9lbmRfdGltZUIHCgVfcGFnZUIMCgpfcGFnZV9zaXplIooBChVMaXN0QXVkaXRMb2dzUmVzcG9uc2USLAoFaXRlbXMYASADKAsyHS5wcm90by5hZG1pbi52MS5BZG1pbkF1ZGl0TG9nEg0KBXRvdGFsGAIgASgDEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFEhMKC3RvdGFsX3BhZ2VzGAUgASgFMuYNCgxBZG1pblNlcnZpY2USXQoRR2V0RGFzaGJvYXJkU3RhdHMSKC5wcm90by5hZG1pbi52MS5HZXREYXNoYm9hcmRTdGF0c1JlcXVlc3QaHi5wcm90by5hZG1pbi52MS5EYXNoYm9hcmRTdGF0cxJQCglMaXN0VXNlcnMSIC5wcm90by5hZG1pbi52MS5MaXN0VXNlcnNSZXF1ZXN0GiEucHJvdG8uYWRtaW4udjEuTGlzdFVzZXJzUmVzcG9uc2USRAoHR2V0VXNlchIeLnByb3RvLmFkbWluLnYxLkdldFVzZXJSZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyEkoKClVwZGF0ZVVzZXISIS5wcm90by5hZG1pbi52MS5VcGRhdGVVc2VyUmVxdWVzdBoZLnByb3RvLmFkbWluLnYxLkFkbWluVXNlchJMCgtEaXNhYmxlVXNlchIiLnByb3RvLmFkbWluLnYxLkRpc2FibGVVc2VyUmVxdWVzdBoZLnByb3RvLmFkbWluLnYxLkFkbWluVXNlchJKCgpFbmFibGVVc2VyEiEucHJvdG8uYWRtaW4udjEuRW5hYmxlVXNlclJlcXVlc3QaGS5wcm90by5hZG1pbi52MS5BZG1pblVzZXISSgoKR3JhbnRBZG1pbhIhLnByb3RvLmFkbWluLnYxLkdyYW50QWRtaW5SZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyEkwKC1Jldm9rZUFkbWluEiIucHJvdG8uYWRtaW4udjEuUmV2b2tlQWRtaW5SZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyElQKD1ZlcmlmeVVzZXJFbWFpbBImLnByb3RvLmFkbWluLnYxLlZlcmlmeVVzZXJFbWFpbFJlcXVlc3QaGS5wcm90by5hZG1pbi52MS5BZG1pblVzZXISWAoRVW52ZXJpZnlVc2VyRW1haWwSKC5wcm90by5hZG1pbi52MS5VbnZlcmlmeVVzZXJFbWFpbFJlcXVlc3QaGS5wcm90by5hZG1pbi52MS5BZG1pblVzZXISaAoRTGlzdE9yZ2FuaXphdGlvbnMSKC5wcm90by5hZG1pbi52MS5MaXN0T3JnYW5pemF0aW9uc1JlcXVlc3QaKS5wcm90by5hZG1pbi52MS5MaXN0T3JnYW5pemF0aW9uc1Jlc3BvbnNlElwKD0dldE9yZ2FuaXphdGlvbhImLnByb3RvLmFkbWluLnYxLkdldE9yZ2FuaXphdGlvblJlcXVlc3QaIS5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvbhJ3ChZHZXRPcmdhbml6YXRpb25NZW1iZXJzEi0ucHJvdG8uYWRtaW4udjEuR2V0T3JnYW5pemF0aW9uTWVtYmVyc1JlcXVlc3QaLi5wcm90by5hZG1pbi52MS5HZXRPcmdhbml6YXRpb25NZW1iZXJzUmVzcG9uc2USawoSRGVsZXRlT3JnYW5pemF0aW9uEikucHJvdG8uYWRtaW4udjEuRGVsZXRlT3JnYW5pemF0aW9uUmVxdWVzdBoqLnByb3RvLmFkbWluLnYxLkRlbGV0ZU9yZ2FuaXphdGlvblJlc3BvbnNlElYKC0xpc3RSdW5uZXJzEiIucHJvdG8uYWRtaW4udjEuTGlzdFJ1bm5lcnNSZXF1ZXN0GiMucHJvdG8uYWRtaW4udjEuTGlzdFJ1bm5lcnNSZXNwb25zZRJKCglHZXRSdW5uZXISIC5wcm90by5hZG1pbi52MS5HZXRSdW5uZXJSZXF1ZXN0GhsucHJvdG8uYWRtaW4udjEuQWRtaW5SdW5uZXISUgoNRGlzYWJsZVJ1bm5lchIkLnByb3RvLmFkbWluLnYxLkRpc2FibGVSdW5uZXJSZXF1ZXN0GhsucHJvdG8uYWRtaW4udjEuQWRtaW5SdW5uZXISUAoMRW5hYmxlUnVubmVyEiMucHJvdG8uYWRtaW4udjEuRW5hYmxlUnVubmVyUmVxdWVzdBobLnByb3RvLmFkbWluLnYxLkFkbWluUnVubmVyElkKDERlbGV0ZVJ1bm5lchIjLnByb3RvLmFkbWluLnYxLkRlbGV0ZVJ1bm5lclJlcXVlc3QaJC5wcm90by5hZG1pbi52MS5EZWxldGVSdW5uZXJSZXNwb25zZRJcCg1MaXN0QXVkaXRMb2dzEiQucHJvdG8uYWRtaW4udjEuTGlzdEF1ZGl0TG9nc1JlcXVlc3QaJS5wcm90by5hZG1pbi52MS5MaXN0QXVkaXRMb2dzUmVzcG9uc2VCQFo+Z2l0aHViLmNvbS9hbnRocm9waWNzL2FnZW50c21lc2gvcHJvdG8vZ2VuL2dvL2FkbWluL3YxO2FkbWludjFiBnByb3RvMw");
+  fileDesc("ChRhZG1pbi92MS9hZG1pbi5wcm90bxIOcHJvdG8uYWRtaW4udjEiGgoYR2V0RGFzaGJvYXJkU3RhdHNSZXF1ZXN0Ir8CCg5EYXNoYm9hcmRTdGF0cxITCgt0b3RhbF91c2VycxgBIAEoAxIUCgxhY3RpdmVfdXNlcnMYAiABKAMSGwoTdG90YWxfb3JnYW5pemF0aW9ucxgDIAEoAxIVCg10b3RhbF9ydW5uZXJzGAQgASgDEhYKDm9ubGluZV9ydW5uZXJzGAUgASgDEhIKCnRvdGFsX3BvZHMYBiABKAMSEwoLYWN0aXZlX3BvZHMYByABKAMSGwoTdG90YWxfc3Vic2NyaXB0aW9ucxgIIAEoAxIcChRhY3RpdmVfc3Vic2NyaXB0aW9ucxgJIAEoAxIXCg9uZXdfdXNlcnNfdG9kYXkYCiABKAMSGwoTbmV3X3VzZXJzX3RoaXNfd2VlaxgLIAEoAxIcChRuZXdfdXNlcnNfdGhpc19tb250aBgMIAEoAyKZAgoJQWRtaW5Vc2VyEgoKAmlkGAEgASgDEg0KBWVtYWlsGAIgASgJEhAKCHVzZXJuYW1lGAMgASgJEhEKBG5hbWUYBCABKAlIAIgBARIXCgphdmF0YXJfdXJsGAUgASgJSAGIAQESEQoJaXNfYWN0aXZlGAYgASgIEhcKD2lzX3N5c3RlbV9hZG1pbhgHIAEoCBIZChFpc19lbWFpbF92ZXJpZmllZBgIIAEoCBIaCg1sYXN0X2xvZ2luX2F0GAkgASgJSAKIAQESEgoKY3JlYXRlZF9hdBgKIAEoCRISCgp1cGRhdGVkX2F0GAsgASgJQgcKBV9uYW1lQg0KC19hdmF0YXJfdXJsQhAKDl9sYXN0X2xvZ2luX2F0Ir8BChFBZG1pbk9yZ2FuaXphdGlvbhIKCgJpZBgBIAEoAxIMCgRuYW1lGAIgASgJEgwKBHNsdWcYAyABKAkSFQoIbG9nb191cmwYBCABKAlIAIgBARIZChFzdWJzY3JpcHRpb25fcGxhbhgFIAEoCRIbChNzdWJzY3JpcHRpb25fc3RhdHVzGAYgASgJEhIKCmNyZWF0ZWRfYXQYByABKAkSEgoKdXBkYXRlZF9hdBgIIAEoCUILCglfbG9nb191cmwipQEKF0FkbWluT3JnYW5pemF0aW9uTWVtYmVyEgoKAmlkGAEgASgDEg8KB3VzZXJfaWQYAiABKAMSDgoGb3JnX2lkGAMgASgDEgwKBHJvbGUYBCABKAkSEQoJam9pbmVkX2F0GAUgASgJEjMKBHVzZXIYBiABKAsyIC5wcm90by5hZG1pbi52MS5BZG1pblVzZXJTdW1tYXJ5SACIAQFCBwoFX3VzZXIigwEKEEFkbWluVXNlclN1bW1hcnkSCgoCaWQYASABKAMSDQoFZW1haWwYAiABKAkSEAoIdXNlcm5hbWUYAyABKAkSEQoEbmFtZRgEIAEoCUgAiAEBEhcKCmF2YXRhcl91cmwYBSABKAlIAYgBAUIHCgVfbmFtZUINCgtfYXZhdGFyX3VybCLsAwoLQWRtaW5SdW5uZXISCgoCaWQYASABKAMSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgDEg8KB25vZGVfaWQYAyABKAkSGAoLZGVzY3JpcHRpb24YBCABKAlIAIgBARIOCgZzdGF0dXMYBSABKAkSEgoKaXNfZW5hYmxlZBgGIAEoCBIbCg5ydW5uZXJfdmVyc2lvbhgHIAEoCUgBiAEBEhQKDGN1cnJlbnRfcG9kcxgIIAEoBRIbChNtYXhfY29uY3VycmVudF9wb2RzGAkgASgFEhgKEGF2YWlsYWJsZV9hZ2VudHMYCiADKAkSGwoOaG9zdF9pbmZvX2pzb24YCyABKAlIAogBARIbCg5sYXN0X2hlYXJ0YmVhdBgMIAEoCUgDiAEBEhIKCmNyZWF0ZWRfYXQYDSABKAkSEgoKdXBkYXRlZF9hdBgOIAEoCRJDCgxvcmdhbml6YXRpb24YDyABKAsyKC5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvblN1bW1hcnlIBIgBAUIOCgxfZGVzY3JpcHRpb25CEQoPX3J1bm5lcl92ZXJzaW9uQhEKD19ob3N0X2luZm9fanNvbkIRCg9fbGFzdF9oZWFydGJlYXRCDwoNX29yZ2FuaXphdGlvbiJCChhBZG1pbk9yZ2FuaXphdGlvblN1bW1hcnkSCgoCaWQYASABKAMSDAoEbmFtZRgCIAEoCRIMCgRzbHVnGAMgASgJIuACCg1BZG1pbkF1ZGl0TG9nEgoKAmlkGAEgASgDEhUKDWFkbWluX3VzZXJfaWQYAiABKAMSDgoGYWN0aW9uGAMgASgJEhMKC3RhcmdldF90eXBlGAQgASgJEhEKCXRhcmdldF9pZBgFIAEoAxIVCghvbGRfZGF0YRgGIAEoCUgAiAEBEhUKCG5ld19kYXRhGAcgASgJSAGIAQESFwoKaXBfYWRkcmVzcxgIIAEoCUgCiAEBEhcKCnVzZXJfYWdlbnQYCSABKAlIA4gBARISCgpjcmVhdGVkX2F0GAogASgJEjkKCmFkbWluX3VzZXIYCyABKAsyIC5wcm90by5hZG1pbi52MS5BZG1pblVzZXJTdW1tYXJ5SASIAQFCCwoJX29sZF9kYXRhQgsKCV9uZXdfZGF0YUINCgtfaXBfYWRkcmVzc0INCgtfdXNlcl9hZ2VudEINCgtfYWRtaW5fdXNlciK+AQoQTGlzdFVzZXJzUmVxdWVzdBITCgZzZWFyY2gYASABKAlIAIgBARIWCglpc19hY3RpdmUYAiABKAhIAYgBARIVCghpc19hZG1pbhgDIAEoCEgCiAEBEhEKBHBhZ2UYBCABKAVIA4gBARIWCglwYWdlX3NpemUYBSABKAVIBIgBAUIJCgdfc2VhcmNoQgwKCl9pc19hY3RpdmVCCwoJX2lzX2FkbWluQgcKBV9wYWdlQgwKCl9wYWdlX3NpemUiggEKEUxpc3RVc2Vyc1Jlc3BvbnNlEigKBWl0ZW1zGAEgAygLMhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyEg0KBXRvdGFsGAIgASgDEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFEhMKC3RvdGFsX3BhZ2VzGAUgASgFIiEKDkdldFVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMiggEKEVVwZGF0ZVVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMSEQoEbmFtZRgCIAEoCUgAiAEBEhUKCHVzZXJuYW1lGAMgASgJSAGIAQESEgoFZW1haWwYBCABKAlIAogBAUIHCgVfbmFtZUILCglfdXNlcm5hbWVCCAoGX2VtYWlsIiUKEkRpc2FibGVVc2VyUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgDIiQKEUVuYWJsZVVzZXJSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMiJAoRR3JhbnRBZG1pblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoAyIlChJSZXZva2VBZG1pblJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoAyIpChZWZXJpZnlVc2VyRW1haWxSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMiKwoYVW52ZXJpZnlVc2VyRW1haWxSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAMifAoYTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUgAiAEBEhEKBHBhZ2UYAiABKAVIAYgBARIWCglwYWdlX3NpemUYAyABKAVIAogBAUIJCgdfc2VhcmNoQgcKBV9wYWdlQgwKCl9wYWdlX3NpemUikgEKGUxpc3RPcmdhbml6YXRpb25zUmVzcG9uc2USMAoFaXRlbXMYASADKAsyIS5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvbhINCgV0b3RhbBgCIAEoAxIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBRITCgt0b3RhbF9wYWdlcxgFIAEoBSIoChZHZXRPcmdhbml6YXRpb25SZXF1ZXN0Eg4KBm9yZ19pZBgBIAEoAyIvCh1HZXRPcmdhbml6YXRpb25NZW1iZXJzUmVxdWVzdBIOCgZvcmdfaWQYASABKAMikwEKHkdldE9yZ2FuaXphdGlvbk1lbWJlcnNSZXNwb25zZRI3Cgxvcmdhbml6YXRpb24YASABKAsyIS5wcm90by5hZG1pbi52MS5BZG1pbk9yZ2FuaXphdGlvbhI4CgdtZW1iZXJzGAIgAygLMicucHJvdG8uYWRtaW4udjEuQWRtaW5Pcmdhbml6YXRpb25NZW1iZXIiKwoZRGVsZXRlT3JnYW5pemF0aW9uUmVxdWVzdBIOCgZvcmdfaWQYASABKAMiLQoaRGVsZXRlT3JnYW5pemF0aW9uUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSK2AQoSTGlzdFJ1bm5lcnNSZXF1ZXN0EhMKBnNlYXJjaBgBIAEoCUgAiAEBEhMKBnN0YXR1cxgCIAEoCUgBiAEBEhMKBm9yZ19pZBgDIAEoA0gCiAEBEhEKBHBhZ2UYBCABKAVIA4gBARIWCglwYWdlX3NpemUYBSABKAVIBIgBAUIJCgdfc2VhcmNoQgkKB19zdGF0dXNCCQoHX29yZ19pZEIHCgVfcGFnZUIMCgpfcGFnZV9zaXplIoYBChNMaXN0UnVubmVyc1Jlc3BvbnNlEioKBWl0ZW1zGAEgAygLMhsucHJvdG8uYWRtaW4udjEuQWRtaW5SdW5uZXISDQoFdG90YWwYAiABKAMSDAoEcGFnZRgDIAEoBRIRCglwYWdlX3NpemUYBCABKAUSEwoLdG90YWxfcGFnZXMYBSABKAUiJQoQR2V0UnVubmVyUmVxdWVzdBIRCglydW5uZXJfaWQYASABKAMiKQoURGlzYWJsZVJ1bm5lclJlcXVlc3QSEQoJcnVubmVyX2lkGAEgASgDIigKE0VuYWJsZVJ1bm5lclJlcXVlc3QSEQoJcnVubmVyX2lkGAEgASgDIigKE0RlbGV0ZVJ1bm5lclJlcXVlc3QSEQoJcnVubmVyX2lkGAEgASgDIicKFERlbGV0ZVJ1bm5lclJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiwgIKFExpc3RBdWRpdExvZ3NSZXF1ZXN0EhoKDWFkbWluX3VzZXJfaWQYASABKANIAIgBARITCgZhY3Rpb24YAiABKAlIAYgBARIYCgt0YXJnZXRfdHlwZRgDIAEoCUgCiAEBEhYKCXRhcmdldF9pZBgEIAEoA0gDiAEBEhcKCnN0YXJ0X3RpbWUYBSABKAlIBIgBARIVCghlbmRfdGltZRgGIAEoCUgFiAEBEhEKBHBhZ2UYByABKAVIBogBARIWCglwYWdlX3NpemUYCCABKAVIB4gBAUIQCg5fYWRtaW5fdXNlcl9pZEIJCgdfYWN0aW9uQg4KDF90YXJnZXRfdHlwZUIMCgpfdGFyZ2V0X2lkQg0KC19zdGFydF90aW1lQgsKCV9lbmRfdGltZUIHCgVfcGFnZUIMCgpfcGFnZV9zaXplIooBChVMaXN0QXVkaXRMb2dzUmVzcG9uc2USLAoFaXRlbXMYASADKAsyHS5wcm90by5hZG1pbi52MS5BZG1pbkF1ZGl0TG9nEg0KBXRvdGFsGAIgASgDEgwKBHBhZ2UYAyABKAUSEQoJcGFnZV9zaXplGAQgASgFEhMKC3RvdGFsX3BhZ2VzGAUgASgFIusBCgpBZG1pblJlbGF5EgoKAmlkGAEgASgJEgsKA3VybBgCIAEoCRIOCgZyZWdpb24YAyABKAkSEAoIY2FwYWNpdHkYBCABKAUSEwoLY29ubmVjdGlvbnMYBSABKAUSEQoJY3B1X3VzYWdlGAYgASgBEhQKDG1lbW9yeV91c2FnZRgHIAEoARIWCg5sYXN0X2hlYXJ0YmVhdBgIIAEoCRIPCgdoZWFsdGh5GAkgASgIEhYKDmF2Z19sYXRlbmN5X21zGAogASgFEhAKCGxhdGl0dWRlGAsgASgBEhEKCWxvbmdpdHVkZRgMIAEoASJVCgpSZWxheVN0YXRzEhQKDHRvdGFsX3JlbGF5cxgBIAEoBRIWCg5oZWFsdGh5X3JlbGF5cxgCIAEoBRIZChF0b3RhbF9jb25uZWN0aW9ucxgDIAEoBSITChFMaXN0UmVsYXlzUmVxdWVzdCJOChJMaXN0UmVsYXlzUmVzcG9uc2USKQoFaXRlbXMYASADKAsyGi5wcm90by5hZG1pbi52MS5BZG1pblJlbGF5Eg0KBXRvdGFsGAIgASgFIh0KD0dldFJlbGF5UmVxdWVzdBIKCgJpZBgBIAEoCSI9ChBHZXRSZWxheVJlc3BvbnNlEikKBXJlbGF5GAEgASgLMhoucHJvdG8uYWRtaW4udjEuQWRtaW5SZWxheSIWChRHZXRSZWxheVN0YXRzUmVxdWVzdCIpChtGb3JjZVVucmVnaXN0ZXJSZWxheVJlcXVlc3QSCgoCaWQYASABKAkiQAocRm9yY2VVbnJlZ2lzdGVyUmVsYXlSZXNwb25zZRIOCgZzdGF0dXMYASABKAkSEAoIcmVsYXlfaWQYAiABKAkidwoWQWRtaW5TdXBwb3J0VGlja2V0VXNlchIKCgJpZBgBIAEoAxIRCgRuYW1lGAIgASgJSACIAQESDQoFZW1haWwYAyABKAkSFwoKYXZhdGFyX3VybBgEIAEoCUgBiAEBQgcKBV9uYW1lQg0KC19hdmF0YXJfdXJsIpgDChJBZG1pblN1cHBvcnRUaWNrZXQSCgoCaWQYASABKAMSDwoHdXNlcl9pZBgCIAEoAxINCgV0aXRsZRgDIAEoCRIQCghjYXRlZ29yeRgEIAEoCRIOCgZzdGF0dXMYBSABKAkSEAoIcHJpb3JpdHkYBiABKAkSHgoRYXNzaWduZWRfYWRtaW5faWQYByABKANIAIgBARISCgpjcmVhdGVkX2F0GAggASgJEhIKCnVwZGF0ZWRfYXQYCSABKAkSGAoLcmVzb2x2ZWRfYXQYCiABKAlIAYgBARI5CgR1c2VyGAsgASgLMiYucHJvdG8uYWRtaW4udjEuQWRtaW5TdXBwb3J0VGlja2V0VXNlckgCiAEBEkMKDmFzc2lnbmVkX2FkbWluGAwgASgLMiYucHJvdG8uYWRtaW4udjEuQWRtaW5TdXBwb3J0VGlja2V0VXNlckgDiAEBQhQKEl9hc3NpZ25lZF9hZG1pbl9pZEIOCgxfcmVzb2x2ZWRfYXRCBwoFX3VzZXJCEQoPX2Fzc2lnbmVkX2FkbWluIsYBChxBZG1pblN1cHBvcnRUaWNrZXRBdHRhY2htZW50EgoKAmlkGAEgASgDEhEKCXRpY2tldF9pZBgCIAEoAxIXCgptZXNzYWdlX2lkGAMgASgDSACIAQESEwoLdXBsb2FkZXJfaWQYBCABKAMSFQoNb3JpZ2luYWxfbmFtZRgFIAEoCRIRCgltaW1lX3R5cGUYBiABKAkSDAoEc2l6ZRgHIAEoAxISCgpjcmVhdGVkX2F0GAggASgJQg0KC19tZXNzYWdlX2lkIo8CChlBZG1pblN1cHBvcnRUaWNrZXRNZXNzYWdlEgoKAmlkGAEgASgDEhEKCXRpY2tldF9pZBgCIAEoAxIPCgd1c2VyX2lkGAMgASgDEg8KB2NvbnRlbnQYBCABKAkSFgoOaXNfYWRtaW5fcmVwbHkYBSABKAgSEgoKY3JlYXRlZF9hdBgGIAEoCRI5CgR1c2VyGAcgASgLMiYucHJvdG8uYWRtaW4udjEuQWRtaW5TdXBwb3J0VGlja2V0VXNlckgAiAEBEkEKC2F0dGFjaG1lbnRzGAggAygLMiwucHJvdG8uYWRtaW4udjEuQWRtaW5TdXBwb3J0VGlja2V0QXR0YWNobWVudEIHCgVfdXNlciJoChJTdXBwb3J0VGlja2V0U3RhdHMSDQoFdG90YWwYASABKAMSDAoEb3BlbhgCIAEoAxITCgtpbl9wcm9ncmVzcxgDIAEoAxIQCghyZXNvbHZlZBgEIAEoAxIOCgZjbG9zZWQYBSABKAMi5QEKGUxpc3RTdXBwb3J0VGlja2V0c1JlcXVlc3QSEwoGc2VhcmNoGAEgASgJSACIAQESEwoGc3RhdHVzGAIgASgJSAGIAQESFQoIY2F0ZWdvcnkYAyABKAlIAogBARIVCghwcmlvcml0eRgEIAEoCUgDiAEBEhEKBHBhZ2UYBSABKAVIBIgBARIWCglwYWdlX3NpemUYBiABKAVIBYgBAUIJCgdfc2VhcmNoQgkKB19zdGF0dXNCCwoJX2NhdGVnb3J5QgsKCV9wcmlvcml0eUIHCgVfcGFnZUIMCgpfcGFnZV9zaXplIpQBChpMaXN0U3VwcG9ydFRpY2tldHNSZXNwb25zZRIxCgVpdGVtcxgBIAMoCzIiLnByb3RvLmFkbWluLnYxLkFkbWluU3VwcG9ydFRpY2tldBINCgV0b3RhbBgCIAEoAxIMCgRwYWdlGAMgASgFEhEKCXBhZ2Vfc2l6ZRgEIAEoBRITCgt0b3RhbF9wYWdlcxgFIAEoBSIeChxHZXRTdXBwb3J0VGlja2V0U3RhdHNSZXF1ZXN0IiUKF0dldFN1cHBvcnRUaWNrZXRSZXF1ZXN0EgoKAmlkGAEgASgDIoYBChNTdXBwb3J0VGlja2V0RGV0YWlsEjIKBnRpY2tldBgBIAEoCzIiLnByb3RvLmFkbWluLnYxLkFkbWluU3VwcG9ydFRpY2tldBI7CghtZXNzYWdlcxgCIAMoCzIpLnByb3RvLmFkbWluLnYxLkFkbWluU3VwcG9ydFRpY2tldE1lc3NhZ2UiLgogTGlzdFN1cHBvcnRUaWNrZXRNZXNzYWdlc1JlcXVlc3QSCgoCaWQYASABKAMiXAohTGlzdFN1cHBvcnRUaWNrZXRNZXNzYWdlc1Jlc3BvbnNlEjcKBGRhdGEYASADKAsyKS5wcm90by5hZG1pbi52MS5BZG1pblN1cHBvcnRUaWNrZXRNZXNzYWdlIj4KIFVwZGF0ZVN1cHBvcnRUaWNrZXRTdGF0dXNSZXF1ZXN0EgoKAmlkGAEgASgDEg4KBnN0YXR1cxgCIAEoCSI0CiFVcGRhdGVTdXBwb3J0VGlja2V0U3RhdHVzUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSJMChpBc3NpZ25TdXBwb3J0VGlja2V0UmVxdWVzdBIKCgJpZBgBIAEoAxIVCghhZG1pbl9pZBgCIAEoA0gAiAEBQgsKCV9hZG1pbl9pZCIuChtBc3NpZ25TdXBwb3J0VGlja2V0UmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCSI9CiRHZXRTdXBwb3J0VGlja2V0QXR0YWNobWVudFVybFJlcXVlc3QSFQoNYXR0YWNobWVudF9pZBgBIAEoAyI0CiVHZXRTdXBwb3J0VGlja2V0QXR0YWNobWVudFVybFJlc3BvbnNlEgsKA3VybBgBIAEoCSI0ChFBZG1pbkxvZ2luUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJjChJBZG1pbkxvZ2luUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRInCgR1c2VyGAMgASgLMhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyIg4KDEdldE1lUmVxdWVzdDKPFwoMQWRtaW5TZXJ2aWNlEl0KEUdldERhc2hib2FyZFN0YXRzEigucHJvdG8uYWRtaW4udjEuR2V0RGFzaGJvYXJkU3RhdHNSZXF1ZXN0Gh4ucHJvdG8uYWRtaW4udjEuRGFzaGJvYXJkU3RhdHMSUAoJTGlzdFVzZXJzEiAucHJvdG8uYWRtaW4udjEuTGlzdFVzZXJzUmVxdWVzdBohLnByb3RvLmFkbWluLnYxLkxpc3RVc2Vyc1Jlc3BvbnNlEkQKB0dldFVzZXISHi5wcm90by5hZG1pbi52MS5HZXRVc2VyUmVxdWVzdBoZLnByb3RvLmFkbWluLnYxLkFkbWluVXNlchJKCgpVcGRhdGVVc2VyEiEucHJvdG8uYWRtaW4udjEuVXBkYXRlVXNlclJlcXVlc3QaGS5wcm90by5hZG1pbi52MS5BZG1pblVzZXISTAoLRGlzYWJsZVVzZXISIi5wcm90by5hZG1pbi52MS5EaXNhYmxlVXNlclJlcXVlc3QaGS5wcm90by5hZG1pbi52MS5BZG1pblVzZXISSgoKRW5hYmxlVXNlchIhLnByb3RvLmFkbWluLnYxLkVuYWJsZVVzZXJSZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyEkoKCkdyYW50QWRtaW4SIS5wcm90by5hZG1pbi52MS5HcmFudEFkbWluUmVxdWVzdBoZLnByb3RvLmFkbWluLnYxLkFkbWluVXNlchJMCgtSZXZva2VBZG1pbhIiLnByb3RvLmFkbWluLnYxLlJldm9rZUFkbWluUmVxdWVzdBoZLnByb3RvLmFkbWluLnYxLkFkbWluVXNlchJUCg9WZXJpZnlVc2VyRW1haWwSJi5wcm90by5hZG1pbi52MS5WZXJpZnlVc2VyRW1haWxSZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyElgKEVVudmVyaWZ5VXNlckVtYWlsEigucHJvdG8uYWRtaW4udjEuVW52ZXJpZnlVc2VyRW1haWxSZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyEmgKEUxpc3RPcmdhbml6YXRpb25zEigucHJvdG8uYWRtaW4udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXF1ZXN0GikucHJvdG8uYWRtaW4udjEuTGlzdE9yZ2FuaXphdGlvbnNSZXNwb25zZRJcCg9HZXRPcmdhbml6YXRpb24SJi5wcm90by5hZG1pbi52MS5HZXRPcmdhbml6YXRpb25SZXF1ZXN0GiEucHJvdG8uYWRtaW4udjEuQWRtaW5Pcmdhbml6YXRpb24SdwoWR2V0T3JnYW5pemF0aW9uTWVtYmVycxItLnByb3RvLmFkbWluLnYxLkdldE9yZ2FuaXphdGlvbk1lbWJlcnNSZXF1ZXN0Gi4ucHJvdG8uYWRtaW4udjEuR2V0T3JnYW5pemF0aW9uTWVtYmVyc1Jlc3BvbnNlEmsKEkRlbGV0ZU9yZ2FuaXphdGlvbhIpLnByb3RvLmFkbWluLnYxLkRlbGV0ZU9yZ2FuaXphdGlvblJlcXVlc3QaKi5wcm90by5hZG1pbi52MS5EZWxldGVPcmdhbml6YXRpb25SZXNwb25zZRJWCgtMaXN0UnVubmVycxIiLnByb3RvLmFkbWluLnYxLkxpc3RSdW5uZXJzUmVxdWVzdBojLnByb3RvLmFkbWluLnYxLkxpc3RSdW5uZXJzUmVzcG9uc2USSgoJR2V0UnVubmVyEiAucHJvdG8uYWRtaW4udjEuR2V0UnVubmVyUmVxdWVzdBobLnByb3RvLmFkbWluLnYxLkFkbWluUnVubmVyElIKDURpc2FibGVSdW5uZXISJC5wcm90by5hZG1pbi52MS5EaXNhYmxlUnVubmVyUmVxdWVzdBobLnByb3RvLmFkbWluLnYxLkFkbWluUnVubmVyElAKDEVuYWJsZVJ1bm5lchIjLnByb3RvLmFkbWluLnYxLkVuYWJsZVJ1bm5lclJlcXVlc3QaGy5wcm90by5hZG1pbi52MS5BZG1pblJ1bm5lchJZCgxEZWxldGVSdW5uZXISIy5wcm90by5hZG1pbi52MS5EZWxldGVSdW5uZXJSZXF1ZXN0GiQucHJvdG8uYWRtaW4udjEuRGVsZXRlUnVubmVyUmVzcG9uc2USXAoNTGlzdEF1ZGl0TG9ncxIkLnByb3RvLmFkbWluLnYxLkxpc3RBdWRpdExvZ3NSZXF1ZXN0GiUucHJvdG8uYWRtaW4udjEuTGlzdEF1ZGl0TG9nc1Jlc3BvbnNlElMKCkxpc3RSZWxheXMSIS5wcm90by5hZG1pbi52MS5MaXN0UmVsYXlzUmVxdWVzdBoiLnByb3RvLmFkbWluLnYxLkxpc3RSZWxheXNSZXNwb25zZRJNCghHZXRSZWxheRIfLnByb3RvLmFkbWluLnYxLkdldFJlbGF5UmVxdWVzdBogLnByb3RvLmFkbWluLnYxLkdldFJlbGF5UmVzcG9uc2USUQoNR2V0UmVsYXlTdGF0cxIkLnByb3RvLmFkbWluLnYxLkdldFJlbGF5U3RhdHNSZXF1ZXN0GhoucHJvdG8uYWRtaW4udjEuUmVsYXlTdGF0cxJxChRGb3JjZVVucmVnaXN0ZXJSZWxheRIrLnByb3RvLmFkbWluLnYxLkZvcmNlVW5yZWdpc3RlclJlbGF5UmVxdWVzdBosLnByb3RvLmFkbWluLnYxLkZvcmNlVW5yZWdpc3RlclJlbGF5UmVzcG9uc2USawoSTGlzdFN1cHBvcnRUaWNrZXRzEikucHJvdG8uYWRtaW4udjEuTGlzdFN1cHBvcnRUaWNrZXRzUmVxdWVzdBoqLnByb3RvLmFkbWluLnYxLkxpc3RTdXBwb3J0VGlja2V0c1Jlc3BvbnNlEmkKFUdldFN1cHBvcnRUaWNrZXRTdGF0cxIsLnByb3RvLmFkbWluLnYxLkdldFN1cHBvcnRUaWNrZXRTdGF0c1JlcXVlc3QaIi5wcm90by5hZG1pbi52MS5TdXBwb3J0VGlja2V0U3RhdHMSYAoQR2V0U3VwcG9ydFRpY2tldBInLnByb3RvLmFkbWluLnYxLkdldFN1cHBvcnRUaWNrZXRSZXF1ZXN0GiMucHJvdG8uYWRtaW4udjEuU3VwcG9ydFRpY2tldERldGFpbBKAAQoZTGlzdFN1cHBvcnRUaWNrZXRNZXNzYWdlcxIwLnByb3RvLmFkbWluLnYxLkxpc3RTdXBwb3J0VGlja2V0TWVzc2FnZXNSZXF1ZXN0GjEucHJvdG8uYWRtaW4udjEuTGlzdFN1cHBvcnRUaWNrZXRNZXNzYWdlc1Jlc3BvbnNlEoABChlVcGRhdGVTdXBwb3J0VGlja2V0U3RhdHVzEjAucHJvdG8uYWRtaW4udjEuVXBkYXRlU3VwcG9ydFRpY2tldFN0YXR1c1JlcXVlc3QaMS5wcm90by5hZG1pbi52MS5VcGRhdGVTdXBwb3J0VGlja2V0U3RhdHVzUmVzcG9uc2USbgoTQXNzaWduU3VwcG9ydFRpY2tldBIqLnByb3RvLmFkbWluLnYxLkFzc2lnblN1cHBvcnRUaWNrZXRSZXF1ZXN0GisucHJvdG8uYWRtaW4udjEuQXNzaWduU3VwcG9ydFRpY2tldFJlc3BvbnNlEowBCh1HZXRTdXBwb3J0VGlja2V0QXR0YWNobWVudFVybBI0LnByb3RvLmFkbWluLnYxLkdldFN1cHBvcnRUaWNrZXRBdHRhY2htZW50VXJsUmVxdWVzdBo1LnByb3RvLmFkbWluLnYxLkdldFN1cHBvcnRUaWNrZXRBdHRhY2htZW50VXJsUmVzcG9uc2UyYgoQQWRtaW5BdXRoU2VydmljZRJOCgVMb2dpbhIhLnByb3RvLmFkbWluLnYxLkFkbWluTG9naW5SZXF1ZXN0GiIucHJvdG8uYWRtaW4udjEuQWRtaW5Mb2dpblJlc3BvbnNlMlsKF0FkbWluQXV0aFNlc3Npb25TZXJ2aWNlEkAKBUdldE1lEhwucHJvdG8uYWRtaW4udjEuR2V0TWVSZXF1ZXN0GhkucHJvdG8uYWRtaW4udjEuQWRtaW5Vc2VyQkBaPmdpdGh1Yi5jb20vYW50aHJvcGljcy9hZ2VudHNtZXNoL3Byb3RvL2dlbi9nby9hZG1pbi92MTthZG1pbnYxYgZwcm90bzM");
 
 /**
  * @generated from message proto.admin.v1.GetDashboardStatsRequest
@@ -1144,6 +1154,822 @@ export const ListAuditLogsResponseSchema: GenMessage<ListAuditLogsResponse> = /*
   messageDesc(file_admin_v1_admin, 34);
 
 /**
+ * AdminRelay mirrors backend/internal/service/relay/RelayInfo. Field shape is
+ * REST parity (`relay_info.go:11`) — JSON struct tags match the wire names.
+ *
+ * @generated from message proto.admin.v1.AdminRelay
+ */
+export type AdminRelay = Message<"proto.admin.v1.AdminRelay"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string url = 2;
+   */
+  url: string;
+
+  /**
+   * @generated from field: string region = 3;
+   */
+  region: string;
+
+  /**
+   * @generated from field: int32 capacity = 4;
+   */
+  capacity: number;
+
+  /**
+   * @generated from field: int32 connections = 5;
+   */
+  connections: number;
+
+  /**
+   * @generated from field: double cpu_usage = 6;
+   */
+  cpuUsage: number;
+
+  /**
+   * @generated from field: double memory_usage = 7;
+   */
+  memoryUsage: number;
+
+  /**
+   * RFC 3339 timestamp.
+   *
+   * @generated from field: string last_heartbeat = 8;
+   */
+  lastHeartbeat: string;
+
+  /**
+   * @generated from field: bool healthy = 9;
+   */
+  healthy: boolean;
+
+  /**
+   * @generated from field: int32 avg_latency_ms = 10;
+   */
+  avgLatencyMs: number;
+
+  /**
+   * @generated from field: double latitude = 11;
+   */
+  latitude: number;
+
+  /**
+   * @generated from field: double longitude = 12;
+   */
+  longitude: number;
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminRelay.
+ * Use `create(AdminRelaySchema)` to create a new message.
+ */
+export const AdminRelaySchema: GenMessage<AdminRelay> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 35);
+
+/**
+ * @generated from message proto.admin.v1.RelayStats
+ */
+export type RelayStats = Message<"proto.admin.v1.RelayStats"> & {
+  /**
+   * @generated from field: int32 total_relays = 1;
+   */
+  totalRelays: number;
+
+  /**
+   * @generated from field: int32 healthy_relays = 2;
+   */
+  healthyRelays: number;
+
+  /**
+   * @generated from field: int32 total_connections = 3;
+   */
+  totalConnections: number;
+};
+
+/**
+ * Describes the message proto.admin.v1.RelayStats.
+ * Use `create(RelayStatsSchema)` to create a new message.
+ */
+export const RelayStatsSchema: GenMessage<RelayStats> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 36);
+
+/**
+ * @generated from message proto.admin.v1.ListRelaysRequest
+ */
+export type ListRelaysRequest = Message<"proto.admin.v1.ListRelaysRequest"> & {
+};
+
+/**
+ * Describes the message proto.admin.v1.ListRelaysRequest.
+ * Use `create(ListRelaysRequestSchema)` to create a new message.
+ */
+export const ListRelaysRequestSchema: GenMessage<ListRelaysRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 37);
+
+/**
+ * @generated from message proto.admin.v1.ListRelaysResponse
+ */
+export type ListRelaysResponse = Message<"proto.admin.v1.ListRelaysResponse"> & {
+  /**
+   * @generated from field: repeated proto.admin.v1.AdminRelay items = 1;
+   */
+  items: AdminRelay[];
+
+  /**
+   * @generated from field: int32 total = 2;
+   */
+  total: number;
+};
+
+/**
+ * Describes the message proto.admin.v1.ListRelaysResponse.
+ * Use `create(ListRelaysResponseSchema)` to create a new message.
+ */
+export const ListRelaysResponseSchema: GenMessage<ListRelaysResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 38);
+
+/**
+ * @generated from message proto.admin.v1.GetRelayRequest
+ */
+export type GetRelayRequest = Message<"proto.admin.v1.GetRelayRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.GetRelayRequest.
+ * Use `create(GetRelayRequestSchema)` to create a new message.
+ */
+export const GetRelayRequestSchema: GenMessage<GetRelayRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 39);
+
+/**
+ * @generated from message proto.admin.v1.GetRelayResponse
+ */
+export type GetRelayResponse = Message<"proto.admin.v1.GetRelayResponse"> & {
+  /**
+   * @generated from field: proto.admin.v1.AdminRelay relay = 1;
+   */
+  relay?: AdminRelay | undefined;
+};
+
+/**
+ * Describes the message proto.admin.v1.GetRelayResponse.
+ * Use `create(GetRelayResponseSchema)` to create a new message.
+ */
+export const GetRelayResponseSchema: GenMessage<GetRelayResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 40);
+
+/**
+ * @generated from message proto.admin.v1.GetRelayStatsRequest
+ */
+export type GetRelayStatsRequest = Message<"proto.admin.v1.GetRelayStatsRequest"> & {
+};
+
+/**
+ * Describes the message proto.admin.v1.GetRelayStatsRequest.
+ * Use `create(GetRelayStatsRequestSchema)` to create a new message.
+ */
+export const GetRelayStatsRequestSchema: GenMessage<GetRelayStatsRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 41);
+
+/**
+ * @generated from message proto.admin.v1.ForceUnregisterRelayRequest
+ */
+export type ForceUnregisterRelayRequest = Message<"proto.admin.v1.ForceUnregisterRelayRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.ForceUnregisterRelayRequest.
+ * Use `create(ForceUnregisterRelayRequestSchema)` to create a new message.
+ */
+export const ForceUnregisterRelayRequestSchema: GenMessage<ForceUnregisterRelayRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 42);
+
+/**
+ * @generated from message proto.admin.v1.ForceUnregisterRelayResponse
+ */
+export type ForceUnregisterRelayResponse = Message<"proto.admin.v1.ForceUnregisterRelayResponse"> & {
+  /**
+   * @generated from field: string status = 1;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string relay_id = 2;
+   */
+  relayId: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.ForceUnregisterRelayResponse.
+ * Use `create(ForceUnregisterRelayResponseSchema)` to create a new message.
+ */
+export const ForceUnregisterRelayResponseSchema: GenMessage<ForceUnregisterRelayResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 43);
+
+/**
+ * @generated from message proto.admin.v1.AdminSupportTicketUser
+ */
+export type AdminSupportTicketUser = Message<"proto.admin.v1.AdminSupportTicketUser"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: optional string name = 2;
+   */
+  name?: string | undefined;
+
+  /**
+   * @generated from field: string email = 3;
+   */
+  email: string;
+
+  /**
+   * @generated from field: optional string avatar_url = 4;
+   */
+  avatarUrl?: string | undefined;
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminSupportTicketUser.
+ * Use `create(AdminSupportTicketUserSchema)` to create a new message.
+ */
+export const AdminSupportTicketUserSchema: GenMessage<AdminSupportTicketUser> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 44);
+
+/**
+ * @generated from message proto.admin.v1.AdminSupportTicket
+ */
+export type AdminSupportTicket = Message<"proto.admin.v1.AdminSupportTicket"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: int64 user_id = 2;
+   */
+  userId: bigint;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string category = 4;
+   */
+  category: string;
+
+  /**
+   * @generated from field: string status = 5;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string priority = 6;
+   */
+  priority: string;
+
+  /**
+   * @generated from field: optional int64 assigned_admin_id = 7;
+   */
+  assignedAdminId?: bigint | undefined;
+
+  /**
+   * @generated from field: string created_at = 8;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string updated_at = 9;
+   */
+  updatedAt: string;
+
+  /**
+   * @generated from field: optional string resolved_at = 10;
+   */
+  resolvedAt?: string | undefined;
+
+  /**
+   * @generated from field: optional proto.admin.v1.AdminSupportTicketUser user = 11;
+   */
+  user?: AdminSupportTicketUser | undefined;
+
+  /**
+   * @generated from field: optional proto.admin.v1.AdminSupportTicketUser assigned_admin = 12;
+   */
+  assignedAdmin?: AdminSupportTicketUser | undefined;
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminSupportTicket.
+ * Use `create(AdminSupportTicketSchema)` to create a new message.
+ */
+export const AdminSupportTicketSchema: GenMessage<AdminSupportTicket> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 45);
+
+/**
+ * @generated from message proto.admin.v1.AdminSupportTicketAttachment
+ */
+export type AdminSupportTicketAttachment = Message<"proto.admin.v1.AdminSupportTicketAttachment"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: int64 ticket_id = 2;
+   */
+  ticketId: bigint;
+
+  /**
+   * @generated from field: optional int64 message_id = 3;
+   */
+  messageId?: bigint | undefined;
+
+  /**
+   * @generated from field: int64 uploader_id = 4;
+   */
+  uploaderId: bigint;
+
+  /**
+   * @generated from field: string original_name = 5;
+   */
+  originalName: string;
+
+  /**
+   * @generated from field: string mime_type = 6;
+   */
+  mimeType: string;
+
+  /**
+   * @generated from field: int64 size = 7;
+   */
+  size: bigint;
+
+  /**
+   * @generated from field: string created_at = 8;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminSupportTicketAttachment.
+ * Use `create(AdminSupportTicketAttachmentSchema)` to create a new message.
+ */
+export const AdminSupportTicketAttachmentSchema: GenMessage<AdminSupportTicketAttachment> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 46);
+
+/**
+ * @generated from message proto.admin.v1.AdminSupportTicketMessage
+ */
+export type AdminSupportTicketMessage = Message<"proto.admin.v1.AdminSupportTicketMessage"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: int64 ticket_id = 2;
+   */
+  ticketId: bigint;
+
+  /**
+   * @generated from field: int64 user_id = 3;
+   */
+  userId: bigint;
+
+  /**
+   * @generated from field: string content = 4;
+   */
+  content: string;
+
+  /**
+   * @generated from field: bool is_admin_reply = 5;
+   */
+  isAdminReply: boolean;
+
+  /**
+   * @generated from field: string created_at = 6;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: optional proto.admin.v1.AdminSupportTicketUser user = 7;
+   */
+  user?: AdminSupportTicketUser | undefined;
+
+  /**
+   * @generated from field: repeated proto.admin.v1.AdminSupportTicketAttachment attachments = 8;
+   */
+  attachments: AdminSupportTicketAttachment[];
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminSupportTicketMessage.
+ * Use `create(AdminSupportTicketMessageSchema)` to create a new message.
+ */
+export const AdminSupportTicketMessageSchema: GenMessage<AdminSupportTicketMessage> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 47);
+
+/**
+ * @generated from message proto.admin.v1.SupportTicketStats
+ */
+export type SupportTicketStats = Message<"proto.admin.v1.SupportTicketStats"> & {
+  /**
+   * @generated from field: int64 total = 1;
+   */
+  total: bigint;
+
+  /**
+   * @generated from field: int64 open = 2;
+   */
+  open: bigint;
+
+  /**
+   * @generated from field: int64 in_progress = 3;
+   */
+  inProgress: bigint;
+
+  /**
+   * @generated from field: int64 resolved = 4;
+   */
+  resolved: bigint;
+
+  /**
+   * @generated from field: int64 closed = 5;
+   */
+  closed: bigint;
+};
+
+/**
+ * Describes the message proto.admin.v1.SupportTicketStats.
+ * Use `create(SupportTicketStatsSchema)` to create a new message.
+ */
+export const SupportTicketStatsSchema: GenMessage<SupportTicketStats> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 48);
+
+/**
+ * @generated from message proto.admin.v1.ListSupportTicketsRequest
+ */
+export type ListSupportTicketsRequest = Message<"proto.admin.v1.ListSupportTicketsRequest"> & {
+  /**
+   * @generated from field: optional string search = 1;
+   */
+  search?: string | undefined;
+
+  /**
+   * @generated from field: optional string status = 2;
+   */
+  status?: string | undefined;
+
+  /**
+   * @generated from field: optional string category = 3;
+   */
+  category?: string | undefined;
+
+  /**
+   * @generated from field: optional string priority = 4;
+   */
+  priority?: string | undefined;
+
+  /**
+   * @generated from field: optional int32 page = 5;
+   */
+  page?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 page_size = 6;
+   */
+  pageSize?: number | undefined;
+};
+
+/**
+ * Describes the message proto.admin.v1.ListSupportTicketsRequest.
+ * Use `create(ListSupportTicketsRequestSchema)` to create a new message.
+ */
+export const ListSupportTicketsRequestSchema: GenMessage<ListSupportTicketsRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 49);
+
+/**
+ * @generated from message proto.admin.v1.ListSupportTicketsResponse
+ */
+export type ListSupportTicketsResponse = Message<"proto.admin.v1.ListSupportTicketsResponse"> & {
+  /**
+   * @generated from field: repeated proto.admin.v1.AdminSupportTicket items = 1;
+   */
+  items: AdminSupportTicket[];
+
+  /**
+   * @generated from field: int64 total = 2;
+   */
+  total: bigint;
+
+  /**
+   * @generated from field: int32 page = 3;
+   */
+  page: number;
+
+  /**
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: int32 total_pages = 5;
+   */
+  totalPages: number;
+};
+
+/**
+ * Describes the message proto.admin.v1.ListSupportTicketsResponse.
+ * Use `create(ListSupportTicketsResponseSchema)` to create a new message.
+ */
+export const ListSupportTicketsResponseSchema: GenMessage<ListSupportTicketsResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 50);
+
+/**
+ * @generated from message proto.admin.v1.GetSupportTicketStatsRequest
+ */
+export type GetSupportTicketStatsRequest = Message<"proto.admin.v1.GetSupportTicketStatsRequest"> & {
+};
+
+/**
+ * Describes the message proto.admin.v1.GetSupportTicketStatsRequest.
+ * Use `create(GetSupportTicketStatsRequestSchema)` to create a new message.
+ */
+export const GetSupportTicketStatsRequestSchema: GenMessage<GetSupportTicketStatsRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 51);
+
+/**
+ * @generated from message proto.admin.v1.GetSupportTicketRequest
+ */
+export type GetSupportTicketRequest = Message<"proto.admin.v1.GetSupportTicketRequest"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+};
+
+/**
+ * Describes the message proto.admin.v1.GetSupportTicketRequest.
+ * Use `create(GetSupportTicketRequestSchema)` to create a new message.
+ */
+export const GetSupportTicketRequestSchema: GenMessage<GetSupportTicketRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 52);
+
+/**
+ * SupportTicketDetail mirrors REST `{ticket, messages}` shape — same as
+ * the user-side SupportTicketDetail but on the admin envelope so the
+ * embedded user identity is the renderer-facing variant.
+ *
+ * @generated from message proto.admin.v1.SupportTicketDetail
+ */
+export type SupportTicketDetail = Message<"proto.admin.v1.SupportTicketDetail"> & {
+  /**
+   * @generated from field: proto.admin.v1.AdminSupportTicket ticket = 1;
+   */
+  ticket?: AdminSupportTicket | undefined;
+
+  /**
+   * @generated from field: repeated proto.admin.v1.AdminSupportTicketMessage messages = 2;
+   */
+  messages: AdminSupportTicketMessage[];
+};
+
+/**
+ * Describes the message proto.admin.v1.SupportTicketDetail.
+ * Use `create(SupportTicketDetailSchema)` to create a new message.
+ */
+export const SupportTicketDetailSchema: GenMessage<SupportTicketDetail> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 53);
+
+/**
+ * @generated from message proto.admin.v1.ListSupportTicketMessagesRequest
+ */
+export type ListSupportTicketMessagesRequest = Message<"proto.admin.v1.ListSupportTicketMessagesRequest"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+};
+
+/**
+ * Describes the message proto.admin.v1.ListSupportTicketMessagesRequest.
+ * Use `create(ListSupportTicketMessagesRequestSchema)` to create a new message.
+ */
+export const ListSupportTicketMessagesRequestSchema: GenMessage<ListSupportTicketMessagesRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 54);
+
+/**
+ * @generated from message proto.admin.v1.ListSupportTicketMessagesResponse
+ */
+export type ListSupportTicketMessagesResponse = Message<"proto.admin.v1.ListSupportTicketMessagesResponse"> & {
+  /**
+   * @generated from field: repeated proto.admin.v1.AdminSupportTicketMessage data = 1;
+   */
+  data: AdminSupportTicketMessage[];
+};
+
+/**
+ * Describes the message proto.admin.v1.ListSupportTicketMessagesResponse.
+ * Use `create(ListSupportTicketMessagesResponseSchema)` to create a new message.
+ */
+export const ListSupportTicketMessagesResponseSchema: GenMessage<ListSupportTicketMessagesResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 55);
+
+/**
+ * @generated from message proto.admin.v1.UpdateSupportTicketStatusRequest
+ */
+export type UpdateSupportTicketStatusRequest = Message<"proto.admin.v1.UpdateSupportTicketStatusRequest"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.UpdateSupportTicketStatusRequest.
+ * Use `create(UpdateSupportTicketStatusRequestSchema)` to create a new message.
+ */
+export const UpdateSupportTicketStatusRequestSchema: GenMessage<UpdateSupportTicketStatusRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 56);
+
+/**
+ * @generated from message proto.admin.v1.UpdateSupportTicketStatusResponse
+ */
+export type UpdateSupportTicketStatusResponse = Message<"proto.admin.v1.UpdateSupportTicketStatusResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.UpdateSupportTicketStatusResponse.
+ * Use `create(UpdateSupportTicketStatusResponseSchema)` to create a new message.
+ */
+export const UpdateSupportTicketStatusResponseSchema: GenMessage<UpdateSupportTicketStatusResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 57);
+
+/**
+ * @generated from message proto.admin.v1.AssignSupportTicketRequest
+ */
+export type AssignSupportTicketRequest = Message<"proto.admin.v1.AssignSupportTicketRequest"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * When unset, the handler assigns the calling admin to the ticket
+   * (mirrors REST behavior at support_ticket_actions.go:155).
+   *
+   * @generated from field: optional int64 admin_id = 2;
+   */
+  adminId?: bigint | undefined;
+};
+
+/**
+ * Describes the message proto.admin.v1.AssignSupportTicketRequest.
+ * Use `create(AssignSupportTicketRequestSchema)` to create a new message.
+ */
+export const AssignSupportTicketRequestSchema: GenMessage<AssignSupportTicketRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 58);
+
+/**
+ * @generated from message proto.admin.v1.AssignSupportTicketResponse
+ */
+export type AssignSupportTicketResponse = Message<"proto.admin.v1.AssignSupportTicketResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.AssignSupportTicketResponse.
+ * Use `create(AssignSupportTicketResponseSchema)` to create a new message.
+ */
+export const AssignSupportTicketResponseSchema: GenMessage<AssignSupportTicketResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 59);
+
+/**
+ * @generated from message proto.admin.v1.GetSupportTicketAttachmentUrlRequest
+ */
+export type GetSupportTicketAttachmentUrlRequest = Message<"proto.admin.v1.GetSupportTicketAttachmentUrlRequest"> & {
+  /**
+   * @generated from field: int64 attachment_id = 1;
+   */
+  attachmentId: bigint;
+};
+
+/**
+ * Describes the message proto.admin.v1.GetSupportTicketAttachmentUrlRequest.
+ * Use `create(GetSupportTicketAttachmentUrlRequestSchema)` to create a new message.
+ */
+export const GetSupportTicketAttachmentUrlRequestSchema: GenMessage<GetSupportTicketAttachmentUrlRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 60);
+
+/**
+ * @generated from message proto.admin.v1.GetSupportTicketAttachmentUrlResponse
+ */
+export type GetSupportTicketAttachmentUrlResponse = Message<"proto.admin.v1.GetSupportTicketAttachmentUrlResponse"> & {
+  /**
+   * @generated from field: string url = 1;
+   */
+  url: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.GetSupportTicketAttachmentUrlResponse.
+ * Use `create(GetSupportTicketAttachmentUrlResponseSchema)` to create a new message.
+ */
+export const GetSupportTicketAttachmentUrlResponseSchema: GenMessage<GetSupportTicketAttachmentUrlResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 61);
+
+/**
+ * @generated from message proto.admin.v1.AdminLoginRequest
+ */
+export type AdminLoginRequest = Message<"proto.admin.v1.AdminLoginRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminLoginRequest.
+ * Use `create(AdminLoginRequestSchema)` to create a new message.
+ */
+export const AdminLoginRequestSchema: GenMessage<AdminLoginRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 62);
+
+/**
+ * @generated from message proto.admin.v1.AdminLoginResponse
+ */
+export type AdminLoginResponse = Message<"proto.admin.v1.AdminLoginResponse"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+
+  /**
+   * @generated from field: proto.admin.v1.AdminUser user = 3;
+   */
+  user?: AdminUser | undefined;
+};
+
+/**
+ * Describes the message proto.admin.v1.AdminLoginResponse.
+ * Use `create(AdminLoginResponseSchema)` to create a new message.
+ */
+export const AdminLoginResponseSchema: GenMessage<AdminLoginResponse> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 63);
+
+/**
+ * @generated from message proto.admin.v1.GetMeRequest
+ */
+export type GetMeRequest = Message<"proto.admin.v1.GetMeRequest"> & {
+};
+
+/**
+ * Describes the message proto.admin.v1.GetMeRequest.
+ * Use `create(GetMeRequestSchema)` to create a new message.
+ */
+export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
+  messageDesc(file_admin_v1_admin, 64);
+
+/**
  * @generated from service proto.admin.v1.AdminService
  */
 export const AdminService: GenService<{
@@ -1317,6 +2143,141 @@ export const AdminService: GenService<{
     input: typeof ListAuditLogsRequestSchema;
     output: typeof ListAuditLogsResponseSchema;
   },
+  /**
+   * Relays (data-plane WS hubs). Mirrors REST /api/v1/admin/relays.
+   * The relay manager keeps an in-memory roster + Redis-mirrored heartbeat;
+   * these RPCs only read from / unregister against that roster (no DB).
+   *
+   * @generated from rpc proto.admin.v1.AdminService.ListRelays
+   */
+  listRelays: {
+    methodKind: "unary";
+    input: typeof ListRelaysRequestSchema;
+    output: typeof ListRelaysResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.GetRelay
+   */
+  getRelay: {
+    methodKind: "unary";
+    input: typeof GetRelayRequestSchema;
+    output: typeof GetRelayResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.GetRelayStats
+   */
+  getRelayStats: {
+    methodKind: "unary";
+    input: typeof GetRelayStatsRequestSchema;
+    output: typeof RelayStatsSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.ForceUnregisterRelay
+   */
+  forceUnregisterRelay: {
+    methodKind: "unary";
+    input: typeof ForceUnregisterRelayRequestSchema;
+    output: typeof ForceUnregisterRelayResponseSchema;
+  },
+  /**
+   * Support tickets. Mirrors REST /api/v1/admin/support-tickets except for
+   * POST /:id/reply — that path keeps multipart/form-data on REST because
+   * Connect-RPC has no multipart story (parity with the user-side service).
+   *
+   * @generated from rpc proto.admin.v1.AdminService.ListSupportTickets
+   */
+  listSupportTickets: {
+    methodKind: "unary";
+    input: typeof ListSupportTicketsRequestSchema;
+    output: typeof ListSupportTicketsResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.GetSupportTicketStats
+   */
+  getSupportTicketStats: {
+    methodKind: "unary";
+    input: typeof GetSupportTicketStatsRequestSchema;
+    output: typeof SupportTicketStatsSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.GetSupportTicket
+   */
+  getSupportTicket: {
+    methodKind: "unary";
+    input: typeof GetSupportTicketRequestSchema;
+    output: typeof SupportTicketDetailSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.ListSupportTicketMessages
+   */
+  listSupportTicketMessages: {
+    methodKind: "unary";
+    input: typeof ListSupportTicketMessagesRequestSchema;
+    output: typeof ListSupportTicketMessagesResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.UpdateSupportTicketStatus
+   */
+  updateSupportTicketStatus: {
+    methodKind: "unary";
+    input: typeof UpdateSupportTicketStatusRequestSchema;
+    output: typeof UpdateSupportTicketStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.AssignSupportTicket
+   */
+  assignSupportTicket: {
+    methodKind: "unary";
+    input: typeof AssignSupportTicketRequestSchema;
+    output: typeof AssignSupportTicketResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.admin.v1.AdminService.GetSupportTicketAttachmentUrl
+   */
+  getSupportTicketAttachmentUrl: {
+    methodKind: "unary";
+    input: typeof GetSupportTicketAttachmentUrlRequestSchema;
+    output: typeof GetSupportTicketAttachmentUrlResponseSchema;
+  },
 }> = /*@__PURE__*/
   serviceDesc(file_admin_v1_admin, 0);
+
+/**
+ * AdminAuthService — admin-console login flow. Public (no auth interceptor)
+ * — the caller does not yet have a bearer when hitting Login. The handler
+ * enforces `is_system_admin = true` + `is_active = true` before issuing a
+ * JWT so non-admin accounts can never receive an admin-scoped token.
+ *
+ * @generated from service proto.admin.v1.AdminAuthService
+ */
+export const AdminAuthService: GenService<{
+  /**
+   * @generated from rpc proto.admin.v1.AdminAuthService.Login
+   */
+  login: {
+    methodKind: "unary";
+    input: typeof AdminLoginRequestSchema;
+    output: typeof AdminLoginResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_admin_v1_admin, 1);
+
+/**
+ * AdminAuthSessionService — authenticated admin session lookups. Mirrors
+ * REST GET /api/v1/admin/me. Lives on its own service so AdminAuthService
+ * stays free of the auth interceptor.
+ *
+ * @generated from service proto.admin.v1.AdminAuthSessionService
+ */
+export const AdminAuthSessionService: GenService<{
+  /**
+   * @generated from rpc proto.admin.v1.AdminAuthSessionService.GetMe
+   */
+  getMe: {
+    methodKind: "unary";
+    input: typeof GetMeRequestSchema;
+    output: typeof AdminUserSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_admin_v1_admin, 2);
 
