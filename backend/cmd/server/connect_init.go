@@ -10,6 +10,7 @@ import (
 	agentpodsettingsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings"
 	adminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin"
 	promocodeadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/promocode"
+	skillregistryadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/skill_registry"
 	subscriptionadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/subscription"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	authconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/auth"
@@ -160,6 +161,13 @@ func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, opts []connec
 	promocodeadminconnect.Mount(mux, promocodeadminconnect.NewServer(svc.admin, svc.adminDB), opts...)
 	if svc.billing != nil {
 		subscriptionadminconnect.Mount(mux, subscriptionadminconnect.NewServer(svc.admin, svc.billing, svc.adminDB), opts...)
+	}
+	if svc.extensionRepo != nil {
+		skillregistryadminconnect.Mount(
+			mux,
+			skillregistryadminconnect.NewServer(svc.extensionRepo, svc.marketplaceWorker, svc.adminDB),
+			opts...,
+		)
 	}
 }
 
