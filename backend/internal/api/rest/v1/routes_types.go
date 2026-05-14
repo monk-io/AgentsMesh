@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"github.com/anthropics/agentsmesh/backend/internal/domain/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/acme"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
@@ -94,10 +93,12 @@ type Services struct {
 	// Runner version checker (optional, checks GitHub Releases for latest version)
 	VersionChecker *runner.VersionChecker
 
-	// Extension services (Skills marketplace, MCP servers)
-	Extension         *extensionservice.Service
-	ExtensionRepo     extension.Repository
-	MarketplaceWorker *extensionservice.MarketplaceWorker
+	// Extension services (Skills marketplace, MCP servers).
+	// ExtensionRepo + MarketplaceWorker were dropped when admin skill
+	// registries moved to Connect-RPC (commit-link). Connect handlers
+	// read them straight from the serviceContainer, REST has no remaining
+	// consumer, so keeping them here would be dead state.
+	Extension *extensionservice.Service
 
 	// Loop services
 	Loop             *loop.LoopService

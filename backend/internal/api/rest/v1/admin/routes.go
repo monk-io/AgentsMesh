@@ -2,15 +2,13 @@ package admin
 
 import (
 	"github.com/anthropics/agentsmesh/backend/internal/config"
-	"github.com/anthropics/agentsmesh/backend/internal/domain/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
-	ssoservice "github.com/anthropics/agentsmesh/backend/internal/service/sso"
-	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
+	ssoservice "github.com/anthropics/agentsmesh/backend/internal/service/sso"
 	"github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 
 	"github.com/gin-gonic/gin"
@@ -18,14 +16,12 @@ import (
 
 // Services contains all admin-related services
 type Services struct {
-	Auth              *auth.Service
-	Admin             *admin.Service
-	Billing           *billing.Service
-	SSO               *ssoservice.Service
-	RelayManager      *relay.Manager
-	ExtensionRepo     extension.Repository
-	MarketplaceWorker *extensionservice.MarketplaceWorker
-	SupportTicket     *supportticket.Service
+	Auth          *auth.Service
+	Admin         *admin.Service
+	Billing       *billing.Service
+	SSO           *ssoservice.Service
+	RelayManager  *relay.Manager
+	SupportTicket *supportticket.Service
 }
 
 // RegisterRoutes registers all admin console routes
@@ -76,11 +72,10 @@ func RegisterRoutes(router *gin.Engine, cfg *config.Config, db database.DB, svc 
 		relayHandler.RegisterRoutes(protected)
 	}
 
-	// Skill Registries (optional - only if extension repo is available)
-	if svc.ExtensionRepo != nil {
-		skillRegistryHandler := NewSkillRegistryHandler(svc.ExtensionRepo, svc.MarketplaceWorker)
-		skillRegistryHandler.RegisterRoutes(protected)
-	}
+	// Skill Registries moved to Connect-RPC
+	// (backend/internal/api/connect/admin/skill_registry/server.go,
+	// proto.extension.v1.SkillRegistryAdminService). The mount keeps the
+	// same ExtensionRepo != nil gate via mountAdminServices in cmd/server.
 
 	// SSO Configs (optional - only if SSO service is available)
 	if svc.SSO != nil {

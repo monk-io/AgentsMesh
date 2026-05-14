@@ -200,8 +200,6 @@ func buildServicesContainer(
 		GeoResolver:         geoResolver,
 		VersionChecker:      versionChecker,
 		Extension:           services.extension,
-		ExtensionRepo:       services.extensionRepo,
-		MarketplaceWorker:   services.marketplaceWorker,
 		Loop:                services.loop,
 		LoopRun:             services.loopRun,
 		LoopOrchestrator:    loopOrchestrator,
