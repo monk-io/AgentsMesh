@@ -49,13 +49,10 @@ func RegisterRoutes(router *gin.Engine, cfg *config.Config, db database.DB, svc 
 	dashboardHandler := NewDashboardHandler(svc.Admin)
 	dashboardHandler.RegisterRoutes(protected)
 
-	// Users
-	userHandler := NewUserHandler(svc.Admin)
-	userHandler.RegisterRoutes(protected)
-
-	// Organizations
-	orgHandler := NewOrganizationHandler(svc.Admin)
-	orgHandler.RegisterRoutes(protected)
+	// Users + Organizations moved to Connect-RPC. See
+	// backend/internal/api/connect/admin/server.go for the AdminService
+	// surface (proto.admin.v1.AdminService). The Connect handlers run
+	// behind the same admin gate via interceptors.ResolveSystemAdmin.
 
 	// Runners
 	runnerHandler := NewRunnerHandler(svc.Admin)
