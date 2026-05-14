@@ -172,11 +172,14 @@ func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 func mapServiceError(err error) error {
 	switch {
 	case errors.Is(err, adminservice.ErrUserNotFound),
-		errors.Is(err, adminservice.ErrOrganizationNotFound):
+		errors.Is(err, adminservice.ErrOrganizationNotFound),
+		errors.Is(err, adminservice.ErrRunnerNotFound):
 		return connect.NewError(connect.CodeNotFound, err)
 	case errors.Is(err, adminservice.ErrUsernameAlreadyExists),
 		errors.Is(err, adminservice.ErrEmailAlreadyExists),
-		errors.Is(err, adminservice.ErrOrganizationHasActiveRunner):
+		errors.Is(err, adminservice.ErrOrganizationHasActiveRunner),
+		errors.Is(err, adminservice.ErrRunnerHasActivePods),
+		errors.Is(err, adminservice.ErrRunnerHasLoopRefs):
 		return connect.NewError(connect.CodeAlreadyExists, err)
 	case errors.Is(err, adminservice.ErrCannotRevokeOwnAdmin),
 		errors.Is(err, adminservice.ErrCannotDisableSelf):
