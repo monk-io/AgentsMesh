@@ -11,6 +11,7 @@ import (
 	adminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin"
 	promocodeadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/promocode"
 	skillregistryadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/skill_registry"
+	ssoadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/sso"
 	subscriptionadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/subscription"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	authconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/auth"
@@ -174,6 +175,13 @@ func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Serv
 		skillregistryadminconnect.Mount(
 			mux,
 			skillregistryadminconnect.NewServer(svc.extensionRepo, svc.marketplaceWorker, svc.adminDB),
+			opts...,
+		)
+	}
+	if svc.sso != nil {
+		ssoadminconnect.Mount(
+			mux,
+			ssoadminconnect.NewServer(svc.sso, svc.admin, svc.adminDB),
 			opts...,
 		)
 	}
