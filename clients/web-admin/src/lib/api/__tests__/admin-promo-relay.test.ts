@@ -31,13 +31,9 @@ import {
   listSessions,
   migrateSession,
   bulkMigrateSessions,
-  listSkillRegistries,
-  createSkillRegistry,
-  syncSkillRegistry,
-  deleteSkillRegistry,
 } from "../admin";
 
-describe("Admin API - Promo Codes, Relays & Skill Registries", () => {
+describe("Admin API - Promo Codes & Relays", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -211,33 +207,6 @@ describe("Admin API - Promo Codes, Relays & Skill Registries", () => {
         "/relays/relay-1",
         { migrate_sessions: false }
       );
-    });
-  });
-
-  describe("Skill Registries", () => {
-    it("listSkillRegistries calls GET /skill-registries", async () => {
-      mockGet.mockResolvedValue({ items: [], total: 0 });
-      await listSkillRegistries();
-      expect(mockGet).toHaveBeenCalledWith("/skill-registries");
-    });
-
-    it("createSkillRegistry calls POST /skill-registries", async () => {
-      const data = { repository_url: "https://github.com/org/repo" };
-      mockPost.mockResolvedValue({ id: 1 });
-      await createSkillRegistry(data);
-      expect(mockPost).toHaveBeenCalledWith("/skill-registries", data);
-    });
-
-    it("syncSkillRegistry calls POST /skill-registries/:id/sync", async () => {
-      mockPost.mockResolvedValue({ message: "ok" });
-      await syncSkillRegistry(3);
-      expect(mockPost).toHaveBeenCalledWith("/skill-registries/3/sync");
-    });
-
-    it("deleteSkillRegistry calls DELETE /skill-registries/:id", async () => {
-      mockDelete.mockResolvedValue(undefined);
-      await deleteSkillRegistry(3);
-      expect(mockDelete).toHaveBeenCalledWith("/skill-registries/3");
     });
   });
 });
