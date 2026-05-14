@@ -8,6 +8,16 @@
 //   * Organizations       — list/get/members/delete
 //   * Runners             — list/get/disable/enable/delete (across all orgs)
 //   * AuditLogs           — list with filters
+//   * Relays              — list/get/stats/force-unregister
+//   * SupportTickets      — list/get/stats/list-messages/status/assign/attachment-url
+//                           (Reply with multipart attachments stays on REST)
+//
+// AdminAuthService — admin-console login flow.
+//
+// Mirrors backend/internal/api/rest/v1/admin/auth.go. The login RPC is
+// PUBLIC (no auth interceptor) because the caller does not yet hold a
+// bearer; the handler enforces is_system_admin + is_active server-side.
+// GetMe lives on AdminAuthSessionService (auth-required).
 //
 // Auth model (conventions §3.5 EXCEPTION — platform-admin scoped):
 //   Every RPC requires (1) a valid bearer JWT (standard auth interceptor)
@@ -62,6 +72,40 @@ service AdminService {
 
   // Audit logs
   rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+
+  // Relays (data-plane WS hubs). Mirrors REST /api/v1/admin/relays.
+  // The relay manager keeps an in-memory roster + Redis-mirrored heartbeat;
+  // these RPCs only read from / unregister against that roster (no DB).
+  rpc ListRelays(ListRelaysRequest) returns (ListRelaysResponse);
+  rpc GetRelay(GetRelayRequest) returns (GetRelayResponse);
+  rpc GetRelayStats(GetRelayStatsRequest) returns (RelayStats);
+  rpc ForceUnregisterRelay(ForceUnregisterRelayRequest) returns (ForceUnregisterRelayResponse);
+
+  // Support tickets. Mirrors REST /api/v1/admin/support-tickets except for
+  // POST /:id/reply — that path keeps multipart/form-data on REST because
+  // Connect-RPC has no multipart story (parity with the user-side service).
+  rpc ListSupportTickets(ListSupportTicketsRequest) returns (ListSupportTicketsResponse);
+  rpc GetSupportTicketStats(GetSupportTicketStatsRequest) returns (SupportTicketStats);
+  rpc GetSupportTicket(GetSupportTicketRequest) returns (SupportTicketDetail);
+  rpc ListSupportTicketMessages(ListSupportTicketMessagesRequest) returns (ListSupportTicketMessagesResponse);
+  rpc UpdateSupportTicketStatus(UpdateSupportTicketStatusRequest) returns (UpdateSupportTicketStatusResponse);
+  rpc AssignSupportTicket(AssignSupportTicketRequest) returns (AssignSupportTicketResponse);
+  rpc GetSupportTicketAttachmentUrl(GetSupportTicketAttachmentUrlRequest) returns (GetSupportTicketAttachmentUrlResponse);
+}
+
+// AdminAuthService — admin-console login flow. Public (no auth interceptor)
+// — the caller does not yet have a bearer when hitting Login. The handler
+// enforces `is_system_admin = true` + `is_active = true` before issuing a
+// JWT so non-admin accounts can never receive an admin-scoped token.
+service AdminAuthService {
+  rpc Login(AdminLoginRequest) returns (AdminLoginResponse);
+}
+
+// AdminAuthSessionService — authenticated admin session lookups. Mirrors
+// REST GET /api/v1/admin/me. Lives on its own service so AdminAuthService
+// stays free of the auth interceptor.
+service AdminAuthSessionService {
+  rpc GetMe(GetMeRequest) returns (AdminUser);
 }
 
 // --- Dashboard ---
@@ -320,3 +364,191 @@ message ListAuditLogsResponse {
   int32 page_size = 4;
   int32 total_pages = 5;
 }
+
+// --- Relays ---
+
+// AdminRelay mirrors backend/internal/service/relay/RelayInfo. Field shape is
+// REST parity (`relay_info.go:11`) — JSON struct tags match the wire names.
+message AdminRelay {
+  string id = 1;
+  string url = 2;
+  string region = 3;
+  int32 capacity = 4;
+  int32 connections = 5;
+  double cpu_usage = 6;
+  double memory_usage = 7;
+  // RFC 3339 timestamp.
+  string last_heartbeat = 8;
+  bool healthy = 9;
+  int32 avg_latency_ms = 10;
+  double latitude = 11;
+  double longitude = 12;
+}
+
+message RelayStats {
+  int32 total_relays = 1;
+  int32 healthy_relays = 2;
+  int32 total_connections = 3;
+}
+
+message ListRelaysRequest {}
+
+message ListRelaysResponse {
+  repeated AdminRelay items = 1;
+  int32 total = 2;
+}
+
+message GetRelayRequest {
+  string id = 1;
+}
+
+message GetRelayResponse {
+  AdminRelay relay = 1;
+}
+
+message GetRelayStatsRequest {}
+
+message ForceUnregisterRelayRequest {
+  string id = 1;
+}
+
+message ForceUnregisterRelayResponse {
+  string status = 1;
+  string relay_id = 2;
+}
+
+// --- Support tickets ---
+
+message AdminSupportTicketUser {
+  int64 id = 1;
+  optional string name = 2;
+  string email = 3;
+  optional string avatar_url = 4;
+}
+
+message AdminSupportTicket {
+  int64 id = 1;
+  int64 user_id = 2;
+  string title = 3;
+  string category = 4;
+  string status = 5;
+  string priority = 6;
+  optional int64 assigned_admin_id = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  optional string resolved_at = 10;
+  optional AdminSupportTicketUser user = 11;
+  optional AdminSupportTicketUser assigned_admin = 12;
+}
+
+message AdminSupportTicketAttachment {
+  int64 id = 1;
+  int64 ticket_id = 2;
+  optional int64 message_id = 3;
+  int64 uploader_id = 4;
+  string original_name = 5;
+  string mime_type = 6;
+  int64 size = 7;
+  string created_at = 8;
+}
+
+message AdminSupportTicketMessage {
+  int64 id = 1;
+  int64 ticket_id = 2;
+  int64 user_id = 3;
+  string content = 4;
+  bool is_admin_reply = 5;
+  string created_at = 6;
+  optional AdminSupportTicketUser user = 7;
+  repeated AdminSupportTicketAttachment attachments = 8;
+}
+
+message SupportTicketStats {
+  int64 total = 1;
+  int64 open = 2;
+  int64 in_progress = 3;
+  int64 resolved = 4;
+  int64 closed = 5;
+}
+
+message ListSupportTicketsRequest {
+  optional string search = 1;
+  optional string status = 2;
+  optional string category = 3;
+  optional string priority = 4;
+  optional int32 page = 5;
+  optional int32 page_size = 6;
+}
+
+message ListSupportTicketsResponse {
+  repeated AdminSupportTicket items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+message GetSupportTicketStatsRequest {}
+
+message GetSupportTicketRequest {
+  int64 id = 1;
+}
+
+// SupportTicketDetail mirrors REST `{ticket, messages}` shape — same as
+// the user-side SupportTicketDetail but on the admin envelope so the
+// embedded user identity is the renderer-facing variant.
+message SupportTicketDetail {
+  AdminSupportTicket ticket = 1;
+  repeated AdminSupportTicketMessage messages = 2;
+}
+
+message ListSupportTicketMessagesRequest {
+  int64 id = 1;
+}
+
+message ListSupportTicketMessagesResponse {
+  repeated AdminSupportTicketMessage data = 1;
+}
+
+message UpdateSupportTicketStatusRequest {
+  int64 id = 1;
+  string status = 2;
+}
+
+message UpdateSupportTicketStatusResponse {
+  string message = 1;
+}
+
+message AssignSupportTicketRequest {
+  int64 id = 1;
+  // When unset, the handler assigns the calling admin to the ticket
+  // (mirrors REST behavior at support_ticket_actions.go:155).
+  optional int64 admin_id = 2;
+}
+
+message AssignSupportTicketResponse {
+  string message = 1;
+}
+
+message GetSupportTicketAttachmentUrlRequest {
+  int64 attachment_id = 1;
+}
+
+message GetSupportTicketAttachmentUrlResponse {
+  string url = 1;
+}
+
+// --- Admin auth ---
+
+message AdminLoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message AdminLoginResponse {
+  string token = 1;
+  string refresh_token = 2;
+  AdminUser user = 3;
+}
+
+message GetMeRequest {}
