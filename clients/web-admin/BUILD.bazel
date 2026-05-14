@@ -70,11 +70,11 @@ _NEXT_DATA_COMMON = [
     "//:node_modules/@agentsmesh/service-runtime",
     "//:node_modules/agentsmesh-wasm",
     "//:package_json_bin",
-    # Generated TS proto modules — `@proto/*` alias (tsconfig.json
-    # paths) resolves to `../../proto/gen/ts/*`. Next.js's bundler
-    # reads the .ts files directly; the alias maps imports to disk
-    # paths inside the Bazel sandbox.
-    "//proto:proto_gen_ts",
+    # Generated TS proto modules — mounted as `@agentsmesh/proto` via
+    # //BUILD.bazel's `npm_link_package`. Next.js's bundler walks the
+    # node_modules resolution chain for `@proto/*` imports (the
+    # tsconfig path alias points there).
+    "//:node_modules/@agentsmesh/proto",
 ]
 
 # Dev path — keeps next.config.ts so existing `bazel run :next_dev` works.

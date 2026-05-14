@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
     ? { distDir: ".next-dev" as const }
     : {}),
 
+  // `@agentsmesh/proto` ships raw .ts files (the generated Connect-RPC
+  // message classes). Webpack/SWC needs to compile them — same reason
+  // clients/web lists this in transpilePackages.
+  transpilePackages: ["@agentsmesh/proto"],
+
   // =============================================================================
   // Unified Domain Configuration
   // 将 PRIMARY_DOMAIN / USE_HTTPS 映射为 NEXT_PUBLIC_* 变量

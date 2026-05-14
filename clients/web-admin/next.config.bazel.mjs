@@ -11,6 +11,12 @@ const nextConfig = {
   // Same pnpm/monorepo NFT fix as clients/web — see that file's comment.
   outputFileTracingRoot: monorepoRoot,
 
+  // `@agentsmesh/proto` ships raw .ts files (the generated Connect-RPC
+  // message classes). Webpack needs to run SWC over them instead of
+  // expecting pre-compiled JS. Same reason clients/web lists this in
+  // transpilePackages.
+  transpilePackages: ["@agentsmesh/proto"],
+
   env: {
     NEXT_PUBLIC_PRIMARY_DOMAIN:
       process.env.PRIMARY_DOMAIN || "__PRIMARY_DOMAIN__",
@@ -26,6 +32,9 @@ const nextConfig = {
       : "http://localhost:10000";
     return [
       { source: "/api/:path*", destination: `${backendUrl}/api/:path*` },
+      // Connect-RPC: backend serves /proto.<svc>.v1.<Service>/<Method>
+      // at the root path (no /api prefix).
+      { source: "/proto.:path*", destination: `${backendUrl}/proto.:path*` },
     ];
   },
 
