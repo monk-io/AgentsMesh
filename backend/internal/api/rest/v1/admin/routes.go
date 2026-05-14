@@ -7,7 +7,6 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
-	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 	ssoservice "github.com/anthropics/agentsmesh/backend/internal/service/sso"
 	"github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 
@@ -20,7 +19,6 @@ type Services struct {
 	Admin         *admin.Service
 	Billing       *billing.Service
 	SSO           *ssoservice.Service
-	RelayManager  *relay.Manager
 	SupportTicket *supportticket.Service
 }
 
@@ -66,11 +64,10 @@ func RegisterRoutes(router *gin.Engine, cfg *config.Config, db database.DB, svc 
 	// (backend/internal/api/connect/admin/subscription/server.go,
 	// proto.billing.v1.SubscriptionAdminService).
 
-	// Relays (optional - only if relay manager is available)
-	if svc.RelayManager != nil {
-		relayHandler := NewRelayHandler(svc.Admin, svc.RelayManager)
-		relayHandler.RegisterRoutes(protected)
-	}
+	// Relays moved to Connect-RPC
+	// (backend/internal/api/connect/admin/handlers_relays.go,
+	// proto.admin.v1.AdminService). RelayManager threads in via
+	// mountAdminServices's WithRelayManager option in cmd/server.
 
 	// Skill Registries moved to Connect-RPC
 	// (backend/internal/api/connect/admin/skill_registry/server.go,
