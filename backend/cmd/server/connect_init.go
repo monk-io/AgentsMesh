@@ -13,6 +13,7 @@ import (
 	skillregistryadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/skill_registry"
 	ssoadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/sso"
 	subscriptionadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/subscription"
+	supportticketadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/support_ticket"
 	apikeyconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/apikey"
 	authconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/auth"
 	autopilotconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/autopilot"
@@ -182,6 +183,13 @@ func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Serv
 		ssoadminconnect.Mount(
 			mux,
 			ssoadminconnect.NewServer(svc.sso, svc.admin, svc.adminDB),
+			opts...,
+		)
+	}
+	if svc.supportTicket != nil {
+		supportticketadminconnect.Mount(
+			mux,
+			supportticketadminconnect.NewServer(svc.supportTicket, svc.admin, svc.adminDB),
 			opts...,
 		)
 	}
