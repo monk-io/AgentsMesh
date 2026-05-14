@@ -14,6 +14,7 @@
 //   - server.go               — service scaffolding + Mount (this file)
 //   - convert.go              — domain ↔ proto field translation
 //   - convert_relay.go        — relay.RelayInfo → proto translation
+//   - convert_runner.go       — runner.Runner + org → proto translation
 //   - audit.go                — Connect-context audit log helper
 //   - handlers_dashboard.go   — GetDashboardStats
 //   - handlers_audit.go       — ListAuditLogs
@@ -22,6 +23,8 @@
 //                                 VerifyUserEmail / UnverifyUserEmail
 //   - handlers_orgs.go        — ListOrganizations / GetOrganization /
 //                               GetOrganizationMembers / DeleteOrganization
+//   - handlers_runners_query.go — ListRunners / GetRunner
+//   - handlers_runners_actions.go — DisableRunner / EnableRunner / DeleteRunner
 //   - handlers_relays.go      — ListRelays / GetRelay / GetRelayStats /
 //                               ForceUnregisterRelay (gated on WithRelayManager)
 package adminconnect
@@ -59,15 +62,21 @@ const (
 
 	ListAuditLogsProcedure = "/" + ServiceName + "/ListAuditLogs"
 
+	ListRunnersProcedure   = "/" + ServiceName + "/ListRunners"
+	GetRunnerProcedure     = "/" + ServiceName + "/GetRunner"
+	DisableRunnerProcedure = "/" + ServiceName + "/DisableRunner"
+	EnableRunnerProcedure  = "/" + ServiceName + "/EnableRunner"
+	DeleteRunnerProcedure  = "/" + ServiceName + "/DeleteRunner"
+
 	ListRelaysProcedure           = "/" + ServiceName + "/ListRelays"
 	GetRelayProcedure             = "/" + ServiceName + "/GetRelay"
 	GetRelayStatsProcedure        = "/" + ServiceName + "/GetRelayStats"
 	ForceUnregisterRelayProcedure = "/" + ServiceName + "/ForceUnregisterRelay"
 )
 
-// Server implements the dashboard + user + organization + audit + relay
-// slice of proto.admin.v1.AdminService. Runner RPCs live in the same proto
-// service but stay on REST until a follow-up PR migrates them.
+// Server implements proto.admin.v1.AdminService (dashboard + user +
+// organization + audit + runner + relay slices). Per-resource org-scoped
+// surfaces stay parallel.
 //
 // relayMgr is optional — only deployments that wire the relay subsystem
 // surface the 4 relay RPCs. When nil, the handlers return CodeUnavailable
@@ -151,6 +160,22 @@ func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 
 	mux.Handle(ListAuditLogsProcedure, connect.NewUnaryHandler(
 		ListAuditLogsProcedure, srv.ListAuditLogs, opts...,
+	))
+
+	mux.Handle(ListRunnersProcedure, connect.NewUnaryHandler(
+		ListRunnersProcedure, srv.ListRunners, opts...,
+	))
+	mux.Handle(GetRunnerProcedure, connect.NewUnaryHandler(
+		GetRunnerProcedure, srv.GetRunner, opts...,
+	))
+	mux.Handle(DisableRunnerProcedure, connect.NewUnaryHandler(
+		DisableRunnerProcedure, srv.DisableRunner, opts...,
+	))
+	mux.Handle(EnableRunnerProcedure, connect.NewUnaryHandler(
+		EnableRunnerProcedure, srv.EnableRunner, opts...,
+	))
+	mux.Handle(DeleteRunnerProcedure, connect.NewUnaryHandler(
+		DeleteRunnerProcedure, srv.DeleteRunner, opts...,
 	))
 
 	mux.Handle(ListRelaysProcedure, connect.NewUnaryHandler(
