@@ -7,6 +7,7 @@ import { useCurrentOrg } from "@/stores/auth";
 import { useRunners, getRunnerStatusInfo } from "@/stores/runner";
 import { Button } from "@/components/ui/button";
 import { STEP_LABELS, useLocalRunnerOnboarding } from "@/hooks/useLocalRunnerOnboarding";
+import { useOrphanGrace } from "@/hooks/useOrphanGrace";
 
 const SECTION_HEADER = "px-3 pt-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground";
 
@@ -15,6 +16,12 @@ export function ThisMacSection() {
   const router = useRouter();
   const currentOrg = useCurrentOrg();
   const runners = useRunners();
+  // Grace-wait so fresh registrants don't flicker through OrphanedBlock
+  // while the local→backend heartbeat catches up, and so an empty list
+  // ("never fetched" vs. "truly empty") doesn't false-positive without
+  // coupling to the store loading flag. Must run before any early
+  // return — React's rules-of-hooks demand a stable call order.
+  const graceExpired = useOrphanGrace(isRegistered);
 
   if (unsupported) return null;
   if (phase.kind === "loading") {
@@ -32,11 +39,10 @@ export function ThisMacSection() {
   const matchingRunner = localNodeId
     ? runners.find((r) => r.node_id === localNodeId) ?? null
     : null;
-  // Orphaned: backend list has been loaded (has other runners) but doesn't
-  // include this node_id — it was deleted server-side. Empty list is treated
-  // as "still syncing" because we can't distinguish "never fetched" from
-  // "truly empty" here without coupling to the store's loading flag.
-  const orphaned = isRegistered && !matchingRunner && runners.length > 0;
+  // Orphan = registered but the runners list (after load) doesn't
+  // contain this node_id, after the orphan grace window has elapsed.
+  const orphaned =
+    isRegistered && !matchingRunner && runners.length > 0 && graceExpired;
   const isStale = phase.kind === "idle" && phase.status === "stale";
 
   return (

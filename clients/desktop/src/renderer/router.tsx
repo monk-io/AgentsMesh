@@ -1,4 +1,5 @@
-import { createHashRouter as createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { createHashRouter as createBrowserRouter, Navigate, Outlet, useParams } from "react-router-dom";
+import { useEffect } from "react";
 import { DashboardShell } from "@/pages/layouts/DashboardShell";
 import { useAuthStore, useCurrentOrg, useAuthOrganizations, useIsAuthenticated } from "@/stores/auth";
 import { RequireAuth } from "@/components/auth/RequireAuth";
@@ -50,6 +51,29 @@ import { PopoutTerminalPage } from "@/pages/popout/terminal/PopoutTerminalPage";
 // the whole window (HashRouter has no server-side fallback in Electron).
 import { RouteErrorBoundary } from "@/pages/RouteErrorBoundary";
 
+// react-router v7's `<Navigate to="../infra?tab=runners">` and even its
+// absolute-path equivalent drop the search string intermittently when the
+// HashRouter is the active history — runners-nav.spec failed deterministically
+// (3 retries), repositories-nav.spec failed flakily (1 retry recovered). The
+// same hash-write fallback `replaceWithHashFallback` uses in
+// shims/next-navigation.ts is the proven workaround: write the full
+// `#/{org}/infra?tab=...` to window.location.hash directly so HashRouter
+// picks up both pathname and search atomically. InfraPage's "default tab"
+// effect then sees `tab` already set and won't overwrite it.
+function LegacyInfraTabRedirect({ tab }: { tab: "runners" | "repositories" }) {
+  const { org } = useParams<{ org: string }>();
+  useEffect(() => {
+    if (!org) return;
+    const target = `#/${org}/infra?tab=${tab}`;
+    if (window.location.hash !== target) {
+      const base = window.location.href.split("#")[0];
+      window.history.replaceState(null, "", base + target);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    }
+  }, [org, tab]);
+  return null;
+}
+
 export const router = createBrowserRouter([
   // Auth routes (no shell)
   { path: "/login", element: <LoginPage /> },
@@ -90,14 +114,14 @@ export const router = createBrowserRouter([
       { path: "tickets/:slug", element: <TicketDetailPage /> },
       { path: "channels", element: <ChannelsPage /> },
       { path: "channels/:id", element: <ChannelsPage /> },
-      { path: "runners", element: <Navigate to="../infra?tab=runners" replace /> },
+      { path: "runners", element: <LegacyInfraTabRedirect tab="runners" /> },
       { path: "runners/:id", element: <RunnerDetailPage /> },
       { path: "loops", element: <LoopsPage /> },
       { path: "loops/:slug", element: <LoopDetailPage /> },
       { path: "mesh", element: <MeshPage /> },
       { path: "blocks", element: <BlocksPage /> },
       { path: "infra", element: <InfraPage /> },
-      { path: "repositories", element: <Navigate to="../infra?tab=repositories" replace /> },
+      { path: "repositories", element: <LegacyInfraTabRedirect tab="repositories" /> },
       { path: "repositories/:id", element: <RepositoryDetailPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
