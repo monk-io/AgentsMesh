@@ -132,7 +132,7 @@ def napi_rust_library(
         }
         actual_map["//conditions:default"] = "_{}_rename_{}".format(
             name,
-            _PLATFORM_SUFFIXES["@platforms//os:macos"].replace("-", "_"),
+            _PLATFORM_SUFFIXES["//build_defs/rust:darwin_arm64"].replace("-", "_"),
         )
         native.alias(
             name = "_{}_rename".format(name),
