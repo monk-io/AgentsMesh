@@ -132,7 +132,7 @@ def napi_rust_library(
         }
         actual_map["//conditions:default"] = "_{}_rename_{}".format(
             name,
-            _PLATFORM_SUFFIXES["@platforms//os:macos"].replace("-", "_"),
+            _PLATFORM_SUFFIXES["//build_defs/rust:darwin_arm64"].replace("-", "_"),
         )
         native.alias(
             name = "_{}_rename".format(name),
@@ -160,13 +160,12 @@ def napi_rust_library(
         visibility = visibility or ["//visibility:public"],
     )
 
-# Maps Bazel host-OS constraint labels to the napi-rs convention
+# Maps Bazel config_setting labels to the napi-rs convention
 # `<os>-<cpu>[-abi]` triple that the generated index.js loader looks
-# for. Keyed by host OS only — CPU is implicit from CI runners (mac =
-# macos-14 = M1; linux = ubuntu-latest = x64; windows = windows-latest
-# = x64). When we add Intel macs / arm64 linux / arm64 windows runners,
-# the dict gains entries; consumers automatically pick them up via
-# the `select()` below.
+# for. macOS keys are (os, cpu)-composites declared in
+# //build_defs/rust:BUILD.bazel so x86_64 and arm64 hosts each pick
+# their own slice (macmini-03 is M-series, macmini-04 is Intel).
+# linux/windows stay single-OS — every runner there is x86_64.
 #
 # `//conditions:default` falls back to darwin-arm64 because the alias
 # must resolve on every platform Bazel analyzes — even when the addon
@@ -176,7 +175,8 @@ def napi_rust_library(
 # platform branches is selected, so the fallback string is just a
 # placeholder for graph completeness.
 _PLATFORM_SUFFIXES = {
-    "@platforms//os:macos": "darwin-arm64",
+    "//build_defs/rust:darwin_arm64": "darwin-arm64",
+    "//build_defs/rust:darwin_x86_64": "darwin-x64",
     "@platforms//os:linux": "linux-x64-gnu",
     "@platforms//os:windows": "win32-x64-msvc",
 }
