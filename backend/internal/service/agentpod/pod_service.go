@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 )
 
@@ -52,6 +53,7 @@ type CreatePodRequest struct {
 	SkipPermissions   bool
 	PreparationConfig *agentpod.PreparationConfig
 	EnvVars           map[string]string
+	ResolvedConfig    agentDomain.ConfigValues
 
 	// CredentialProfileID records which credential profile was selected.
 	// nil = default resolution, >0 = specific profile. 0 is not stored (FK constraint).
@@ -82,13 +84,16 @@ func (s *PodService) CreatePod(ctx context.Context, req *CreatePodRequest) (*age
 	}
 	podKey := fmt.Sprintf("%d-%s-%s", req.CreatedByID, ticketPart, randomSuffix)
 
-	model := req.Model
-	if model == "" {
-		model = "opus"
+	var modelPtr *string
+	if req.Model != "" {
+		m := req.Model
+		modelPtr = &m
 	}
-	permissionMode := req.PermissionMode
-	if permissionMode == "" {
-		permissionMode = agentpod.PermissionModeBypass
+
+	var permissionModePtr *string
+	if req.PermissionMode != "" {
+		pm := req.PermissionMode
+		permissionModePtr = &pm
 	}
 	// Handle session ID
 	var sessionID *string
@@ -121,13 +126,14 @@ func (s *PodService) CreatePod(ctx context.Context, req *CreatePodRequest) (*age
 		Prompt:              req.Prompt,
 		Alias:               req.Alias,
 		BranchName:          req.BranchName,
-		Model:               &model,
-		PermissionMode:      &permissionMode,
+		Model:               modelPtr,
+		PermissionMode:      permissionModePtr,
 		SessionID:           sessionID,
 		SourcePodKey:        sourcePodKey,
 		CredentialProfileID: req.CredentialProfileID,
 		InteractionMode:     interactionMode,
 		Perpetual:           req.Perpetual,
+		ResolvedConfig:      req.ResolvedConfig,
 	}
 
 	if err := s.repo.Create(ctx, pod); err != nil {

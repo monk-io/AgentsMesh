@@ -8,21 +8,19 @@ import (
 	"github.com/anthropics/agentsmesh/agentfile/parser"
 	"github.com/anthropics/agentsmesh/agentfile/resolve"
 	"github.com/anthropics/agentsmesh/agentfile/serialize"
+	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 )
 
 // agentfileExtractResult holds values extracted from a merged AgentFile (base + user layer).
-// It contains both overrides for DB write and the serialized merged source for Runner,
-// eliminating the need for downstream re-parsing.
+// CONFIG values land in ConfigValues; the serialized merged source goes to Runner so
+// downstream consumers never re-parse the AgentFile.
 type agentfileExtractResult struct {
-	// Overrides for DB write
-	Mode              string // MODE pty/acp
-	CredentialProfile string // CREDENTIAL "profile-name"
-	Branch            string // BRANCH "branch-name"
-	RepoSlug          string // REPO "slug" (e.g., "dev-org/demo-api")
-	PermissionMode    string // CONFIG permission_mode = "bypassPermissions"
-	Prompt            string // PROMPT "prompt content"
-	// Merged AgentFile source (for Runner, avoids re-parsing in ConfigBuilder).
-	// CONFIG declarations contain final resolved values (post-resolve).
+	Mode                  string // MODE pty/acp
+	CredentialProfile     string // CREDENTIAL "profile-name"
+	Branch                string // BRANCH "branch-name"
+	RepoSlug              string // REPO "slug" (e.g., "dev-org/demo-api")
+	Prompt                string // PROMPT "prompt content"
+	ConfigValues          agentDomain.ConfigValues
 	MergedAgentfileSource string
 }
 
@@ -59,6 +57,7 @@ func extractFromAgentfileLayer(
 		CredentialProfile:     spec.CredentialProfile,
 		Prompt:                spec.Prompt,
 		MergedAgentfileSource: mergedSource,
+		ConfigValues:          make(agentDomain.ConfigValues),
 	}
 
 	if spec.Repo != nil {
@@ -67,10 +66,8 @@ func extractFromAgentfileLayer(
 	}
 
 	for _, cfg := range spec.Config {
-		if cfg.Name == "permission_mode" {
-			if s, ok := cfg.Default.(string); ok {
-				result.PermissionMode = s
-			}
+		if !isSystemConfigKey(cfg.Name) {
+			result.ConfigValues[cfg.Name] = cfg.Default
 		}
 	}
 

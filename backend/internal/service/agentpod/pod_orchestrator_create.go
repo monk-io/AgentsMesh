@@ -69,24 +69,17 @@ func (o *PodOrchestrator) CreatePod(ctx context.Context, req *OrchestrateCreateP
 	// --- AgentFile Layer resolution ---
 	resolved := &agentfileResolved{}
 
-	// Build systemOverrides: truly system-internal values injected into AgentFile.
-	systemOverrides := make(map[string]interface{})
-	if !isResumeMode {
-		systemOverrides["session_id"] = sessionID
-	} else {
-		systemOverrides["session_id"] = ""
-		resumeAgentSession := req.ResumeAgentSession == nil || *req.ResumeAgentSession
-		if resumeAgentSession {
-			systemOverrides["resume_enabled"] = true
-			systemOverrides["resume_session"] = sessionID
-		}
-	}
+	resumeAgentSession := req.ResumeAgentSession == nil || *req.ResumeAgentSession
+	systemOverrides := newSystemOverrides(sessionID, isResumeMode, resumeAgentSession)
 
 	// AgentFile SSOT: resolve CONFIG values from base AgentFile + optional user Layer.
 	if agentDef != nil && agentDef.AgentfileSource != nil {
 		var userPrefs map[string]interface{}
 		if o.userConfigQuery != nil {
 			userPrefs = o.userConfigQuery.GetUserConfigPrefs(ctx, req.UserID, req.AgentSlug)
+		}
+		if isResumeMode {
+			userPrefs = mergeSourcePodConfigPrefs(userPrefs, sourcePod, agentDef)
 		}
 
 		layerSrc := ""
@@ -103,14 +96,12 @@ func (o *PodOrchestrator) CreatePod(ctx context.Context, req *OrchestrateCreateP
 		}
 		resolved.MergedAgentfileSource = result.MergedAgentfileSource
 		resolved.CredentialProfile = result.CredentialProfile
+		resolved.ConfigValues = result.ConfigValues
 		if result.Mode != "" {
 			resolved.InteractionMode = result.Mode
 		}
 		if result.Branch != "" {
 			resolved.BranchName = result.Branch
-		}
-		if result.PermissionMode != "" {
-			resolved.PermissionMode = result.PermissionMode
 		}
 		if result.RepoSlug != "" && o.repoService != nil {
 			repo, repoErr := o.repoService.FindByOrgSlug(ctx, req.OrganizationID, result.RepoSlug)
@@ -123,14 +114,12 @@ func (o *PodOrchestrator) CreatePod(ctx context.Context, req *OrchestrateCreateP
 		}
 	}
 
-	// --- Compute effective values: resolved (AgentFile) > source pod (resume) > defaults ---
+	// Effective Model / PermissionMode come from resolved.ConfigValues — the
+	// single source of truth post-resolve. mergeSourcePodConfigPrefs already
+	// projects legacy Claude columns into userPrefs so they re-emerge here.
 	effectiveInteractionMode := firstNonEmpty(resolved.InteractionMode, podDomain.InteractionModePTY)
-	// Permission mode: AgentFile > source pod (resume inheritance) > default.
-	sourcePermMode := ""
-	if sourcePod != nil && sourcePod.PermissionMode != nil {
-		sourcePermMode = *sourcePod.PermissionMode
-	}
-	effectivePermissionMode := firstNonEmpty(resolved.PermissionMode, sourcePermMode, podDomain.PermissionModeBypass)
+	effectiveModel := resolved.ConfigValues.GetString(agentDomain.ConfigKeyModel)
+	effectivePermissionMode := resolved.ConfigValues.GetString(agentDomain.ConfigKeyPermissionMode)
 	effectiveBranch := firstNonEmptyPtr(resolved.BranchName, req.BranchName) // req.BranchName only from resume
 	effectiveRepoID := firstNonNilInt64(resolved.RepositoryID, req.RepositoryID)
 
@@ -173,12 +162,14 @@ func (o *PodOrchestrator) CreatePod(ctx context.Context, req *OrchestrateCreateP
 		Prompt:              resolved.Prompt,
 		Alias:               req.Alias,
 		BranchName:          effectiveBranch,
+		Model:               effectiveModel,
 		PermissionMode:      effectivePermissionMode,
 		SessionID:           sessionID,
 		SourcePodKey:        req.SourcePodKey,
 		CredentialProfileID: dbCredProfileID,
 		InteractionMode:     effectiveInteractionMode,
 		Perpetual:           req.Perpetual,
+		ResolvedConfig:      resolved.ConfigValues,
 	})
 	if err != nil {
 		return nil, err

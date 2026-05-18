@@ -23,6 +23,7 @@ var (
 	ErrSourcePodAccessDenied      = errors.New("source pod belongs to different organization")
 	ErrSourcePodNotTerminated     = errors.New("source pod is not terminated")
 	ErrSourcePodAlreadyResumed    = errors.New("source pod already resumed")
+	ErrResumeAgentMismatch        = errors.New("resume requires same agent as source pod")
 	ErrResumeRunnerMismatch       = errors.New("resume requires same runner")
 	ErrConfigBuildFailed          = errors.New("failed to build pod configuration")
 	ErrInvalidAgentfileLayer        = errors.New("invalid agentfile layer")
@@ -146,11 +147,11 @@ type PodOrchestrator struct {
 type agentfileResolved struct {
 	InteractionMode      string
 	BranchName           string
-	PermissionMode       string
 	RepositoryID         *int64
 	Prompt               string
 	MergedAgentfileSource string
 	CredentialProfile    string
+	ConfigValues         agentDomain.ConfigValues
 }
 
 func NewPodOrchestrator(deps *PodOrchestratorDeps) *PodOrchestrator {
