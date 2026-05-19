@@ -1,7 +1,6 @@
 use crate::ApiClient;
 use crate::connect_call::connect_call;
 use crate::error::ApiError;
-use agentsmesh_types::*;
 use agentsmesh_types::proto_billing_v1 as billing_proto;
 
 // =============================================================================
@@ -191,47 +190,5 @@ impl ApiClient {
             req,
         )
         .await
-    }
-}
-
-// =============================================================================
-// Legacy REST methods — preserved for endpoints with no Connect-RPC equivalent.
-// =============================================================================
-//
-// Connect now owns subscription / checkout / seats / overview / invoices /
-// plans / public-pricing / deployment-info. The remaining REST methods cover
-// gaps: usage-history granular fetch, quota check / set, multi-currency plan
-// prices, Stripe customer + customer-portal, and the downgrade path.
-
-impl ApiClient {
-    pub async fn get_billing_usage(
-        &self,
-        usage_type: Option<&str>,
-    ) -> Result<BillingUsageResponse, ApiError> {
-        let mut path = self.org_path("/billing/usage");
-        if let Some(t) = usage_type {
-            path = format!("{path}?type={t}");
-        }
-        self.get(&path).await
-    }
-
-    pub async fn check_billing_quota(
-        &self,
-        resource: &str,
-        amount: Option<u32>,
-    ) -> Result<QuotaCheckResponse, ApiError> {
-        let mut path = self.org_path(&format!("/billing/quota/check?resource={resource}"));
-        if let Some(a) = amount {
-            path = format!("{path}&amount={a}");
-        }
-        self.get(&path).await
-    }
-
-    pub async fn get_customer_portal(
-        &self,
-        data: &CustomerPortalRequest,
-    ) -> Result<CustomerPortalResponse, ApiError> {
-        self.post(&self.org_path("/billing/customer-portal"), data)
-            .await
     }
 }

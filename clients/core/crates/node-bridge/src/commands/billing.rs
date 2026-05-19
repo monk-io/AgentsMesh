@@ -40,18 +40,6 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn billing_get_usage(&self, usage_type: Option<String>) -> napi::Result<String> {
-        let svc = self.billing.lock().await;
-            svc.get_usage(usage_type).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn billing_check_quota(&self, resource: String, amount: Option<u32>) -> napi::Result<String> {
-        let svc = self.billing.lock().await;
-            svc.check_quota(&resource, amount).await.map_err(err)
-    }
-
-    #[napi]
     pub async fn billing_create_checkout(&self, json: String) -> napi::Result<String> {
         let svc = self.billing.lock().await;
             svc.create_checkout(&json).await.map_err(err)
@@ -109,12 +97,6 @@ impl AppState {
     pub async fn billing_list_invoices(&self, limit: Option<u32>, offset: Option<u32>) -> napi::Result<String> {
         let svc = self.billing.lock().await;
             svc.list_invoices(limit, offset).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn billing_get_customer_portal(&self, json: String) -> napi::Result<String> {
-        let svc = self.billing.lock().await;
-            svc.get_customer_portal(&json).await.map_err(err)
     }
 
     #[napi]

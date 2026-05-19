@@ -44,13 +44,6 @@ impl WasmBillingService {
         agentsmesh_services::BillingService::new(self.client.clone()).list_plans().await
     }
 
-    pub async fn get_usage(&self, usage_type: Option<String>) -> Result<String, String> {
-        agentsmesh_services::BillingService::new(self.client.clone()).get_usage(usage_type).await
-    }
-
-    pub async fn check_quota(&self, resource: &str, amount: Option<u32>) -> Result<String, String> {
-        agentsmesh_services::BillingService::new(self.client.clone()).check_quota(resource, amount).await
-    }
 
     pub async fn create_checkout(&self, json: &str) -> Result<String, String> {
         agentsmesh_services::BillingService::new(self.client.clone()).create_checkout(json).await
@@ -92,10 +85,6 @@ impl WasmBillingService {
         &self, limit: Option<u32>, offset: Option<u32>,
     ) -> Result<String, String> {
         agentsmesh_services::BillingService::new(self.client.clone()).list_invoices(limit, offset).await
-    }
-
-    pub async fn get_customer_portal(&self, json: &str) -> Result<String, String> {
-        agentsmesh_services::BillingService::new(self.client.clone()).get_customer_portal(json).await
     }
 
     pub async fn get_deployment_info(&self) -> Result<String, String> {

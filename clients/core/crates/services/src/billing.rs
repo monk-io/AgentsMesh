@@ -151,24 +151,6 @@ impl BillingService {
         serde_json::to_string(&envelope).map_err(crate::wire)
     }
 
-    pub async fn get_usage(&self, usage_type: Option<String>) -> Result<String, String> {
-        // proto.billing.v1.BillingService doesn't carry a GetUsage RPC —
-        // usage rolls up into the overview. Keep legacy REST until proto
-        // adds a dedicated usage endpoint.
-        let resp = self.client
-            .get_billing_usage(usage_type.as_deref())
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn check_quota(&self, resource: &str, amount: Option<u32>) -> Result<String, String> {
-        // Same as get_usage — no proto coverage yet, stay on REST.
-        let resp = self.client
-            .check_billing_quota(resource, amount)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
     pub async fn create_checkout(&self, json: &str) -> Result<String, String> {
         let req_legacy: CheckoutRequest = serde_json::from_str(json).map_err(crate::wire)?;
         let req = billing_proto::CreateCheckoutRequest {
@@ -326,14 +308,6 @@ impl BillingService {
             "total": resp.total,
         });
         serde_json::to_string(&envelope).map_err(crate::wire)
-    }
-
-    pub async fn get_customer_portal(&self, json: &str) -> Result<String, String> {
-        // No proto coverage — Stripe/LemonSqueezy customer portal is a
-        // provider-side redirect that the backend mints, not a domain RPC.
-        let req: CustomerPortalRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client.get_customer_portal(&req).await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_deployment_info(&self) -> Result<String, String> {
