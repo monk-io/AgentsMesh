@@ -139,16 +139,7 @@ mod api_core_tests {
     }
 
     // ── notification ────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_notification_preferences() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/notifications/preferences"))
-            .respond_with(ok(json!({"preferences":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_notification_preferences().await.unwrap();
-    }
+    // REST surface dropped; covered by notification_connect.rs.
 
     // ── organization ────────────────────────────────────────────────────
 

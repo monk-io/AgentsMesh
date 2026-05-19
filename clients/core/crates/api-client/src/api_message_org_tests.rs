@@ -128,18 +128,8 @@ mod api_message_org_tests {
         let _ = c.replay_mesh_dead_letter(7).await.unwrap();
     }
 
-    #[tokio::test]
-    async fn set_notification_preference() {
-        let s = MockServer::start().await;
-        Mock::given(method("PUT")).and(path("/api/v1/orgs/acme/notifications/preferences"))
-            .respond_with(ok(json!({"source":"pod","is_muted":true})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let data = agentsmesh_types::SetNotificationPreferenceRequest {
-            source: "pod".into(), entity_id: None, is_muted: Some(true), channels: None,
-        };
-        let _ = c.set_notification_preference(&data).await.unwrap();
-    }
+    // set_notification_preference REST surface dropped; covered by
+    // notification_connect.rs.
 
     #[tokio::test]
     async fn create_organization() {
