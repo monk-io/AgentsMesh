@@ -24,6 +24,10 @@ rust_library(
     edition = "2021",
     visibility = ["//clients/core:__subpackages__"],
     deps = [
+        # R1: auto-generated prost mirrors replace hand-written *_proto.rs.
+        # Re-exported via `pub mod proto_billing_v1 { ... }` etc. in lib.rs
+        # to preserve the legacy import path.
+        "//proto/billing/v1:billing_rust_proto",
         "@crates//:prost",
         "@crates//:serde",
         "@crates//:serde_json",

@@ -403,6 +403,16 @@ crate.spec(
     package = "prost",
     version = "0.13",
 )
+
+# Used by tools/rust_prost_toolchain so the custom toolchain can pass
+# `prost_types` from the same `@crates//:` source as the runtime — keeps
+# `prost::Message` a single trait instance across codegen + consumer
+# crates. Without this, rules_rust_prost's vendored prost-types collides
+# with our prost and downstream `impl Message for X` doesn't match.
+crate.spec(
+    package = "prost-types",
+    version = "0.13",
+)
 crate.from_specs(
     supported_platform_triples = [
         "aarch64-apple-darwin",
@@ -424,6 +434,18 @@ use_repo(crate, "crates")
 ###############################################################################
 
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
+
+# Prost-based Rust protobuf codegen — replaces the hand-written prost::Message
+# mirrors under clients/core/crates/types/src/*_proto.rs. Same major version
+# as rules_rust + rules_rust_wasm_bindgen so the bazel module graph resolves
+# cleanly. Default toolchain self-registers protoc-gen-prost 0.4.0.
+bazel_dep(name = "rules_rust_prost", version = "0.70.0")
+
+# Override the default prost toolchain to use our own `@crates//:prost`
+# crate instead of the vendored rules_rust_prost copy. Trait coherence
+# (single `prost::Message` across codegen + services) requires the same
+# crate source, not just matching version strings.
+register_toolchains("//tools/rust_prost_toolchain:prost_toolchain")
 
 ###############################################################################
 # Phase 4 — TS / pnpm frontends (Next.js web, web-admin; Electron desktop)

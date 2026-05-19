@@ -1,0 +1,41 @@
+load("@rules_rust//rust:defs.bzl", "rust_library_group")
+load("@rules_rust_prost//:defs.bzl", "rust_prost_toolchain")
+
+# R1 — custom rust_prost_toolchain bridging rules_rust_prost (plugin) with
+# our project-owned `@crates//:prost` runtime. The default toolchain that
+# rules_rust_prost 0.70 self-registers uses its vendored `prost-0.13.1`,
+# which trips Rust's trait coherence rules because services / wasm / ffi
+# already pull `@crates//:prost` (0.13.5). Same crate source ⇒ one
+# `prost::Message` trait instance everywhere.
+
+rust_library_group(
+    name = "prost_runtime",
+    deps = ["@crates//:prost"],
+)
+
+rust_library_group(
+    name = "prost_types",
+    deps = ["@crates//:prost-types"],
+)
+
+rust_prost_toolchain(
+    name = "prost_toolchain_impl",
+    # Plugin binaries we keep at rules_rust_prost-vendored — no point
+    # rebuilding `protoc-gen-prost` ourselves.
+    prost_plugin = "@rules_rust_prost//private/3rdparty/crates:protoc-gen-prost__protoc-gen-prost",
+    prost_runtime = ":prost_runtime",
+    prost_types = ":prost_types",
+    # Skip tonic — we use Connect-RPC, not raw gRPC. `tonic_plugin_flag`
+    # has a truthy default ("--plugin=protoc-gen-tonic=%s") so we must
+    # explicitly blank it to avoid the toolchain rule's
+    # "When one tonic attribute is added, all must be added" guard
+    # (rules_rust 0.70 upstream bug).
+    tonic_plugin_flag = "",
+)
+
+toolchain(
+    name = "prost_toolchain",
+    toolchain = ":prost_toolchain_impl",
+    toolchain_type = "@rules_rust_prost//:toolchain_type",
+    visibility = ["//visibility:public"],
+)

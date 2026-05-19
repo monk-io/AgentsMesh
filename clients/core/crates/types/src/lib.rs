@@ -8,7 +8,6 @@ mod auth_proto;
 mod autopilot;
 mod autopilot_proto;
 mod billing;
-mod billing_proto;
 mod binding_proto;
 mod blockstore;
 mod blockstore_proto;
@@ -68,8 +67,11 @@ pub use billing::*;
 /// distinct module so the legacy serde `Subscription` (REST path) and the
 /// prost `Subscription` (Connect path) coexist during the dual-track
 /// migration window without name collisions.
+///
+/// R1: backed by the auto-generated `billing_rust_proto` crate (prost
+/// codegen via rules_rust_prost); the hand-written mirror is retired.
 pub mod proto_billing_v1 {
-    pub use super::billing_proto::*;
+    pub use ::billing_proto::proto::billing::v1::*;
 }
 
 /// Connect-RPC binary-wire DTOs for `proto.binding.v1`. The legacy serde
