@@ -1,14 +1,6 @@
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
-
-# Bazel-native protobuf code generation for promocode.v1.
-#
-# Mirrors proto/invitation/v1/BUILD.bazel — same hermetic protoc/protoc-gen-go
-# pipeline, same `proto/gen/go/<svc>/v1` importpath shape. The Rust prost
-# DTOs are hand-maintained at clients/core/crates/types/src/promocode_proto.rs;
-# the validator pins .proto field number ↔ Rust `prost(tag = N)` mapping at
-# build time.
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 
 proto_library(
     name = "promocode_proto",
@@ -30,8 +22,8 @@ go_proto_library(
     visibility = ["//visibility:public"],
 )
 
-validate_prost_tags(
-    name = "promocode_validate",
-    proto = "promocode.proto",
-    rust = "//clients/core/crates/types:src/promocode_proto.rs",
+rust_prost_library(
+    name = "promocode_rust_proto",
+    proto = ":promocode_proto",
+    visibility = ["//visibility:public"],
 )

@@ -39,12 +39,6 @@ pub struct CreateAutopilotRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApproveAutopilotRequest {
-    pub continue_execution: Option<bool>,
-    pub additional_iterations: Option<i64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutopilotIteration {
     pub id: i64,
     pub controller_key: String,
@@ -58,11 +52,4 @@ pub struct AutopilotIteration {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutopilotListResponse {
     pub controllers: Vec<AutopilotController>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AutopilotActionResponse {
-    pub status: String,
-    #[serde(default)]
-    pub action: Option<String>,
 }

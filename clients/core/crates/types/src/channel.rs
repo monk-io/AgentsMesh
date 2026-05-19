@@ -150,16 +150,6 @@ pub struct EditChannelMessageRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JoinChannelPodRequest {
-    pub pod_key: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MuteChannelRequest {
-    pub muted: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelListResponse {
     pub channels: Vec<Channel>,
     #[serde(default)]
@@ -179,11 +169,6 @@ pub struct ChannelMember {
 pub struct ChannelMemberListResponse {
     pub members: Vec<ChannelMember>,
     pub total: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InviteChannelMembersRequest {
-    pub user_ids: Vec<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

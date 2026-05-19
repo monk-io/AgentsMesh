@@ -51,12 +51,6 @@ pub struct AuthTokens {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterRequest {
     pub name: String,
     pub email: String,
@@ -182,17 +176,6 @@ mod tests {
         let decoded: AuthTokens = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded.token, "new-tok");
         assert!(decoded.expires_in.is_none());
-    }
-
-    #[test]
-    fn login_request_serialization() {
-        let req = LoginRequest {
-            email: "dev@test.com".into(),
-            password: "pass".into(),
-        };
-        let json = serde_json::to_string(&req).unwrap();
-        assert!(json.contains("\"email\":\"dev@test.com\""));
-        assert!(json.contains("\"password\":\"pass\""));
     }
 
     #[test]

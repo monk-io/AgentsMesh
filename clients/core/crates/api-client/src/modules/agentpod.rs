@@ -45,7 +45,7 @@ impl ApiClient {
     pub async fn create_agentpod_provider_connect(
         &self,
         req: &pod_proto::CreateProviderRequest,
-    ) -> Result<pod_proto::AIProvider, ApiError> {
+    ) -> Result<pod_proto::AiProvider, ApiError> {
         connect_call(
             self,
             "/proto.pod.v1.AgentPodSettingsService/CreateProvider",
@@ -57,7 +57,7 @@ impl ApiClient {
     pub async fn update_agentpod_provider_connect(
         &self,
         req: &pod_proto::UpdateProviderRequest,
-    ) -> Result<pod_proto::AIProvider, ApiError> {
+    ) -> Result<pod_proto::AiProvider, ApiError> {
         connect_call(
             self,
             "/proto.pod.v1.AgentPodSettingsService/UpdateProvider",

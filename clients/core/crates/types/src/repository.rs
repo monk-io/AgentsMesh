@@ -50,11 +50,6 @@ pub struct Branch {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SyncBranchesRequest {
-    pub access_token: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookStatus {
     pub is_configured: Option<bool>,
     pub url: Option<String>,
@@ -81,11 +76,6 @@ pub struct RepositoryMergeRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepositoryListResponse {
     pub repositories: Vec<Repository>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BranchListResponse {
-    pub branches: Vec<Branch>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

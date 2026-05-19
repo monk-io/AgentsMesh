@@ -1,21 +1,6 @@
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
-
-# Bazel-native protobuf code generation for invitation.v1.
-#
-# Mirrors proto/user_credential/v1/BUILD.bazel — same hermetic
-# protoc/protoc-gen-go pipeline, same `proto/gen/go/<svc>/v1` importpath
-# shape. The Rust prost DTOs are hand-maintained at
-# clients/core/crates/types/src/invitation_proto.rs; the validator pins
-# .proto field number ↔ Rust `prost(tag = N)` mapping at build time.
-#
-# Three services in one proto package (org-scoped + user-scoped + public).
-# Conventions §3.5 lists user-scoped and platform-admin scopes as exempt
-# from org_slug = 1; this is the same pattern as user_credential (3 user
-# services) and billing (auth + public). The validate_prost_tags rule
-# pairs the proto with one Rust file because the Rust DTOs all share
-# `clients/core/crates/types/src/invitation_proto.rs`.
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 
 proto_library(
     name = "invitation_proto",
@@ -31,8 +16,8 @@ go_proto_library(
     visibility = ["//visibility:public"],
 )
 
-validate_prost_tags(
-    name = "invitation_validate",
-    proto = "invitation.proto",
-    rust = "//clients/core/crates/types:src/invitation_proto.rs",
+rust_prost_library(
+    name = "invitation_rust_proto",
+    proto = ":invitation_proto",
+    visibility = ["//visibility:public"],
 )

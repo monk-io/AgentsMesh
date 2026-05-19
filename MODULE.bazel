@@ -435,10 +435,9 @@ use_repo(crate, "crates")
 
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 
-# Prost-based Rust protobuf codegen — replaces the hand-written prost::Message
-# mirrors under clients/core/crates/types/src/*_proto.rs. Same major version
-# as rules_rust + rules_rust_wasm_bindgen so the bazel module graph resolves
-# cleanly. Default toolchain self-registers protoc-gen-prost 0.4.0.
+# Prost-based Rust protobuf codegen. Same major version as rules_rust +
+# rules_rust_wasm_bindgen so the bazel module graph resolves cleanly.
+# Default toolchain self-registers protoc-gen-prost 0.4.0.
 bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
 # Override the default prost toolchain to use our own `@crates//:prost`

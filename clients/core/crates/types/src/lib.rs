@@ -1,347 +1,35 @@
-mod agent;
-mod agent_proto;
-mod agentpod_settings;
-mod agentpod_settings_proto;
-mod apikey_proto;
+// Legacy serde DTOs (REST dual-track window — read these via `use
+// agentsmesh_types::*`). All proto/Connect-RPC binary-wire types live in the
+// `proto_<svc>_v1` modules below and come from auto-generated prost crates
+// (rules_rust_prost). Hand-written `*_proto.rs` mirrors retired in R1a.
+
 mod auth;
-mod auth_proto;
 mod autopilot;
-mod autopilot_proto;
 mod billing;
-mod binding_proto;
 mod blockstore;
-mod blockstore_proto;
 mod channel;
-mod channel_proto;
 mod common;
 mod enums;
-mod extension_market_proto;
-mod extension_proto;
-mod extension_repo_mcp_proto;
-mod extension_repo_skill_proto;
-mod file_upload;
-mod file_proto;
-mod grant;
-mod grant_proto;
-mod invitation;
-mod invitation_proto;
-mod license_proto;
 mod loop_requests;
-mod loop_proto;
 mod loop_types;
 mod mesh;
-mod mesh_proto;
 mod message;
 mod notification;
-mod notification_proto;
 mod organization;
-mod org_proto;
 mod pod;
-mod pod_proto;
-mod promocode;
-mod promocode_proto;
 mod repository;
-mod repository_proto;
 mod runner;
-mod runner_proto;
 mod service_error;
-mod sso;
-mod sso_proto;
-mod support_ticket_proto;
 mod ticket;
-mod ticket_proto;
-mod ticket_relations_proto;
-mod token_usage;
-mod token_usage_proto;
 mod user_credential;
-mod user_credential_proto;
-mod user_proto;
 
-pub use agent::*;
-pub use agentpod_settings::*;
 pub use auth::*;
 pub use autopilot::*;
 pub use billing::*;
-
-/// Connect-RPC binary-wire DTOs for `proto.billing.v1`. Re-exported as a
-/// distinct module so the legacy serde `Subscription` (REST path) and the
-/// prost `Subscription` (Connect path) coexist during the dual-track
-/// migration window without name collisions.
-///
-/// R1: backed by the auto-generated `billing_rust_proto` crate (prost
-/// codegen via rules_rust_prost); the hand-written mirror is retired.
-pub mod proto_billing_v1 {
-    pub use ::billing_proto::proto::billing::v1::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.binding.v1`. The legacy serde
-/// `Binding` (REST path) is retired; the prost `PodBinding` is now the only
-/// wire shape.
-pub mod proto_binding_v1 {
-    pub use super::binding_proto::*;
-}
 pub use blockstore::*;
-
-/// Connect-RPC binary-wire DTOs for `proto.blockstore.v1`. Re-exported as a
-/// distinct module so the legacy serde `Block` / `BlockRef` / `BlockOp`
-/// (REST path) and the prost mirrors (Connect path) coexist during the
-/// dual-track migration window without name collisions.
-pub mod proto_blockstore_v1 {
-    pub use super::blockstore_proto::*;
-}
 pub use channel::*;
 pub use common::*;
 pub use enums::*;
-
-/// Connect-RPC binary-wire DTOs for `proto.channel.v1`. Re-exported as a
-/// distinct module so the legacy serde `Channel` (REST path) and the prost
-/// `Channel` (Connect path) coexist during the dual-track migration window
-/// without name collisions.
-pub mod proto_channel_v1 {
-    pub use super::channel_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.extension.v1`. Re-exported as a
-/// distinct module so the legacy serde `SkillRegistry` (REST path) and the
-/// prost `SkillRegistry` (Connect path) coexist during the dual-track
-/// migration window without name collisions.
-///
-/// All sub-services of the extension domain (skill_registry / market /
-/// repo_skill / repo_mcp) share the same proto package, so their prost
-/// mirrors are unified under this single module — `use proto_extension_v1::*`
-/// pulls in every prost type for the domain without per-sub-service imports.
-pub mod proto_extension_v1 {
-    pub use super::extension_market_proto::*;
-    pub use super::extension_proto::*;
-    pub use super::extension_repo_mcp_proto::*;
-    pub use super::extension_repo_skill_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.apikey.v1`.
-pub mod proto_apikey_v1 {
-    pub use super::apikey_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.runner_api.v1`. Re-exported as
-/// `proto_runner_api_v1` so the legacy serde `Runner` (REST path) and the
-/// prost `Runner` (Connect path) coexist during the dual-track migration
-/// window without name collisions.
-pub mod proto_runner_api_v1 {
-    pub use super::runner_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.pod.v1`. Bundles both `PodService`
-/// (org-scoped pod lifecycle) and `AgentPodSettingsService` (user-scoped
-/// settings/providers) because they share the same proto package. Coexists
-/// with the legacy serde `Pod` / `AgentPodSettings` for the dual-track window.
-pub mod proto_pod_v1 {
-    pub use super::agentpod_settings_proto::*;
-    pub use super::pod_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.repository.v1`. Re-exported as a
-/// distinct module so the legacy serde `Repository` (REST path) and the
-/// prost `Repository` (Connect path) coexist during the dual-track migration
-/// window without name collisions. PR #329 / #342 / #343 reconciliation:
-/// the proto SSOT carries all 19 backend fields the legacy DTO dropped.
-pub mod proto_repository_v1 {
-    pub use super::repository_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.user_credential.v1`. Three
-/// services share this module because they live in the same proto package
-/// (GitCredential, AgentCredentialProfile, RepositoryProvider). All are
-/// user-scoped — no org_slug, conventions §3.5 exception #1.
-pub mod proto_user_credential_v1 {
-    pub use super::user_credential_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.user.v1`. UserService is the
-/// caller's profile / identity / search surface (REST `/api/v1/users/me*`
-/// + `/search`). All RPCs are user-scoped — no org_slug, conventions
-/// §3.5 exception #1. Coexists with the legacy serde `User` (REST path,
-/// in `auth.rs`) for the dual-track migration window.
-pub mod proto_user_v1 {
-    pub use super::user_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.ticket_relations.v1`. Bundles
-/// relations / comments / commits / merge-requests under one module — they
-/// share the `ticket_slug` lookup, so the proto file is one. Connect-RPC is
-/// the SSOT for this domain; the legacy REST/serde DTOs were removed once
-/// every consumer migrated to the prost types. PR 986a38ca6 reconciliation:
-/// the comment list envelope (`{items, total, limit, offset}`) survives the
-/// wire — the adapter remaps to the legacy `{comments, ...}` shape.
-pub mod proto_ticket_relations_v1 {
-    pub use super::ticket_relations_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.ticket.v1`. Re-exported as a
-/// distinct module so the legacy serde `Ticket` / `Label` / `BoardColumn`
-/// (REST path) and the prost mirrors (Connect path) coexist during the
-/// dual-track migration window without name collisions. PR 986a38ca6
-/// reconciliation: list envelope unified to `{items, total, limit,
-/// offset}`; legacy `{tickets, ...}` shape lives only in the TS adapter.
-pub mod proto_ticket_v1 {
-    pub use super::ticket_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.org.v1`. Re-exported as a distinct
-/// module so the legacy serde `Organization` (REST path, in `auth.rs`) and the
-/// prost `Organization` (Connect path) coexist during the dual-track migration
-/// window without name collisions.
-pub mod proto_org_v1 {
-    pub use super::org_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.agent.v1`. Bundles `AgentService`
-/// (org-scoped agent catalog + custom CRUD) and `UserAgentConfigService`
-/// (user-scoped personal config) because they share the same proto package.
-/// Coexists with the legacy serde `Agent` / `UserAgentConfig` for the
-/// dual-track window. AgentListResponse is the §9 multi-field exception
-/// (builtin_agents + custom_agents kept separate per existing REST shape);
-/// UserAgentConfigListResponse keeps the `configs` field (§9 exception #2,
-/// sub-resource envelope).
-pub mod proto_agent_v1 {
-    pub use super::agent_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.invitation.v1`. Bundles three
-/// services (org-scoped `InvitationService`, invitee-scoped
-/// `UserInvitationService`, public `PublicInvitationService`) because they
-/// address the same `invitations` table via orthogonal scopes. Coexists
-/// with the legacy serde `Invitation` for the dual-track window.
-pub mod proto_invitation_v1 {
-    pub use super::invitation_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.license.v1`. System-wide
-/// (not org-scoped) OnPremise license management. Bundles two services:
-/// `LicenseService` (auth-required: Activate / Refresh / Validate) and
-/// `LicensePublicService` (no auth: GetStatus / GetLimits / CheckFeature
-/// — the login page needs license state before any token exists).
-/// Conventions §3.5 EXCEPTION: no org_slug — the whole server runs
-/// against ONE active license at a time, not per-org. No legacy serde
-/// counterpart in this crate; the REST surface was server-only.
-pub mod proto_license_v1 {
-    pub use super::license_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.support_ticket.v1`. User-scoped
-/// service (no org_slug, conventions §3.5 exception #1). The list envelope
-/// is `{items, total, limit, offset}`; the TS adapter remaps to the
-/// renderer surface.
-pub mod proto_support_ticket_v1 {
-    pub use super::support_ticket_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.promocode.v1`. Re-exported as a
-/// distinct module so the legacy serde `ValidatePromoRequest` etc. (REST
-/// path) and the prost mirrors (Connect path) coexist during the dual-track
-/// migration window without name collisions. Org-scoped surface only —
-/// admin CRUD over promo codes stays on REST during this migration.
-pub mod proto_promocode_v1 {
-    pub use super::promocode_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.auth.v1`. AuthService is public
-/// (login / register / refresh / oauth / verify-email / forgot- and
-/// reset-password — no token required); AuthSessionService.Logout is
-/// authenticated. Coexists with the legacy serde `AuthSession` / `User` /
-/// `LoginRequest` / `RegisterRequest` in `auth.rs` for the dual-track window.
-pub mod proto_auth_v1 {
-    pub use super::auth_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.sso.v1`. PUBLIC service (no
-/// auth, conventions §3.5 exception #1) — the login page hits Discover
-/// before the user has a bearer token, and LdapAuth issues that token.
-/// Coexists with the legacy serde `SSOConfig` / `LdapAuthRequest` /
-/// `SSODiscoverResponse` in `auth.rs` + `sso.rs` for the dual-track window.
-pub mod proto_sso_v1 {
-    pub use super::sso_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.notification.v1`. Org-scoped
-/// service — every request carries `org_slug = 1`. Coexists with the
-/// legacy serde `NotificationPreference` / `SetNotificationPreferenceRequest`
-/// / `NotificationPreferenceListResponse` in `notification.rs` for the
-/// dual-track migration window. The legacy REST envelope
-/// `{preferences: [...]}` lives only in the TS adapter; the proto wire is
-/// the §8 uniform `{items, total, limit, offset}`. SetPreference returns
-/// the entity directly (§9) where REST returns `{status:"ok"}` — drift
-/// reconciled inline (the TS adapter discards the response, so this is
-/// backwards compatible at the call-site level).
-pub mod proto_notification_v1 {
-    pub use super::notification_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.grant.v1`. Single
-/// `GrantService` covers all three resource types (pod / runner /
-/// repository) — the REST layer split was policy-only, the wire was
-/// already unified. Coexists with the legacy serde `ResourceGrant` for
-/// the dual-track window.
-pub mod proto_grant_v1 {
-    pub use super::grant_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.file.v1`. Org-scoped service
-/// — every request carries `org_slug = 1`. Single-RPC service for S3
-/// presigned upload URLs. Coexists with the legacy serde
-/// `PresignRequest` / `PresignResponse` in `file_upload.rs` for the
-/// dual-track migration window.
-pub mod proto_file_v1 {
-    pub use super::file_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.token_usage.v1`. Org-scoped +
-/// admin-only — every request carries `org_slug = 1`; handler enforces
-/// role == owner|admin. Single dashboard RPC returns 5 aggregations.
-/// Coexists with the legacy serde `TokenUsageDashboard` for the
-/// dual-track migration window.
-pub mod proto_token_usage_v1 {
-    pub use super::token_usage_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.autopilot.v1`. Org-scoped
-/// AutopilotControllerService — CRUD + 6 control actions (pause /
-/// resume / stop / approve / takeover / handback) + iteration history.
-/// Coexists with the legacy serde `AutopilotController` /
-/// `CreateAutopilotRequest` / `AutopilotActionResponse` / `AutopilotIteration`
-/// in `autopilot.rs` for the dual-track migration window.
-///
-/// Wire-shape reconciliation: the legacy serde `AutopilotController`
-/// carries `key` as a `#[serde(alias = "key")]` to autopilot_controller_key.
-/// The proto wire uses the canonical `autopilot_controller_key` (tag 2);
-/// the TS adapter remaps to the legacy shape.
-pub mod proto_autopilot_v1 {
-    pub use super::autopilot_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.mesh.v1`. MeshService covers
-/// the topology aggregate read, ticket→pod lookup, and pod-for-ticket
-/// creation. The legacy serde `MeshTopology` / `MeshNode` / `MeshEdge` /
-/// `MeshChannelInfo` / `MeshRunnerInfo` in `mesh.rs` are no longer wire
-/// types — they remain as the in-memory cache shape that MeshState +
-/// WasmMeshService project for the renderer.
-pub mod proto_mesh_v1 {
-    pub use super::mesh_proto::*;
-}
-
-/// Connect-RPC binary-wire DTOs for `proto.loop.v1`. Org-scoped
-/// LoopService — Loop CRUD + Enable / Disable / Trigger + LoopRun
-/// list / cancel. The JSON config fields (autopilot_config,
-/// config_overrides, prompt_variables, trigger_params) ship as raw
-/// JSON strings to keep the proto surface stable; renderer + service
-/// layer continue to use map types. Coexists with the legacy serde
-/// `LoopData` / `LoopRunData` / `CreateLoopRequest` / `UpdateLoopRequest`
-/// in `loop_types.rs` + `loop_requests.rs` for the dual-track window.
-pub mod proto_loop_v1 {
-    pub use super::loop_proto::*;
-}
-pub use file_upload::*;
-pub use grant::*;
-pub use invitation::*;
 pub use loop_requests::*;
 pub use loop_types::*;
 pub use mesh::*;
@@ -349,11 +37,132 @@ pub use message::*;
 pub use notification::*;
 pub use organization::*;
 pub use pod::*;
-pub use promocode::*;
 pub use repository::*;
 pub use runner::*;
 pub use service_error::*;
-pub use sso::*;
 pub use ticket::*;
-pub use token_usage::*;
 pub use user_credential::*;
+
+// =============================================================================
+// Connect-RPC binary-wire DTOs (prost). Single source of truth: the .proto
+// schema. Each `proto_<svc>_v1` module re-exports an auto-generated crate
+// produced by `rust_prost_library` (see proto/<svc>/v1/BUILD.bazel).
+//
+// Per-module doc comments retired with R1a — the proto file is the SSOT and
+// already carries the canonical descriptions. Behavioural exceptions (e.g.
+// `loop` keyword escape) stay inline.
+// =============================================================================
+
+pub mod proto_agent_v1 {
+    pub use ::agent_proto::proto::agent::v1::*;
+}
+
+pub mod proto_apikey_v1 {
+    pub use ::apikey_proto::proto::apikey::v1::*;
+}
+
+pub mod proto_auth_v1 {
+    pub use ::auth_proto::proto::auth::v1::*;
+}
+
+pub mod proto_autopilot_v1 {
+    pub use ::autopilot_proto::proto::autopilot::v1::*;
+}
+
+pub mod proto_billing_v1 {
+    pub use ::billing_proto::proto::billing::v1::*;
+}
+
+pub mod proto_binding_v1 {
+    pub use ::binding_proto::proto::binding::v1::*;
+}
+
+pub mod proto_blockstore_v1 {
+    pub use ::blockstore_proto::proto::blockstore::v1::*;
+}
+
+pub mod proto_channel_v1 {
+    pub use ::channel_proto::proto::channel::v1::*;
+}
+
+pub mod proto_extension_v1 {
+    pub use ::extension_proto::proto::extension::v1::*;
+}
+
+pub mod proto_file_v1 {
+    pub use ::file_proto::proto::file::v1::*;
+}
+
+pub mod proto_grant_v1 {
+    pub use ::grant_proto::proto::grant::v1::*;
+}
+
+pub mod proto_invitation_v1 {
+    pub use ::invitation_proto::proto::invitation::v1::*;
+}
+
+pub mod proto_license_v1 {
+    pub use ::license_proto::proto::license::v1::*;
+}
+
+// `loop` is a Rust keyword; the prost-generated module uses the `r#loop`
+// raw identifier and we forward that through the re-export.
+pub mod proto_loop_v1 {
+    pub use ::loop_proto::proto::r#loop::v1::*;
+}
+
+pub mod proto_mesh_v1 {
+    pub use ::mesh_proto::proto::mesh::v1::*;
+}
+
+pub mod proto_notification_v1 {
+    pub use ::notification_proto::proto::notification::v1::*;
+}
+
+pub mod proto_org_v1 {
+    pub use ::org_proto::proto::org::v1::*;
+}
+
+pub mod proto_pod_v1 {
+    pub use ::pod_proto::proto::pod::v1::*;
+}
+
+pub mod proto_promocode_v1 {
+    pub use ::promocode_proto::proto::promocode::v1::*;
+}
+
+pub mod proto_repository_v1 {
+    pub use ::repository_proto::proto::repository::v1::*;
+}
+
+pub mod proto_runner_api_v1 {
+    pub use ::runner_api_proto::proto::runner_api::v1::*;
+}
+
+pub mod proto_sso_v1 {
+    pub use ::sso_proto::proto::sso::v1::*;
+}
+
+pub mod proto_support_ticket_v1 {
+    pub use ::support_ticket_proto::proto::support_ticket::v1::*;
+}
+
+pub mod proto_ticket_v1 {
+    pub use ::ticket_proto::proto::ticket::v1::*;
+}
+
+pub mod proto_ticket_relations_v1 {
+    pub use ::ticket_relations_proto::proto::ticket_relations::v1::*;
+}
+
+pub mod proto_token_usage_v1 {
+    pub use ::token_usage_proto::proto::token_usage::v1::*;
+}
+
+pub mod proto_user_v1 {
+    pub use ::user_proto::proto::user::v1::*;
+}
+
+pub mod proto_user_credential_v1 {
+    pub use ::user_credential_proto::proto::user_credential::v1::*;
+}

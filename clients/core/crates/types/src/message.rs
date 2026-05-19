@@ -62,11 +62,6 @@ pub struct ReplayDeadLetterResponse {
     pub replayed_message: Option<DirectMessage>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MarkReadResponse {
-    pub marked_count: i64,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

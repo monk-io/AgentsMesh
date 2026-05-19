@@ -4,7 +4,6 @@ pub mod apikey;
 pub mod auth_connect;
 pub mod autopilot_connect;
 pub mod billing;
-pub mod billing_public;
 pub mod binding;
 pub mod blockstore;
 pub mod channel;

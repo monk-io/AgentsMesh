@@ -65,28 +65,8 @@ mod api_core_tests {
     // REST surface dropped; covered by autopilot_connect.rs.
 
     // ── billing_public ──────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_public_pricing() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/config/pricing"))
-            .respond_with(ok(json!({"deployment_type":"global","currency":"USD","plans":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.get_public_pricing().await.unwrap();
-        let reqs = s.received_requests().await.unwrap();
-        assert!(reqs[0].headers.get("Authorization").is_none());
-    }
-
-    #[tokio::test]
-    async fn get_public_deployment_info() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/config/deployment"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.get_public_deployment_info().await.unwrap();
-    }
+    // REST surface dropped; covered by billing.rs Connect block
+    // (`get_public_pricing_connect` + `get_public_deployment_info_connect`).
 
     // ── file ────────────────────────────────────────────────────────────
     // REST `files/presign` removed; covered by file_connect.rs.

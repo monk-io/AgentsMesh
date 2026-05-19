@@ -1,18 +1,6 @@
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//tools/validate_prost_tags:rule.bzl", "validate_prost_tags")
-
-# Bazel-native protobuf code generation for user_credential.v1.
-#
-# Mirrors proto/apikey/v1/BUILD.bazel — same hermetic protoc/protoc-gen-go
-# pipeline, same `proto/gen/go/<svc>/v1` importpath shape. The Rust prost
-# DTOs are hand-maintained at
-# clients/core/crates/types/src/user_credential_proto.rs; the validator
-# pins .proto field number ↔ Rust `prost(tag = N)` mapping at build time.
-#
-# This is a USER-SCOPED service (no org_slug = 1) — conventions §3.5 exempts
-# user-scoped RPCs from the org-scope helper. The 3 services share one
-# proto file because they're tightly coupled at the data layer.
+load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 
 proto_library(
     name = "user_credential_proto",
@@ -28,8 +16,8 @@ go_proto_library(
     visibility = ["//visibility:public"],
 )
 
-validate_prost_tags(
-    name = "user_credential_validate",
-    proto = "user_credential.proto",
-    rust = "//clients/core/crates/types:src/user_credential_proto.rs",
+rust_prost_library(
+    name = "user_credential_rust_proto",
+    proto = ":user_credential_proto",
+    visibility = ["//visibility:public"],
 )

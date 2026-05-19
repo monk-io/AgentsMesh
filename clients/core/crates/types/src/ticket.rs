@@ -23,35 +23,11 @@ pub struct BoardColumn {
     pub total_count: i64,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct BoardResponse {
-    pub columns: Vec<BoardColumn>,
-    #[serde(default)]
-    pub priority_counts: Option<serde_json::Value>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Label {
     pub id: i64,
     pub name: String,
     pub color: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TicketListResponse {
-    pub tickets: Vec<Ticket>,
-    pub total: Option<i64>,
-    #[serde(default)]
-    pub limit: Option<i64>,
-    #[serde(default)]
-    pub offset: Option<i64>,
-}
-
-
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LabelListResponse {
-    pub labels: Vec<Label>,
 }
 
 #[cfg(test)]
@@ -133,18 +109,5 @@ mod tests {
         assert_eq!(decoded.name, "bug");
         assert_eq!(decoded.color, "#ff0000");
     }
-
-    #[test]
-    fn ticket_list_relay_preserves_pagination() {
-        let backend = r#"{
-            "tickets": [{"slug":"T-1","title":"t","status":"backlog","priority":"low"}],
-            "total": 42, "limit": 20, "offset": 20
-        }"#;
-        let typed: TicketListResponse = serde_json::from_str(backend).unwrap();
-        let relayed = serde_json::to_string(&typed).unwrap();
-        let parsed: serde_json::Value = serde_json::from_str(&relayed).unwrap();
-        assert_eq!(parsed["total"], serde_json::json!(42));
-        assert_eq!(parsed["limit"], serde_json::json!(20));
-        assert_eq!(parsed["offset"], serde_json::json!(20));
-    }
 }
+
