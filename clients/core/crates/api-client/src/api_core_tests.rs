@@ -122,30 +122,7 @@ mod api_core_tests {
 
 
     // ── invitation ──────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_invitations() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/invitations"))
-            .respond_with(ok(json!({"invitations":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_invitations().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_invitation_by_token() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/invitations/abc123"))
-            .respond_with(ok(json!({
-                "id":1,"token":"abc123","email":"a@b.com","role":"member"
-            })))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.get_invitation_by_token("abc123").await.unwrap();
-        let reqs = s.received_requests().await.unwrap();
-        assert!(reqs[0].headers.get("Authorization").is_none());
-    }
+    // REST surface dropped; covered by invitation_connect.rs.
 
     // ── message ─────────────────────────────────────────────────────────
 

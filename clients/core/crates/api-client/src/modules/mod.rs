@@ -11,7 +11,6 @@ pub mod channel;
 pub mod extension;
 pub mod file_connect;
 pub mod grant_connect;
-pub mod invitation;
 pub mod invitation_connect;
 pub mod license;
 pub mod loop_api;

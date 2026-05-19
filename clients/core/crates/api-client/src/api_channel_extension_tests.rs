@@ -34,71 +34,7 @@ mod api_channel_extension_tests {
     }
 
     // ── invitation ──────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn create_invitation() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/invitations"))
-            .and(body_json(json!({"email":"a@b.com","role":"member"})))
-            .respond_with(ok(json!({
-                "id":1,"email":"a@b.com","role":"member"
-            })))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let data = agentsmesh_types::CreateInvitationRequest {
-            email: "a@b.com".into(),
-            role: "member".into(),
-        };
-        let r = c.create_invitation(&data).await.unwrap();
-        assert_eq!(r.email, "a@b.com");
-    }
-
-    #[tokio::test]
-    async fn revoke_invitation() {
-        let s = MockServer::start().await;
-        Mock::given(method("DELETE"))
-            .and(path("/api/v1/orgs/acme/invitations/9"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.revoke_invitation(9).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn resend_invitation() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/api/v1/orgs/acme/invitations/9/resend"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.resend_invitation(9).await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn accept_invitation() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST"))
-            .and(path("/api/v1/invitations/tok-xyz/accept"))
-            .respond_with(ok(json!({})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.accept_invitation("tok-xyz").await.unwrap();
-        let reqs = s.received_requests().await.unwrap();
-        assert!(reqs[0].headers.get("Authorization").is_none());
-    }
-
-    #[tokio::test]
-    async fn list_pending_invitations() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/api/v1/invitations/pending"))
-            .respond_with(ok(json!({"invitations":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let r = c.list_pending_invitations().await.unwrap();
-        assert!(r.invitations.is_empty());
-    }
+    // REST surface dropped; covered by invitation_connect.rs.
 
     // ── loop_api ────────────────────────────────────────────────────────
 
