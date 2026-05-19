@@ -83,19 +83,4 @@ impl WasmPodState {
     pub fn remove_pod(&mut self, pod_key: &str) {
         self.inner.remove_pod(pod_key);
     }
-
-    pub fn set_pods(&mut self, pods_json: &str) {
-        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(pods_json) {
-            self.inner.set_pods(pods);
-        }
-    }
-
-    pub fn set_current_pod(&mut self, pod_json: &str) {
-        let pod = if pod_json.is_empty() {
-            None
-        } else {
-            serde_json::from_str::<Pod>(pod_json).ok()
-        };
-        self.inner.set_current_pod(pod);
-    }
 }

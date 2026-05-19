@@ -569,7 +569,6 @@ vi.mock('@/lib/wasm-core', () => {
 
   // --- Mesh state ---
   const meshState = {
-    set_topology: fn((j: string) => { h.mesh.topo = j }),
     topology_json: fn(() => h.mesh.topo || undefined),
     clear_topology: fn(() => { h.mesh.topo = '' }),
     select_node: fn((key?: string) => { h.mesh.selected = key }),

@@ -30,14 +30,6 @@ impl WasmPodService {
         }
     }
 
-    pub fn upsert_pod(&self, pod_json: &str, timestamp: Option<i64>) {
-        self.0.upsert_pod(pod_json, timestamp);
-    }
-
-    pub fn set_pods(&self, pods_json: &str) { self.0.set_pods(pods_json); }
-
-    pub fn set_current_pod(&self, pod_json: &str) { self.0.set_current_pod(pod_json); }
-
     pub fn update_pod_status(
         &self, pod_key: &str, status: &str,
         agent_status: Option<String>, error_code: Option<String>,
@@ -81,10 +73,6 @@ impl WasmPodService {
 
     pub async fn fetch_pod(&self, pod_key: &str) -> Result<String, String> {
         self.0.fetch_pod(pod_key).await
-    }
-
-    pub async fn create_pod(&self, request_json: &str) -> Result<String, String> {
-        self.0.create_pod(request_json).await
     }
 
     pub async fn terminate_pod(&self, pod_key: &str) -> Result<(), String> {

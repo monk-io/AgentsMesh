@@ -53,13 +53,6 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn mesh_set_topology(&self, json: String) -> napi::Result<()> {
-        let svc = self.mesh.lock().await;
-            svc.set_topology(&json);
-            Ok(())
-    }
-
-    #[napi]
     pub async fn mesh_clear_topology(&self) -> napi::Result<()> {
         let svc = self.mesh.lock().await;
             svc.clear_topology();

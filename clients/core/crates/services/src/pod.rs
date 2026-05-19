@@ -44,27 +44,6 @@ impl PodService {
             .map(|pod| serde_json::to_string(pod).unwrap_or_default())
     }
 
-    pub fn upsert_pod(&self, pod_json: &str, timestamp: Option<i64>) {
-        if let Ok(pod) = serde_json::from_str::<Pod>(pod_json) {
-            self.state.write().unwrap().upsert_pod(pod, timestamp);
-        }
-    }
-
-    pub fn set_pods(&self, pods_json: &str) {
-        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(pods_json) {
-            self.state.write().unwrap().set_pods(pods);
-        }
-    }
-
-    pub fn set_current_pod(&self, pod_json: &str) {
-        let pod = if pod_json.is_empty() {
-            None
-        } else {
-            serde_json::from_str::<Pod>(pod_json).ok()
-        };
-        self.state.write().unwrap().set_current_pod(pod);
-    }
-
     pub fn update_pod_status(
         &self, pod_key: &str, status: &str,
         agent_status: Option<String>, error_code: Option<String>,
@@ -191,35 +170,6 @@ impl PodService {
         let pod = crate::proto_convert::pod::from_proto(resp);
         self.state.write().unwrap().upsert_pod(pod.clone(), None);
         serde_json::to_string(&pod).map_err(crate::wire)
-    }
-
-    pub async fn create_pod(&self, request_json: &str) -> Result<String, String> {
-        let req_legacy: CreatePodRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let req = pod_proto::CreatePodRequest {
-            org_slug: self.client.current_org_slug(),
-            agent_slug: req_legacy.agent_slug,
-            runner_id: req_legacy.runner_id,
-            ticket_slug: req_legacy.ticket_slug,
-            alias: req_legacy.alias,
-            agentfile_layer: req_legacy.agentfile_layer,
-            repository_id: None,
-            credential_profile_id: None,
-            cols: req_legacy.cols.map(|v| v as i32).unwrap_or(0),
-            rows: req_legacy.rows.map(|v| v as i32).unwrap_or(0),
-            source_pod_key: req_legacy.source_pod_key,
-            resume_agent_session: req_legacy.resume_agent_session,
-            perpetual: req_legacy.perpetual,
-        };
-        let resp = self.client.create_pod_connect(&req).await.map_err(crate::wire)?;
-        let pod_proto_msg = resp.pod.ok_or_else(|| "create_pod: empty pod in response".to_string())?;
-        let pod = crate::proto_convert::pod::from_proto(pod_proto_msg);
-        self.state.write().unwrap().upsert_pod(pod.clone(), None);
-        let envelope = serde_json::json!({
-            "pod": pod,
-            "warning": resp.warning,
-        });
-        serde_json::to_string(&envelope).map_err(crate::wire)
     }
 
     pub async fn terminate_pod(&self, pod_key: &str) -> Result<(), String> {

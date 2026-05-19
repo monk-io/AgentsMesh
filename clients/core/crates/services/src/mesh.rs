@@ -64,12 +64,6 @@ impl MeshService {
             .map(|r| serde_json::to_string(r).unwrap_or_default())
     }
 
-    pub fn set_topology(&self, json: &str) {
-        if let Ok(t) = serde_json::from_str::<MeshTopology>(json) {
-            self.state.write().unwrap().set_topology(t);
-        }
-    }
-
     pub fn clear_topology(&self) {
         self.state.write().unwrap().clear_topology();
     }
@@ -79,10 +73,6 @@ impl MeshService {
     }
 
     pub async fn fetch_topology(&self) -> Result<String, String> {
-        // proto.mesh.v1 owns the wire — call the Connect-RPC path and project
-        // the prost response into the legacy serde shape so existing
-        // renderer state slots (set_topology JSON deserialization) keep
-        // working without a wider refactor.
         use agentsmesh_types::proto_mesh_v1 as mp;
         let req = mp::GetMeshTopologyRequest {
             org_slug: self.client.current_org_slug(),
