@@ -3,21 +3,13 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "admin",
     srcs = [
-        "audit_helper.go",
-        "audit_logs.go",
         "auth.go",
-        "dashboard.go",
-        "promo_codes.go",
-        "promo_codes_actions.go",
         "routes.go",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/rest/v1/admin",
     visibility = ["//backend:__subpackages__"],
     deps = [
         "//backend/internal/config",
-        "//backend/internal/domain/admin",
-        "//backend/internal/domain/billing",
-        "//backend/internal/domain/promocode",
         "//backend/internal/domain/user",
         "//backend/internal/infra/database",
         "//backend/internal/middleware",
@@ -37,30 +29,13 @@ alias(
 
 go_test(
     name = "admin_test",
-    srcs = [
-        "admin_dashboard_integration_test.go",
-        "handlers_audit_test.go",
-        "handlers_auth_test.go",
-        "handlers_dashboard_test.go",
-        "handlers_internal_error_test.go",
-        "handlers_mock_test.go",
-    ],
+    srcs = ["handlers_auth_test.go"],
     embed = [":admin"],
     deps = [
-        "//backend/internal/domain/admin",
-        "//backend/internal/domain/agentpod",
-        "//backend/internal/domain/organization",
-        "//backend/internal/domain/runner",
         "//backend/internal/domain/user",
-        "//backend/internal/infra/database",
-        "//backend/internal/service/admin",
         "//backend/internal/service/auth",
-        "//backend/internal/testkit",
         "@com_github_gin_gonic_gin//:gin",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
-        "@io_gorm_driver_sqlite//:sqlite",
-        "@io_gorm_gorm//:gorm",
-        "@io_gorm_gorm//logger",
     ],
 )

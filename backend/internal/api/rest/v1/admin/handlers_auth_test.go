@@ -16,6 +16,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	gin.SetMode(gin.TestMode)
+}
+
+// createAdminContext builds a Gin context populated with an admin user,
+// matching what AdminMiddleware would inject in production.
+func createAdminContext(w *httptest.ResponseRecorder) *gin.Context {
+	c, _ := gin.CreateTestContext(w)
+	c.Set("admin_user_id", int64(1))
+	c.Set("admin_user", &user.User{ID: 1, Email: "admin@example.com", IsSystemAdmin: true})
+	return c
+}
+
 // mockAuthService implements authServiceInterface for testing
 type mockAuthService struct {
 	loginResult *auth.LoginResult
