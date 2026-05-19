@@ -10,7 +10,6 @@ pub mod blockstore;
 pub mod channel;
 pub mod extension;
 pub mod file_connect;
-pub mod grant;
 pub mod grant_connect;
 pub mod invitation;
 pub mod invitation_connect;

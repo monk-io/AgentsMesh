@@ -13,28 +13,6 @@ impl WasmGrantService {
         Self(GrantService::new(client))
     }
 
-    pub async fn list(&self, resource_type: String, resource_id: String) -> Result<String, String> {
-        self.0.list(&resource_type, &resource_id).await
-    }
-
-    pub async fn grant(
-        &self,
-        resource_type: String,
-        resource_id: String,
-        user_id: i64,
-    ) -> Result<String, String> {
-        self.0.grant(&resource_type, &resource_id, user_id).await
-    }
-
-    pub async fn revoke(
-        &self,
-        resource_type: String,
-        resource_id: String,
-        grant_id: i64,
-    ) -> Result<(), String> {
-        self.0.revoke(&resource_type, &resource_id, grant_id).await
-    }
-
     // -------- Connect-RPC (binary wire) --------
     //
     // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the

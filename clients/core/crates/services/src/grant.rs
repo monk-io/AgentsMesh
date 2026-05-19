@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_types::proto_grant_v1 as gp;
-use agentsmesh_types::*;
 use prost::Message;
 
 pub struct GrantService {
@@ -14,45 +13,6 @@ impl GrantService {
         Self { client }
     }
 
-    pub async fn list(&self, resource_type: &str, resource_id: &str) -> Result<String, String> {
-        let resp = self
-            .client
-            .list_resource_grants(resource_type, resource_id)
-            .await
-            .map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn grant(
-        &self,
-        resource_type: &str,
-        resource_id: &str,
-        user_id: i64,
-    ) -> Result<String, String> {
-        let req = CreateResourceGrantRequest { user_id };
-        let resp = self
-            .client
-            .grant_resource_access(resource_type, resource_id, &req)
-            .await
-            .map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn revoke(
-        &self,
-        resource_type: &str,
-        resource_id: &str,
-        grant_id: i64,
-    ) -> Result<(), String> {
-        self.client
-            .revoke_resource_grant(resource_type, resource_id, grant_id)
-            .await
-            .map_err(crate::wire)?;
-        Ok(())
-    }
-
-    // -------- Connect-RPC (binary wire) --------
-    //
     // TS encodes via @bufbuild/protobuf .toBinary() → wasm bridge → here →
     // ApiClient.*_connect (binary in / binary out, conventions §2.5). No
     // JSON path on the client.

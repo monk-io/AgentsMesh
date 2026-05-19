@@ -10,7 +10,6 @@ pub mod channel_api;
 pub mod channel_state;
 pub mod extension;
 pub mod file;
-pub mod grant;
 pub mod invitation;
 pub mod local_runner;
 pub mod loop_service;
