@@ -118,25 +118,8 @@ mod api_core_tests {
     }
 
     // ── file ────────────────────────────────────────────────────────────
+    // REST `files/presign` removed; covered by file_connect.rs.
 
-    #[tokio::test]
-    async fn presign_file_upload() {
-        let s = MockServer::start().await;
-        Mock::given(method("POST")).and(path("/api/v1/orgs/acme/files/presign"))
-            .respond_with(ok(json!({
-                "put_url":"https://s3.example.com/upload",
-                "get_url":"https://s3.example.com/download"
-            })))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let data = agentsmesh_types::PresignRequest {
-            filename: "test.txt".into(),
-            content_type: "text/plain".into(),
-            size: 1024,
-        };
-        let r = c.presign_file_upload(&data).await.unwrap();
-        assert_eq!(r.put_url, "https://s3.example.com/upload");
-    }
 
     // ── invitation ──────────────────────────────────────────────────────
 

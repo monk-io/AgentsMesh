@@ -13,10 +13,6 @@ impl WasmFileService {
         Self(FileService::new(client))
     }
 
-    pub async fn presign_upload(&self, json: &str) -> Result<String, String> {
-        self.0.presign_upload(json).await
-    }
-
     pub async fn upload_file(
         &self, file_data: js_sys::Uint8Array, filename: &str, content_type: &str,
     ) -> Result<String, String> {
