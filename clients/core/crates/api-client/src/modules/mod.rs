@@ -2,7 +2,6 @@ pub mod agent;
 pub mod agentpod;
 pub mod apikey;
 pub mod auth_connect;
-pub mod autopilot;
 pub mod autopilot_connect;
 pub mod billing;
 pub mod billing_public;
