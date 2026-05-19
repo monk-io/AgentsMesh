@@ -3,10 +3,7 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::loop_state::LoopState;
-use agentsmesh_types::{
-    LoopData, LoopRunData, LoopRunStatus,
-    CreateLoopRequest, UpdateLoopRequest,
-};
+use agentsmesh_types::{LoopData, LoopRunData, LoopRunStatus};
 
 use crate::parse_status;
 
@@ -80,92 +77,6 @@ impl LoopService {
 
     pub fn clear_runs(&self) {
         self.state.write().unwrap().clear_runs();
-    }
-
-    pub async fn fetch_loops(
-        &self, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .list_loops(status.as_deref(), limit, offset)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_loops(resp.loops.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn fetch_loop(&self, slug: &str) -> Result<String, String> {
-        let data: LoopData = self.client
-            .get_loop(slug)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_current_loop(Some(data.clone()));
-        serde_json::to_string(&data).map_err(crate::wire)
-    }
-
-    pub async fn create_loop(&self, request_json: &str) -> Result<String, String> {
-        let req: CreateLoopRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let data: LoopData = self.client
-            .create_loop(&req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&data).map_err(crate::wire)
-    }
-
-    pub async fn update_loop(&self, slug: &str, request_json: &str) -> Result<String, String> {
-        let req: UpdateLoopRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let data: LoopData = self.client
-            .update_loop(slug, &req)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_current_loop(Some(data.clone()));
-        serde_json::to_string(&data).map_err(crate::wire)
-    }
-
-    pub async fn delete_loop(&self, slug: &str) -> Result<(), String> {
-        self.client.delete_loop(slug).await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_current_loop(None);
-        Ok(())
-    }
-
-    pub async fn enable_loop(&self, slug: &str) -> Result<String, String> {
-        self.client.enable_loop(slug).await.map_err(crate::wire)?;
-        let data = self.client.get_loop(slug).await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_loop(slug, data.clone());
-        serde_json::to_string(&data).map_err(crate::wire)
-    }
-
-    pub async fn disable_loop(&self, slug: &str) -> Result<String, String> {
-        self.client.disable_loop(slug).await.map_err(crate::wire)?;
-        let data = self.client.get_loop(slug).await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_loop(slug, data.clone());
-        serde_json::to_string(&data).map_err(crate::wire)
-    }
-
-    pub async fn trigger_loop(&self, slug: &str) -> Result<String, String> {
-        let run: LoopRunData = self.client
-            .trigger_loop(slug)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().add_run(run.clone());
-        serde_json::to_string(&run).map_err(crate::wire)
-    }
-
-    pub async fn fetch_runs(
-        &self, slug: &str, status: Option<String>,
-        limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .list_loop_runs(slug, status.as_deref(), limit, offset)
-            .await.map_err(crate::wire)?;
-        if offset.unwrap_or(0) > 0 {
-            self.state.write().unwrap().append_runs(resp.runs.clone());
-        } else {
-            self.state.write().unwrap().set_runs(resp.runs.clone());
-        }
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn cancel_run(&self, slug: &str, run_id: i64) -> Result<(), String> {
-        self.client.cancel_loop_run(slug, run_id).await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_run_status(run_id, LoopRunStatus::Cancelled);
-        Ok(())
     }
 
     // -------- Connect-RPC (binary wire) --------

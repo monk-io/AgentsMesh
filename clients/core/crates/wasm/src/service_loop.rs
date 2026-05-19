@@ -49,51 +49,6 @@ impl WasmLoopService {
 
     pub fn clear_runs(&self) { self.0.clear_runs(); }
 
-    pub async fn fetch_loops(
-        &self, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        self.0.fetch_loops(status, limit, offset).await
-    }
-
-    pub async fn fetch_loop(&self, slug: &str) -> Result<String, String> {
-        self.0.fetch_loop(slug).await
-    }
-
-    pub async fn create_loop(&self, request_json: &str) -> Result<String, String> {
-        self.0.create_loop(request_json).await
-    }
-
-    pub async fn update_loop(&self, slug: &str, request_json: &str) -> Result<String, String> {
-        self.0.update_loop(slug, request_json).await
-    }
-
-    pub async fn delete_loop(&self, slug: &str) -> Result<(), String> {
-        self.0.delete_loop(slug).await
-    }
-
-    pub async fn enable_loop(&self, slug: &str) -> Result<String, String> {
-        self.0.enable_loop(slug).await
-    }
-
-    pub async fn disable_loop(&self, slug: &str) -> Result<String, String> {
-        self.0.disable_loop(slug).await
-    }
-
-    pub async fn trigger_loop(&self, slug: &str) -> Result<String, String> {
-        self.0.trigger_loop(slug).await
-    }
-
-    pub async fn fetch_runs(
-        &self, slug: &str, status: Option<String>,
-        limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        self.0.fetch_runs(slug, status, limit, offset).await
-    }
-
-    pub async fn cancel_run(&self, slug: &str, run_id: i64) -> Result<(), String> {
-        self.0.cancel_run(slug, run_id).await
-    }
-
     // -------- Connect-RPC (binary wire) --------
 
     #[wasm_bindgen(js_name = listLoopsConnect)]

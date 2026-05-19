@@ -56,17 +56,7 @@ mod api_core_tests {
     // the same surface.
 
     // ── loop ────────────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_loops() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/loops"))
-            .and(query_param("status", "active"))
-            .respond_with(ok(json!({"loops":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.list_loops(Some("active"), None, None).await.unwrap();
-    }
+    // REST surface dropped; covered by loop_connect.rs.
 
     // ── agentpod ────────────────────────────────────────────────────────
 
