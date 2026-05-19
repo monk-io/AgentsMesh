@@ -122,7 +122,7 @@ use_repo(
 # Phase 2 — Rust Core (preview: will replace Cargo workspace)
 ###############################################################################
 
-bazel_dep(name = "rules_rust", version = "0.68.1")
+bazel_dep(name = "rules_rust", version = "0.70.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
@@ -345,10 +345,11 @@ crate.spec(
 # WASM glue — consumed by crates/wasm only.
 crate.spec(
     package = "wasm-bindgen",
-    # Pinned to match the wasm-bindgen-cli that rules_rust_wasm_bindgen 0.69
-    # bundles. Schema must agree exactly (`rust Wasm file schema version` ↔
-    # `this binary schema version`). Bumping rules_rust_wasm_bindgen lifts
-    # the cap.
+    # Pinned to match the wasm-bindgen-cli that rules_rust_wasm_bindgen 0.70
+    # bundles (WASM_BINDGEN_VERSION="0.2.105" in upstream repositories.bzl).
+    # Schema must agree exactly (`rust Wasm file schema version` ↔
+    # `this binary schema version`); bumping the crate requires a custom
+    # wasm_bindgen_toolchain that injects a newer cli binary.
     version = "=0.2.105",
 )
 crate.spec(
@@ -422,7 +423,7 @@ use_repo(crate, "crates")
 # Phase 3a — Rust → WASM (consumed by clients/web via npm_link_package)
 ###############################################################################
 
-bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.69.0")
+bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 
 ###############################################################################
 # Phase 4 — TS / pnpm frontends (Next.js web, web-admin; Electron desktop)
