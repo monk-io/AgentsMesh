@@ -136,23 +136,6 @@ mod api_repo_tests {
             .unwrap();
     }
 
-    #[tokio::test]
-    async fn get_token_usage_dashboard_all_params() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/api/v1/orgs/acme/token-usage/dashboard"))
-            .and(query_param("start_time", "2026-01-01"))
-            .and(query_param("end_time", "2026-01-31"))
-            .and(query_param("agent_slug", "claude"))
-            .and(query_param("user_id", "1"))
-            .and(query_param("model", "opus"))
-            .and(query_param("granularity", "hourly"))
-            .respond_with(ok(json!({"total_input_tokens":100,"total_output_tokens":200})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), Tok::org("acme"));
-        let _ = c.get_token_usage_dashboard(
-            Some("2026-01-01"), Some("2026-01-31"),
-            Some("claude"), Some(1), Some("opus"), Some("hourly"),
-        ).await.unwrap();
-    }
+    // get_token_usage_dashboard REST surface dropped; covered by
+    // token_usage_connect.rs.
 }

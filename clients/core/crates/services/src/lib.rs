@@ -30,7 +30,6 @@ mod sso;
 mod support_ticket;
 mod ticket;
 mod ticket_relations;
-mod token_usage;
 mod user;
 mod user_credential;
 mod user_credential_agent_connect;
@@ -63,7 +62,6 @@ pub use sso::SSOService;
 pub use support_ticket::SupportTicketService;
 pub use ticket::TicketService;
 pub use ticket_relations::TicketRelationsService;
-pub use token_usage::TokenUsageService;
 pub use user::UserApiService;
 pub use user_credential::UserCredentialService;
 

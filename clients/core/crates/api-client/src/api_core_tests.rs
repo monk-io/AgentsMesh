@@ -196,19 +196,7 @@ mod api_core_tests {
     // backend/internal/api/connect/ticket_relations cover the same surface.
 
     // ── token_usage ─────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn get_token_usage_dashboard() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme/token-usage/dashboard"))
-            .and(query_param("granularity", "daily"))
-            .respond_with(ok(json!({"total_input_tokens":0,"total_output_tokens":0})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::with_org("acme"));
-        let _ = c.get_token_usage_dashboard(
-            None, None, None, None, None, Some("daily"),
-        ).await.unwrap();
-    }
+    // REST surface dropped; covered by token_usage_connect.rs.
 
     // ── user_agent_credential ───────────────────────────────────────────
 
