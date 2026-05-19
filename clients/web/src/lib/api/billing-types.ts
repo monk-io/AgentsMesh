@@ -168,3 +168,28 @@ export interface PublicPricingResponse {
   currency: Currency;
   plans: PublicPlanPricing[];
 }
+
+// -------- Usage / quota / customer portal (Connect-RPC migrated from REST) --------
+
+export interface UsageRecord {
+  id: number;
+  organization_id: number;
+  usage_type: string;
+  quantity: number;
+  period_start: string;
+  period_end: string;
+  created_at: string;
+}
+
+// When `type` is passed to getUsage, the server returns metric_value +
+// metric_type; otherwise it returns the full UsageOverview. Matches the
+// REST behavior at `/api/v1/orgs/:slug/billing/usage`.
+export interface UsageQueryResponse {
+  metric_value?: number;
+  metric_type?: string;
+  overview?: UsageOverview;
+}
+
+export interface CustomerPortalResponse {
+  url: string;
+}

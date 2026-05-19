@@ -54,6 +54,11 @@ const (
 	CreateCheckoutProcedure            = "/" + ServiceName + "/CreateCheckout"
 	GetCheckoutStatusProcedure         = "/" + ServiceName + "/GetCheckoutStatus"
 	GetDeploymentInfoProcedure         = "/" + ServiceName + "/GetDeploymentInfo"
+	GetUsageProcedure                  = "/" + ServiceName + "/GetUsage"
+	GetUsageHistoryProcedure           = "/" + ServiceName + "/GetUsageHistory"
+	CheckQuotaProcedure                = "/" + ServiceName + "/CheckQuota"
+	SetCustomQuotaProcedure            = "/" + ServiceName + "/SetCustomQuota"
+	CreateCustomerPortalProcedure      = "/" + ServiceName + "/CreateCustomerPortal"
 )
 
 // Server implements BillingService — authenticated, org-scoped.
@@ -73,4 +78,5 @@ func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 	mountCheckout(mux, srv, opts...)
 	mountSeats(mux, srv, opts...)
 	mountOverview(mux, srv, opts...)
+	mountUsage(mux, srv, opts...)
 }

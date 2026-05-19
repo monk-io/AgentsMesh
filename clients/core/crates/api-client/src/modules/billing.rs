@@ -191,4 +191,56 @@ impl ApiClient {
         )
         .await
     }
+
+    // -------- Usage / quota / customer portal — REST refugees --------
+
+    pub async fn get_usage_connect(
+        &self,
+        req: &billing_proto::GetUsageRequest,
+    ) -> Result<billing_proto::GetUsageResponse, ApiError> {
+        connect_call(self, "/proto.billing.v1.BillingService/GetUsage", req).await
+    }
+
+    pub async fn get_usage_history_connect(
+        &self,
+        req: &billing_proto::GetUsageHistoryRequest,
+    ) -> Result<billing_proto::GetUsageHistoryResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.billing.v1.BillingService/GetUsageHistory",
+            req,
+        )
+        .await
+    }
+
+    pub async fn check_quota_connect(
+        &self,
+        req: &billing_proto::CheckQuotaRequest,
+    ) -> Result<billing_proto::CheckQuotaResponse, ApiError> {
+        connect_call(self, "/proto.billing.v1.BillingService/CheckQuota", req).await
+    }
+
+    pub async fn set_custom_quota_connect(
+        &self,
+        req: &billing_proto::SetCustomQuotaRequest,
+    ) -> Result<billing_proto::SetCustomQuotaResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.billing.v1.BillingService/SetCustomQuota",
+            req,
+        )
+        .await
+    }
+
+    pub async fn create_customer_portal_connect(
+        &self,
+        req: &billing_proto::CreateCustomerPortalRequest,
+    ) -> Result<billing_proto::CreateCustomerPortalResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.billing.v1.BillingService/CreateCustomerPortal",
+            req,
+        )
+        .await
+    }
 }

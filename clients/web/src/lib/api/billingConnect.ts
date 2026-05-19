@@ -16,8 +16,12 @@ import {
   ChangeBillingCycleRequestSchema,
   ChangeBillingCycleResponseSchema,
   CheckoutStatusSchema,
+  CheckQuotaRequestSchema,
+  CheckQuotaResponseSchema,
   CreateCheckoutRequestSchema,
   CreateCheckoutResponseSchema,
+  CreateCustomerPortalRequestSchema,
+  CreateCustomerPortalResponseSchema,
   CreateSubscriptionRequestSchema,
   DeploymentInfoSchema,
   GetCheckoutStatusRequestSchema,
@@ -27,6 +31,10 @@ import {
   GetPublicPricingRequestSchema,
   GetSeatUsageRequestSchema,
   GetSubscriptionRequestSchema,
+  GetUsageHistoryRequestSchema,
+  GetUsageHistoryResponseSchema,
+  GetUsageRequestSchema,
+  GetUsageResponseSchema,
   ListInvoicesRequestSchema,
   ListInvoicesResponseSchema,
   ListPlansRequestSchema,
@@ -38,6 +46,8 @@ import {
   RequestCancelSubscriptionRequestSchema,
   RequestCancelSubscriptionResponseSchema,
   SeatUsageSchema,
+  SetCustomQuotaRequestSchema,
+  SetCustomQuotaResponseSchema,
   SubscriptionSchema,
   UpdateAutoRenewRequestSchema,
   UpdateSubscriptionRequestSchema,
@@ -60,6 +70,7 @@ import type {
   CheckoutResponse,
   CheckoutStatus,
   Currency,
+  CustomerPortalResponse,
   DeploymentInfo,
   Invoice,
   OrderType,
@@ -69,6 +80,8 @@ import type {
   SeatUsage,
   Subscription,
   SubscriptionPlan,
+  UsageQueryResponse,
+  UsageRecord,
 } from "@/lib/api/billing-types";
 
 // ============== Wire conversion (proto -> snake_case web shape) ==============
@@ -418,4 +431,99 @@ export async function getPublicDeploymentInfoConnect(): Promise<DeploymentInfo> 
   const bytes = toBinary(GetPublicDeploymentInfoRequestSchema, req);
   const respBytes = await getBillingService().get_public_deployment_info_connect(bytes);
   return fromProtoDeployment(fromBinary(DeploymentInfoSchema, new Uint8Array(respBytes)));
+}
+
+// ============== Usage / quota / customer portal — REST refugees ==============
+
+export async function getUsageConnect(
+  orgSlug: string,
+  usageType?: string,
+): Promise<UsageQueryResponse> {
+  const req = create(GetUsageRequestSchema, {
+    orgSlug,
+    usageType: usageType ?? undefined,
+  });
+  const bytes = toBinary(GetUsageRequestSchema, req);
+  const respBytes = await getBillingService().get_usage_connect(bytes);
+  const resp = fromBinary(GetUsageResponseSchema, new Uint8Array(respBytes));
+  const out: UsageQueryResponse = {};
+  if (resp.metricValue !== undefined) {
+    out.metric_value = resp.metricValue;
+  }
+  if (resp.metricType !== undefined) {
+    out.metric_type = resp.metricType;
+  }
+  if (resp.overview) {
+    out.overview = {
+      pod_minutes: resp.overview.podMinutes,
+      included_pod_minutes: resp.overview.includedPodMinutes,
+      users: resp.overview.users,
+      max_users: resp.overview.maxUsers,
+      runners: resp.overview.runners,
+      max_runners: resp.overview.maxRunners,
+      repositories: resp.overview.repositories,
+      max_repositories: resp.overview.maxRepositories,
+    };
+  }
+  return out;
+}
+
+export async function getUsageHistoryConnect(
+  orgSlug: string,
+  opts: { usageType?: string; months?: number } = {},
+): Promise<{ records: UsageRecord[] }> {
+  const req = create(GetUsageHistoryRequestSchema, {
+    orgSlug,
+    usageType: opts.usageType ?? undefined,
+    months: opts.months ?? 3,
+  });
+  const bytes = toBinary(GetUsageHistoryRequestSchema, req);
+  const respBytes = await getBillingService().get_usage_history_connect(bytes);
+  const resp = fromBinary(GetUsageHistoryResponseSchema, new Uint8Array(respBytes));
+  return {
+    records: resp.records.map((r) => ({
+      id: Number(r.id),
+      organization_id: Number(r.organizationId),
+      usage_type: r.usageType,
+      quantity: r.quantity,
+      period_start: r.periodStart,
+      period_end: r.periodEnd,
+      created_at: r.createdAt,
+    })),
+  };
+}
+
+export async function checkQuotaConnect(
+  orgSlug: string,
+  resource: string,
+  amount = 1,
+): Promise<{ available: boolean }> {
+  const req = create(CheckQuotaRequestSchema, { orgSlug, resource, amount });
+  const bytes = toBinary(CheckQuotaRequestSchema, req);
+  const respBytes = await getBillingService().check_quota_connect(bytes);
+  const resp = fromBinary(CheckQuotaResponseSchema, new Uint8Array(respBytes));
+  return { available: resp.available };
+}
+
+export async function setCustomQuotaConnect(
+  orgSlug: string,
+  resource: string,
+  limit: number,
+): Promise<{ message: string }> {
+  const req = create(SetCustomQuotaRequestSchema, { orgSlug, resource, limit });
+  const bytes = toBinary(SetCustomQuotaRequestSchema, req);
+  const respBytes = await getBillingService().set_custom_quota_connect(bytes);
+  const resp = fromBinary(SetCustomQuotaResponseSchema, new Uint8Array(respBytes));
+  return { message: resp.message };
+}
+
+export async function createCustomerPortalConnect(
+  orgSlug: string,
+  returnUrl: string,
+): Promise<CustomerPortalResponse> {
+  const req = create(CreateCustomerPortalRequestSchema, { orgSlug, returnUrl });
+  const bytes = toBinary(CreateCustomerPortalRequestSchema, req);
+  const respBytes = await getBillingService().create_customer_portal_connect(bytes);
+  const resp = fromBinary(CreateCustomerPortalResponseSchema, new Uint8Array(respBytes));
+  return { url: resp.url };
 }

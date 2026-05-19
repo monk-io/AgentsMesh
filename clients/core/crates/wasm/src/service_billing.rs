@@ -218,4 +218,41 @@ impl WasmBillingService {
             .get_public_deployment_info_connect(request_bytes)
             .await
     }
+
+    // -------- Usage / quota / customer portal — REST refugees --------
+
+    #[wasm_bindgen(js_name = getUsageConnect)]
+    pub async fn get_usage_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        agentsmesh_services::BillingService::new(self.client.clone())
+            .get_usage_connect(request_bytes)
+            .await
+    }
+
+    #[wasm_bindgen(js_name = getUsageHistoryConnect)]
+    pub async fn get_usage_history_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        agentsmesh_services::BillingService::new(self.client.clone())
+            .get_usage_history_connect(request_bytes)
+            .await
+    }
+
+    #[wasm_bindgen(js_name = checkQuotaConnect)]
+    pub async fn check_quota_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        agentsmesh_services::BillingService::new(self.client.clone())
+            .check_quota_connect(request_bytes)
+            .await
+    }
+
+    #[wasm_bindgen(js_name = setCustomQuotaConnect)]
+    pub async fn set_custom_quota_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        agentsmesh_services::BillingService::new(self.client.clone())
+            .set_custom_quota_connect(request_bytes)
+            .await
+    }
+
+    #[wasm_bindgen(js_name = createCustomerPortalConnect)]
+    pub async fn create_customer_portal_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        agentsmesh_services::BillingService::new(self.client.clone())
+            .create_customer_portal_connect(request_bytes)
+            .await
+    }
 }

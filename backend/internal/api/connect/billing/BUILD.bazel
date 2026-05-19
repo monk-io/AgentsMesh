@@ -12,6 +12,7 @@ go_library(
         "billing_public.go",
         "billing_seats.go",
         "billing_subscription.go",
+        "billing_usage.go",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/billing",
     visibility = ["//backend:__subpackages__"],

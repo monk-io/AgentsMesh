@@ -498,4 +498,53 @@ impl BillingService {
         let resp = self.client.get_public_deployment_info_connect(&req).await.map_err(crate::wire)?;
         Ok(resp.encode_to_vec())
     }
+
+    // -------- Usage / quota / customer portal — REST refugees --------
+
+    pub async fn get_usage_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = billing_proto::GetUsageRequest::decode(request_bytes)
+            .map_err(|e| format!("decode get_usage request: {e}"))?;
+        let resp = self.client.get_usage_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn get_usage_history_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = billing_proto::GetUsageHistoryRequest::decode(request_bytes)
+            .map_err(|e| format!("decode get_usage_history request: {e}"))?;
+        let resp = self
+            .client
+            .get_usage_history_connect(&req)
+            .await
+            .map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn check_quota_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = billing_proto::CheckQuotaRequest::decode(request_bytes)
+            .map_err(|e| format!("decode check_quota request: {e}"))?;
+        let resp = self.client.check_quota_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn set_custom_quota_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = billing_proto::SetCustomQuotaRequest::decode(request_bytes)
+            .map_err(|e| format!("decode set_custom_quota request: {e}"))?;
+        let resp = self
+            .client
+            .set_custom_quota_connect(&req)
+            .await
+            .map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn create_customer_portal_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = billing_proto::CreateCustomerPortalRequest::decode(request_bytes)
+            .map_err(|e| format!("decode create_customer_portal request: {e}"))?;
+        let resp = self
+            .client
+            .create_customer_portal_connect(&req)
+            .await
+            .map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
 }

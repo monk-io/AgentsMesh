@@ -458,6 +458,106 @@ pub struct GetPublicPricingRequest {
 #[derive(Clone, PartialEq, prost::Message)]
 pub struct GetPublicDeploymentInfoRequest {}
 
+// -------- Usage / quota / customer portal (proto.billing.v1.BillingService) --------
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct UsageRecord {
+    #[prost(int64, tag = "1")]
+    pub id: i64,
+    #[prost(int64, tag = "2")]
+    pub organization_id: i64,
+    #[prost(string, tag = "3")]
+    pub usage_type: String,
+    #[prost(double, tag = "4")]
+    pub quantity: f64,
+    #[prost(string, tag = "5")]
+    pub period_start: String,
+    #[prost(string, tag = "6")]
+    pub period_end: String,
+    #[prost(string, tag = "7")]
+    pub created_at: String,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct GetUsageRequest {
+    #[prost(string, tag = "1")]
+    pub org_slug: String,
+    #[prost(string, optional, tag = "2")]
+    pub usage_type: Option<String>,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct GetUsageResponse {
+    #[prost(double, optional, tag = "1")]
+    pub metric_value: Option<f64>,
+    #[prost(string, optional, tag = "2")]
+    pub metric_type: Option<String>,
+    #[prost(message, optional, tag = "3")]
+    pub overview: Option<UsageOverview>,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct GetUsageHistoryRequest {
+    #[prost(string, tag = "1")]
+    pub org_slug: String,
+    #[prost(string, optional, tag = "2")]
+    pub usage_type: Option<String>,
+    #[prost(int32, tag = "3")]
+    pub months: i32,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct GetUsageHistoryResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub records: Vec<UsageRecord>,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct CheckQuotaRequest {
+    #[prost(string, tag = "1")]
+    pub org_slug: String,
+    #[prost(string, tag = "2")]
+    pub resource: String,
+    #[prost(int32, tag = "3")]
+    pub amount: i32,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct CheckQuotaResponse {
+    #[prost(bool, tag = "1")]
+    pub available: bool,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct SetCustomQuotaRequest {
+    #[prost(string, tag = "1")]
+    pub org_slug: String,
+    #[prost(string, tag = "2")]
+    pub resource: String,
+    #[prost(int32, tag = "3")]
+    pub limit: i32,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct SetCustomQuotaResponse {
+    #[prost(string, tag = "1")]
+    pub message: String,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct CreateCustomerPortalRequest {
+    #[prost(string, tag = "1")]
+    pub org_slug: String,
+    #[prost(string, tag = "2")]
+    pub return_url: String,
+}
+
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct CreateCustomerPortalResponse {
+    #[prost(string, tag = "1")]
+    pub url: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
