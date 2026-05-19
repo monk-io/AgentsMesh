@@ -131,25 +131,3 @@ func (h *LoopHandler) GetLoop(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"loop": loop})
 }
-
-// DeleteLoop deletes a loop.
-// Atomically rejects deletion if there are active (pending/running) runs to prevent orphaned Pods.
-// DELETE /api/v1/orgs/:slug/loops/:loop_slug
-func (h *LoopHandler) DeleteLoop(c *gin.Context) {
-	tenant := middleware.GetTenant(c)
-	loopSlug := c.Param("loop_slug")
-
-	if err := h.loopService.Delete(c.Request.Context(), tenant.OrganizationID, loopSlug); err != nil {
-		if errors.Is(err, loopService.ErrLoopNotFound) {
-			apierr.ResourceNotFound(c, "Loop not found")
-		} else if errors.Is(err, loopService.ErrHasActiveRuns) {
-			apierr.BadRequest(c, apierr.VALIDATION_FAILED,
-				"Cannot delete loop with active runs. Cancel or wait for runs to complete first.")
-		} else {
-			apierr.InternalError(c, "Failed to delete loop")
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Loop deleted"})
-}
