@@ -47,9 +47,8 @@ function userFromProto(u: ProtoAdminUser): User {
   };
 }
 
-// Dashboard stays on REST until a follow-up PR migrates it; we re-export
-// the existing REST call here so the import surface in adminUsers.ts
-// remains stable for callers.
+// Re-export getDashboardStats (Connect-RPC adapter lives in adminDashboard.ts)
+// to keep the import surface in adminUsers.ts stable for callers.
 export { getDashboardStats } from "./adminDashboard";
 export type { DashboardStats };
 
