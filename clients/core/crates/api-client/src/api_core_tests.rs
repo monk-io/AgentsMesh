@@ -142,27 +142,7 @@ mod api_core_tests {
     // REST surface dropped; covered by notification_connect.rs.
 
     // ── organization ────────────────────────────────────────────────────
-
-    #[tokio::test]
-    async fn list_organizations() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs"))
-            .respond_with(ok(json!({"organizations":[]})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.list_organizations().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn get_organization() {
-        let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/orgs/acme"))
-            .respond_with(ok(json!({"id":1,"slug":"acme","name":"Acme"})))
-            .expect(1).mount(&s).await;
-        let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let r = c.get_organization("acme").await.unwrap();
-        assert_eq!(r.slug, "acme");
-    }
+    // REST surface dropped; covered by organization.rs Connect block.
 
     // ── promocode ───────────────────────────────────────────────────────
     // REST surface dropped; validate / redeem / history all live on

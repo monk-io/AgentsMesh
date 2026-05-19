@@ -71,44 +71,4 @@ impl WasmOrgApiService {
     pub async fn update_member_role_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
         self.0.update_member_role_connect(request).await
     }
-
-    // -------- Legacy REST JSON methods (preserved during dual-track) --------
-
-    pub async fn list(&self) -> Result<String, String> {
-        self.0.list().await
-    }
-
-    pub async fn get(&self, slug: &str) -> Result<String, String> {
-        self.0.get(slug).await
-    }
-
-    pub async fn create(&self, json: &str) -> Result<String, String> {
-        self.0.create(json).await
-    }
-
-    pub async fn update(&self, slug: &str, json: &str) -> Result<String, String> {
-        self.0.update(slug, json).await
-    }
-
-    pub async fn delete(&self, slug: &str) -> Result<(), String> {
-        self.0.delete(slug).await
-    }
-
-    pub async fn list_members(&self, slug: &str) -> Result<String, String> {
-        self.0.list_members(slug).await
-    }
-
-    pub async fn invite_member(&self, slug: &str, json: &str) -> Result<String, String> {
-        self.0.invite_member(slug, json).await
-    }
-
-    pub async fn remove_member(&self, slug: &str, user_id: i64) -> Result<(), String> {
-        self.0.remove_member(slug, user_id).await
-    }
-
-    pub async fn update_member_role(
-        &self, slug: &str, user_id: i64, json: &str,
-    ) -> Result<String, String> {
-        self.0.update_member_role(slug, user_id, json).await
-    }
 }
