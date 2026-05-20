@@ -1,15 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-
-export default function RunnerDetailRedirect() {
-  const router = useRouter();
-  const { org, id } = useParams<{ org: string; id: string }>();
-
-  useEffect(() => {
-    if (org && id) router.replace(`/${org}/infra?tab=runners&id=${id}`);
-  }, [org, id, router]);
-
-  return null;
+// URL canonicalization: deep-links to /runners/[id] redirect to the
+// equivalent infra tab + id query. Server-side redirect (HTTP 307) — no
+// client-side flash, no useEffect race.
+export default async function RunnerDetailRedirect({
+  params,
+}: {
+  params: Promise<{ org: string; id: string }>;
+}) {
+  const { org, id } = await params;
+  redirect(`/${org}/infra?tab=runners&id=${id}`);
 }

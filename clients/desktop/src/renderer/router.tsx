@@ -32,7 +32,7 @@ import InfraPage from "@/app/(dashboard)/[org]/infra/page";
 import { RepositoryDetailPage } from "@/pages/dashboard/repository-detail/RepositoryDetailPage";
 import { SettingsPage } from "@/pages/dashboard/settings/OrgSettingsPage";
 
-import { PersonalSettingsPage } from "@/pages/settings/SettingsRootPage";
+// User settings
 import { GeneralSettingsPage } from "@/pages/settings/general/GeneralSettingsPage";
 import { GitSettingsPage } from "@/pages/settings/git/GitSettingsPage";
 import { PersonalNotificationsPage } from "@/pages/settings/notifications/NotificationsPage";
@@ -45,8 +45,9 @@ import { PopoutTerminalPage } from "@/pages/popout/terminal/PopoutTerminalPage";
 import { RouteErrorBoundary } from "@/pages/RouteErrorBoundary";
 
 // Workaround: react-router v7 `<Navigate>` drops the search string intermittently under
-// HashRouter (runners-nav.spec/repositories-nav.spec flake). Same hash-write fallback as
-// shims/next-navigation.ts replaceWithHashFallback — write full hash atomically.
+// HashRouter. Same hash-write fallback as shims/next-navigation.ts replaceWithHashFallback —
+// write full hash atomically. Mirrors the web-side short-form redirects in
+// app/(dashboard)/[org]/{runners,repositories}/page.tsx.
 function LegacyInfraTabRedirect({ tab }: { tab: "runners" | "repositories" }) {
   const { org } = useParams<{ org: string }>();
   useEffect(() => {
@@ -115,7 +116,7 @@ export const router = createBrowserRouter([
     element: <DashboardShell><Outlet /></DashboardShell>,
     errorElement: <RouteErrorBoundary />,
     children: [
-      { index: true, element: <PersonalSettingsPage /> },
+      { index: true, element: <Navigate to="general" replace /> },
       { path: "general", element: <GeneralSettingsPage /> },
       { path: "git", element: <GitSettingsPage /> },
       { path: "notifications", element: <PersonalNotificationsPage /> },

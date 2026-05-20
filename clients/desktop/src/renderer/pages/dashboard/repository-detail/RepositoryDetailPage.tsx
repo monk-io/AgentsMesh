@@ -17,7 +17,7 @@ import {
 
 export function RepositoryDetailPage() {
   const t = useTranslations();
-  const params = useParams();
+  const params = useParams<{ org: string; id: string }>();
   const repositoryId = Number(params.id);
 
   const {
@@ -41,7 +41,7 @@ export function RepositoryDetailPage() {
       <div className="p-6">
         <div className="text-center py-12">
           <p className="text-muted-foreground mb-4">{t("repositories.detail.notFound")}</p>
-          <Link href="../repositories">
+          <Link href={`/${params.org}/infra?tab=repositories`}>
             <Button variant="outline">{t("repositories.detail.backToList")}</Button>
           </Link>
         </div>
