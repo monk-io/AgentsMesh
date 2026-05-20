@@ -1,6 +1,6 @@
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
 use agentsmesh_types::{
-    AuthorizeRunnerRequest, CreateRunnerTokenRequest, Runner, RunnerAuthStatus, RunnerStatus,
+    AuthorizeRunnerRequest, CreateRunnerTokenRequest, RunnerAuthStatus,
     UpdateRunnerRequest, UpgradeRunnerRequest,
 };
 
@@ -10,17 +10,6 @@ pub enum RunnerStatusDto {
     Offline,
     Maintenance,
     Unknown,
-}
-
-impl From<RunnerStatus> for RunnerStatusDto {
-    fn from(s: RunnerStatus) -> Self {
-        match s {
-            RunnerStatus::Online => Self::Online,
-            RunnerStatus::Offline => Self::Offline,
-            RunnerStatus::Maintenance => Self::Maintenance,
-            RunnerStatus::Unknown => Self::Unknown,
-        }
-    }
 }
 
 fn parse_proto_runner_status(s: &str) -> RunnerStatusDto {
@@ -50,27 +39,6 @@ pub struct RunnerDto {
     pub available_agents: Option<Vec<String>>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
-}
-
-impl From<Runner> for RunnerDto {
-    fn from(r: Runner) -> Self {
-        Self {
-            id: r.id,
-            name: r.name,
-            node_id: r.node_id,
-            description: r.description,
-            status: r.status.into(),
-            version: r.version,
-            max_concurrent_pods: r.max_concurrent_pods,
-            active_pod_count: r.active_pod_count,
-            is_enabled: r.is_enabled,
-            host_info_json: r.host_info.and_then(|v| serde_json::to_string(&v).ok()),
-            last_heartbeat: r.last_heartbeat,
-            available_agents: r.available_agents,
-            created_at: r.created_at,
-            updated_at: r.updated_at,
-        }
-    }
 }
 
 impl From<runner_proto::Runner> for RunnerDto {

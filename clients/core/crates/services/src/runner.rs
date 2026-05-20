@@ -4,12 +4,9 @@ use std::sync::RwLock;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::runner_state::RunnerState;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::{
-    Runner, RunnerStatus, UpdateRunnerRequest, CreateRunnerTokenRequest,
-};
+use agentsmesh_types::proto_runner_api_v1::Runner;
+use agentsmesh_types::{UpdateRunnerRequest, CreateRunnerTokenRequest};
 use prost::Message;
-
-use crate::parse_status;
 
 pub struct RunnerService {
     client: Arc<ApiClient>,
@@ -63,8 +60,7 @@ impl RunnerService {
     }
 
     pub fn update_runner_status(&self, id: i64, status: &str) {
-        let parsed = parse_status::<RunnerStatus>(status);
-        self.state.write().unwrap().update_runner_status(id, parsed);
+        self.state.write().unwrap().update_runner_status(id, status);
     }
 
     pub fn remove_runner_local(&self, id: i64) {
@@ -80,7 +76,7 @@ impl RunnerService {
         };
         let resp = self.client.list_runners_connect(&req).await.map_err(crate::wire)?;
         let latest = resp.latest_runner_version.clone();
-        let runners: Vec<Runner> = resp.items.into_iter().map(crate::proto_convert::runner::from_proto).collect();
+        let runners: Vec<Runner> = resp.items;
         self.state.write().unwrap().set_runners(runners.clone());
         let envelope = serde_json::json!({
             "runners": runners,
@@ -94,7 +90,7 @@ impl RunnerService {
             org_slug: self.client.current_org_slug(),
         };
         let resp = self.client.list_available_runners_connect(&req).await.map_err(crate::wire)?;
-        let runners: Vec<Runner> = resp.items.into_iter().map(crate::proto_convert::runner::from_proto).collect();
+        let runners: Vec<Runner> = resp.items;
         self.state.write().unwrap().set_available_runners(runners.clone());
         let envelope = serde_json::json!({
             "runners": runners,
@@ -108,10 +104,8 @@ impl RunnerService {
             id,
         };
         let resp = self.client.get_runner_connect(&req).await.map_err(crate::wire)?;
-        let runner_proto_msg = resp.runner.ok_or_else(|| "get_runner: empty runner in response".to_string())?;
-        let runner = crate::proto_convert::runner::from_proto(runner_proto_msg);
+        let runner = resp.runner.ok_or_else(|| "get_runner: empty runner in response".to_string())?;
         self.state.write().unwrap().set_current_runner(Some(runner.clone()));
-        // Map proto relay connections to legacy serde_json shape via re-serialization.
         let relay_connections = if resp.relay_connections.is_empty() {
             None
         } else {
@@ -143,8 +137,7 @@ impl RunnerService {
             visibility: req_legacy.visibility,
             tags: None,
         };
-        let runner_proto_msg = self.client.update_runner_connect(&req).await.map_err(crate::wire)?;
-        let runner = crate::proto_convert::runner::from_proto(runner_proto_msg);
+        let runner = self.client.update_runner_connect(&req).await.map_err(crate::wire)?;
         self.state.write().unwrap().update_runner(id, runner.clone());
         serde_json::to_string(&runner).map_err(crate::wire)
     }

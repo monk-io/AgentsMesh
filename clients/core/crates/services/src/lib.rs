@@ -22,7 +22,6 @@ mod notification;
 mod org;
 mod pod;
 mod promocode;
-mod proto_convert;
 mod repository;
 mod runner;
 mod sso;

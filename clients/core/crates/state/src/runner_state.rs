@@ -1,7 +1,18 @@
 use std::sync::Arc;
 
 use agentsmesh_persistence::{RunnerRepo, StorageBackend};
-use agentsmesh_types::{Runner, RunnerStatus};
+use agentsmesh_types::proto_runner_api_v1::Runner;
+
+// Runner status comes off the proto wire as a string ("online" / "offline" /
+// "registering" etc.). State cache stores the wire string verbatim; callers
+// compare against these constants.
+pub mod runner_status {
+    pub const ONLINE: &str = "online";
+    pub const OFFLINE: &str = "offline";
+    pub const REGISTERING: &str = "registering";
+    pub const ERROR: &str = "error";
+    pub const UNKNOWN: &str = "unknown";
+}
 
 pub struct RunnerState {
     runners: Vec<Runner>,
@@ -49,7 +60,6 @@ impl RunnerState {
             *r = runner.clone();
             if let Some(repo) = &self.repo { let _ = repo.save(r); }
         }
-        // Also update in available_runners if present
         if let Some(r) = self.available_runners.iter_mut().find(|r| r.id == id) {
             *r = runner.clone();
         }
@@ -58,23 +68,23 @@ impl RunnerState {
         }
     }
 
-    pub fn update_runner_status(&mut self, id: i64, status: RunnerStatus) {
+    pub fn update_runner_status(&mut self, id: i64, status: &str) {
         for r in &mut self.runners {
             if r.id == id {
-                r.status = status;
+                r.status = status.to_string();
             }
         }
 
-        if status != RunnerStatus::Online {
+        if status != runner_status::ONLINE {
             self.available_runners.retain(|r| r.id != id);
         } else {
             for r in &mut self.available_runners {
-                if r.id == id { r.status = status; }
+                if r.id == id { r.status = status.to_string(); }
             }
         }
 
         if let Some(ref mut cur) = self.current_runner {
-            if cur.id == id { cur.status = status; }
+            if cur.id == id { cur.status = status.to_string(); }
         }
 
         if let Some(repo) = &self.repo {
@@ -95,8 +105,8 @@ impl RunnerState {
 
     pub fn can_accept_pods(runner: &Runner) -> bool {
         runner.is_enabled
-            && runner.status == RunnerStatus::Online
-            && runner.active_pod_count < runner.max_concurrent_pods
+            && runner.status == runner_status::ONLINE
+            && runner.current_pods < runner.max_concurrent_pods
     }
 }
 

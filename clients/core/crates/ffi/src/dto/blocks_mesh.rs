@@ -2,7 +2,7 @@ use agentsmesh_types::proto_mesh_v1 as mesh_proto;
 use agentsmesh_types::proto_notification_v1 as notification_proto;
 use agentsmesh_types::{
     ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, ChildrenResult,
-    OpEnvelope, OpKind, RunnerStatus, SearchHit, SemanticSearchRequest, Workspace,
+    OpEnvelope, OpKind, SearchHit, SemanticSearchRequest, Workspace,
 };
 
 use super::{PodStatusDto, RunnerStatusDto};
@@ -432,13 +432,14 @@ pub struct MeshRunnerInfoDto {
     pub pod_keys: Vec<String>,
 }
 
-// R2: legacy `From<RunnerStatus> for RunnerStatusDto` bridge — runner domain
-// still uses the legacy enum (RunnerStatus). Delete this impl together with
-// the runner_state migration.
+// R2: parse proto wire string into the typed UniFFI enum.
 fn parse_runner_status_from_str(s: &str) -> RunnerStatusDto {
-    let parsed: RunnerStatus = serde_json::from_value(serde_json::Value::String(s.to_string()))
-        .unwrap_or_default();
-    parsed.into()
+    match s {
+        "online" => RunnerStatusDto::Online,
+        "offline" => RunnerStatusDto::Offline,
+        "maintenance" => RunnerStatusDto::Maintenance,
+        _ => RunnerStatusDto::Unknown,
+    }
 }
 
 impl From<mesh_proto::RunnerInfo> for MeshRunnerInfoDto {
