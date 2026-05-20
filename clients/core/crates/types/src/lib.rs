@@ -5,7 +5,6 @@
 
 mod auth;
 mod autopilot;
-mod billing;
 mod blockstore;
 mod channel;
 mod common;
@@ -23,7 +22,6 @@ mod user_credential;
 
 pub use auth::*;
 pub use autopilot::*;
-pub use billing::*;
 pub use blockstore::*;
 pub use channel::*;
 pub use common::*;
