@@ -6,15 +6,16 @@ import (
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/agentfile/eval"
-	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
+// buildEvalContext creates the AgentFile eval context with placeholder sandbox paths.
+// CONFIG values are populated by CONFIG declarations during eval (resolve step already injected defaults).
+// EnvBundles are loaded by buildEnvBundleContext and consumed by USE_ENV_BUNDLE declarations.
 func buildEvalContext(
 	req *ConfigBuildRequest,
-	creds agentDomain.EncryptedCredentials,
-	isRunnerHost bool,
 	builtinMCP, installedMCP map[string]interface{},
+	envBundles map[string]map[string]string,
 ) *eval.Context {
 	vars := map[string]interface{}{
 		"config": make(map[string]interface{}), // filled by CONFIG declarations during eval
@@ -34,17 +35,19 @@ func buildEvalContext(
 	}
 
 	ctx := eval.NewContext(vars)
-	ctx.Credentials = credentialsToMap(creds)
-	ctx.IsRunnerHost = isRunnerHost
+	ctx.EnvBundles = envBundles
 	return ctx
 }
 
+// buildResultToProto converts eval.BuildResult to a CreatePodCommand proto.
+// Paths contain placeholders ({{sandbox_root}}, {{work_dir}}) for Runner to resolve.
+// EnvVars carries all environment values destined for the pod process — including
+// any merged in by USE_ENV_BUNDLE eval. There's no separate Credentials channel.
 func buildResultToProto(
 	req *ConfigBuildRequest,
 	br *eval.BuildResult,
-	creds agentDomain.EncryptedCredentials,
-	isRunnerHost bool,
 ) *runnerv1.CreatePodCommand {
+	// Convert dirs + files to proto FileToCreate list
 	var files []*runnerv1.FileToCreate
 	for _, dir := range br.Dirs {
 		files = append(files, &runnerv1.FileToCreate{Path: dir, IsDirectory: true})
@@ -59,11 +62,13 @@ func buildResultToProto(
 		})
 	}
 
+	// Determine prompt from AgentFile PROMPT declaration
 	prompt := br.Prompt
 	if prompt == "" {
 		prompt = req.Prompt
 	}
 
+	// Determine interaction mode
 	mode := br.Mode
 	if mode == "" {
 		mode = "pty"
@@ -81,11 +86,10 @@ func buildResultToProto(
 		InteractionMode: mode,
 		Prompt:          prompt,
 		PromptPosition:  br.PromptPosition,
-		Credentials:     credentialsToMap(creds),
-		IsRunnerHost:    isRunnerHost,
 	}
 }
 
+// buildSandboxConfig builds sandbox config from request fields.
 func buildSandboxConfig(req *ConfigBuildRequest) *runnerv1.SandboxConfig {
 	if req.HttpCloneURL == "" && req.SshCloneURL == "" && req.LocalPath == "" && req.PreparationScript == "" {
 		return nil
@@ -110,6 +114,7 @@ func buildSandboxConfig(req *ConfigBuildRequest) *runnerv1.SandboxConfig {
 	}
 }
 
+// buildMCPContext loads MCP server configurations.
 func (b *ConfigBuilder) buildMCPContext(ctx context.Context, req *ConfigBuildRequest, agentSlug string) (map[string]interface{}, map[string]interface{}) {
 	builtinMCP := map[string]interface{}{
 		"agentsmesh": map[string]interface{}{
@@ -137,15 +142,4 @@ func (b *ConfigBuilder) buildMCPContext(ctx context.Context, req *ConfigBuildReq
 	}
 
 	return builtinMCP, installedMCP
-}
-
-func credentialsToMap(creds agentDomain.EncryptedCredentials) map[string]string {
-	if creds == nil {
-		return nil
-	}
-	result := make(map[string]string, len(creds))
-	for k, v := range creds {
-		result[k] = v
-	}
-	return result
 }

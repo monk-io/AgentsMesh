@@ -31,3 +31,4 @@ pub mod ticket_relations;
 pub mod token_usage;
 pub mod user;
 pub mod user_credential;
+pub mod user_env_bundle;

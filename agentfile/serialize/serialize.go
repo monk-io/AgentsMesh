@@ -67,8 +67,8 @@ func writeDecl(b *strings.Builder, decl parser.Declaration) {
 		for _, arg := range d.Args {
 			fmt.Fprintf(b, " %s", QuoteString(arg))
 		}
-	case *parser.CredentialDecl:
-		fmt.Fprintf(b, "CREDENTIAL %s", quoteIfNeeded(d.ProfileName))
+	case *parser.UseEnvBundleDecl:
+		fmt.Fprintf(b, "USE_ENV_BUNDLE %s", quoteIfNeeded(d.Name))
 	case *parser.PromptDecl:
 		fmt.Fprintf(b, "PROMPT %q", d.Content)
 	case *parser.PromptPositionDecl:

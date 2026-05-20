@@ -1,12 +1,17 @@
 "use client";
 
+/**
+ * AgentFile Layer editor with form/source mode toggle.
+ * Form mode: read-only preview of generated Layer.
+ * Source mode: CodeMirror 6 editor with syntax highlighting + autocomplete.
+ */
 import React, { useMemo } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { AgentfileCodeEditor } from "./AgentfileCodeEditor";
 import type { AgentfileCompletionContext } from "@/lib/codemirror-agentfile";
 import type { ConfigField } from "@/lib/api";
-import type { RepositoryData, AgentData, CredentialProfileData } from "@/lib/api";
+import type { RepositoryData, AgentData, EnvBundleSummary } from "@/lib/api";
 
 interface AgentfileLayerEditorProps {
   generatedLayer: string;
@@ -14,10 +19,14 @@ interface AgentfileLayerEditorProps {
   rawText: string;
   onRawModeChange: (enabled: boolean) => void;
   onRawTextChange: (text: string) => void;
+  /** Agent config schema for CONFIG field/value completions */
   configFields?: ConfigField[];
+  /** Available agents for AGENT keyword completions */
   agents?: AgentData[];
+  /** Available repositories for REPO/BRANCH completions */
   repositories?: RepositoryData[];
-  credentialProfiles?: CredentialProfileData[];
+  /** EnvBundles for USE_ENV_BUNDLE completions */
+  envBundles?: EnvBundleSummary[];
   t: (key: string) => string;
 }
 
@@ -30,9 +39,10 @@ export function AgentfileLayerEditor({
   configFields = [],
   agents,
   repositories,
-  credentialProfiles,
+  envBundles,
   t,
 }: AgentfileLayerEditorProps) {
+  // Build completion context from all available data sources
   const completionContext = useMemo<AgentfileCompletionContext>(() => ({
     configFields,
     agents: agents?.map((a) => ({ slug: a.slug, name: a.name })),
@@ -41,14 +51,14 @@ export function AgentfileLayerEditor({
       name: r.name,
       default_branch: r.default_branch,
     })),
-    credentialProfiles: credentialProfiles?.map((p) => ({
-      name: p.name,
-      description: p.description,
+    envBundles: envBundles?.map((b) => ({
+      name: b.name,
     })),
-  }), [configFields, agents, repositories, credentialProfiles]);
+  }), [configFields, agents, repositories, envBundles]);
 
   return (
     <div className="space-y-2 border-t pt-3">
+      {/* Toggle: Form Mode / Source Mode */}
       <div className="flex items-center justify-between">
         <Label className="text-sm">{t("ide.createPod.agentfileLayer")}</Label>
         <div className="flex items-center gap-2">
@@ -59,6 +69,7 @@ export function AgentfileLayerEditor({
         </div>
       </div>
 
+      {/* Layer preview or CodeMirror editor */}
       {rawMode ? (
         <AgentfileCodeEditor
           value={rawText}

@@ -52,48 +52,6 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn user_credential_list_agent_credentials(&self) -> napi::Result<String> {
-        let svc = self.user_credential.lock().await;
-            svc.list_agent_credentials().await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn user_credential_list_agent_credentials_for_agent(&self, agent_slug: String) -> napi::Result<String> {
-        let svc = self.user_credential.lock().await;
-            svc.list_agent_credentials_for_agent(&agent_slug).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn user_credential_create_agent_credential(&self, agent_slug: String, json: String) -> napi::Result<String> {
-        let svc = self.user_credential.lock().await;
-            svc.create_agent_credential(&agent_slug, &json).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn user_credential_get_agent_credential(&self, id: i64) -> napi::Result<String> {
-        let svc = self.user_credential.lock().await;
-            svc.get_agent_credential(id).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn user_credential_update_agent_credential(&self, id: i64, json: String) -> napi::Result<String> {
-        let svc = self.user_credential.lock().await;
-            svc.update_agent_credential(id, &json).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn user_credential_delete_agent_credential(&self, id: i64) -> napi::Result<()> {
-        let svc = self.user_credential.lock().await;
-            svc.delete_agent_credential(id).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn user_credential_set_default_agent_credential(&self, id: i64) -> napi::Result<()> {
-        let svc = self.user_credential.lock().await;
-            svc.set_default_agent_credential(id).await.map_err(err)
-    }
-
-    #[napi]
     pub async fn user_credential_list_repo_providers(&self) -> napi::Result<String> {
         let svc = self.user_credential.lock().await;
             svc.list_repo_providers().await.map_err(err)
@@ -140,5 +98,4 @@ impl AppState {
         let svc = self.user_credential.lock().await;
             svc.list_provider_repositories(id, page, per_page, search).await.map_err(err)
     }
-
 }

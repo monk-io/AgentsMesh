@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { repositoryApi, RepositoryData } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -23,6 +23,7 @@ export interface UseRepositoryDetailResult {
 export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailResult {
   const t = useTranslations();
   const router = useRouter();
+  const { org } = useParams<{ org: string }>();
 
   const [repository, setRepository] = useState<RepositoryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,12 +58,12 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
     if (!confirmed) return;
     try {
       await repositoryApi.delete(repositoryId);
-      router.push("../repositories");
+      router.push(`/${org}/infra?tab=repositories`);
     } catch (error) {
       console.error("Failed to delete repository:", error);
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
-  }, [repository, repositoryId, router, deleteDialog, t]);
+  }, [repository, repositoryId, router, org, deleteDialog, t]);
 
   return {
     repository,

@@ -5,11 +5,14 @@ import (
 	"time"
 )
 
+// AgentRepository defines persistence operations for agents
 type AgentRepository interface {
+	// Builtin agents
 	ListBuiltinActive(ctx context.Context) ([]*Agent, error)
 	ListAllActive(ctx context.Context) ([]*Agent, error)
 	GetBySlug(ctx context.Context, slug string) (*Agent, error)
 
+	// Custom agents
 	ListCustomByOrg(ctx context.Context, orgID int64) ([]*CustomAgent, error)
 	GetCustomBySlug(ctx context.Context, orgID int64, slug string) (*CustomAgent, error)
 	CustomSlugExists(ctx context.Context, orgID int64, slug string) (bool, error)
@@ -19,22 +22,7 @@ type AgentRepository interface {
 	CountLoopReferences(ctx context.Context, orgID int64, slug string) (int64, error)
 }
 
-type CredentialProfileRepository interface {
-	Create(ctx context.Context, profile *UserAgentCredentialProfile) error
-	GetWithAgent(ctx context.Context, userID, profileID int64) (*UserAgentCredentialProfile, error)
-	GetByName(ctx context.Context, userID int64, agentSlug, name string) (*UserAgentCredentialProfile, error)
-	Delete(ctx context.Context, userID, profileID int64) (int64, error)
-
-	ListActiveWithAgent(ctx context.Context, userID int64) ([]*UserAgentCredentialProfile, error)
-	ListByAgentSlug(ctx context.Context, userID int64, agentSlug string) ([]*UserAgentCredentialProfile, error)
-	GetDefault(ctx context.Context, userID int64, agentSlug string) (*UserAgentCredentialProfile, error)
-
-	NameExists(ctx context.Context, userID int64, agentSlug string, name string, excludeID *int64) (bool, error)
-	UnsetDefaults(ctx context.Context, userID int64, agentSlug string) error
-	Update(ctx context.Context, profile *UserAgentCredentialProfile, updates map[string]interface{}) error
-	SetDefault(ctx context.Context, profile *UserAgentCredentialProfile) error
-}
-
+// UserConfigRepository defines persistence operations for user agent configs
 type UserConfigRepository interface {
 	GetByUserAndAgentSlug(ctx context.Context, userID int64, agentSlug string) (*UserAgentConfig, error)
 	Upsert(ctx context.Context, userID int64, agentSlug string, configValues ConfigValues) error
@@ -42,6 +30,7 @@ type UserConfigRepository interface {
 	ListByUser(ctx context.Context, userID int64) ([]*UserAgentConfig, error)
 }
 
+// MessageRepository defines persistence operations for agent messages
 type MessageRepository interface {
 	Create(ctx context.Context, message *AgentMessage) error
 	GetByID(ctx context.Context, id int64) (*AgentMessage, error)

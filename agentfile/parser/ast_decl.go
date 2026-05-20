@@ -100,10 +100,17 @@ type ModeArgsDecl struct {
 	Position Position
 }
 
-// CredentialDecl: CREDENTIAL "profile-name" | CREDENTIAL runner_host
-type CredentialDecl struct {
-	ProfileName string // profile name or "runner_host"
-	Position    Position
+// UseEnvBundleDecl: USE_ENV_BUNDLE "bundle-name"
+//
+// Backend pre-loads all bundles visible to the user (mirror of MCP pattern)
+// and exposes them keyed by name in ctx.EnvBundles. Each USE_ENV_BUNDLE
+// declaration merges the named bundle's KV into Result.EnvVars in declaration
+// order — later names override earlier ones. Missing names are skipped with
+// a warning, not an error, so a stale layer reference doesn't break Pod
+// creation.
+type UseEnvBundleDecl struct {
+	Name     string
+	Position Position
 }
 
 // PromptDecl: PROMPT "prompt content"
@@ -131,7 +138,7 @@ func (d *SetupDecl) declNode()          {}
 func (d *RemoveDecl) declNode()         {}
 func (d *ModeDecl) declNode()           {}
 func (d *ModeArgsDecl) declNode()       {}
-func (d *CredentialDecl) declNode()     {}
+func (d *UseEnvBundleDecl) declNode()   {}
 func (d *PromptDecl) declNode()         {}
 func (d *PromptPositionDecl) declNode() {}
 
@@ -148,6 +155,6 @@ func (d *SetupDecl) Pos() Position          { return d.Position }
 func (d *RemoveDecl) Pos() Position         { return d.Position }
 func (d *ModeDecl) Pos() Position           { return d.Position }
 func (d *ModeArgsDecl) Pos() Position       { return d.Position }
-func (d *CredentialDecl) Pos() Position     { return d.Position }
+func (d *UseEnvBundleDecl) Pos() Position   { return d.Position }
 func (d *PromptDecl) Pos() Position         { return d.Position }
 func (d *PromptPositionDecl) Pos() Position { return d.Position }

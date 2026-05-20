@@ -32,21 +32,23 @@ test.describe("Personal Agent Configuration", () => {
   });
 
   /**
-   * TC-AGENT-003: Add custom API credential
+   * TC-AGENT-003: Add custom credential EnvBundle via the new API
    */
-  test("add and delete custom API credential", async ({ api, db }) => {
+  test("add and delete custom credential bundle", async ({ api, db }) => {
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Test Credential'`
+      `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`
     );
-    const res = await api.post("/api/v1/users/agent-credentials/agents/claude-code", {
-      name: "E2E Test Credential",
-      description: "Test credential for E2E",
-      credentials: { ANTHROPIC_API_KEY: "sk-ant-test-key-12345" },
+    const res = await api.post("/api/v1/users/env-bundles", {
+      agent_slug: "claude-code",
+      name: "E2E Test Bundle",
+      description: "Test credential bundle for E2E",
+      kind: "credential",
+      data: { ANTHROPIC_API_KEY: "sk-ant-test-key-12345" },
     });
     expect([200, 201]).toContain(res.status);
 
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Test Credential'`
+      `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`
     );
   });
 

@@ -26,6 +26,6 @@ pub mod ticket;
 pub mod ticket_relations;
 pub mod token_usage;
 pub mod user;
-pub mod user_agent_credential;
+pub mod user_env_bundle;
 pub mod user_git_credential;
 pub mod user_repository_provider;

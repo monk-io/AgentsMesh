@@ -68,8 +68,12 @@
       "selectAgentPlaceholder": "Elige un agente...",
       "noAgentsForRunner": "This runner does not support any agents",
       "selectCredential": "API Credentials",
-      "runnerHostDescription": "use Runner's local config",
-      "runnerHostHint": "Using Runner's local environment configuration. No credentials will be injected.",
+      "selectRuntimeBundles": "Runtime Env Bundles",
+      "useAgentDefaultAuth": "Use Agent default auth",
+      "credentialSelectedHint": "Selected credential bundle's env vars are injected when the Pod starts.",
+      "noCredentialHint": "No custom credentials injected; the agent uses its built-in auth flow (OAuth, signed-in CLI, etc.).",
+      "noRuntimeBundlesAvailableHint": "This agent has no runtime env bundles yet. Add one in Settings → Agent config.",
+      "noRuntimeBundleSelectedHint": "No runtime bundle selected; the Pod runs without any extra runtime preferences.",
       "customCredentialHint": "Using your custom API credentials for this agent.",
       "selectRepository": "Seleccionar Repositorio",
       "selectRepositoryPlaceholder": "Elige un repositorio...",
@@ -95,7 +99,17 @@
       "alias": "Alias",
       "aliasPlaceholder": "Ingrese un nombre para este pod...",
       "perpetual": "Perpetuo",
-      "perpetualDescription": "Reinicio automático al salir el agente. El Pod permanece activo indefinidamente."
+      "perpetualDescription": "Reinicio automático al salir el agente. El Pod permanece activo indefinidamente.",
+      "noBundleLabel": "Usar autenticación predeterminada del agente",
+      "noBundleHint": "No se inyectan credenciales personalizadas; el agente usa su flujo de autenticación integrado (OAuth, CLI con sesión, etc.).",
+      "multiBundleHint": "Los paquetes seleccionados se fusionan en el entorno del Pod en orden; las entradas posteriores anulan las anteriores en claves en conflicto.",
+      "selectedOrderHint": "Seleccionados (orden de fusión)",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "bundleKind": {
+        "credential": "Credencial",
+        "runtime": "Ejecución"
+      }
     },
     "sidebar": {
       "settings": {

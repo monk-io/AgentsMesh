@@ -23,6 +23,10 @@ type Service struct {
 
 	providerFactory     func(ctx context.Context, cfg *sso.Config) (ssoprovider.Provider, error)
 	samlProviderFactory func(cfg *sso.Config) (*ssoprovider.SAMLProvider, error)
+	// ldapConnectionTester overrides the post-build LDAP TCP/bind probe so
+	// tests can simulate connection failures without depending on DNS or
+	// sandbox network behavior (real LDAP TestConnection touches the wire).
+	ldapConnectionTester func(*ssoprovider.LDAPProvider) error
 }
 
 func NewService(repo sso.Repository, encryptionKey string, cfg *config.Config) *Service {

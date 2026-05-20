@@ -44,8 +44,6 @@ type BuildResult struct {
 	Mode string // "pty" or "acp"
 	// From MODE <name> <args...> declarations (per-mode launch args)
 	ModeArgs map[string][]string
-	// From CREDENTIAL declaration
-	CredentialProfile string // profile name or "runner_host"
 }
 
 // FileEntry represents a file to create in the sandbox.
@@ -73,11 +71,12 @@ type Context struct {
 	// Variables is the mutable variable scope.
 	Variables map[string]interface{}
 
-	// Credentials maps ENV names to their secret/text values.
-	Credentials map[string]string
-
-	// IsRunnerHost: use Runner's local credentials, don't inject.
-	IsRunnerHost bool
+	// EnvBundles is the bundle-name → KV map loaded by the backend before
+	// eval (mirror of the MCP pattern). USE_ENV_BUNDLE "name" declarations
+	// look up entries here and merge them into Result.EnvVars in declaration
+	// order. Missing names are skipped (warn-only) so a stale layer
+	// reference doesn't fail Pod creation.
+	EnvBundles map[string]map[string]string
 
 	// Result accumulates the complete Pod creation instruction.
 	Result *BuildResult

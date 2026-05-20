@@ -100,46 +100,11 @@ ENV TERM = "xterm-256color"
 	assert.Equal(t, "xterm-256color", ctx.Result.EnvVars["TERM"])
 }
 
-func TestEval_CredentialEnvInjection(t *testing.T) {
-	prog, errs := parser.Parse(`
-AGENT test
-ENV ANTHROPIC_API_KEY SECRET
-ENV ANTHROPIC_BASE_URL TEXT OPTIONAL
-ENV TERM = "xterm-256color"
-`)
-	require.Empty(t, errs)
-
-	ctx := NewContext(nil)
-	ctx.Credentials = map[string]string{
-		"ANTHROPIC_API_KEY":  "sk-secret-123",
-		"ANTHROPIC_BASE_URL": "https://custom.api.com",
-	}
-	require.NoError(t, Eval(prog, ctx))
-
-	assert.Equal(t, "sk-secret-123", ctx.Result.EnvVars["ANTHROPIC_API_KEY"])
-	assert.Equal(t, "https://custom.api.com", ctx.Result.EnvVars["ANTHROPIC_BASE_URL"])
-	assert.Equal(t, "xterm-256color", ctx.Result.EnvVars["TERM"])
-}
-
-func TestEval_CredentialEnvRunnerHost(t *testing.T) {
-	prog, errs := parser.Parse(`
-AGENT test
-ENV ANTHROPIC_API_KEY SECRET
-ENV TERM = "xterm-256color"
-`)
-	require.Empty(t, errs)
-
-	ctx := NewContext(nil)
-	ctx.Credentials = map[string]string{"ANTHROPIC_API_KEY": "sk-secret"}
-	ctx.IsRunnerHost = true
-	require.NoError(t, Eval(prog, ctx))
-
-	// RunnerHost mode: credentials NOT injected
-	_, hasKey := ctx.Result.EnvVars["ANTHROPIC_API_KEY"]
-	assert.False(t, hasKey)
-	// Fixed value env still works
-	assert.Equal(t, "xterm-256color", ctx.Result.EnvVars["TERM"])
-}
+// After the EnvBundle refactor the eval layer no longer pulls values from a
+// `ctx.Credentials` map. Environment values arrive exclusively through ENV
+// declarations (literal/expression form) and USE_ENV_BUNDLE references — both
+// of which are covered by eval_envbundle_test.go and the regular env tests.
+// The original "implicit credential merge" behavior has been removed.
 
 func TestEval_Assignment(t *testing.T) {
 	prog, errs := parser.Parse(`

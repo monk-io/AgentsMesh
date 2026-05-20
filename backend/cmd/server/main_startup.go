@@ -108,12 +108,15 @@ func initLogUploadService(
 }
 
 func createPodOrchestrator(services *serviceContainer, podCoordinator *runner.PodCoordinator) *agentpod.PodOrchestrator {
-	compositeProvider := agent.NewCompositeProvider(services.agentSvc, services.credentialProfile, services.userConfig)
-	configBuilder := agent.NewConfigBuilder(compositeProvider)
+	if services.envBundle == nil {
+		panic("createPodOrchestrator: services.envBundle is required for ConfigBuilder")
+	}
+	configBuilder := agent.NewConfigBuilder(services.agentSvc, services.envBundle)
 	if services.extension != nil {
 		configBuilder.SetExtensionProvider(services.extension)
 		slog.Info("ExtensionProvider connected to ConfigBuilder")
 	}
+	slog.Info("EnvBundleService connected to ConfigBuilder")
 	orch := agentpod.NewPodOrchestrator(&agentpod.PodOrchestratorDeps{
 		PodService:      services.pod,
 		ConfigBuilder:   configBuilder,
@@ -157,7 +160,7 @@ func buildServicesContainer(
 		User:               services.user,
 		Org:                services.org,
 		AgentSvc:           services.agentSvc,
-		CredentialProfile:  services.credentialProfile,
+		EnvBundle:          services.envBundle,
 		UserConfig:         services.userConfig,
 		Repository:         services.repository,
 		Webhook:            services.webhook,

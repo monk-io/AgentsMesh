@@ -53,6 +53,7 @@ export const getTokenUsageService = () => g<any>("tokenUsageService");
 export const getSSOService = () => g<any>("ssoService");
 export const getUserApiService = () => g<any>("userApiService");
 export const getUserCredentialService = () => g<any>("userCredentialService");
+export const getEnvBundleService = () => g<any>("envBundleService");
 export const getOrgApiService = () => g<any>("orgApiService");
 export const getAgentService = () => g<any>("agentService");
 export const getTicketRelationsService = () => g<any>("ticketRelationsService");

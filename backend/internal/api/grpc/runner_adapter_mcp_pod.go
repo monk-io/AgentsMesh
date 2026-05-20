@@ -9,21 +9,26 @@ import (
 	"github.com/anthropics/agentsmesh/backend/pkg/slugkit"
 )
 
-// AgentFile SSOT: agentfile_layer carries MODE/CONFIG/REPO/etc.
-// repository_id + credential_profile_id remain platform-level ID refs (see backend/internal/service/agentpod/agentfile_extract.go).
+// ==================== Pod MCP Methods ====================
+
+// mcpCreatePod handles the "create_pod" MCP method.
+// Delegates to PodOrchestrator for the full creation flow (DB + config + Runner command).
+// `agentfile_layer` is the SSOT for everything Pod-specific (MODE, CONFIG, REPO,
+// USE_ENV_BUNDLE, …). `repository_id` is kept as a separate platform-level ID
+// reference that can't be expressed inside the AgentFile.
 func (a *GRPCRunnerAdapter) mcpCreatePod(ctx context.Context, tc *middleware.TenantContext, payload []byte) (interface{}, *mcpError) {
 	var params struct {
-		AgentSlug           string  `json:"agent_slug"`
-		RunnerID            int64   `json:"runner_id"`
-		TicketSlug          *string `json:"ticket_slug"`
-		Alias               *string `json:"alias"`
-		AgentfileLayer        *string `json:"agentfile_layer"`
-		Cols                int32   `json:"cols"`
-		Rows                int32   `json:"rows"`
-		SourcePodKey        string  `json:"source_pod_key"`
-		ResumeAgentSession  *bool   `json:"resume_agent_session"`
-		RepositoryID        *int64  `json:"repository_id"`
-		CredentialProfileID *int64  `json:"credential_profile_id"`
+		AgentSlug          string  `json:"agent_slug"`
+		RunnerID           int64   `json:"runner_id"`
+		TicketSlug         *string `json:"ticket_slug"`
+		Alias              *string `json:"alias"`
+		AgentfileLayer     *string `json:"agentfile_layer"`
+		Cols               int32   `json:"cols"`
+		Rows               int32   `json:"rows"`
+		SourcePodKey       string  `json:"source_pod_key"`
+		ResumeAgentSession *bool   `json:"resume_agent_session"`
+		// Platform-level ID reference (cannot be expressed as AgentFile declarations)
+		RepositoryID *int64 `json:"repository_id"`
 	}
 	if err := unmarshalPayload(payload, &params); err != nil {
 		return nil, err
@@ -33,20 +38,20 @@ func (a *GRPCRunnerAdapter) mcpCreatePod(ctx context.Context, tc *middleware.Ten
 		return nil, newMcpError(400, "agent_slug: "+err.Error())
 	}
 
+	// Delegate to PodOrchestrator for the complete creation flow
 	result, err := a.podOrchestrator.CreatePod(ctx, &agentpod.OrchestrateCreatePodRequest{
-		OrganizationID:      tc.OrganizationID,
-		UserID:              tc.UserID,
-		RunnerID:            params.RunnerID,
-		AgentSlug:           params.AgentSlug,
-		RepositoryID:        params.RepositoryID,
-		TicketSlug:          params.TicketSlug,
-		Alias:               params.Alias,
-		CredentialProfileID: params.CredentialProfileID,
-		AgentfileLayer:      params.AgentfileLayer,
-		Cols:                params.Cols,
-		Rows:                params.Rows,
-		SourcePodKey:        params.SourcePodKey,
-		ResumeAgentSession:  params.ResumeAgentSession,
+		OrganizationID:     tc.OrganizationID,
+		UserID:             tc.UserID,
+		RunnerID:           params.RunnerID,
+		AgentSlug:          params.AgentSlug,
+		RepositoryID:       params.RepositoryID,
+		TicketSlug:         params.TicketSlug,
+		Alias:              params.Alias,
+		AgentfileLayer:     params.AgentfileLayer,
+		Cols:               params.Cols,
+		Rows:               params.Rows,
+		SourcePodKey:       params.SourcePodKey,
+		ResumeAgentSession: params.ResumeAgentSession,
 	})
 	if err != nil {
 		return nil, mapOrchestratorErrorToMCP(err)
@@ -65,6 +70,7 @@ func (a *GRPCRunnerAdapter) mcpCreatePod(ctx context.Context, tc *middleware.Ten
 	return resp, nil
 }
 
+// mapOrchestratorErrorToMCP maps PodOrchestrator errors to MCP error responses.
 func mapOrchestratorErrorToMCP(err error) *mcpError {
 	switch {
 	case errors.Is(err, agentpod.ErrMissingRunnerID):

@@ -156,6 +156,14 @@ func TestTestConnection_LDAP_BuildSuccess_ConnectFails(t *testing.T) {
 	*cfg.LDAPHost = "127.0.0.1"
 	*cfg.LDAPPort = 1
 
+	// Inject a deterministic failure for the wire-level probe. The real
+	// LDAPProvider.TestConnection() relies on DNS + TCP behavior, which
+	// some sandboxed test environments handle inconsistently (a closed
+	// host can appear as instantly-succeeding).
+	svc.ldapConnectionTester = func(_ *ssoprovider.LDAPProvider) error {
+		return fmt.Errorf("connection failed: simulated unreachable host")
+	}
+
 	err := svc.TestConnection(context.Background(), 1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "connection failed")

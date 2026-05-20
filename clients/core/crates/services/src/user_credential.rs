@@ -58,61 +58,6 @@ impl UserCredentialService {
         Ok(())
     }
 
-    pub async fn list_agent_credentials(&self) -> Result<String, String> {
-        let resp = self.client
-            .list_user_agent_credentials()
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn list_agent_credentials_for_agent(
-        &self, agent_slug: &str,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .list_user_agent_credentials_for_agent(agent_slug)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn create_agent_credential(
-        &self, agent_slug: &str, json: &str,
-    ) -> Result<String, String> {
-        let req: CreateAgentCredentialProfileRequest =
-            serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .create_user_agent_credential(agent_slug, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn get_agent_credential(&self, id: i64) -> Result<String, String> {
-        let resp = self.client
-            .get_user_agent_credential(id)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn update_agent_credential(
-        &self, id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: UpdateAgentCredentialProfileRequest =
-            serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .update_user_agent_credential(id, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn delete_agent_credential(&self, id: i64) -> Result<(), String> {
-        self.client.delete_user_agent_credential(id).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
-    pub async fn set_default_agent_credential(&self, id: i64) -> Result<(), String> {
-        self.client.set_default_agent_credential(id).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
     pub async fn list_repo_providers(&self) -> Result<String, String> {
         let resp = self.client
             .list_user_repository_providers()

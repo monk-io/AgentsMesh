@@ -605,27 +605,34 @@ mod api_core_tests {
         ).await.unwrap();
     }
 
-    // ── user_agent_credential ───────────────────────────────────────────
+    // ── user_env_bundle ─────────────────────────────────────────────────
 
     #[tokio::test]
-    async fn list_user_agent_credentials() {
+    async fn list_user_env_bundles() {
         let s = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/api/v1/users/agent-credentials"))
+        Mock::given(method("GET")).and(path("/api/v1/users/env-bundles"))
             .respond_with(ok(json!({"items":[]})))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.list_user_agent_credentials().await.unwrap();
+        let _ = c.list_user_env_bundles(None, None).await.unwrap();
     }
 
     #[tokio::test]
-    async fn set_default_agent_credential() {
+    async fn set_primary_env_bundle() {
         let s = MockServer::start().await;
         Mock::given(method("POST"))
-            .and(path("/api/v1/users/agent-credentials/profiles/3/set-default"))
-            .respond_with(ok(json!({})))
+            .and(path("/api/v1/users/env-bundles/3/set-primary"))
+            .respond_with(ok(json!({
+                "bundle": {
+                    "id": 3, "owner_scope": "user", "owner_id": 1,
+                    "name": "work", "kind": "credential",
+                    "kind_primary": true, "is_active": true,
+                    "created_at": "x", "updated_at": "x"
+                }
+            })))
             .expect(1).mount(&s).await;
         let c = ApiClient::new(s.uri(), MockTokenStore::no_org());
-        let _ = c.set_default_agent_credential(3).await.unwrap();
+        let _ = c.set_primary_env_bundle(3).await.unwrap();
     }
 
     // ── user_git_credential ─────────────────────────────────────────────

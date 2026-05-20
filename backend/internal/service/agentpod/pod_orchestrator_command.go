@@ -92,7 +92,6 @@ func (o *PodOrchestrator) buildPodCommand(
 		AgentSlug:           req.AgentSlug,
 		OrganizationID:      req.OrganizationID,
 		UserID:              req.UserID,
-		CredentialProfileID: req.CredentialProfileID,
 		RepositoryID:        effectiveRepoID,
 		HttpCloneURL:        httpCloneURL,
 		SshCloneURL:         sshCloneURL,
@@ -111,7 +110,6 @@ func (o *PodOrchestrator) buildPodCommand(
 		Rows:                req.Rows,
 		RunnerAgentVersions: runnerAgentVersions,
 		MergedAgentfileSource: resolved.MergedAgentfileSource,
-		CredentialProfile:   resolved.CredentialProfile,
 	}
 
 	cmd, err := o.configBuilder.BuildPodCommand(ctx, buildReq)

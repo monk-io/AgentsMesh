@@ -19,18 +19,10 @@ test.describe("Backend wrapper envelope contracts", () => {
     expect(body.offset).toBe(0);
   });
 
-  test("dlq list keeps total alongside entries", async ({ api }) => {
-    const res = await api.get(`${ORG_BASE}/messages/dlq?limit=10&offset=0`);
-    // Messaging is feature-gated — dev/CI backends may run with svc.Message=nil
-    // and short-circuit registerMessageRoutes. Treat 404 as "feature off" rather
-    // than a wrapper-shape regression.
-    if (res.status === 404) { test.skip(); return; }
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toHaveProperty("entries");
-    expect(body).toHaveProperty("total");
-    expect(typeof body.total).toBe("number");
-  });
+  // NOTE: the DLQ envelope test used to live here but messaging service is
+  // not wired into cmd/server (no MessageService instance, no migration for
+  // agent_messages / agent_message_dead_letters). When the feature is wired
+  // up, restore: GET messages/dlq?limit=10&offset=0 → { entries, total }.
 
   test("pod create response carries pod envelope", async ({ api }) => {
     const runners = (await (await api.get(`${ORG_BASE}/runners/available`)).json()).runners;
@@ -52,18 +44,33 @@ test.describe("Backend wrapper envelope contracts", () => {
     }
   });
 
-  test("loop runs list keeps pagination shape", async ({ api }) => {
-    const loopsRes = await api.get(`${ORG_BASE}/loops?limit=1`);
-    if (loopsRes.status !== 200) { test.skip(); return; }
-    const loops = (await loopsRes.json()).loops;
-    if (!loops?.length) { test.skip(); return; }
+  test("loop runs list keeps pagination shape", async ({ api, db }) => {
+    // Self-seed a loop so the test doesn't depend on whatever residue
+    // previous tests happened to leave behind. The wrapper-envelope check
+    // is about wire shape (runs / total / limit / offset), not behaviour —
+    // an empty runs array is the expected payload for a freshly-created loop.
+    const loopName = `E2E Envelope Loop ${Date.now()}`;
+    db.cleanup(`DELETE FROM loops WHERE name LIKE 'E2E Envelope Loop%'`);
+    const createRes = await api.post(`${ORG_BASE}/loops`, {
+      name: loopName,
+      agent_slug: "claude-code",
+      prompt_template: "noop",
+    });
+    expect([200, 201]).toContain(createRes.status);
+    const loop = (await createRes.json()).loop;
+    expect(loop?.slug).toBeTruthy();
 
-    const res = await api.get(`${ORG_BASE}/loops/${loops[0].slug}/runs?limit=10&offset=0`);
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toHaveProperty("runs");
-    expect(body).toHaveProperty("total");
-    expect(body).toHaveProperty("limit");
-    expect(body).toHaveProperty("offset");
+    try {
+      const res = await api.get(`${ORG_BASE}/loops/${loop.slug}/runs?limit=10&offset=0`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveProperty("runs");
+      expect(body).toHaveProperty("total");
+      expect(body).toHaveProperty("limit");
+      expect(body).toHaveProperty("offset");
+    } finally {
+      await api.delete(`${ORG_BASE}/loops/${loop.slug}`);
+      db.cleanup(`DELETE FROM loops WHERE name LIKE 'E2E Envelope Loop%'`);
+    }
   });
 });

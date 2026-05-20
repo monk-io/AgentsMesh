@@ -6,6 +6,7 @@ import (
 	"time"
 
 	loopDomain "github.com/anthropics/agentsmesh/backend/internal/domain/loop"
+	"github.com/lib/pq"
 )
 
 func (s *LoopService) Update(ctx context.Context, orgID int64, slug string, req *UpdateLoopRequest) (*loopDomain.Loop, error) {
@@ -42,8 +43,11 @@ func (s *LoopService) Update(ctx context.Context, orgID int64, slug string, req 
 	if req.TicketID != nil {
 		updates["ticket_id"] = *req.TicketID
 	}
-	if req.CredentialProfileID != nil {
-		updates["credential_profile_id"] = *req.CredentialProfileID
+	if req.UsedEnvBundles != nil {
+		// Nil pointer = leave unchanged; pointer to []string = replace.
+		// Empty slice replaces with no bundles. pq.StringArray serialises
+		// `[]string{}` to PostgreSQL `'{}'::text[]`.
+		updates["used_env_bundles"] = pq.StringArray(*req.UsedEnvBundles)
 	}
 	if req.ConfigOverrides != nil {
 		updates["config_overrides"] = req.ConfigOverrides

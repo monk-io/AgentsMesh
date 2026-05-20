@@ -79,7 +79,7 @@ func (s *LoopService) Create(ctx context.Context, req *CreateLoopRequest) (*loop
 		RunnerID:            req.RunnerID,
 		BranchName:          req.BranchName,
 		TicketID:            req.TicketID,
-		CredentialProfileID: req.CredentialProfileID,
+		UsedEnvBundles:      req.UsedEnvBundles,
 		ConfigOverrides:     req.ConfigOverrides,
 		ExecutionMode:       req.ExecutionMode,
 		CronExpression:      req.CronExpression,

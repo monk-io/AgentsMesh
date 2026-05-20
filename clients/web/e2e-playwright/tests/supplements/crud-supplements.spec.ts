@@ -10,60 +10,62 @@ test.describe("CRUD Supplements", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   /**
-   * TC-AGENTCRED-003: Update agent credential
+   * EnvBundle update via /users/env-bundles. Replaces the legacy
+   * /users/agent-credentials/profiles/:id endpoint.
    */
-  test("update agent credential profile name", async ({ api, db }) => {
-    // user_agent_credential_profiles has UNIQUE(user_id, agent_slug, name);
-    // a residue from a prior failed run would make POST return
-    // ALREADY_EXISTS and silently skip. Pre-clean.
+  test("update env bundle name", async ({ api, db }) => {
+    // env_bundles has UNIQUE(owner_scope, owner_id, name); a residue from a
+    // prior failed run would make POST return ALREADY_EXISTS and silently
+    // skip. Pre-clean.
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name IN ('E2E Update Cred', 'E2E Updated Cred')`
+      `DELETE FROM env_bundles WHERE name IN ('E2E Update Bundle', 'E2E Updated Bundle')`
     );
-    const createRes = await api.post(
-      "/api/v1/users/agent-credentials/agents/claude-code",
-      { name: "E2E Update Cred", credentials: { ANTHROPIC_API_KEY: "sk-test" } }
-    );
+    const createRes = await api.post("/api/v1/users/env-bundles", {
+      agent_slug: "claude-code",
+      name: "E2E Update Bundle",
+      kind: "credential",
+      data: { ANTHROPIC_API_KEY: "sk-test" },
+    });
     if (createRes.status === 404) { test.skip(); return; }
     const created = await createRes.json();
-    const id = created.profile?.id || created.id;
+    const id = created.bundle?.id;
     if (!id) { test.skip(); return; }
 
-    // Update
     const updateRes = await api.put(
-      `/api/v1/users/agent-credentials/profiles/${id}`,
-      { name: "E2E Updated Cred" }
+      `/api/v1/users/env-bundles/${id}`,
+      { name: "E2E Updated Bundle" }
     );
     expect(updateRes.status).toBe(200);
 
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name IN ('E2E Update Cred', 'E2E Updated Cred')`
+      `DELETE FROM env_bundles WHERE name IN ('E2E Update Bundle', 'E2E Updated Bundle')`
     );
   });
 
   /**
-   * TC-AGENTCRED-005: Set default agent credential
+   * Promote a bundle to primary within its (agent, kind) group.
    */
-  test("set agent credential as default", async ({ api, db }) => {
-    db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Default Cred'`
-    );
-    const createRes = await api.post(
-      "/api/v1/users/agent-credentials/agents/claude-code",
-      { name: "E2E Default Cred", credentials: { ANTHROPIC_API_KEY: "sk-test" } }
-    );
+  test("set env bundle as primary", async ({ api, db }) => {
+    db.cleanup(`DELETE FROM env_bundles WHERE name = 'E2E Primary Bundle'`);
+    const createRes = await api.post("/api/v1/users/env-bundles", {
+      agent_slug: "claude-code",
+      name: "E2E Primary Bundle",
+      kind: "credential",
+      data: { ANTHROPIC_API_KEY: "sk-test" },
+    });
     if (createRes.status === 404) { test.skip(); return; }
     const created = await createRes.json();
-    const id = created.profile?.id || created.id;
+    const id = created.bundle?.id;
     if (!id) { test.skip(); return; }
 
     const setRes = await api.post(
-      `/api/v1/users/agent-credentials/profiles/${id}/set-default`, {}
+      `/api/v1/users/env-bundles/${id}/set-primary`, {}
     );
     expect(setRes.status).toBe(200);
+    const after = await setRes.json();
+    expect(after.bundle?.kind_primary).toBe(true);
 
-    db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Default Cred'`
-    );
+    db.cleanup(`DELETE FROM env_bundles WHERE name = 'E2E Primary Bundle'`);
   });
 
   /**

@@ -4,14 +4,14 @@ import {
   MODE_VALUES, GIT_CREDENTIAL_VALUES, PROMPT_POSITION_VALUES,
   buildFieldCompletions, buildValueCompletions,
   buildAgentCompletions, buildRepoCompletions,
-  buildBranchCompletions, buildCredentialCompletions,
+  buildBranchCompletions, buildEnvBundleCompletions,
 } from "./completionBuilders";
 
 export interface AgentfileCompletionContext {
   configFields: ConfigField[];
   agents?: { slug: string; name: string }[];
   repositories?: { slug: string; name: string; default_branch: string }[];
-  credentialProfiles?: { name: string; description?: string }[];
+  envBundles?: { name: string; description?: string }[];
 }
 
 const DECLARATION_COMPLETIONS: Completion[] = [
@@ -19,7 +19,7 @@ const DECLARATION_COMPLETIONS: Completion[] = [
   { label: "CONFIG", type: "keyword", detail: "Configuration key = value" },
   { label: "ENV", type: "keyword", detail: "Environment variable" },
   { label: "MODE", type: "keyword", detail: "Interaction mode (pty/acp)" },
-  { label: "CREDENTIAL", type: "keyword", detail: "Credential profile name" },
+  { label: "USE_ENV_BUNDLE", type: "keyword", detail: "EnvBundle name" },
   { label: "REPO", type: "keyword", detail: "Repository slug" },
   { label: "BRANCH", type: "keyword", detail: "Git branch name" },
   { label: "GIT_CREDENTIAL", type: "keyword", detail: "Git credential type" },
@@ -47,7 +47,7 @@ function findConfigFieldOnLine(text: string): string | null {
 
 function matchKeywordValue(text: string): [string, string] | null {
   const m = text.match(
-    /^\s*(AGENT|REPO|BRANCH|CREDENTIAL|GIT_CREDENTIAL|MODE|MCP|EXECUTABLE|PROMPT_POSITION)\s+"?([^"]*)$/
+    /^\s*(AGENT|REPO|BRANCH|USE_ENV_BUNDLE|GIT_CREDENTIAL|MODE|MCP|EXECUTABLE|PROMPT_POSITION)\s+"?([^"]*)$/
   );
   if (m) return [m[1], m[2]];
   const m2 = text.match(/^\s*(MODE|GIT_CREDENTIAL|PROMPT_POSITION)\s+(\w*)$/);
@@ -61,7 +61,7 @@ function keywordValueOptions(kw: string, ctx: AgentfileCompletionContext): Compl
     case "AGENT": return buildAgentCompletions(ctx.agents);
     case "REPO": return buildRepoCompletions(ctx.repositories);
     case "BRANCH": return buildBranchCompletions(ctx.repositories);
-    case "CREDENTIAL": return buildCredentialCompletions(ctx.credentialProfiles);
+    case "USE_ENV_BUNDLE": return buildEnvBundleCompletions(ctx.envBundles);
     case "GIT_CREDENTIAL": return GIT_CREDENTIAL_VALUES;
     case "PROMPT_POSITION": return PROMPT_POSITION_VALUES;
     default: return [];

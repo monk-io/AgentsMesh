@@ -209,3 +209,77 @@ func TestBuildLoopAgentfileLayer_FullCombination(t *testing.T) {
 	assert.Contains(t, layer, `REPO "team/project"`)
 	assert.Contains(t, layer, `BRANCH "develop"`)
 }
+
+// ---------- USE_ENV_BUNDLE (loop bundle binding) ----------
+
+func TestBuildLoopAgentfileLayer_UsedEnvBundles_SingleEmitsLine(t *testing.T) {
+	o := newTestOrchestrator(nil)
+	loop := &loopDomain.Loop{
+		PermissionMode:  "bypassPermissions",
+		UsedEnvBundles:  []string{"work-creds"},
+	}
+
+	layer := o.buildLoopAgentfileLayer(context.Background(), loop, "")
+
+	assert.Contains(t, layer, `USE_ENV_BUNDLE "work-creds"`)
+}
+
+func TestBuildLoopAgentfileLayer_UsedEnvBundles_MultipleEmitLinesInOrder(t *testing.T) {
+	// Each name becomes its own USE_ENV_BUNDLE line, in array order.
+	// Later entries override earlier ones at backend eval time, so order
+	// is part of the wire contract.
+	o := newTestOrchestrator(nil)
+	loop := &loopDomain.Loop{
+		PermissionMode: "bypassPermissions",
+		UsedEnvBundles: []string{"base", "overlay-1", "overlay-2"},
+	}
+
+	layer := o.buildLoopAgentfileLayer(context.Background(), loop, "")
+
+	idxBase := strings.Index(layer, `USE_ENV_BUNDLE "base"`)
+	idxOverlay1 := strings.Index(layer, `USE_ENV_BUNDLE "overlay-1"`)
+	idxOverlay2 := strings.Index(layer, `USE_ENV_BUNDLE "overlay-2"`)
+	assert.True(t, idxBase >= 0 && idxOverlay1 > idxBase && idxOverlay2 > idxOverlay1,
+		"USE_ENV_BUNDLE lines must appear in array order; got layer:\n%s", layer)
+}
+
+func TestBuildLoopAgentfileLayer_EmptyUsedEnvBundles_OmitsLine(t *testing.T) {
+	o := newTestOrchestrator(nil)
+	loop := &loopDomain.Loop{
+		PermissionMode:  "bypassPermissions",
+		UsedEnvBundles:  nil,
+	}
+
+	layer := o.buildLoopAgentfileLayer(context.Background(), loop, "")
+
+	assert.NotContains(t, layer, "USE_ENV_BUNDLE")
+}
+
+func TestBuildLoopAgentfileLayer_UsedEnvBundles_EmptyStringEntrySkipped(t *testing.T) {
+	// Empty-string array entries are skipped silently — guards against
+	// stray "" sneaking in from form state without crashing the run.
+	o := newTestOrchestrator(nil)
+	loop := &loopDomain.Loop{
+		PermissionMode: "bypassPermissions",
+		UsedEnvBundles: []string{"", "work-creds", ""},
+	}
+
+	layer := o.buildLoopAgentfileLayer(context.Background(), loop, "")
+
+	assert.Contains(t, layer, `USE_ENV_BUNDLE "work-creds"`)
+	assert.NotContains(t, layer, `USE_ENV_BUNDLE ""`)
+}
+
+func TestBuildLoopAgentfileLayer_UsedEnvBundlesEscapesQuotes(t *testing.T) {
+	o := newTestOrchestrator(nil)
+	tricky := `name with "quotes" and \ backslash`
+	loop := &loopDomain.Loop{
+		PermissionMode: "bypassPermissions",
+		UsedEnvBundles: []string{tricky},
+	}
+
+	layer := o.buildLoopAgentfileLayer(context.Background(), loop, "")
+
+	// Should serialize as: USE_ENV_BUNDLE "name with \"quotes\" and \\ backslash"
+	assert.Contains(t, layer, `USE_ENV_BUNDLE "name with \"quotes\" and \\ backslash"`)
+}

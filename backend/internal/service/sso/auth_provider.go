@@ -179,5 +179,8 @@ func (s *Service) testLDAPConnection(cfg *sso.Config) error {
 	if err != nil {
 		return err
 	}
+	if s.ldapConnectionTester != nil {
+		return s.ldapConnectionTester(provider)
+	}
 	return provider.TestConnection()
 }

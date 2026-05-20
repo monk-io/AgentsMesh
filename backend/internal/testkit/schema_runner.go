@@ -88,7 +88,6 @@ func podTableDDLs() []string {
 			perpetual BOOLEAN NOT NULL DEFAULT FALSE,
 			restart_count INTEGER NOT NULL DEFAULT 0,
 			last_restart_at DATETIME,
-			credential_profile_id INTEGER,
 			config_overrides TEXT DEFAULT '{}',
 			interaction_mode TEXT NOT NULL DEFAULT 'pty',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

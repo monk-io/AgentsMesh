@@ -58,6 +58,12 @@ pub struct LoopData {
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
+    /// Ordered list of EnvBundle names attached to every run of this loop
+    /// (each emitted as `USE_ENV_BUNDLE "<name>"` in the generated
+    /// AgentFile, in array order; later entries override earlier ones on
+    /// conflicting env keys). Empty = no bundles.
+    #[serde(default)]
+    pub used_env_bundles: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

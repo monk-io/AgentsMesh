@@ -42,7 +42,7 @@ func setupIntegrationOrchestrator(t *testing.T, opts ...func(*PodOrchestratorDep
 		creds:  agentDomain.EncryptedCredentials{},
 		isRunner: true,
 	}
-	configBuilder := agent.NewConfigBuilder(provider)
+	configBuilder := agent.NewConfigBuilder(provider, noopBundleLoader{})
 
 	deps := &PodOrchestratorDeps{
 		PodService:    podSvc,

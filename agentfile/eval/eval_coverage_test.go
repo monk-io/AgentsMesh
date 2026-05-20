@@ -8,12 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Cover evalRemoveDecl (0% → package-local test)
+// Cover evalRemoveDecl (0% → package-local test). After the EnvBundle
+// refactor we no longer pull values from a credentials map; we seed the
+// envs through a USE_ENV_BUNDLE reference instead so the REMOVE ENV path is
+// still exercised end to end.
 func TestEval_RemoveDecl(t *testing.T) {
 	prog, errs := parser.Parse(`
 AGENT test
-ENV KEY1 SECRET
-ENV KEY2 SECRET
+USE_ENV_BUNDLE "creds"
 SKILLS s1, s2
 REMOVE ENV KEY2
 REMOVE SKILLS s1
@@ -21,7 +23,9 @@ REMOVE SKILLS s1
 	require.Empty(t, errs)
 
 	ctx := NewContext(nil)
-	ctx.Credentials = map[string]string{"KEY1": "v1", "KEY2": "v2"}
+	ctx.EnvBundles = map[string]map[string]string{
+		"creds": {"KEY1": "v1", "KEY2": "v2"},
+	}
 	require.NoError(t, Eval(prog, ctx))
 	ApplyRemoves(ctx.Result)
 
@@ -185,18 +189,19 @@ x = nonexistent()
 	assert.Contains(t, err.Error(), "undefined function")
 }
 
-// Cover credential empty string not injected
-func TestEval_CredentialEmptyString(t *testing.T) {
+// `ENV X SECRET` declarations are pure metadata after the EnvBundle
+// refactor — they don't read from any credential map and never populate
+// EnvVars on their own. Values come from USE_ENV_BUNDLE references.
+func TestEval_DeclaredSecretEnvIsMetadataOnly(t *testing.T) {
 	prog, errs := parser.Parse(`
 AGENT test
 ENV MY_KEY SECRET
 `)
 	require.Empty(t, errs)
 	ctx := NewContext(nil)
-	ctx.Credentials = map[string]string{"MY_KEY": ""}
 	require.NoError(t, Eval(prog, ctx))
 	_, has := ctx.Result.EnvVars["MY_KEY"]
-	assert.False(t, has) // empty string not injected
+	assert.False(t, has, "ENV SECRET declarations should not populate EnvVars")
 }
 
 // Cover dot access on nil

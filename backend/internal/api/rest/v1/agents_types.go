@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
+	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
 	"github.com/gin-gonic/gin"
 )
@@ -44,7 +45,7 @@ func (h *AgentHandler) GetAgent(c *gin.Context) {
 func (h *AgentHandler) GetAgentConfigSchema(c *gin.Context) {
 	agentSlug := c.Param("agent_slug")
 
-	schema, err := h.configBuilder.GetConfigSchema(c.Request.Context(), agentSlug)
+	schema, err := agent.ResolveConfigSchema(c.Request.Context(), h.agentSvc, agentSlug)
 	if err != nil {
 		apierr.InternalError(c, "Failed to get config schema")
 		return

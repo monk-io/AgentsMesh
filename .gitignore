@@ -204,6 +204,8 @@ clients/ios/Packages/AgentsMeshCore/Sources/AgentsMeshCoreFFI/AgentsMeshCore.xcf
 # Claude Code
 # =========================
 .claude/worktrees/
+.claude/*.png
+.claude/cred-dialog-*
 
 # =========================
 # Reports (generated artifacts)

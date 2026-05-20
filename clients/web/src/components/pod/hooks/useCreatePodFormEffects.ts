@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import type { AgentData, RepositoryData, CredentialProfileData } from "@/lib/api";
-import { getUserCredentialService } from "@/lib/wasm-core";
+import type { AgentData, RepositoryData, EnvBundleSummary } from "@/lib/api";
+import { getEnvBundleService } from "@/lib/wasm-core";
 import { usePodCreationStore } from "@/stores/podCreation";
-import { RUNNER_HOST_PROFILE_ID } from "./useCreatePodFormTypes";
 
 /**
  * Hook managing auto-fill from saved preferences when agents/repos become available.
@@ -24,7 +23,6 @@ export function usePrefsAutoFill(
   const { lastAgentSlug, lastRepositoryId, lastBranchName } = usePodCreationStore();
   const prefsInitializedRef = useRef(false);
   const overrideRepositoryId = overrides?.repositoryId ?? null;
-
   useEffect(() => {
     if (prefsInitializedRef.current || availableAgents.length === 0) return;
 
@@ -48,55 +46,104 @@ export function usePrefsAutoFill(
   return prefsInitializedRef;
 }
 
-export function useCredentialProfiles(selectedAgent: string | null) {
-  const { lastCredentialProfileId } = usePodCreationStore();
-  const [credentialProfiles, setCredentialProfiles] = useState<CredentialProfileData[]>([]);
-  const [loadingCredentials, setLoadingCredentials] = useState(false);
-  const [selectedCredentialProfile, setSelectedCredentialProfile] = useState<number>(RUNNER_HOST_PROFILE_ID);
+/**
+ * Hook that loads EnvBundles available for the selected agent — both
+ * credential kind (API keys, encrypted server-side) and runtime kind
+ * (model overrides, log levels, plaintext).
+ *
+ * Returns split selection state to mirror the dialog UI:
+ *   - `selectedCredentialName`: single value, "" = use Agent default auth
+ *   - `selectedRuntimeBundleNames`: ordered multi-select (later overrides earlier)
+ *
+ * Persisted preferences (`lastCredentialName`, `lastRuntimeBundleNames`) are
+ * restored as the initial selection; if absent, falls back to the
+ * `kind_primary=true` bundle of each kind (so a "default" set propagates).
+ */
+export function useEnvBundles(selectedAgent: string | null) {
+  const { lastCredentialName, lastRuntimeBundleNames } = usePodCreationStore();
+  const [envBundles, setEnvBundles] = useState<EnvBundleSummary[]>([]);
+  const [loadingBundles, setLoadingBundles] = useState(false);
+  const [selectedCredentialName, setSelectedCredentialName] = useState<string>("");
+  const [selectedRuntimeBundleNames, setSelectedRuntimeBundleNames] = useState<string[]>([]);
 
   useEffect(() => {
     if (!selectedAgent) {
-      setCredentialProfiles([]);
-      setSelectedCredentialProfile(RUNNER_HOST_PROFILE_ID);
+      setEnvBundles([]);
+      setSelectedCredentialName("");
+      setSelectedRuntimeBundleNames([]);
       return;
     }
 
-    const loadCredentials = async () => {
-      setLoadingCredentials(true);
+    const load = async () => {
+      setLoadingBundles(true);
       try {
-        const res = JSON.parse(
-          await getUserCredentialService().list_agent_credentials_for_agent(selectedAgent)
-        );
-        const profiles = res.profiles || [];
-        setCredentialProfiles(profiles);
+        const svc = getEnvBundleService();
+        // Load both kinds in parallel. Failure of one shouldn't take out
+        // the other (credential may be empty while runtime has entries).
+        const [credRes, runtimeRes] = await Promise.all([
+          svc.list("credential", selectedAgent).then((j: string) => JSON.parse(j)).catch(() => ({ items: [] })),
+          svc.list("runtime", selectedAgent).then((j: string) => JSON.parse(j)).catch(() => ({ items: [] })),
+        ]);
+        const mapBundle = (b: {
+          id: number;
+          agent_slug?: string | null;
+          name: string;
+          kind: string;
+          kind_primary: boolean;
+          configured_fields?: string[];
+        }): EnvBundleSummary => ({
+          id: b.id,
+          name: b.name,
+          agent_slug: b.agent_slug ?? selectedAgent,
+          kind: b.kind,
+          kind_primary: b.kind_primary,
+          configured_fields: b.configured_fields,
+        });
+        const credBundles: EnvBundleSummary[] = (credRes.items ?? []).map(mapBundle);
+        const runtimeBundles: EnvBundleSummary[] = (runtimeRes.items ?? []).map(mapBundle);
+        setEnvBundles([...credBundles, ...runtimeBundles]);
 
-        const savedProfile = lastCredentialProfileId && profiles.find((p: CredentialProfileData) => p.id === lastCredentialProfileId);
-        const defaultProfile = profiles.find((p: CredentialProfileData) => p.is_default);
-        if (savedProfile) {
-          setSelectedCredentialProfile(savedProfile.id);
-        } else if (defaultProfile) {
-          setSelectedCredentialProfile(defaultProfile.id);
+        // Credential auto-select: saved pref (if still exists) → kind_primary → "".
+        const credNames = new Set(credBundles.map((b) => b.name));
+        if (lastCredentialName && credNames.has(lastCredentialName)) {
+          setSelectedCredentialName(lastCredentialName);
         } else {
-          setSelectedCredentialProfile(RUNNER_HOST_PROFILE_ID);
+          const primaryCred = credBundles.find((b) => b.kind_primary);
+          setSelectedCredentialName(primaryCred?.name ?? "");
+        }
+
+        // Runtime auto-select: saved prefs (filtered to still-existing) → all
+        // primary runtime bundles → empty.
+        const runtimeNames = new Set(runtimeBundles.map((b) => b.name));
+        const savedRuntime = (lastRuntimeBundleNames ?? []).filter((n) => runtimeNames.has(n));
+        if (savedRuntime.length > 0) {
+          setSelectedRuntimeBundleNames(savedRuntime);
+        } else {
+          setSelectedRuntimeBundleNames(
+            runtimeBundles.filter((b) => b.kind_primary).map((b) => b.name)
+          );
         }
       } catch (err) {
-        console.error("Failed to load credential profiles:", err);
-        setCredentialProfiles([]);
-        setSelectedCredentialProfile(RUNNER_HOST_PROFILE_ID);
+        console.error("Failed to load env bundles:", err);
+        setEnvBundles([]);
+        setSelectedCredentialName("");
+        setSelectedRuntimeBundleNames([]);
       } finally {
-        setLoadingCredentials(false);
+        setLoadingBundles(false);
       }
     };
 
-    loadCredentials();
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgent]);
 
   return {
-    credentialProfiles,
-    setCredentialProfiles,
-    loadingCredentials,
-    selectedCredentialProfile,
-    setSelectedCredentialProfile,
+    envBundles,
+    setEnvBundles,
+    loadingBundles,
+    selectedCredentialName,
+    setSelectedCredentialName,
+    selectedRuntimeBundleNames,
+    setSelectedRuntimeBundleNames,
   };
 }

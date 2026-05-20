@@ -33,7 +33,6 @@ go_test(
         "parser_errorpaths_test.go",
         "parser_finalcover_test.go",
         "parser_full_test.go",
-        "parser_mode_credential_test.go",
         "parser_test.go",
     ],
     embed = [":parser"],

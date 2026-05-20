@@ -19,6 +19,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
 	blockstoreservice "github.com/anthropics/agentsmesh/backend/internal/service/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
+	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
 	ssoservice "github.com/anthropics/agentsmesh/backend/internal/service/sso"
@@ -47,7 +48,7 @@ type serviceContainer struct {
 	user              *user.Service
 	org               *organization.Service
 	agentSvc          *agent.AgentService
-	credentialProfile *agent.CredentialProfileService
+	envBundle         *envbundleservice.Service
 	userConfig        *agent.UserConfigService
 	repository        *repository.Service
 	webhook           *repository.WebhookService
@@ -116,8 +117,8 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 
 	agentRepo := infra.NewAgentRepository(db)
 	agentSvc := agent.NewAgentService(agentRepo)
-	credentialProfileRepo := infra.NewCredentialProfileRepository(db)
-	credentialProfileSvc := agent.NewCredentialProfileService(credentialProfileRepo, agentSvc, encryptor)
+	envBundleRepo := infra.NewEnvBundleRepository(db)
+	envBundleSvc := envbundleservice.NewService(envBundleRepo, encryptor)
 	userConfigRepo := infra.NewUserConfigRepository(db)
 	userConfigSvc := agent.NewUserConfigService(userConfigRepo, agentSvc)
 
@@ -197,7 +198,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		user:               userSvc,
 		org:                orgSvc,
 		agentSvc:           agentSvc,
-		credentialProfile:  credentialProfileSvc,
+		envBundle:          envBundleSvc,
 		userConfig:         userConfigSvc,
 		repository:         repoSvc,
 		webhook:            webhookSvc,

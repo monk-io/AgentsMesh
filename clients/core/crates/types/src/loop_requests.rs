@@ -16,14 +16,18 @@ pub struct CreateLoopRequest {
     pub runner_id: Option<i64>,
     pub branch_name: Option<String>,
     pub ticket_id: Option<String>,
-    pub credential_profile_id: Option<i64>,
+    /// Ordered list of EnvBundle names to attach to every run. Each name
+    /// is emitted as a `USE_ENV_BUNDLE "<name>"` line in the generated
+    /// AgentFile (in array order; later entries override earlier ones on
+    /// conflicting env keys). Empty / None = no bundles.
+    pub used_env_bundles: Option<Vec<String>>,
     pub config_overrides: Option<serde_json::Value>,
     pub execution_mode: Option<String>,
     pub cron_expression: Option<String>,
     pub autopilot_config: Option<serde_json::Value>,
     pub callback_url: Option<String>,
     pub sandbox_strategy: Option<String>,
-    pub session_persistence: Option<String>,
+    pub session_persistence: Option<bool>,
     pub concurrency_policy: Option<String>,
     pub max_concurrent_runs: Option<i64>,
     pub max_retained_runs: Option<i64>,
@@ -40,10 +44,13 @@ pub struct UpdateLoopRequest {
     pub repository_id: Option<i64>,
     pub runner_id: Option<i64>,
     pub branch_name: Option<String>,
+    /// None leaves the bundle list unchanged; Some(empty) clears it;
+    /// Some(non-empty) replaces it with the supplied ordered list.
+    pub used_env_bundles: Option<Vec<String>>,
     pub cron_expression: Option<String>,
     pub autopilot_config: Option<serde_json::Value>,
     pub sandbox_strategy: Option<String>,
-    pub session_persistence: Option<String>,
+    pub session_persistence: Option<bool>,
     pub concurrency_policy: Option<String>,
     pub max_concurrent_runs: Option<i64>,
     pub max_retained_runs: Option<i64>,
@@ -79,5 +86,30 @@ mod pagination_tests {
         assert_eq!(parsed["total"], serde_json::json!(120));
         assert_eq!(parsed["limit"], serde_json::json!(25));
         assert_eq!(parsed["offset"], serde_json::json!(50));
+    }
+
+    #[test]
+    fn create_loop_request_accepts_boolean_session_persistence() {
+        // Frontend serializes session_persistence as JSON boolean (not string),
+        // matching the backend's *bool field. Regression guard against a prior
+        // Option<String> typing that silently rejected every dialog submit.
+        let body = r#"{
+            "name": "demo",
+            "agent_slug": "claude-code",
+            "prompt_template": "go",
+            "session_persistence": true,
+            "max_concurrent_runs": 1,
+            "max_retained_runs": 0,
+            "timeout_minutes": 60
+        }"#;
+        let req: CreateLoopRequest = serde_json::from_str(body).unwrap();
+        assert_eq!(req.session_persistence, Some(true));
+    }
+
+    #[test]
+    fn update_loop_request_accepts_boolean_session_persistence() {
+        let body = r#"{"session_persistence": false}"#;
+        let req: UpdateLoopRequest = serde_json::from_str(body).unwrap();
+        assert_eq!(req.session_persistence, Some(false));
     }
 }

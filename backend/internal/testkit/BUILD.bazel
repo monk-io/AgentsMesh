@@ -11,6 +11,7 @@ go_library(
         "schema_blockstore.go",
         "schema_business.go",
         "schema_core.go",
+        "schema_envbundle.go",
         "schema_runner.go",
         "schema_support.go",
     ],

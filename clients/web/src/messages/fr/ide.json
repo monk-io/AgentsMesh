@@ -68,8 +68,12 @@
       "selectAgentPlaceholder": "Choisissez un agent...",
       "noAgentsForRunner": "This runner does not support any agents",
       "selectCredential": "API Credentials",
-      "runnerHostDescription": "use Runner's local config",
-      "runnerHostHint": "Using Runner's local environment configuration. No credentials will be injected.",
+      "selectRuntimeBundles": "Runtime Env Bundles",
+      "useAgentDefaultAuth": "Use Agent default auth",
+      "credentialSelectedHint": "Selected credential bundle's env vars are injected when the Pod starts.",
+      "noCredentialHint": "No custom credentials injected; the agent uses its built-in auth flow (OAuth, signed-in CLI, etc.).",
+      "noRuntimeBundlesAvailableHint": "This agent has no runtime env bundles yet. Add one in Settings → Agent config.",
+      "noRuntimeBundleSelectedHint": "No runtime bundle selected; the Pod runs without any extra runtime preferences.",
       "customCredentialHint": "Using your custom API credentials for this agent.",
       "selectRepository": "Sélectionner un Dépôt",
       "selectRepositoryPlaceholder": "Choisissez un dépôt...",
@@ -95,7 +99,17 @@
       "alias": "Alias",
       "aliasPlaceholder": "Entrez un nom d'affichage pour ce pod...",
       "perpetual": "Perpétuel",
-      "perpetualDescription": "Redémarrage automatique à la sortie de l'agent. Le Pod reste actif indéfiniment."
+      "perpetualDescription": "Redémarrage automatique à la sortie de l'agent. Le Pod reste actif indéfiniment.",
+      "noBundleLabel": "Utiliser l'auth par défaut de l'agent",
+      "noBundleHint": "Aucun identifiant personnalisé injecté ; l'agent utilise son flux d'authentification intégré (OAuth, CLI connecté, etc.).",
+      "multiBundleHint": "Les bundles sélectionnés sont fusionnés dans l'environnement du Pod dans l'ordre ; les entrées suivantes remplacent les précédentes sur les clés en conflit.",
+      "selectedOrderHint": "Sélectionnés (ordre de fusion)",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "bundleKind": {
+        "credential": "Identifiant",
+        "runtime": "Exécution"
+      }
     },
     "sidebar": {
       "settings": {

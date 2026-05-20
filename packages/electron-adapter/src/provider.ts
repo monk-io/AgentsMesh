@@ -16,6 +16,7 @@ import { ElectronNotificationService } from './notification';
 import { ElectronOrgService } from './org';
 import { ElectronUserService } from './user';
 import { ElectronUserCredentialService } from './user_credential';
+import { ElectronEnvBundleService } from './env_bundle';
 import { ElectronAgentService } from './agent';
 import { ElectronSSOService } from './sso';
 import { ElectronFileService } from './file';
@@ -108,6 +109,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     orgApiService: new ElectronOrgService(),
     userApiService: new ElectronUserService(),
     userCredentialService: new ElectronUserCredentialService(),
+    envBundleService: new ElectronEnvBundleService(),
     agentService: new ElectronAgentService(),
     ssoService: new ElectronSSOService(),
     fileService: new ElectronFileService(),

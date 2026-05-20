@@ -66,7 +66,7 @@ export {
   getGrantService,
   getMessageService, getNotificationService, getPromoCodeService,
   getTokenUsageService, getSSOService, getUserApiService,
-  getUserCredentialService, getOrgApiService, getAgentService,
+  getUserCredentialService, getEnvBundleService, getOrgApiService, getAgentService,
   getTicketRelationsService, getFileService, getSupportTicketService,
   getAuthApiService, getBlockstoreService,
 } from "@agentsmesh/service-runtime";

@@ -5,29 +5,37 @@ import { CenteredSpinner } from "@/components/ui/spinner";
 import { AlertMessage } from "@/components/ui/alert-message";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTranslations } from "next-intl";
-import type { CredentialProfileData } from "@/lib/api";
+import type { CredentialProfileViewModel } from "../_shared/credentialViewModel";
 import { useAgentCredentials } from "./useAgentCredentials";
 import { AgentItem } from "./AgentItem";
 import { CredentialProfileDialog } from "./CredentialProfileDialog";
 import type { CredentialFormData } from "./types";
 
+/**
+ * AgentCredentialsSettings - Manages credential profiles for all agents
+ *
+ * Displays a collapsible list of agents. Each agent shows a "no bundle"
+ * row first (meaning "use the Runner's native env") followed by any
+ * credential-kind EnvBundles the user has attached.
+ */
 export function AgentCredentialsSettings() {
   const t = useTranslations();
 
+  // Dialog state
   const [showDialog, setShowDialog] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<CredentialProfileData | null>(null);
+  const [editingProfile, setEditingProfile] = useState<CredentialProfileViewModel | null>(null);
   const [selectedAgentSlug, setSelectedAgentSlug] = useState<string | null>(null);
 
+  // Use the custom hook for data and actions
   const {
     loading,
     error,
     success,
     agents,
     expandedAgents,
-    runnerHostDefaults,
-    credentialFieldsByAgent,
+    agentsWithoutPrimaryBundle,
     toggleAgent,
-    handleSetRunnerHostDefault,
+    handleClearPrimaryBundle,
     handleSetDefault,
     handleDelete,
     handleSaveProfile,
@@ -36,20 +44,24 @@ export function AgentCredentialsSettings() {
     setSuccess,
   } = useAgentCredentials(t);
 
+  // Confirm dialog for delete
   const { dialogProps, confirm } = useConfirmDialog();
 
+  // Open add dialog
   const handleOpenAddDialog = useCallback((agentSlug: string) => {
     setSelectedAgentSlug(agentSlug);
     setEditingProfile(null);
     setShowDialog(true);
   }, []);
 
-  const handleOpenEditDialog = useCallback((profile: CredentialProfileData) => {
+  // Open edit dialog
+  const handleOpenEditDialog = useCallback((profile: CredentialProfileViewModel) => {
     setSelectedAgentSlug(profile.agent_slug);
     setEditingProfile(profile);
     setShowDialog(true);
   }, []);
 
+  // Handle dialog submit
   const handleDialogSubmit = useCallback(async (data: CredentialFormData) => {
     if (!selectedAgentSlug) {
       throw new Error("No agent selected");
@@ -58,6 +70,7 @@ export function AgentCredentialsSettings() {
     setShowDialog(false);
   }, [selectedAgentSlug, editingProfile, handleSaveProfile]);
 
+  // Handle delete with confirmation
   const handleDeleteWithConfirm = useCallback(async (profileId: number) => {
     const confirmed = await confirm({
       title: t("common.confirmDelete"),
@@ -94,7 +107,7 @@ export function AgentCredentialsSettings() {
         {agents.map((agent) => {
           const profiles = getProfilesForAgent(agent.slug);
           const isExpanded = expandedAgents.has(agent.slug);
-          const isRunnerHostDefault = runnerHostDefaults.has(agent.slug);
+          const noPrimaryBundle = agentsWithoutPrimaryBundle.has(agent.slug);
 
           return (
             <AgentItem
@@ -102,9 +115,9 @@ export function AgentCredentialsSettings() {
               agent={agent}
               profiles={profiles}
               isExpanded={isExpanded}
-              isRunnerHostDefault={isRunnerHostDefault}
+              noPrimaryBundle={noPrimaryBundle}
               onToggle={() => toggleAgent(agent.slug)}
-              onSetRunnerHostDefault={() => handleSetRunnerHostDefault(agent.slug)}
+              onClearPrimary={() => handleClearPrimaryBundle(agent.slug)}
               onSetDefault={handleSetDefault}
               onEdit={handleOpenEditDialog}
               onDelete={handleDeleteWithConfirm}
@@ -125,7 +138,7 @@ export function AgentCredentialsSettings() {
       <CredentialProfileDialog
         open={showDialog}
         onOpenChange={setShowDialog}
-        credentialFields={selectedAgentSlug ? credentialFieldsByAgent.get(selectedAgentSlug) || [] : []}
+        agentSlug={selectedAgentSlug ?? ""}
         editingProfile={editingProfile}
         onSubmit={handleDialogSubmit}
         t={t}

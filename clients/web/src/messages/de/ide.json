@@ -68,8 +68,12 @@
       "selectAgentPlaceholder": "Wählen Sie einen Agent...",
       "noAgentsForRunner": "This runner does not support any agents",
       "selectCredential": "API Credentials",
-      "runnerHostDescription": "use Runner's local config",
-      "runnerHostHint": "Using Runner's local environment configuration. No credentials will be injected.",
+      "selectRuntimeBundles": "Runtime Env Bundles",
+      "useAgentDefaultAuth": "Use Agent default auth",
+      "credentialSelectedHint": "Selected credential bundle's env vars are injected when the Pod starts.",
+      "noCredentialHint": "No custom credentials injected; the agent uses its built-in auth flow (OAuth, signed-in CLI, etc.).",
+      "noRuntimeBundlesAvailableHint": "This agent has no runtime env bundles yet. Add one in Settings → Agent config.",
+      "noRuntimeBundleSelectedHint": "No runtime bundle selected; the Pod runs without any extra runtime preferences.",
       "customCredentialHint": "Using your custom API credentials for this agent.",
       "selectRepository": "Repository auswählen",
       "selectRepositoryPlaceholder": "Wählen Sie ein Repository...",
@@ -95,7 +99,17 @@
       "alias": "Alias",
       "aliasPlaceholder": "Anzeigename für diesen Pod eingeben...",
       "perpetual": "Dauerhaft",
-      "perpetualDescription": "Automatischer Neustart bei Agent-Ende. Pod bleibt dauerhaft aktiv."
+      "perpetualDescription": "Automatischer Neustart bei Agent-Ende. Pod bleibt dauerhaft aktiv.",
+      "noBundleLabel": "Standardauth des Agents verwenden",
+      "noBundleHint": "Keine eigenen Anmeldedaten injiziert; der Agent verwendet seinen integrierten Auth-Flow (OAuth, angemeldete CLI usw.).",
+      "multiBundleHint": "Ausgewählte Bundles werden in dieser Reihenfolge in die Pod-Umgebung eingefügt; spätere Einträge überschreiben frühere bei Schlüsselkonflikten.",
+      "selectedOrderHint": "Ausgewählt (Zusammenführungsreihenfolge)",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "bundleKind": {
+        "credential": "Anmeldedaten",
+        "runtime": "Laufzeit"
+      }
     },
     "sidebar": {
       "settings": {

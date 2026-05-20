@@ -14,20 +14,30 @@ import {
   Star,
 } from "lucide-react";
 import type { AgentItemProps } from "./types";
-import { getCredentialFieldLabel } from "../credentialFieldLabel";
+import { getEnvKeyLabel } from "./credentialForms";
 
+/**
+ * AgentIcon - Returns an icon based on agent slug
+ */
 function AgentIcon({ slug: _slug }: { slug: string }) {
   void _slug; // Reserved for future per-agent icons
   return <Bot className="w-5 h-5" />;
 }
 
+/**
+ * AgentItem - Expandable panel for a single agent's credentials
+ *
+ * Shows the agent header with expand/collapse toggle, the "no bundle"
+ * (Runner-native env) row as first option, and custom credential bundles
+ * below.
+ */
 export function AgentItem({
   agent,
   profiles,
   isExpanded,
-  isRunnerHostDefault,
+  noPrimaryBundle,
   onToggle,
-  onSetRunnerHostDefault,
+  onClearPrimary,
   onSetDefault,
   onEdit,
   onDelete,
@@ -67,14 +77,16 @@ export function AgentItem({
       {/* Profiles List */}
       {isExpanded && (
         <div className="border-t border-border bg-muted/20">
-          {/* RunnerHost - always shown as first option, not deletable */}
+          {/* "No bundle" — always shown as first option, not deletable.
+              Represents "use the Runner's native env"; selecting this clears
+              any primary bundle in this (user, agent, kind=credential) group. */}
           <div className="px-4 py-3 flex items-center justify-between hover:bg-muted/50 border-b border-border">
             <div className="flex items-center gap-3">
               <Server className="w-4 h-4 text-muted-foreground" />
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">RunnerHost</span>
-                  {isRunnerHostDefault && (
+                  <span className="font-medium">{t("settings.agentCredentials.noBundleLabel")}</span>
+                  {noPrimaryBundle && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary">
                       <Star className="w-3 h-3 mr-0.5" />
                       {t("settings.agentCredentials.default")}
@@ -82,16 +94,16 @@ export function AgentItem({
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {t("settings.agentCredentials.runnerHostHint")}
+                  {t("settings.agentCredentials.noBundleHint")}
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              {!isRunnerHostDefault && (
+              {!noPrimaryBundle && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onSetRunnerHostDefault}
+                  onClick={onClearPrimary}
                   title={t("settings.agentCredentials.setAsDefault")}
                 >
                   <Check className="w-4 h-4" />
@@ -122,7 +134,7 @@ export function AgentItem({
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {profile.configured_fields?.length
-                          ? `${t("settings.agentCredentials.configured")}: ${profile.configured_fields.map((f) => getCredentialFieldLabel(f, t)).join(", ")}`
+                          ? `${t("settings.agentCredentials.configured")}: ${profile.configured_fields.map((f) => getEnvKeyLabel(agent.slug, f, t)).join(", ")}`
                           : t("settings.agentCredentials.notConfigured")}
                       </div>
                     </div>

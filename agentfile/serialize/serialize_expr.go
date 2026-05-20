@@ -123,8 +123,13 @@ func quoteIfNeeded(s string) string {
 }
 
 func isIdentChar(ch rune) bool {
+	// Mirrors the lexer's identifier rules (agentfile/lexer/lexer.go) — letters,
+	// digits, and underscore. Hyphen is NOT a valid identifier character: the
+	// lexer tokenizes it as a separate symbol, so bare strings containing
+	// hyphens MUST round-trip through quotes (e.g. EnvBundle names like
+	// "my-bundle-1234").
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
-		(ch >= '0' && ch <= '9') || ch == '_' || ch == '-'
+		(ch >= '0' && ch <= '9') || ch == '_'
 }
 
 // chooseHeredocMarker picks a heredoc marker that doesn't appear in content.

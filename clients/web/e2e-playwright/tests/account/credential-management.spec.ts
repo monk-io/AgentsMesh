@@ -23,9 +23,11 @@ test.describe("User Credential Management API", () => {
     expect(data.providers).toBeDefined();
   });
 
-  test("list agent credentials", async ({ api }) => {
-    const res = await api.get("/api/v1/users/agent-credentials");
+  test("list env bundles", async ({ api }) => {
+    const res = await api.get("/api/v1/users/env-bundles");
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test("get user profile", async ({ api }) => {

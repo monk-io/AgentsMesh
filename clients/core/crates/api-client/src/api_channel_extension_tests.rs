@@ -828,7 +828,7 @@ mod api_channel_extension_tests {
                 "permission_mode":null,"prompt_template":null,
                 "prompt_variables":null,"repository_id":null,
                 "runner_id":null,"branch_name":null,"ticket_id":null,
-                "credential_profile_id":null,"config_overrides":null,
+                "used_env_bundles":null,"config_overrides":null,
                 "execution_mode":null,"cron_expression":null,
                 "autopilot_config":null,"callback_url":null,
                 "sandbox_strategy":null,"session_persistence":null,
@@ -853,7 +853,7 @@ mod api_channel_extension_tests {
             runner_id: None,
             branch_name: None,
             ticket_id: None,
-            credential_profile_id: None,
+            used_env_bundles: None,
             config_overrides: None,
             execution_mode: None,
             cron_expression: None,
@@ -883,7 +883,8 @@ mod api_channel_extension_tests {
                 "cron_expression":null,"autopilot_config":null,
                 "sandbox_strategy":null,"session_persistence":null,
                 "concurrency_policy":null,"max_concurrent_runs":null,
-                "max_retained_runs":null,"timeout_minutes":null
+                "max_retained_runs":null,"timeout_minutes":null,
+                "used_env_bundles":null
             })))
             .respond_with(ok(json!({
                 "slug":"nightly","name":"Nightly v2","is_enabled":true
@@ -899,6 +900,7 @@ mod api_channel_extension_tests {
             repository_id: None,
             runner_id: None,
             branch_name: None,
+            used_env_bundles: None,
             cron_expression: None,
             autopilot_config: None,
             sandbox_strategy: None,

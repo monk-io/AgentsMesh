@@ -43,12 +43,45 @@ describe('buildAgentfileLayer', () => {
     expect(result).toContain('CONFIG model = "opus"')
   })
 
-  it('generates CREDENTIAL', () => {
+  it('emits USE_ENV_BUNDLE for the credential bundle', () => {
     const result = buildAgentfileLayer({
       configValues: {},
-      credentialProfileName: 'my-profile',
+      credentialBundleName: 'my-profile',
     })
-    expect(result).toContain('CREDENTIAL "my-profile"')
+    expect(result).toContain('USE_ENV_BUNDLE "my-profile"')
+  })
+
+  it('emits credential first then runtime bundles in selection order', () => {
+    const result = buildAgentfileLayer({
+      configValues: {},
+      credentialBundleName: 'creds-work',
+      runtimeBundleNames: ['runtime-debug', 'shared-proxy'],
+    })
+    const lines = result.split('\n').filter((l) => l.startsWith('USE_ENV_BUNDLE'))
+    expect(lines).toEqual([
+      'USE_ENV_BUNDLE "creds-work"',
+      'USE_ENV_BUNDLE "runtime-debug"',
+      'USE_ENV_BUNDLE "shared-proxy"',
+    ])
+  })
+
+  it('emits only runtime bundles when no credential is provided', () => {
+    const result = buildAgentfileLayer({
+      configValues: {},
+      runtimeBundleNames: ['runtime-debug', 'shared-proxy'],
+    })
+    const lines = result.split('\n').filter((l) => l.startsWith('USE_ENV_BUNDLE'))
+    expect(lines).toEqual([
+      'USE_ENV_BUNDLE "runtime-debug"',
+      'USE_ENV_BUNDLE "shared-proxy"',
+    ])
+  })
+
+  it('omits USE_ENV_BUNDLE entirely when nothing is selected', () => {
+    expect(buildAgentfileLayer({ configValues: {} })).not.toContain('USE_ENV_BUNDLE')
+    expect(
+      buildAgentfileLayer({ configValues: {}, credentialBundleName: '', runtimeBundleNames: [] }),
+    ).not.toContain('USE_ENV_BUNDLE')
   })
 
   it('returns empty string when all params are empty', () => {
@@ -60,13 +93,15 @@ describe('buildAgentfileLayer', () => {
     const result = buildAgentfileLayer({
       configValues: { model: 'opus', permission_mode: 'plan' },
       interactionMode: 'acp',
-      credentialProfileName: 'my-profile',
+      credentialBundleName: 'my-creds',
+      runtimeBundleNames: ['dev-preferences'],
       prompt: 'fix the bug',
       repositorySlug: 'dev-org/demo-api',
       branchName: 'develop',
     })
     expect(result).toContain('MODE acp')
-    expect(result).toContain('CREDENTIAL "my-profile"')
+    expect(result).toContain('USE_ENV_BUNDLE "my-creds"')
+    expect(result).toContain('USE_ENV_BUNDLE "dev-preferences"')
     expect(result).toContain('PROMPT "fix the bug"')
     expect(result).toContain('CONFIG model = "opus"')
     expect(result).toContain('CONFIG permission_mode = "plan"')
