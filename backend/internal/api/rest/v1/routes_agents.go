@@ -3,7 +3,7 @@ package v1
 import "github.com/gin-gonic/gin"
 
 func registerAgentRoutes(rg *gin.RouterGroup, svc *Services) {
-	agentHandler := NewAgentHandler(svc.AgentSvc, svc.CredentialProfile, svc.UserConfig)
+	agentHandler := NewAgentHandler(svc.AgentSvc, svc.UserConfig)
 	agents := rg.Group("/agents")
 	{
 		agents.GET("", agentHandler.ListAgents)

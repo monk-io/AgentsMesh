@@ -44,8 +44,7 @@ type OrchestrateCreatePodRequest struct {
 	TicketID            *int64
 	TicketSlug          *string
 	Alias               *string
-	CredentialProfileID *int64
-	AgentfileLayer      *string // SSOT for all CONFIG, MODE, PROMPT, REPO, BRANCH, CREDENTIAL
+	AgentfileLayer      *string // SSOT for all CONFIG, MODE, PROMPT, REPO, BRANCH, USE_ENV_BUNDLE
 	Cols                int32
 	Rows                int32
 
@@ -133,12 +132,11 @@ type PodOrchestrator struct {
 
 type agentfileResolved struct {
 	InteractionMode      string
-	BranchName           string
-	RepositoryID         *int64
-	Prompt               string
+	BranchName            string
+	RepositoryID          *int64
+	Prompt                string
 	MergedAgentfileSource string
-	CredentialProfile    string
-	ConfigValues         agentDomain.ConfigValues
+	ConfigValues          agentDomain.ConfigValues
 }
 
 func NewPodOrchestrator(deps *PodOrchestratorDeps) *PodOrchestrator {

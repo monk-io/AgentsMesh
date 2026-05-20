@@ -75,17 +75,9 @@ func TestExtractAgentfileOverrides_Prompt(t *testing.T) {
 	assert.Equal(t, "fix this bug", ov.Prompt)
 }
 
-func TestExtractAgentfileOverrides_CredentialProfile(t *testing.T) {
-	userLayer := `CREDENTIAL "my-profile"`
-
-	ov, err := extractFromAgentfileLayer(baseAgentfileSrc, userLayer, nil, nil)
-	require.NoError(t, err)
-	assert.Equal(t, "my-profile", ov.CredentialProfile)
-}
-
 func TestExtractAgentfileOverrides_AllOverrides(t *testing.T) {
 	userLayer := `MODE acp
-CREDENTIAL "my-profile"
+USE_ENV_BUNDLE "my-profile"
 PROMPT "fix this bug"
 CONFIG permission_mode = "bypassPermissions"
 REPO "dev-org/demo-api"
@@ -95,7 +87,6 @@ BRANCH "develop"
 	ov, err := extractFromAgentfileLayer(baseAgentfileSrc, userLayer, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "acp", ov.Mode)
-	assert.Equal(t, "my-profile", ov.CredentialProfile)
 	assert.Equal(t, "fix this bug", ov.Prompt)
 	assert.Equal(t, "bypassPermissions", ov.ConfigValues["permission_mode"])
 	assert.Equal(t, "dev-org/demo-api", ov.RepoSlug)
@@ -123,7 +114,6 @@ func TestExtractAgentfileOverrides_EmptyLayer(t *testing.T) {
 	assert.Empty(t, ov.Branch)
 	assert.Empty(t, ov.RepoSlug)
 	assert.Empty(t, ov.Prompt)
-	assert.Empty(t, ov.CredentialProfile)
 }
 
 func TestExtractAgentfileOverrides_MergeCorrectness(t *testing.T) {

@@ -9,7 +9,7 @@ export {
   getGrantService,
   getMessageService, getNotificationService, getPromoCodeService,
   getTokenUsageService, getSSOService, getUserApiService,
-  getUserCredentialService, getOrgApiService, getAgentService,
+  getUserCredentialService, getEnvBundleService, getOrgApiService, getAgentService,
   getTicketRelationsService, getFileService, getSupportTicketService,
   getAuthApiService, getRunnerState, getMeshState, getTicketState,
   getChannelState, getLoopState, getAcpManager, getOrgState,

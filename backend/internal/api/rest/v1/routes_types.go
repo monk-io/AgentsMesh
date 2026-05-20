@@ -15,6 +15,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
 	blockstoreservice "github.com/anthropics/agentsmesh/backend/internal/service/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
+	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
 	"github.com/anthropics/agentsmesh/backend/internal/service/geo"
@@ -44,7 +45,7 @@ type Services struct {
 	User *user.Service
 	Org  *organization.Service
 	AgentSvc           *agent.AgentService
-	CredentialProfile  *agent.CredentialProfileService
+	EnvBundle          *envbundleservice.Service
 	UserConfig         *agent.UserConfigService
 	Repository         *repository.Service
 	Webhook            *repository.WebhookService

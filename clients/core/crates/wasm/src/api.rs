@@ -197,6 +197,12 @@ impl WasmApiClient {
         crate::service_user_credential::WasmUserCredentialService::new(self.client.clone())
     }
 
+    pub fn create_env_bundle_service(
+        &self,
+    ) -> crate::service_env_bundle::WasmEnvBundleService {
+        crate::service_env_bundle::WasmEnvBundleService::new(self.client.clone())
+    }
+
     pub fn create_org_api_service(&self) -> crate::service_org::WasmOrgApiService {
         crate::service_org::WasmOrgApiService::new(self.client.clone())
     }

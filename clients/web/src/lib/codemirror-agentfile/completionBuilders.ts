@@ -86,13 +86,13 @@ export function buildBranchCompletions(
   }));
 }
 
-export function buildCredentialCompletions(
-  profiles: AgentfileCompletionContext["credentialProfiles"]
+export function buildEnvBundleCompletions(
+  bundles: AgentfileCompletionContext["envBundles"]
 ): Completion[] {
-  if (!profiles?.length) return [];
-  return profiles.map((p) => ({
-    label: `"${p.name}"`,
+  if (!bundles?.length) return [];
+  return bundles.map((b) => ({
+    label: `"${b.name}"`,
     type: "constant",
-    detail: p.description || "credential profile",
+    detail: b.description || "env bundle",
   }));
 }

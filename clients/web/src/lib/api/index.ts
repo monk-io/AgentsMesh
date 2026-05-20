@@ -10,8 +10,7 @@ export type { RepositoryData, CreateRepositoryRequest, UpdateRepositoryRequest, 
 export type { RepositoryProviderData, ProviderRepositoryData, CreateRepositoryProviderRequest, UpdateRepositoryProviderRequest } from "./userRepositoryProviderTypes";
 export type { CredentialTypeValue, GitCredentialData, RunnerLocalCredentialData, CreateGitCredentialRequest, UpdateGitCredentialRequest, SetDefaultRequest } from "./userGitCredentialTypes";
 export { CredentialType, getCredentialTypeLabel, isRunnerLocalCredential } from "./userGitCredentialTypes";
-export type { CredentialProfileData, CredentialProfilesByAgent, CreateCredentialProfileRequest, UpdateCredentialProfileRequest, RunnerHostInfo } from "./userAgentCredentialTypes";
-export { isRunnerHostProfile, getProfileStatusLabel } from "./userAgentCredentialTypes";
+export type { EnvBundle, EnvBundleSummary, EnvBundleListResponse, CreateEnvBundleRequest, UpdateEnvBundleRequest } from "./envBundleTypes";
 export type { PodBinding } from "./bindingTypes";
 export type { MeshNodeData, MeshEdgeData, ChannelInfoData, RunnerInfoData, MeshTopologyData } from "./meshTypes";
 export type { AgentMessage, DeadLetterEntry } from "./messageTypes";

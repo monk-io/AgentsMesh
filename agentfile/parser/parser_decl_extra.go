@@ -73,12 +73,16 @@ func (p *Parser) parseModeDecl(pos Position) Declaration {
 	return &ModeDecl{Mode: mode, Position: pos}
 }
 
-// parseCredentialDecl: CREDENTIAL "profile-name" | CREDENTIAL runner_host
-func (p *Parser) parseCredentialDecl(pos Position) *CredentialDecl {
+// parseUseEnvBundleDecl: USE_ENV_BUNDLE "bundle-name"
+//
+// The name is the bundle's primary identifier within the current owner scope
+// (user-private bundles take precedence over org-shared ones with the same
+// name; that resolution is done by the backend, not the parser).
+func (p *Parser) parseUseEnvBundleDecl(pos Position) *UseEnvBundleDecl {
 	p.advance()
 	name := p.expectIdentOrString()
 	p.expectNewline()
-	return &CredentialDecl{ProfileName: name, Position: pos}
+	return &UseEnvBundleDecl{Name: name, Position: pos}
 }
 
 // parsePromptDecl: PROMPT "prompt content"

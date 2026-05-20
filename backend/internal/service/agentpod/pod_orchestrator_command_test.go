@@ -229,7 +229,7 @@ func TestGetUserGitCredential_NilUserService(t *testing.T) {
 	provider := newTestProvider()
 	orch := NewPodOrchestrator(&PodOrchestratorDeps{
 		PodService:    podSvc,
-		ConfigBuilder: agent.NewConfigBuilder(provider),
+		ConfigBuilder: agent.NewConfigBuilder(provider, noopBundleLoader{}),
 	})
 
 	result := orch.getUserGitCredential(context.Background(), 1)
@@ -246,7 +246,7 @@ func TestGetUserGitCredential_NoDefaultCredential(t *testing.T) {
 	provider := newTestProvider()
 	orch := NewPodOrchestrator(&PodOrchestratorDeps{
 		PodService:    podSvc,
-		ConfigBuilder: agent.NewConfigBuilder(provider),
+		ConfigBuilder: agent.NewConfigBuilder(provider, noopBundleLoader{}),
 		UserService:   userSvc,
 	})
 
@@ -266,7 +266,7 @@ func TestGetUserGitCredential_RunnerLocal(t *testing.T) {
 	provider := newTestProvider()
 	orch := NewPodOrchestrator(&PodOrchestratorDeps{
 		PodService:    podSvc,
-		ConfigBuilder: agent.NewConfigBuilder(provider),
+		ConfigBuilder: agent.NewConfigBuilder(provider, noopBundleLoader{}),
 		UserService:   userSvc,
 	})
 
@@ -287,7 +287,7 @@ func TestGetUserGitCredential_DecryptError(t *testing.T) {
 	provider := newTestProvider()
 	orch := NewPodOrchestrator(&PodOrchestratorDeps{
 		PodService:    podSvc,
-		ConfigBuilder: agent.NewConfigBuilder(provider),
+		ConfigBuilder: agent.NewConfigBuilder(provider, noopBundleLoader{}),
 		UserService:   userSvc,
 	})
 
@@ -311,7 +311,7 @@ func TestGetUserGitCredential_Success_PAT(t *testing.T) {
 	provider := newTestProvider()
 	orch := NewPodOrchestrator(&PodOrchestratorDeps{
 		PodService:    podSvc,
-		ConfigBuilder: agent.NewConfigBuilder(provider),
+		ConfigBuilder: agent.NewConfigBuilder(provider, noopBundleLoader{}),
 		UserService:   userSvc,
 	})
 

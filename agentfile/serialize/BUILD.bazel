@@ -22,7 +22,6 @@ go_test(
     name = "serialize_test",
     srcs = [
         "serialize_merge_test.go",
-        "serialize_mode_credential_test.go",
         "serialize_test.go",
     ],
     embed = [":serialize"],

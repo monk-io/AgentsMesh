@@ -17,10 +17,7 @@ vi.mock("../useAgentCredentials", () => ({
     success: null,
     agents: [{ name: "Claude Code", slug: "claude-code", is_builtin: true, is_active: true }],
     expandedAgents: new Set(["claude-code"]),
-    runnerHostDefaults: new Set(["claude-code"]),
-    credentialFieldsByAgent: new Map([["claude-code", [
-      { name: "ANTHROPIC_API_KEY", type: "secret", optional: true },
-    ]]]),
+    agentsWithoutPrimaryBundle: new Set(["claude-code"]),
     toggleAgent: vi.fn(),
     handleSetRunnerHostDefault: vi.fn(),
     handleSetDefault: vi.fn(),

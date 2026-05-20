@@ -20,7 +20,6 @@ go_test(
         "merge_comprehensive_test.go",
         "merge_finalcover_test.go",
         "merge_integration_test.go",
-        "merge_mode_credential_test.go",
         "merge_test.go",
     ],
     embed = [":merge"],

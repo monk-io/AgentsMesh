@@ -12,7 +12,11 @@ type createLoopRequest struct {
 	RunnerID          *int64                 `json:"runner_id"`
 	BranchName        *string                `json:"branch_name"`
 	TicketID          *int64                 `json:"ticket_id"`
-	CredentialProfileID *int64               `json:"credential_profile_id"`
+	// UsedEnvBundles: ordered list of EnvBundle names the user owns. Each
+	// becomes a `USE_ENV_BUNDLE "<name>"` line in the generated AgentFile
+	// (in array order; later entries override earlier ones on conflicting
+	// env keys, mirroring Pod creation). Empty / absent = no bundles.
+	UsedEnvBundles    []string               `json:"used_env_bundles"`
 	ConfigOverrides   map[string]interface{} `json:"config_overrides"`
 	ExecutionMode     string                 `json:"execution_mode"`
 	CronExpression    *string                `json:"cron_expression"`
@@ -38,7 +42,10 @@ type updateLoopRequest struct {
 	RunnerID          *int64                 `json:"runner_id"`
 	BranchName        *string                `json:"branch_name"`
 	TicketID          *int64                 `json:"ticket_id"`
-	CredentialProfileID *int64               `json:"credential_profile_id"`
+	// UsedEnvBundles: send nil to leave the list unchanged; send an empty
+	// array `[]` to clear all bundle bindings; send a non-empty array to
+	// replace the binding with the supplied ordered list.
+	UsedEnvBundles    *[]string              `json:"used_env_bundles"`
 	ConfigOverrides   map[string]interface{} `json:"config_overrides"`
 	ExecutionMode     *string                `json:"execution_mode"`
 	CronExpression    *string                `json:"cron_expression"`

@@ -107,12 +107,13 @@ type CreateLoopRequest struct {
 	PromptTemplate  string
 	PromptVariables []byte
 
-	RepositoryID        *int64
-	RunnerID            *int64
-	BranchName          *string
-	TicketID            *int64
-	CredentialProfileID *int64
-	ConfigOverrides     []byte
+	RepositoryID    *int64
+	RunnerID        *int64
+	BranchName      *string
+	TicketID        *int64
+	// UsedEnvBundles is an ordered list (nil/empty = no bundles).
+	UsedEnvBundles  []string
+	ConfigOverrides []byte
 
 	ExecutionMode   string
 	CronExpression  *string
@@ -136,12 +137,14 @@ type UpdateLoopRequest struct {
 	PromptTemplate  *string
 	PromptVariables []byte
 
-	RepositoryID        *int64
-	RunnerID            *int64
-	BranchName          *string
-	TicketID            *int64
-	CredentialProfileID *int64
-	ConfigOverrides     []byte
+	RepositoryID    *int64
+	RunnerID        *int64
+	BranchName      *string
+	TicketID        *int64
+	// UsedEnvBundles: nil leaves the binding unchanged; non-nil replaces
+	// the entire list (an empty slice clears it).
+	UsedEnvBundles  *[]string
+	ConfigOverrides []byte
 
 	ExecutionMode   *string
 	CronExpression  *string

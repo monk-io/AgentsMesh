@@ -6,60 +6,85 @@ import { AlertMessage } from "@/components/ui/alert-message";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTranslations } from "next-intl";
 import { Bot, AlertCircle } from "lucide-react";
-import type { CredentialProfileData } from "@/lib/api";
+import type { CredentialProfileViewModel } from "../_shared/credentialViewModel";
 import { useAgentConfig } from "./useAgentConfig";
 import { CredentialsSection } from "./CredentialsSection";
 import { RuntimeConfigSection } from "./RuntimeConfigSection";
+import { RuntimeBundlesSection } from "./RuntimeBundlesSection";
 import { CredentialDialog } from "./CredentialDialog";
-import type { AgentConfigPageProps, CredentialFormData } from "./types";
+import { RuntimeBundleDialog } from "./RuntimeBundleDialog";
+import type {
+  AgentConfigPageProps,
+  CredentialFormData,
+  RuntimeBundleViewModel,
+} from "./types";
 
+/**
+ * AgentConfigPage - Unified configuration page for a single agent
+ *
+ * Combines credentials management and runtime configuration in one place.
+ * Acts as the coordinator for the extracted sub-components.
+ */
 export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
   const t = useTranslations();
 
+  // Dialog state
   const [showCredentialDialog, setShowCredentialDialog] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<CredentialProfileData | null>(null);
+  const [editingProfile, setEditingProfile] = useState<CredentialProfileViewModel | null>(null);
+  const [showRuntimeDialog, setShowRuntimeDialog] = useState(false);
+  const [editingRuntime, setEditingRuntime] = useState<RuntimeBundleViewModel | null>(null);
 
+  // Use the custom hook for data and actions
   const {
     loading,
     savingConfig,
     agent,
     configFields,
     configValues,
-    credentialFields,
     credentialProfiles,
-    isRunnerHostDefault,
+    noPrimaryBundle,
+    runtimeBundles,
     error,
     success,
     handleConfigChange,
     handleSaveConfig,
-    handleSetRunnerHostDefault,
+    handleClearPrimaryBundle,
     handleSetDefault,
     handleDeleteProfile,
     handleSaveProfile,
+    handleSetRuntimePrimary,
+    handleClearRuntimePrimary,
+    handleDeleteRuntimeBundle,
+    handleSaveRuntimeBundle,
     setError,
     setSuccess,
   } = useAgentConfig(agentSlug, t);
 
+  // Confirm dialog for delete
   const { dialogProps, confirm } = useConfirmDialog();
 
+  // Open credential add dialog
   const handleOpenAddDialog = useCallback(() => {
     setEditingProfile(null);
     setShowCredentialDialog(true);
   }, []);
 
-  const handleOpenEditDialog = useCallback((profile: CredentialProfileData) => {
+  // Open credential edit dialog
+  const handleOpenEditDialog = useCallback((profile: CredentialProfileViewModel) => {
     setEditingProfile(profile);
     setShowCredentialDialog(true);
   }, []);
 
+  // Handle credential form submission
   const handleCredentialSubmit = useCallback(async (
     data: CredentialFormData,
-    profile: CredentialProfileData | null
+    profile: CredentialProfileViewModel | null
   ) => {
     await handleSaveProfile(data, profile);
     setShowCredentialDialog(false);
   }, [handleSaveProfile]);
 
+  // Handle delete with confirmation
   const handleDeleteWithConfirm = useCallback(async (profileId: number) => {
     const confirmed = await confirm({
       title: t("common.confirmDelete"),
@@ -72,6 +97,30 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
       await handleDeleteProfile(profileId);
     }
   }, [confirm, handleDeleteProfile, t]);
+
+  // Runtime bundle dialog handlers
+  const handleOpenAddRuntime = useCallback(() => {
+    setEditingRuntime(null);
+    setShowRuntimeDialog(true);
+  }, []);
+
+  const handleOpenEditRuntime = useCallback((b: RuntimeBundleViewModel) => {
+    setEditingRuntime(b);
+    setShowRuntimeDialog(true);
+  }, []);
+
+  const handleDeleteRuntimeWithConfirm = useCallback(async (id: number) => {
+    const confirmed = await confirm({
+      title: t("common.confirmDelete"),
+      description: t("settings.agentConfig.runtimeBundles.confirmDelete"),
+      variant: "destructive",
+      confirmText: t("common.delete"),
+      cancelText: t("common.cancel"),
+    });
+    if (confirmed) {
+      await handleDeleteRuntimeBundle(id);
+    }
+  }, [confirm, handleDeleteRuntimeBundle, t]);
 
   if (loading) {
     return <CenteredSpinner className="py-12" />;
@@ -105,9 +154,10 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
 
       {/* Credentials Section */}
       <CredentialsSection
-        isRunnerHostDefault={isRunnerHostDefault}
+        agentSlug={agentSlug}
+        noPrimaryBundle={noPrimaryBundle}
         credentialProfiles={credentialProfiles}
-        onSetRunnerHostDefault={handleSetRunnerHostDefault}
+        onClearPrimary={handleClearPrimaryBundle}
         onSetDefault={handleSetDefault}
         onEdit={handleOpenEditDialog}
         onDelete={handleDeleteWithConfirm}
@@ -126,13 +176,34 @@ export function AgentConfigPage({ agentSlug }: AgentConfigPageProps) {
         t={t}
       />
 
+      {/* Runtime EnvBundles Section — plaintext KV preferences attached
+          to this agent (model overrides, log levels, etc.). */}
+      <RuntimeBundlesSection
+        bundles={runtimeBundles}
+        onSetDefault={handleSetRuntimePrimary}
+        onClearDefault={handleClearRuntimePrimary}
+        onEdit={handleOpenEditRuntime}
+        onDelete={handleDeleteRuntimeWithConfirm}
+        onAdd={handleOpenAddRuntime}
+        t={t}
+      />
+
       {/* Add/Edit Credential Dialog */}
       <CredentialDialog
         open={showCredentialDialog}
         onOpenChange={setShowCredentialDialog}
-        credentialFields={credentialFields}
+        agentSlug={agentSlug}
         editingProfile={editingProfile}
         onSubmit={handleCredentialSubmit}
+        t={t}
+      />
+
+      {/* Add/Edit Runtime Bundle Dialog */}
+      <RuntimeBundleDialog
+        open={showRuntimeDialog}
+        onOpenChange={setShowRuntimeDialog}
+        editingBundle={editingRuntime}
+        onSubmit={handleSaveRuntimeBundle}
         t={t}
       />
 

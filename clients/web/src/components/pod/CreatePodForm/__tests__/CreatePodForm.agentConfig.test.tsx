@@ -10,14 +10,12 @@ import {
   mockRunner,
   mockAgent,
   mockRepository,
-  mockCredentialProfile,
   clearAllMocks,
 } from "./test-utils";
 
 vi.mock("../../hooks", () => ({
   usePodCreationData: vi.fn(() => defaultPodCreationData),
   useCreatePodForm: vi.fn(() => defaultFormState),
-  RUNNER_HOST_PROFILE_ID: 0,
 }));
 
 vi.mock("@/components/ide/hooks", () => ({
@@ -47,7 +45,8 @@ vi.mock("@/stores/podCreation", () => ({
   usePodCreationStore: () => ({
     lastAgentSlug: null,
     lastRepositoryId: null,
-    lastCredentialProfileId: null,
+    lastCredentialName: "",
+    lastRuntimeBundleNames: [],
     lastBranchName: null,
     setLastChoices: vi.fn(),
     clearLastChoices: vi.fn(),
@@ -68,7 +67,8 @@ describe("CreatePodForm - Agent Configuration", () => {
   const setupAgentSelectedState = (overrides = {}) => {
     const mockSetSelectedRepository = vi.fn();
     const mockSetSelectedBranch = vi.fn();
-    const mockSetSelectedCredentialProfile = vi.fn();
+    const mockSetSelectedCredentialName = vi.fn();
+    const mockSetSelectedRuntimeBundleNames = vi.fn();
 
     vi.mocked(usePodCreationData).mockReturnValue({
       ...defaultPodCreationData,
@@ -81,58 +81,103 @@ describe("CreatePodForm - Agent Configuration", () => {
     vi.mocked(useCreatePodForm).mockReturnValue({
       ...defaultFormState,
       selectedAgent: "claude-code",
-      credentialProfiles: [
-        { ...mockCredentialProfile, id: 1, name: "My Credentials", is_default: false },
-        { ...mockCredentialProfile, id: 2, name: "Default Creds", is_default: true },
+      envBundles: [
+        { id: 1, agent_slug: "claude-code", name: "My Credentials", kind: "credential", kind_primary: false },
+        { id: 2, agent_slug: "claude-code", name: "Default Creds", kind: "credential", kind_primary: true },
+        { id: 3, agent_slug: "claude-code", name: "dev-preferences", kind: "runtime", kind_primary: false },
       ],
       setSelectedRepository: mockSetSelectedRepository,
       setSelectedBranch: mockSetSelectedBranch,
-      setSelectedCredentialProfile: mockSetSelectedCredentialProfile,
+      setSelectedCredentialName: mockSetSelectedCredentialName,
+      setSelectedRuntimeBundleNames: mockSetSelectedRuntimeBundleNames,
       selectedAgentSlug: "claude-code",
       isValid: true,
       ...overrides,
     });
 
-    return { mockSetSelectedRepository, mockSetSelectedBranch, mockSetSelectedCredentialProfile };
+    return {
+      mockSetSelectedRepository,
+      mockSetSelectedBranch,
+      mockSetSelectedCredentialName,
+      mockSetSelectedRuntimeBundleNames,
+    };
   };
 
-  describe("credential selection", () => {
-    it("should render credential select when agent is selected", () => {
+  describe("API credential single-select", () => {
+    it("renders the credential dropdown with the default-auth option", () => {
       setupAgentSelectedState();
       render(<CreatePodForm config={{ scenario: "workspace" }} />);
       expect(screen.getByLabelText("ide.createPod.selectCredential")).toBeInTheDocument();
+      expect(screen.getByText("ide.createPod.useAgentDefaultAuth")).toBeInTheDocument();
     });
 
-    it("should render credential profiles in select", () => {
+    it("lists every credential-kind bundle as a select option", () => {
       setupAgentSelectedState();
       render(<CreatePodForm config={{ scenario: "workspace" }} />);
-      expect(screen.getByText("My Credentials")).toBeInTheDocument();
-      expect(screen.getByText("Default Creds (settings.agentCredentials.default)")).toBeInTheDocument();
+      const select = screen.getByLabelText("ide.createPod.selectCredential") as HTMLSelectElement;
+      const options = Array.from(select.options).map((o) => o.value);
+      expect(options).toContain("My Credentials");
+      expect(options).toContain("Default Creds");
+      // Runtime bundles should NOT appear in the credential dropdown.
+      expect(options).not.toContain("dev-preferences");
     });
 
-    it("should call setSelectedCredentialProfile when changed", () => {
-      const { mockSetSelectedCredentialProfile } = setupAgentSelectedState();
+    it("calls setSelectedCredentialName when a credential is picked", () => {
+      const { mockSetSelectedCredentialName } = setupAgentSelectedState();
       render(<CreatePodForm config={{ scenario: "workspace" }} />);
-      fireEvent.change(screen.getByLabelText("ide.createPod.selectCredential"), { target: { value: "1" } });
-      expect(mockSetSelectedCredentialProfile).toHaveBeenCalledWith(1);
+      fireEvent.change(screen.getByLabelText("ide.createPod.selectCredential"), {
+        target: { value: "My Credentials" },
+      });
+      expect(mockSetSelectedCredentialName).toHaveBeenCalledWith("My Credentials");
     });
 
-    it("should show runner host hint when runner host profile is selected", () => {
-      setupAgentSelectedState({ selectedCredentialProfile: 0 });
+    it("shows no-credential hint when nothing is selected", () => {
+      setupAgentSelectedState({ selectedCredentialName: "" });
       render(<CreatePodForm config={{ scenario: "workspace" }} />);
-      expect(screen.getByText("ide.createPod.runnerHostHint")).toBeInTheDocument();
+      expect(screen.getByText("ide.createPod.noCredentialHint")).toBeInTheDocument();
     });
+  });
 
-    it("should show custom credential hint when custom profile is selected", () => {
-      setupAgentSelectedState({ selectedCredentialProfile: 1 });
+  describe("Runtime bundle multi-select", () => {
+    it("renders the runtime bundle picker", () => {
+      setupAgentSelectedState();
       render(<CreatePodForm config={{ scenario: "workspace" }} />);
-      expect(screen.getByText("ide.createPod.customCredentialHint")).toBeInTheDocument();
+      expect(screen.getByText("ide.createPod.selectRuntimeBundles")).toBeInTheDocument();
     });
 
-    it("should show loading state for credentials", () => {
-      setupAgentSelectedState({ loadingCredentials: true });
+    it("lists only runtime-kind bundles as checkbox rows (excludes credentials)", () => {
+      setupAgentSelectedState();
+      render(<CreatePodForm config={{ scenario: "workspace" }} />);
+      // Runtime bundle shows up.
+      expect(screen.getByText("dev-preferences")).toBeInTheDocument();
+      // Credential bundles only appear in the credential select <option> elements
+      // — never as checkbox rows. There must be exactly zero checkboxes labeled
+      // with a credential name.
+      const checkboxes = screen.getAllByRole("checkbox");
+      const checkboxLabels = checkboxes.map((cb) => cb.getAttribute("aria-label") ?? "");
+      expect(checkboxLabels.every((l) => !l.includes("My Credentials"))).toBe(true);
+    });
+
+    it("toggles selection through the runtime row checkbox", () => {
+      const { mockSetSelectedRuntimeBundleNames } = setupAgentSelectedState();
+      render(<CreatePodForm config={{ scenario: "workspace" }} />);
+      const checkboxes = screen.getAllByRole("checkbox");
+      // Only one runtime bundle in this fixture; click it.
+      fireEvent.click(checkboxes[0]);
+      expect(mockSetSelectedRuntimeBundleNames).toHaveBeenCalledWith(["dev-preferences"]);
+    });
+
+    it("shows merge-order hint when a runtime bundle is selected", () => {
+      setupAgentSelectedState({ selectedRuntimeBundleNames: ["dev-preferences"] });
+      render(<CreatePodForm config={{ scenario: "workspace" }} />);
+      expect(screen.getByText("ide.createPod.multiBundleHint")).toBeInTheDocument();
+    });
+
+    it("shows loading state while bundles load", () => {
+      setupAgentSelectedState({ loadingBundles: true });
       const { container } = render(<CreatePodForm config={{ scenario: "workspace" }} />);
-      expect(screen.getByText("common.loading")).toBeInTheDocument();
+      // Both pickers render the same loading affordance.
+      expect(screen.getAllByText("common.loading").length).toBeGreaterThan(0);
       expect(container.querySelectorAll(".animate-spin").length).toBeGreaterThan(0);
     });
   });

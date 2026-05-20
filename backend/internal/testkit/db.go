@@ -51,5 +51,6 @@ func allTableDDLs() []string {
 	ddls = append(ddls, billingTableDDLs()...)
 	ddls = append(ddls, supportTableDDLs()...)
 	ddls = append(ddls, blockstoreTableDDLs()...)
+	ddls = append(ddls, envBundleTableDDLs()...)
 	return ddls
 }

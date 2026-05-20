@@ -21,8 +21,6 @@ mod api_ticket_tests;
 #[cfg(test)]
 mod api_repo_tests;
 #[cfg(test)]
-mod api_credential_tests;
-#[cfg(test)]
 mod api_billing_extra_tests;
 
 pub use client::ApiClient;

@@ -78,45 +78,11 @@ func TestCreatePod(t *testing.T) {
 	}
 }
 
-func TestCreatePod_CredentialProfileID(t *testing.T) {
-	db := setupTestDB(t)
-	svc := newTestPodService(db)
-	ctx := context.Background()
-
-	t.Run("stores credential_profile_id when provided", func(t *testing.T) {
-		profileID := int64(42)
-		pod, err := svc.CreatePod(ctx, &CreatePodRequest{
-			OrganizationID:      1,
-			RunnerID:            1,
-			CreatedByID:         1,
-			CredentialProfileID: &profileID,
-		})
-		if err != nil {
-			t.Fatalf("CreatePod failed: %v", err)
-		}
-		if pod.CredentialProfileID == nil {
-			t.Fatal("CredentialProfileID should not be nil")
-		}
-		if *pod.CredentialProfileID != 42 {
-			t.Errorf("CredentialProfileID = %d, want 42", *pod.CredentialProfileID)
-		}
-	})
-
-	t.Run("stores nil credential_profile_id when not provided", func(t *testing.T) {
-		pod, err := svc.CreatePod(ctx, &CreatePodRequest{
-			OrganizationID:      1,
-			RunnerID:            1,
-			CreatedByID:         1,
-			CredentialProfileID: nil,
-		})
-		if err != nil {
-			t.Fatalf("CreatePod failed: %v", err)
-		}
-		if pod.CredentialProfileID != nil {
-			t.Errorf("CredentialProfileID should be nil, got %d", *pod.CredentialProfileID)
-		}
-	})
-}
+// TestCreatePod_CredentialProfileID was retired by the EnvBundle refactor —
+// the pods table no longer carries a credential_profile_id column, and
+// credential routing now lives entirely in AgentFile USE_ENV_BUNDLE
+// declarations. End-to-end coverage moved to
+// TestPodChain_CredentialFlow in pod_chain_integration_test.go.
 
 func TestCreatePod_Alias(t *testing.T) {
 	db := setupTestDB(t)

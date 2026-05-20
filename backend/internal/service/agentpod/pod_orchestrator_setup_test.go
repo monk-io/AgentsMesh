@@ -86,6 +86,11 @@ func (m *mockTicketServiceForOrch) GetTicketBySlug(_ context.Context, _ int64, _
 }
 
 // mockAgentConfigProvider implements agent.AgentConfigProvider for ConfigBuilder.
+// After the EnvBundle refactor only GetAgent is required from the provider —
+// credential resolution now lives in ConfigBuilder.envBundleSvc. The legacy
+// `creds`/`isRunner` fields are retained for tests that still want to assert
+// credential injection, but they're consumed via the mockEnvBundleProvider
+// wired into ConfigBuilder, not via this interface.
 type mockAgentConfigProvider struct {
 	agentDef *agentDomain.Agent
 	agentErr error
@@ -97,17 +102,6 @@ type mockAgentConfigProvider struct {
 
 func (m *mockAgentConfigProvider) GetAgent(_ context.Context, _ string) (*agentDomain.Agent, error) {
 	return m.agentDef, m.agentErr
-}
-
-func (m *mockAgentConfigProvider) GetEffectiveCredentialsForPod(_ context.Context, _ int64, _ string, _ *int64) (agentDomain.EncryptedCredentials, bool, error) {
-	return m.creds, m.isRunner, m.credsErr
-}
-
-func (m *mockAgentConfigProvider) ResolveCredentialsByName(_ context.Context, _ int64, _, profileName string) (agentDomain.EncryptedCredentials, bool, error) {
-	if profileName == "runner_host" {
-		return nil, true, nil
-	}
-	return m.creds, m.isRunner, m.credsErr
 }
 
 // mockRunnerSelector implements RunnerSelectorForOrchestrator for testing.
@@ -265,7 +259,7 @@ func setupOrchestrator(t *testing.T, opts ...func(*PodOrchestratorDeps)) (*PodOr
 	podSvc := newTestPodService(db)
 
 	provider := newTestProvider()
-	configBuilder := agent.NewConfigBuilder(provider)
+	configBuilder := agent.NewConfigBuilder(provider, noopBundleLoader{})
 
 	deps := &PodOrchestratorDeps{
 		PodService:    podSvc,
@@ -310,7 +304,7 @@ func withAgentResolver(ar AgentResolverForOrchestrator) func(*PodOrchestratorDep
 
 func withAgentConfigProvider(provider *mockAgentConfigProvider) func(*PodOrchestratorDeps) {
 	return func(d *PodOrchestratorDeps) {
-		d.ConfigBuilder = agent.NewConfigBuilder(provider)
+		d.ConfigBuilder = agent.NewConfigBuilder(provider, noopBundleLoader{})
 		d.AgentResolver = &mockAgentResolver{agentDef: provider.agentDef, err: provider.agentErr}
 	}
 }

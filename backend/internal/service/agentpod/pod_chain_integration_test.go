@@ -1,6 +1,7 @@
 package agentpod
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -11,7 +12,25 @@ import (
 	podDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/gitprovider"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
+	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 )
+
+// fakeEnvBundleLoader is the minimal mock satisfying ConfigBuilder's
+// EnvBundleLoader interface. Returns pre-seeded bundles keyed by name,
+// matching the eval-ctx shape produced by the real envbundle service.
+type fakeEnvBundleLoader struct {
+	bundles map[string]map[string]string
+}
+
+func (f *fakeEnvBundleLoader) GetEffectiveForUser(_ context.Context, _, _ int64, _ string) ([]*envbundleservice.EffectiveBundle, error) {
+	out := make([]*envbundleservice.EffectiveBundle, 0, len(f.bundles))
+	for name, data := range f.bundles {
+		out = append(out, &envbundleservice.EffectiveBundle{
+			Name: name, Kind: "credential", Data: data,
+		})
+	}
+	return out, nil
+}
 
 // ==================== Helpers ====================
 
@@ -59,7 +78,7 @@ func TestPodChain_AgentfileLayerToCommand(t *testing.T) {
 	orch, podSvc, ctx := setupIntegrationOrchestrator(t,
 		withCoordinator(coord),
 		withAgentResolver(resolver),
-		withConfigBuilder(agent.NewConfigBuilder(provider)),
+		withConfigBuilder(agent.NewConfigBuilder(provider, noopBundleLoader{})),
 	)
 
 	layer := "MODE acp\nBRANCH \"feature-x\"\nPROMPT \"do something\"\nCONFIG permission_mode = \"bypassPermissions\"\n"
@@ -120,7 +139,7 @@ func TestPodChain_RepoSlugResolution(t *testing.T) {
 		withCoordinator(coord),
 		withAgentResolver(resolver),
 		withRepoSvc(repoSvc),
-		withConfigBuilder(agent.NewConfigBuilder(provider)),
+		withConfigBuilder(agent.NewConfigBuilder(provider, noopBundleLoader{})),
 	)
 
 	layer := "REPO \"org/repo-slug\"\n"
@@ -146,45 +165,51 @@ func TestPodChain_RepoSlugResolution(t *testing.T) {
 
 // ==================== Test 3: Credential Flow ====================
 
+// TestPodChain_CredentialFlow asserts that bundles named in the AgentFile's
+// USE_ENV_BUNDLE declarations land in cmd.EnvVars at Pod creation. With the
+// EnvBundle refactor there's no longer a parallel `cmd.Credentials` channel —
+// eval merges the bundle's KV directly into the per-pod env map.
 func TestPodChain_CredentialFlow(t *testing.T) {
 	coord := &mockPodCoordinator{}
 	agentfileSrc := acpAgentfile()
 
-	// Provider that resolves CREDENTIAL name to encrypted credentials
-	credProvider := &mockAgentConfigProvider{
+	provider := &mockAgentConfigProvider{
 		agentDef: &agentDomain.Agent{
 			Slug: "claude-code", Name: "Claude Code",
 			LaunchCommand: "claude", SupportedModes: "pty,acp",
 			AgentfileSource: &agentfileSrc, UsesLegacyColumns: true,
 		},
-		config:   agentDomain.ConfigValues{},
-		creds:    agentDomain.EncryptedCredentials{"ANTHROPIC_API_KEY": "enc-key-123"},
-		isRunner: false,
+		config: agentDomain.ConfigValues{},
 	}
 	resolver := acpResolver(agentfileSrc)
+
+	bundleLoader := &fakeEnvBundleLoader{
+		bundles: map[string]map[string]string{
+			"my-profile": {"ANTHROPIC_API_KEY": "enc-key-123"},
+		},
+	}
+	cb := agent.NewConfigBuilder(provider, bundleLoader)
 
 	orch, _, ctx := setupIntegrationOrchestrator(t,
 		withCoordinator(coord),
 		withAgentResolver(resolver),
-		withConfigBuilder(agent.NewConfigBuilder(credProvider)),
+		withConfigBuilder(cb),
 	)
 
-	layer := "CREDENTIAL \"my-profile\"\n"
+	layer := "USE_ENV_BUNDLE \"my-profile\"\n"
 	result, err := orch.CreatePod(ctx, &OrchestrateCreatePodRequest{
 		OrganizationID: ctxOrgID(ctx),
 		UserID:         ctxUserID(ctx),
 		RunnerID:       ctxRunnerID(ctx),
 		AgentSlug:      "claude-code",
-		AgentfileLayer:   &layer,
+		AgentfileLayer: &layer,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, result.Pod)
 
-	// The command should carry the resolved credentials from the provider
 	cmd := coord.lastCmd
 	require.NotNil(t, cmd)
-	assert.Equal(t, "enc-key-123", cmd.Credentials["ANTHROPIC_API_KEY"])
-	assert.False(t, cmd.IsRunnerHost, "credential profile should not be runner host")
+	assert.Equal(t, "enc-key-123", cmd.EnvVars["ANTHROPIC_API_KEY"])
 }
 
 // ==================== Test 4: Unsupported Interaction Mode ====================
@@ -205,7 +230,7 @@ func TestPodChain_UnsupportedInteractionMode(t *testing.T) {
 	orch, podSvc, ctx := setupIntegrationOrchestrator(t,
 		withCoordinator(coord),
 		withAgentResolver(ptyOnlyResolver),
-		withConfigBuilder(agent.NewConfigBuilder(provider)),
+		withConfigBuilder(agent.NewConfigBuilder(provider, noopBundleLoader{})),
 	)
 
 	// AgentFile layer requests MODE acp, but agent only supports pty
@@ -242,7 +267,7 @@ func TestPodChain_ConfigBuilderFailure(t *testing.T) {
 	orch, podSvc, ctx := setupIntegrationOrchestrator(t,
 		withCoordinator(coord),
 		withAgentResolver(resolver),
-		withConfigBuilder(agent.NewConfigBuilder(failProvider)),
+		withConfigBuilder(agent.NewConfigBuilder(failProvider, noopBundleLoader{})),
 	)
 
 	result, err := orch.CreatePod(ctx, &OrchestrateCreatePodRequest{
@@ -273,7 +298,7 @@ func TestPodChain_DispatchFailureMarksError(t *testing.T) {
 	orch, podSvc, ctx := setupIntegrationOrchestrator(t,
 		withCoordinator(coord),
 		withAgentResolver(resolver),
-		withConfigBuilder(agent.NewConfigBuilder(provider)),
+		withConfigBuilder(agent.NewConfigBuilder(provider, noopBundleLoader{})),
 	)
 
 	layer := "PROMPT \"deploy fix\"\n"
@@ -333,7 +358,7 @@ func TestResumeIntegration_CodexFullChain(t *testing.T) {
 	orch, podSvc, ctx := setupIntegrationOrchestrator(t,
 		withCoordinator(coord),
 		withAgentResolver(codexResolver),
-		withConfigBuilder(agent.NewConfigBuilder(codexProvider)),
+		withConfigBuilder(agent.NewConfigBuilder(codexProvider, noopBundleLoader{})),
 	)
 
 	sourceLayer := `CONFIG approval_mode = "never"`

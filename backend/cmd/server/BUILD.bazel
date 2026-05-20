@@ -56,6 +56,7 @@ go_library(
         "//backend/internal/service/binding",
         "//backend/internal/service/blockstore",
         "//backend/internal/service/channel",
+        "//backend/internal/service/envbundle",
         "//backend/internal/service/extension",
         "//backend/internal/service/file",
         "//backend/internal/service/geo",

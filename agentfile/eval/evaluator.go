@@ -7,8 +7,12 @@ import (
 )
 
 // Eval executes a parsed AgentFile Program and returns the BuildResult.
-// Declarations set up context (agent command, env credentials).
-// Statements execute build logic (arg, file, mkdir, if, for, etc.).
+// Declarations set up context (agent command, env, USE_ENV_BUNDLE refs);
+// statements execute build logic (arg, file, mkdir, if, for, etc.).
+//
+// After the EnvBundle refactor, environment values flow exclusively through
+// `ENV X = expr` literal/expression declarations and USE_ENV_BUNDLE
+// references — no implicit credential merge pass any more.
 func Eval(prog *parser.Program, ctx *Context) error {
 	for _, decl := range prog.Declarations {
 		if err := evalDecl(ctx, decl); err != nil {

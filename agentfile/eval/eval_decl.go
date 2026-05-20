@@ -76,8 +76,8 @@ func evalDecl(ctx *Context, decl parser.Declaration) error {
 			ctx.Result.ModeArgs = make(map[string][]string)
 		}
 		ctx.Result.ModeArgs[d.Mode] = d.Args
-	case *parser.CredentialDecl:
-		ctx.Result.CredentialProfile = d.ProfileName
+	case *parser.UseEnvBundleDecl:
+		evalUseEnvBundleDecl(ctx, d)
 	case *parser.PromptDecl:
 		ctx.Result.Prompt = d.Content
 	case *parser.PromptPositionDecl:
@@ -119,17 +119,35 @@ func evalEnvDecl(ctx *Context, d *parser.EnvDecl) error {
 			return err
 		}
 		ctx.Result.EnvVars[d.Name] = toString(val)
-	} else if d.Source != "" {
-		if ctx.IsRunnerHost {
-			return nil
-		}
-		if val, ok := ctx.Credentials[d.Name]; ok && val != "" {
-			ctx.Result.EnvVars[d.Name] = val
-		}
-	} else if d.Value != "" {
-		ctx.Result.EnvVars[d.Name] = d.Value
+		return nil
 	}
+	if d.Value != "" {
+		ctx.Result.EnvVars[d.Name] = d.Value
+		return nil
+	}
+	// `ENV X SECRET|TEXT OPTIONAL` declarations (d.Source != "") are pure
+	// schema metadata after the EnvBundle refactor: they document which
+	// ENVs an agent expects but produce no eval-time mutation. AgentFile
+	// USE_ENV_BUNDLE references inject the actual values into EnvVars.
 	return nil
+}
+
+// evalUseEnvBundleDecl handles USE_ENV_BUNDLE "name". The backend pre-loads
+// every bundle visible to the user into ctx.EnvBundles (keyed by name). Each
+// declaration merges its bundle's KV into Result.EnvVars in declaration
+// order — later USE_ENV_BUNDLE wins on key conflicts. Missing names produce
+// no env mutation (warn-only, like the MCP "load-everything" pattern).
+func evalUseEnvBundleDecl(ctx *Context, d *parser.UseEnvBundleDecl) {
+	if ctx.EnvBundles == nil {
+		return
+	}
+	bundle, ok := ctx.EnvBundles[d.Name]
+	if !ok {
+		return
+	}
+	for k, v := range bundle {
+		ctx.Result.EnvVars[k] = v
+	}
 }
 
 // shallowMerge merges two maps (later keys override earlier).

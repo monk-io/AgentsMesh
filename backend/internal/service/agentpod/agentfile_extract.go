@@ -12,11 +12,10 @@ import (
 )
 
 type agentfileExtractResult struct {
-	Mode                  string // MODE pty/acp
-	CredentialProfile     string // CREDENTIAL "profile-name"
-	Branch                string // BRANCH "branch-name"
-	RepoSlug              string // REPO "slug" (e.g., "dev-org/demo-api")
-	Prompt                string // PROMPT "prompt content"
+	Mode                  string   // MODE pty/acp
+	Branch                string   // BRANCH "branch-name"
+	RepoSlug              string   // REPO "slug" (e.g., "dev-org/demo-api")
+	Prompt                string   // PROMPT "prompt content"
 	ConfigValues          agentDomain.ConfigValues
 	MergedAgentfileSource string
 }
@@ -46,7 +45,6 @@ func extractFromAgentfileLayer(
 
 	result := &agentfileExtractResult{
 		Mode:                  spec.Mode,
-		CredentialProfile:     spec.CredentialProfile,
 		Prompt:                spec.Prompt,
 		MergedAgentfileSource: mergedSource,
 		ConfigValues:          make(agentDomain.ConfigValues),

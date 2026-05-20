@@ -75,8 +75,12 @@
       "selectAgentPlaceholder": "请选择一个智能体...",
       "noAgentsForRunner": "该 Runner 暂不支持任何智能体",
       "selectCredential": "API 凭据",
-      "runnerHostDescription": "使用 Runner 本地配置",
-      "runnerHostHint": "使用 Runner 机器上的本地环境配置，不注入凭据。",
+      "selectRuntimeBundles": "运行时环境变量 Bundle",
+      "useAgentDefaultAuth": "使用 Agent 默认认证",
+      "credentialSelectedHint": "Pod 启动时注入选中凭据 Bundle 的环境变量。",
+      "noCredentialHint": "不注入额外凭据；Agent 走自带的登录方式（OAuth、CLI 已登录的账号等）。",
+      "noRuntimeBundlesAvailableHint": "此智能体暂无运行时环境变量 Bundle。前往「设置 → 智能体配置」添加。",
+      "noRuntimeBundleSelectedHint": "未选中任何运行时 Bundle，Pod 不会注入额外的运行时偏好。",
       "customCredentialHint": "使用您的自定义 API 凭据运行此智能体。",
       "selectRepository": "选择仓库",
       "selectRepositoryPlaceholder": "请选择一个仓库...",
@@ -102,7 +106,17 @@
       "perpetualDescription": "Agent 退出后自动重启，Pod 持续在线。",
       "interactionMode": "交互模式",
       "modePty": "终端 (PTY)",
-      "modeAcp": "对话 (ACP)"
+      "modeAcp": "对话 (ACP)",
+      "noBundleLabel": "使用 Agent 默认认证",
+      "noBundleHint": "不注入额外凭据；Agent 走自带的登录方式（OAuth、CLI 已登录的账号等）。",
+      "multiBundleHint": "选中的 Bundle 会按顺序合并到 Pod 环境变量；后选的同名变量会覆盖先选的。",
+      "selectedOrderHint": "已选（按合并顺序）",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "bundleKind": {
+        "credential": "凭据",
+        "runtime": "运行时"
+      }
     },
     "sidebar": {
       "collapse": "折叠侧边栏",
