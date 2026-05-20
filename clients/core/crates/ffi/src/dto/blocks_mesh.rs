@@ -2,8 +2,7 @@ use agentsmesh_types::proto_mesh_v1 as mesh_proto;
 use agentsmesh_types::proto_notification_v1 as notification_proto;
 use agentsmesh_types::{
     ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, ChildrenResult,
-    NotificationPreference, NotificationPreferenceListResponse, OpEnvelope, OpKind, RunnerStatus,
-    SearchHit, SemanticSearchRequest, SetNotificationPreferenceRequest, Workspace,
+    OpEnvelope, OpKind, RunnerStatus, SearchHit, SemanticSearchRequest, Workspace,
 };
 
 use super::{PodStatusDto, RunnerStatusDto};
@@ -489,32 +488,9 @@ pub struct NotificationPreferenceDto {
     pub channels: Option<Vec<String>>,
 }
 
-impl From<NotificationPreference> for NotificationPreferenceDto {
-    fn from(p: NotificationPreference) -> Self {
-        Self {
-            source: p.source,
-            entity_id: p.entity_id,
-            is_muted: p.is_muted,
-            channels: p.channels.map(|m| m.into_iter().filter(|(_, v)| *v).map(|(k, _)| k).collect()),
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct NotificationPreferenceListResponseDto {
     pub preferences: Vec<NotificationPreferenceDto>,
-}
-
-impl From<NotificationPreferenceListResponse> for NotificationPreferenceListResponseDto {
-    fn from(r: NotificationPreferenceListResponse) -> Self {
-        Self {
-            preferences: r
-                .preferences
-                .into_iter()
-                .map(NotificationPreferenceDto::from)
-                .collect(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -525,20 +501,9 @@ pub struct SetNotificationPreferenceRequestDto {
     pub channels: Option<Vec<String>>,
 }
 
-impl From<SetNotificationPreferenceRequestDto> for SetNotificationPreferenceRequest {
-    fn from(d: SetNotificationPreferenceRequestDto) -> Self {
-        Self {
-            source: d.source,
-            entity_id: d.entity_id,
-            is_muted: d.is_muted,
-            channels: d.channels.map(|v| v.into_iter().map(|k| (k, true)).collect()),
-        }
-    }
-}
-
 // Proto NotificationPreference carries channels as HashMap<String, bool>;
-// the legacy Swift DTO field is Vec<String> of enabled (true) keys. The
-// false entries are dropped — matches the REST-path projection.
+// the Swift DTO surfaces them as Vec<String> of enabled keys. False entries
+// are dropped — matches the REST projection that web/iOS originally consumed.
 impl From<notification_proto::NotificationPreference> for NotificationPreferenceDto {
     fn from(p: notification_proto::NotificationPreference) -> Self {
         let channels: Vec<String> = p
