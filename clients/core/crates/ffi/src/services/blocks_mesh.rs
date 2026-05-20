@@ -5,7 +5,7 @@ use agentsmesh_types::proto_notification_v1 as notification_proto;
 
 use crate::core::AgentsMeshCore;
 use crate::dto::{
-    mesh_topology_from_proto, notification_list_from_proto, BlockDto, ChildrenResultDto,
+    notification_list_from_proto, BlockDto, ChildrenResultDto,
     MeshTopologyDto, NotificationPreferenceListResponseDto, SearchHitDto, SemanticSearchRequestDto,
     SetNotificationPreferenceRequestDto, WorkspaceDto,
 };
@@ -18,7 +18,7 @@ impl AgentsMeshCore {
     pub async fn get_mesh_topology(&self) -> Result<MeshTopologyDto, CoreError> {
         let req = mesh_proto::GetMeshTopologyRequest { org_slug: self.org_slug()? };
         let resp = self.api.get_mesh_topology_connect(&req).await?;
-        Ok(mesh_topology_from_proto(resp))
+        Ok(resp.into())
     }
 
     // ── Notifications ─────────────────────────────────────

@@ -3,7 +3,7 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::mesh_state::MeshState;
-use agentsmesh_types::MeshTopology;
+use agentsmesh_types::proto_mesh_v1 as mp;
 
 pub struct MeshService {
     client: Arc<ApiClient>,
@@ -73,77 +73,13 @@ impl MeshService {
     }
 
     pub async fn fetch_topology(&self) -> Result<String, String> {
-        use agentsmesh_types::proto_mesh_v1 as mp;
         let req = mp::GetMeshTopologyRequest {
             org_slug: self.client.current_org_slug(),
         };
-        let proto_topo = self.client
+        let topo = self.client
             .get_mesh_topology_connect(&req)
             .await.map_err(crate::wire)?;
-        let topo = mesh_proto_to_legacy(&proto_topo);
         self.state.write().unwrap().set_topology(topo.clone());
         serde_json::to_string(&topo).map_err(crate::wire)
-    }
-}
-
-// mesh_proto_to_legacy converts the prost wire shape into the legacy serde
-// `MeshTopology` so the renderer's state slots can continue reading the
-// existing field set. Drop alongside the legacy serde types once every
-// renderer call site reads the proto camelCase shape directly.
-fn mesh_proto_to_legacy(p: &agentsmesh_types::proto_mesh_v1::MeshTopology) -> MeshTopology {
-    use agentsmesh_types::{MeshChannelInfo, MeshEdge, MeshNode, MeshRunnerInfo, PodStatus};
-    fn parse_status(s: &str) -> PodStatus {
-        serde_json::from_value::<PodStatus>(serde_json::Value::String(s.to_string()))
-            .unwrap_or_default()
-    }
-    fn parse_runner_status(s: &str) -> agentsmesh_types::RunnerStatus {
-        serde_json::from_value::<agentsmesh_types::RunnerStatus>(serde_json::Value::String(s.to_string()))
-            .unwrap_or_default()
-    }
-    MeshTopology {
-        nodes: p.nodes.iter().map(|n| MeshNode {
-            pod_key: n.pod_key.clone(),
-            alias: n.alias.clone(),
-            status: parse_status(&n.status),
-            agent_status: if n.agent_status.is_empty() { None } else { Some(n.agent_status.clone()) },
-            agent_slug: n.agent_slug.clone(),
-            runner_id: if n.runner_id == 0 { None } else { Some(n.runner_id) },
-            model: n.model.clone(),
-            title: n.title.clone(),
-            ticket_id: n.ticket_id,
-            ticket_slug: n.ticket_slug.clone(),
-            ticket_title: n.ticket_title.clone(),
-            repository_id: n.repository_id,
-            created_by_id: if n.created_by_id == 0 { None } else { Some(n.created_by_id) },
-            runner_node_id: if n.runner_node_id.is_empty() { None } else { Some(n.runner_node_id.clone()) },
-            runner_status: if n.runner_status.is_empty() { None } else { Some(n.runner_status.clone()) },
-            started_at: n.started_at.clone(),
-        }).collect(),
-        edges: p.edges.iter().map(|e| MeshEdge {
-            id: if e.id == 0 { None } else { Some(e.id) },
-            source: e.source.clone(),
-            target: e.target.clone(),
-            binding_status: if e.status.is_empty() { None } else { Some(e.status.clone()) },
-            status: if e.status.is_empty() { None } else { Some(e.status.clone()) },
-            granted_scopes: if e.granted_scopes.is_empty() { None } else { Some(e.granted_scopes.clone()) },
-            pending_scopes: if e.pending_scopes.is_empty() { None } else { Some(e.pending_scopes.clone()) },
-        }).collect(),
-        channels: p.channels.iter().map(|c| MeshChannelInfo {
-            id: c.id,
-            name: c.name.clone(),
-            description: c.description.clone(),
-            pod_keys: c.pod_keys.clone(),
-            message_count: Some(c.message_count as i64),
-            is_archived: Some(c.is_archived),
-        }).collect(),
-        runners: p.runners.iter().map(|r| MeshRunnerInfo {
-            id: r.id,
-            name: r.node_id.clone(),
-            status: parse_runner_status(&r.status),
-            node_id: if r.node_id.is_empty() { None } else { Some(r.node_id.clone()) },
-            max_concurrent_pods: Some(r.max_concurrent_pods),
-            current_pods: Some(r.current_pods),
-            pod_keys: Vec::new(),
-        }).collect(),
     }
 }

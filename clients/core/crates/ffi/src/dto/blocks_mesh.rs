@@ -1,12 +1,32 @@
+use agentsmesh_types::proto_mesh_v1 as mesh_proto;
 use agentsmesh_types::proto_notification_v1 as notification_proto;
 use agentsmesh_types::{
     ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, ChildrenResult,
-    MeshChannelInfo, MeshEdge, MeshNode, MeshRunnerInfo, MeshTopology, NotificationPreference,
-    NotificationPreferenceListResponse, OpEnvelope, OpKind, PodStatus, RunnerStatus, SearchHit,
-    SemanticSearchRequest, SetNotificationPreferenceRequest, Workspace,
+    NotificationPreference, NotificationPreferenceListResponse, OpEnvelope, OpKind, RunnerStatus,
+    SearchHit, SemanticSearchRequest, SetNotificationPreferenceRequest, Workspace,
 };
 
 use super::{PodStatusDto, RunnerStatusDto};
+
+// R2: PodStatus wire is `string` in proto.mesh.v1.MeshNode. Parse into
+// PodStatusDto here so Swift consumers keep the strongly-typed enum.
+fn parse_pod_status_from_str(s: &str) -> PodStatusDto {
+    match s {
+        "pending" => PodStatusDto::Pending,
+        "creating" => PodStatusDto::Creating,
+        "initializing" => PodStatusDto::Initializing,
+        "running" => PodStatusDto::Running,
+        "paused" => PodStatusDto::Paused,
+        "stopping" => PodStatusDto::Stopping,
+        "disconnected" => PodStatusDto::Disconnected,
+        "orphaned" => PodStatusDto::Orphaned,
+        "completed" => PodStatusDto::Completed,
+        "terminated" => PodStatusDto::Terminated,
+        "error" => PodStatusDto::Error,
+        "failed" => PodStatusDto::Failed,
+        _ => PodStatusDto::Unknown,
+    }
+}
 
 // ── Blockstore ────────────────────────────────────────────
 
@@ -331,25 +351,24 @@ pub struct MeshNodeDto {
     pub started_at: Option<String>,
 }
 
-impl From<MeshNode> for MeshNodeDto {
-    fn from(n: MeshNode) -> Self {
-        let _: PodStatus = n.status;
+impl From<mesh_proto::MeshNode> for MeshNodeDto {
+    fn from(n: mesh_proto::MeshNode) -> Self {
         Self {
             pod_key: n.pod_key,
             alias: n.alias,
-            status: n.status.into(),
-            agent_status: n.agent_status,
+            status: parse_pod_status_from_str(&n.status),
+            agent_status: if n.agent_status.is_empty() { None } else { Some(n.agent_status) },
             agent_slug: n.agent_slug,
-            runner_id: n.runner_id,
+            runner_id: if n.runner_id == 0 { None } else { Some(n.runner_id) },
             model: n.model,
             title: n.title,
             ticket_id: n.ticket_id,
             ticket_slug: n.ticket_slug,
             ticket_title: n.ticket_title,
             repository_id: n.repository_id,
-            created_by_id: n.created_by_id,
-            runner_node_id: n.runner_node_id,
-            runner_status: n.runner_status,
+            created_by_id: if n.created_by_id == 0 { None } else { Some(n.created_by_id) },
+            runner_node_id: if n.runner_node_id.is_empty() { None } else { Some(n.runner_node_id) },
+            runner_status: if n.runner_status.is_empty() { None } else { Some(n.runner_status) },
             started_at: n.started_at,
         }
     }
@@ -366,16 +385,16 @@ pub struct MeshEdgeDto {
     pub pending_scopes: Option<Vec<String>>,
 }
 
-impl From<MeshEdge> for MeshEdgeDto {
-    fn from(e: MeshEdge) -> Self {
+impl From<mesh_proto::MeshEdge> for MeshEdgeDto {
+    fn from(e: mesh_proto::MeshEdge) -> Self {
         Self {
-            id: e.id,
+            id: if e.id == 0 { None } else { Some(e.id) },
             source: e.source,
             target: e.target,
-            binding_status: e.binding_status,
-            status: e.status,
-            granted_scopes: e.granted_scopes,
-            pending_scopes: e.pending_scopes,
+            binding_status: if e.status.is_empty() { None } else { Some(e.status.clone()) },
+            status: if e.status.is_empty() { None } else { Some(e.status) },
+            granted_scopes: if e.granted_scopes.is_empty() { None } else { Some(e.granted_scopes) },
+            pending_scopes: if e.pending_scopes.is_empty() { None } else { Some(e.pending_scopes) },
         }
     }
 }
@@ -390,15 +409,15 @@ pub struct MeshChannelInfoDto {
     pub is_archived: Option<bool>,
 }
 
-impl From<MeshChannelInfo> for MeshChannelInfoDto {
-    fn from(c: MeshChannelInfo) -> Self {
+impl From<mesh_proto::ChannelInfo> for MeshChannelInfoDto {
+    fn from(c: mesh_proto::ChannelInfo) -> Self {
         Self {
             id: c.id,
             name: c.name,
             description: c.description,
             pod_keys: c.pod_keys,
-            message_count: c.message_count,
-            is_archived: c.is_archived,
+            message_count: Some(c.message_count as i64),
+            is_archived: Some(c.is_archived),
         }
     }
 }
@@ -414,17 +433,25 @@ pub struct MeshRunnerInfoDto {
     pub pod_keys: Vec<String>,
 }
 
-impl From<MeshRunnerInfo> for MeshRunnerInfoDto {
-    fn from(r: MeshRunnerInfo) -> Self {
-        let _: RunnerStatus = r.status;
+// R2: legacy `From<RunnerStatus> for RunnerStatusDto` bridge — runner domain
+// still uses the legacy enum (RunnerStatus). Delete this impl together with
+// the runner_state migration.
+fn parse_runner_status_from_str(s: &str) -> RunnerStatusDto {
+    let parsed: RunnerStatus = serde_json::from_value(serde_json::Value::String(s.to_string()))
+        .unwrap_or_default();
+    parsed.into()
+}
+
+impl From<mesh_proto::RunnerInfo> for MeshRunnerInfoDto {
+    fn from(r: mesh_proto::RunnerInfo) -> Self {
         Self {
             id: r.id,
-            name: r.name,
-            status: r.status.into(),
-            node_id: r.node_id,
-            max_concurrent_pods: r.max_concurrent_pods,
-            current_pods: r.current_pods,
-            pod_keys: r.pod_keys,
+            name: r.node_id.clone(),
+            status: parse_runner_status_from_str(&r.status),
+            node_id: if r.node_id.is_empty() { None } else { Some(r.node_id) },
+            max_concurrent_pods: Some(r.max_concurrent_pods),
+            current_pods: Some(r.current_pods),
+            pod_keys: Vec::new(),
         }
     }
 }
@@ -437,8 +464,8 @@ pub struct MeshTopologyDto {
     pub runners: Vec<MeshRunnerInfoDto>,
 }
 
-impl From<MeshTopology> for MeshTopologyDto {
-    fn from(t: MeshTopology) -> Self {
+impl From<mesh_proto::MeshTopology> for MeshTopologyDto {
+    fn from(t: mesh_proto::MeshTopology) -> Self {
         Self {
             nodes: t.nodes.into_iter().map(MeshNodeDto::from).collect(),
             edges: t.edges.into_iter().map(MeshEdgeDto::from).collect(),
@@ -541,67 +568,6 @@ pub(crate) fn notification_list_from_proto(
     }
 }
 
-// proto.mesh.v1 MeshTopology → MeshTopologyDto. The proto wire shape
-// uses primitive zeros for "absent" (runner_id=0, created_by_id=0,
-// empty strings) where the legacy DTO uses `Option<T>`; map those back
-// to None so Swift consumers see the same surface they did under REST.
-pub(crate) fn mesh_topology_from_proto(
-    t: agentsmesh_types::proto_mesh_v1::MeshTopology,
-) -> MeshTopologyDto {
-    use agentsmesh_types::PodStatus as LegacyPodStatus;
-    use agentsmesh_types::RunnerStatus as LegacyRunnerStatus;
-    fn parse_pod_status(s: &str) -> LegacyPodStatus {
-        serde_json::from_value::<LegacyPodStatus>(serde_json::Value::String(s.to_string()))
-            .unwrap_or_default()
-    }
-    fn parse_runner_status(s: &str) -> LegacyRunnerStatus {
-        serde_json::from_value::<LegacyRunnerStatus>(serde_json::Value::String(s.to_string()))
-            .unwrap_or_default()
-    }
-    MeshTopologyDto {
-        nodes: t.nodes.into_iter().map(|n| MeshNodeDto {
-            pod_key: n.pod_key,
-            alias: n.alias,
-            status: parse_pod_status(&n.status).into(),
-            agent_status: if n.agent_status.is_empty() { None } else { Some(n.agent_status) },
-            agent_slug: n.agent_slug,
-            runner_id: if n.runner_id == 0 { None } else { Some(n.runner_id) },
-            model: n.model,
-            title: n.title,
-            ticket_id: n.ticket_id,
-            ticket_slug: n.ticket_slug,
-            ticket_title: n.ticket_title,
-            repository_id: n.repository_id,
-            created_by_id: if n.created_by_id == 0 { None } else { Some(n.created_by_id) },
-            runner_node_id: if n.runner_node_id.is_empty() { None } else { Some(n.runner_node_id) },
-            runner_status: if n.runner_status.is_empty() { None } else { Some(n.runner_status) },
-            started_at: n.started_at,
-        }).collect(),
-        edges: t.edges.into_iter().map(|e| MeshEdgeDto {
-            id: if e.id == 0 { None } else { Some(e.id) },
-            source: e.source,
-            target: e.target,
-            binding_status: if e.status.is_empty() { None } else { Some(e.status.clone()) },
-            status: if e.status.is_empty() { None } else { Some(e.status) },
-            granted_scopes: if e.granted_scopes.is_empty() { None } else { Some(e.granted_scopes) },
-            pending_scopes: if e.pending_scopes.is_empty() { None } else { Some(e.pending_scopes) },
-        }).collect(),
-        channels: t.channels.into_iter().map(|c| MeshChannelInfoDto {
-            id: c.id,
-            name: c.name,
-            description: c.description,
-            pod_keys: c.pod_keys,
-            message_count: Some(c.message_count as i64),
-            is_archived: Some(c.is_archived),
-        }).collect(),
-        runners: t.runners.into_iter().map(|r| MeshRunnerInfoDto {
-            id: r.id,
-            name: r.node_id.clone(),
-            status: parse_runner_status(&r.status).into(),
-            node_id: if r.node_id.is_empty() { None } else { Some(r.node_id) },
-            max_concurrent_pods: Some(r.max_concurrent_pods),
-            current_pods: Some(r.current_pods),
-            pod_keys: Vec::new(),
-        }).collect(),
-    }
-}
+// proto.mesh.v1 MeshTopology → MeshTopologyDto is handled by the standard
+// `impl From<mesh_proto::MeshTopology>` above (defined inline alongside the
+// per-message converters).

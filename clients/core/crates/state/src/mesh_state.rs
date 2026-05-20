@@ -1,4 +1,4 @@
-use agentsmesh_types::{MeshChannelInfo, MeshEdge, MeshNode, MeshRunnerInfo, MeshTopology, PodStatus};
+use agentsmesh_types::proto_mesh_v1::{ChannelInfo, MeshEdge, MeshNode, MeshTopology, RunnerInfo};
 
 #[derive(Debug, Default)]
 pub struct MeshState {
@@ -48,7 +48,7 @@ impl MeshState {
         }
     }
 
-    pub fn get_channels_for_node(&self, pod_key: &str) -> Vec<&MeshChannelInfo> {
+    pub fn get_channels_for_node(&self, pod_key: &str) -> Vec<&ChannelInfo> {
         match &self.topology {
             Some(t) => t
                 .channels
@@ -64,7 +64,7 @@ impl MeshState {
             Some(t) => t
                 .nodes
                 .iter()
-                .filter(|n| n.runner_id == Some(runner_id))
+                .filter(|n| n.runner_id == runner_id)
                 .collect(),
             None => Vec::new(),
         }
@@ -75,16 +75,15 @@ impl MeshState {
             Some(t) => t
                 .nodes
                 .iter()
-                .filter(|n| n.status == PodStatus::Running || n.status == PodStatus::Creating)
+                .filter(|n| n.status == "running" || n.status == "creating")
                 .collect(),
             None => Vec::new(),
         }
     }
 
-    pub fn get_runner_info(&self, runner_id: i64) -> Option<&MeshRunnerInfo> {
+    pub fn get_runner_info(&self, runner_id: i64) -> Option<&RunnerInfo> {
         self.topology
             .as_ref()
             .and_then(|t| t.runners.iter().find(|r| r.id == runner_id))
     }
 }
-
