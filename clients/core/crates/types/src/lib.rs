@@ -16,7 +16,6 @@ mod mesh;
 mod message;
 mod notification;
 mod organization;
-mod pod;
 mod repository;
 mod runner;
 mod service_error;
@@ -36,7 +35,6 @@ pub use mesh::*;
 pub use message::*;
 pub use notification::*;
 pub use organization::*;
-pub use pod::*;
 pub use repository::*;
 pub use runner::*;
 pub use service_error::*;
@@ -165,4 +163,38 @@ pub mod proto_user_v1 {
 
 pub mod proto_user_credential_v1 {
     pub use ::user_credential_proto::proto::user_credential::v1::*;
+}
+
+#[cfg(test)]
+mod proto_serde_poc {
+    //! R2 PoC: proto types double as wire DTO (prost::Message) and
+    //! JSON-friendly cache/state type (serde derive). This test verifies that
+    //! the `rust_prost_transform` injection in proto/<svc>/v1/BUILD.bazel
+    //! actually produced the expected derives.
+    use crate::proto_pod_v1::Pod;
+    use prost::Message;
+
+    #[test]
+    fn pod_serde_roundtrip() {
+        let pod = Pod {
+            pod_key: "test-key".into(),
+            alias: Some("my-pod".into()),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&pod).unwrap();
+        let decoded: Pod = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded.pod_key, "test-key");
+        assert_eq!(decoded.alias.as_deref(), Some("my-pod"));
+    }
+
+    #[test]
+    fn pod_prost_still_works() {
+        let pod = Pod {
+            pod_key: "test-key".into(),
+            ..Default::default()
+        };
+        let bytes = pod.encode_to_vec();
+        let decoded = Pod::decode(&*bytes).unwrap();
+        assert_eq!(decoded.pod_key, "test-key");
+    }
 }

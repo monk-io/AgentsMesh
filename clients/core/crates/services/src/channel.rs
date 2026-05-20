@@ -5,8 +5,9 @@ use std::sync::RwLock;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::channel_state::ChannelState;
 use agentsmesh_types::proto_channel_v1 as channel_proto;
+use agentsmesh_types::proto_pod_v1::Pod;
 use agentsmesh_types::{
-    Channel, ChannelMember, ChannelMessage, EditChannelMessageRequest, Pod,
+    Channel, ChannelMember, ChannelMessage, EditChannelMessageRequest,
     SendChannelMessageRequest,
 };
 
@@ -415,16 +416,16 @@ impl ChannelService {
     pub async fn get_channel_pods(&self, id: i64) -> Result<String, String> {
         let req = channel_proto::ListChannelPodsRequest { org_slug: self.org_slug(), id };
         let resp = self.client.list_channel_pods_connect(&req).await.map_err(crate::wire)?;
-        let pods: Vec<agentsmesh_types::Pod> = resp.items.iter().map(|p| {
-            agentsmesh_types::Pod {
-                id: Some(p.id),
-                key: p.pod_key.clone(),
-                alias: p.alias.clone(),
-                agent_status: Some(p.agent_status.clone()),
-                status: serde_json::from_value(serde_json::Value::String(p.status.clone()))
-                    .unwrap_or_default(),
-                ..Default::default()
-            }
+        // Project ChannelPod (proto.channel.v1) onto proto.pod.v1.Pod for the
+        // shared PodState cache. Only the subset of fields the channel surface
+        // actually surfaces is filled — other fields keep proto3 defaults.
+        let pods: Vec<Pod> = resp.items.iter().map(|p| Pod {
+            id: p.id,
+            pod_key: p.pod_key.clone(),
+            alias: p.alias.clone(),
+            agent_status: p.agent_status.clone(),
+            status: p.status.clone(),
+            ..Default::default()
         }).collect();
         self.state.write().unwrap().set_channel_pods(id, pods);
         serde_json::to_string(&pod_list_from_proto(resp)).map_err(crate::wire)

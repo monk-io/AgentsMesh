@@ -1,86 +1,18 @@
 // Proto → legacy serde-shape conversions for the dual-track Connect
-// migration. Service public method signatures (e.g., `fetch_pods`,
-// `terminate_pod`) preserve the legacy JSON wire shape so wasm bridge / iOS
-// FFI / node-bridge consumers don't change. The internal implementation
+// migration. Service public method signatures (e.g., `fetch_runners`,
+// `fetch_repositories`) preserve the legacy JSON wire shape so wasm bridge /
+// iOS FFI / node-bridge consumers don't change. The internal implementation
 // calls Connect-RPC and routes the prost response through these converters
 // back to the legacy shape.
+//
+// R2 progress: the `pod` module has been retired — PodState cache now stores
+// proto.pod.v1.Pod directly (see clients/core/crates/state/src/pod_state.rs).
+// Remaining modules (runner / repository) get retired as their respective
+// state crates migrate. The ticket module is already empty.
 
-use agentsmesh_types::proto_pod_v1 as pod_proto;
 use agentsmesh_types::proto_repository_v1 as repo_proto;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::{
-    Pod, PodAgentInfo, PodConnectionInfo, PodCreatedByInfo, PodLoopInfo,
-    PodRepositoryInfo, PodRunnerInfo, PodTicketInfo, Repository, Runner,
-};
-
-pub mod pod {
-    use super::*;
-
-    pub fn from_proto(p: pod_proto::Pod) -> Pod {
-        Pod {
-            id: Some(p.id),
-            key: p.pod_key,
-            status: super::parse_status(&p.status),
-            agent_status: super::option_string(&p.agent_status),
-            alias: p.alias,
-            title: p.title,
-            agent_slug: p.agent_slug,
-            runner_id: p.runner_id,
-            runner_name: p.runner.as_ref().and_then(|r| r.node_id.clone()),
-            user_id: p.created_by_id,
-            ticket_slug: p.ticket.as_ref().and_then(|t| t.slug.clone()),
-            channel_id: None,
-            runner: p.runner.map(|r| PodRunnerInfo {
-                id: r.id,
-                node_id: r.node_id,
-                status: r.status,
-            }),
-            agent: p.agent.map(|a| PodAgentInfo { name: a.name, slug: a.slug }),
-            repository: p.repository.map(|r| PodRepositoryInfo {
-                id: r.id,
-                name: r.name,
-                slug: r.slug,
-                provider_type: r.provider_type,
-            }),
-            ticket: p.ticket.map(|t| PodTicketInfo {
-                id: t.id,
-                slug: t.slug,
-                title: t.title,
-            }),
-            loop_info: p.r#loop.map(|l| PodLoopInfo { id: l.id, name: l.name, slug: l.slug }),
-            created_by: p.created_by.map(|c| PodCreatedByInfo {
-                id: c.id,
-                username: c.username,
-                name: c.name,
-            }),
-            prompt: p.prompt,
-            branch_name: p.branch_name,
-            sandbox_path: p.sandbox_path,
-            started_at: p.started_at,
-            finished_at: p.finished_at,
-            last_activity: p.last_activity,
-            created_at: super::option_string(&p.created_at),
-            updated_at: super::option_string(&p.updated_at),
-            interaction_mode: super::option_string(&p.interaction_mode),
-            perpetual: Some(p.perpetual),
-            restart_count: Some(p.restart_count),
-            last_restart_at: p.last_restart_at,
-            error_code: p.error_code,
-            error_message: p.error_message,
-        }
-    }
-
-    pub fn connection_info(info: pod_proto::PodConnectionInfo) -> PodConnectionInfo {
-        PodConnectionInfo {
-            relay_url: info.relay_url,
-            token: info.token,
-            pod_key: info.pod_key,
-            local_relay_url: info.local_relay_url,
-            local_token: info.local_token,
-            local_relay_node_id: info.local_relay_node_id,
-        }
-    }
-}
+use agentsmesh_types::{Repository, Runner};
 
 pub mod runner {
     use super::*;

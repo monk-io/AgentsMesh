@@ -177,7 +177,7 @@ impl ApiClient {
         status: Option<&str>,
         limit: Option<u32>,
         offset: Option<u32>,
-    ) -> Result<PodListResponse, ApiError> {
+    ) -> Result<agentsmesh_types::proto_pod_v1::ListPodsResponse, ApiError> {
         let mut path = self.org_path(&format!("/runners/{id}/pods"));
         let mut params = Vec::new();
         if let Some(s) = status {

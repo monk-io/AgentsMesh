@@ -2,7 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use agentsmesh_persistence::{ChannelRepo, MessageRepo, StorageBackend};
-use agentsmesh_types::{Channel, ChannelMember, ChannelMessage, MessagePreview, Pod, User};
+use agentsmesh_types::proto_pod_v1::Pod;
+use agentsmesh_types::{Channel, ChannelMember, ChannelMessage, MessagePreview, User};
 
 const MAX_MESSAGES_PER_CHANNEL: usize = 500;
 const MAX_CACHED_CHANNELS: usize = 50;

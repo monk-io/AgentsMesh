@@ -1,12 +1,17 @@
 load("@rules_rust//rust:defs.bzl", "rust_library_group")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_toolchain")
 
-# R1 — custom rust_prost_toolchain bridging rules_rust_prost (plugin) with
-# our project-owned `@crates//:prost` runtime. The default toolchain that
-# rules_rust_prost 0.70 self-registers uses its vendored `prost-0.13.1`,
-# which trips Rust's trait coherence rules because services / wasm / ffi
-# already pull `@crates//:prost` (0.13.5). Same crate source ⇒ one
-# `prost::Message` trait instance everywhere.
+# R1 — bridges rules_rust_prost (plugin) with our project-owned
+# `@crates//:prost` runtime. The default toolchain that rules_rust_prost 0.70
+# self-registers uses its vendored `prost-0.13.1`, which trips Rust's trait
+# coherence rules because services / wasm / ffi already pull
+# `@crates//:prost` (0.13.5). Same crate source ⇒ one `prost::Message` trait
+# instance everywhere.
+#
+# R2 — proto types that need `serde::Serialize/Deserialize` opt in
+# per-package via `rust_prost_transform` in their BUILD.bazel (see
+# proto/pod/v1/BUILD.bazel etc.). The toolchain itself stays minimal — it
+# only carries the prost runtime + plugin, no global derive injection.
 
 rust_library_group(
     name = "prost_runtime",
@@ -20,8 +25,6 @@ rust_library_group(
 
 rust_prost_toolchain(
     name = "prost_toolchain_impl",
-    # Plugin binaries we keep at rules_rust_prost-vendored — no point
-    # rebuilding `protoc-gen-prost` ourselves.
     prost_plugin = "@rules_rust_prost//private/3rdparty/crates:protoc-gen-prost__protoc-gen-prost",
     prost_runtime = ":prost_runtime",
     prost_types = ":prost_types",
@@ -39,3 +42,4 @@ toolchain(
     toolchain_type = "@rules_rust_prost//:toolchain_type",
     visibility = ["//visibility:public"],
 )
+

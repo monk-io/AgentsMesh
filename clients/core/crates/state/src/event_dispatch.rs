@@ -1,8 +1,9 @@
 use agentsmesh_events::event_types::EventType;
 use agentsmesh_events::types::RealtimeEvent;
+use agentsmesh_types::proto_pod_v1::Pod;
 use agentsmesh_types::{
     AutopilotController, AutopilotIteration,
-    ChannelMessage, LoopRunData, LoopRunStatus, Pod, PodStatus, Runner, RunnerStatus, Ticket,
+    ChannelMessage, LoopRunData, LoopRunStatus, Runner, RunnerStatus, Ticket,
 };
 
 use crate::app_state::AppState;
@@ -16,7 +17,7 @@ pub fn dispatch(state: &mut AppState, event: &RealtimeEvent) {
         }
         EventType::PodStatusChanged => {
             if let Some(key) = event.data.get("pod_key").and_then(|v| v.as_str()) {
-                let status = parse_field::<PodStatus>(&event.data, "status");
+                let status = event.data.get("status").and_then(|v| v.as_str()).unwrap_or("");
                 let agent = event.data.get("agent_status").and_then(|v| v.as_str());
                 let code = event.data.get("error_code").and_then(|v| v.as_str());
                 let msg = event.data.get("error_message").and_then(|v| v.as_str());
@@ -25,14 +26,14 @@ pub fn dispatch(state: &mut AppState, event: &RealtimeEvent) {
         }
         EventType::PodAgentStatusChanged => {
             if let Some(key) = event.data.get("pod_key").and_then(|v| v.as_str()) {
-                let status = parse_field::<PodStatus>(&event.data, "status");
+                let status = event.data.get("status").and_then(|v| v.as_str()).unwrap_or("");
                 let agent = event.data.get("agent_status").and_then(|v| v.as_str());
                 state.pods.update_pod_status(key, status, agent, None, None, Some(event.timestamp));
             }
         }
         EventType::PodTerminated => {
             if let Some(key) = event.data.get("pod_key").and_then(|v| v.as_str()) {
-                state.pods.update_pod_status(key, PodStatus::Terminated, None, None, None, Some(event.timestamp));
+                state.pods.update_pod_status(key, "terminated", None, None, None, Some(event.timestamp));
             }
         }
         EventType::PodTitleChanged => {
@@ -190,21 +191,21 @@ mod tests {
     #[test]
     fn pod_created() {
         let mut s = AppState::new();
-        let e = make_event(EventType::PodCreated, json!({"key":"p1","status":"running","agent_slug":"claude"}));
+        let e = make_event(EventType::PodCreated, json!({"pod_key":"p1","status":"running","agent_slug":"claude"}));
         dispatch(&mut s, &e);
         assert_eq!(s.pods.pods().len(), 1);
-        assert_eq!(s.pods.get_pod("p1").unwrap().status, PodStatus::Running);
+        assert_eq!(s.pods.get_pod("p1").unwrap().status, "running");
     }
 
     #[test]
     fn pod_terminated() {
         let mut s = AppState::new();
         s.pods.upsert_pod(Pod {
-            key: "p1".into(), status: PodStatus::Running,
+            pod_key: "p1".into(), status: "running".into(),
             agent_slug: "claude".into(), ..Default::default()
         }, Some(100));
         dispatch(&mut s, &make_event(EventType::PodTerminated, json!({"pod_key":"p1"})));
-        assert_eq!(s.pods.get_pod("p1").unwrap().status, PodStatus::Terminated);
+        assert_eq!(s.pods.get_pod("p1").unwrap().status, "terminated");
     }
 
     #[test]

@@ -118,12 +118,11 @@ impl TicketService {
     pub async fn get_ticket_pods(
         &self, slug: &str, active_only: Option<bool>,
     ) -> Result<String, String> {
-        // proto.mesh.v1 owns ticket→pod lookup (MeshService domain). Go via
-        // the Connect-RPC bridge; project the proto MeshNode wire shape
-        // back into the legacy `PodListResponse` JSON that the renderer
-        // already reads through `useTicketPods` and `ticket_pods_json`.
+        // proto.mesh.v1 owns ticket→pod lookup (MeshService domain). Project
+        // each MeshPodNode into proto.pod.v1.Pod for the shared PodState
+        // cache (only the channel-surface subset of fields is filled).
         use agentsmesh_types::proto_mesh_v1 as mp;
-        use agentsmesh_types::{Pod, PodListResponse, PodStatus};
+        use agentsmesh_types::proto_pod_v1::Pod;
         let req = mp::GetTicketPodsRequest {
             org_slug: self.client.current_org_slug(),
             ticket_slug: slug.to_string(),
@@ -133,22 +132,24 @@ impl TicketService {
             .get_ticket_pods_connect(&req)
             .await.map_err(crate::wire)?;
         let pods: Vec<Pod> = proto_resp.pods.iter().map(|n| Pod {
-            key: n.pod_key.clone(),
-            status: crate::parse_status::<PodStatus>(&n.status),
-            agent_status: if n.agent_status.is_empty() { None } else { Some(n.agent_status.clone()) },
+            pod_key: n.pod_key.clone(),
+            status: n.status.clone(),
+            agent_status: n.agent_status.clone(),
             alias: n.alias.clone(),
             title: n.title.clone(),
             agent_slug: n.agent_slug.clone(),
             runner_id: if n.runner_id == 0 { None } else { Some(n.runner_id) },
-            runner_name: if n.runner_node_id.is_empty() { None } else { Some(n.runner_node_id.clone()) },
-            user_id: if n.created_by_id == 0 { None } else { Some(n.created_by_id) },
-            ticket_slug: n.ticket_slug.clone(),
             started_at: n.started_at.clone(),
             ..Default::default()
         }).collect();
         self.state.write().unwrap().set_ticket_pods(slug, pods.clone());
-        let resp = PodListResponse { pods, total: None, limit: None, offset: None };
-        serde_json::to_string(&resp).map_err(crate::wire)
+        let envelope = serde_json::json!({
+            "pods": pods,
+            "total": serde_json::Value::Null,
+            "limit": serde_json::Value::Null,
+            "offset": serde_json::Value::Null,
+        });
+        serde_json::to_string(&envelope).map_err(crate::wire)
     }
 
     pub fn ticket_pods_json(&self, slug: &str) -> String {

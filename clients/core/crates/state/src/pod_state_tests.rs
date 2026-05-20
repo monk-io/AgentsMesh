@@ -1,11 +1,11 @@
-use agentsmesh_types::{Pod, PodStatus};
+use agentsmesh_types::proto_pod_v1::Pod;
 
 use crate::pod_state::PodState;
 
-fn make_pod(key: &str, status: PodStatus) -> Pod {
+fn make_pod(key: &str, status: &str) -> Pod {
     Pod {
-        key: key.into(),
-        status,
+        pod_key: key.into(),
+        status: status.into(),
         agent_slug: "claude-code".into(),
         ..Default::default()
     }
@@ -21,79 +21,79 @@ fn new_state_is_empty() {
 #[test]
 fn upsert_inserts_new_pod() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(100));
+    s.upsert_pod(make_pod("p1", "running"), Some(100));
     assert_eq!(s.pods().len(), 1);
-    assert_eq!(s.get_pod("p1").unwrap().status, PodStatus::Running);
+    assert_eq!(s.get_pod("p1").unwrap().status, "running");
 }
 
 #[test]
 fn upsert_updates_existing_pod() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Pending), Some(100));
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(200));
+    s.upsert_pod(make_pod("p1", "pending"), Some(100));
+    s.upsert_pod(make_pod("p1", "running"), Some(200));
     assert_eq!(s.pods().len(), 1);
-    assert_eq!(s.get_pod("p1").unwrap().status, PodStatus::Running);
+    assert_eq!(s.get_pod("p1").unwrap().status, "running");
 }
 
 #[test]
 fn timestamp_guard_rejects_stale_update() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(200));
-    s.upsert_pod(make_pod("p1", PodStatus::Pending), Some(100));
-    assert_eq!(s.get_pod("p1").unwrap().status, PodStatus::Running);
+    s.upsert_pod(make_pod("p1", "running"), Some(200));
+    s.upsert_pod(make_pod("p1", "pending"), Some(100));
+    assert_eq!(s.get_pod("p1").unwrap().status, "running");
 }
 
 #[test]
 fn timestamp_guard_rejects_equal_timestamp() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(100));
-    s.upsert_pod(make_pod("p1", PodStatus::Terminated), Some(100));
-    assert_eq!(s.get_pod("p1").unwrap().status, PodStatus::Running);
+    s.upsert_pod(make_pod("p1", "running"), Some(100));
+    s.upsert_pod(make_pod("p1", "terminated"), Some(100));
+    assert_eq!(s.get_pod("p1").unwrap().status, "running");
 }
 
 #[test]
 fn upsert_without_timestamp_always_applies() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(999));
-    s.upsert_pod(make_pod("p1", PodStatus::Terminated), None);
-    assert_eq!(s.get_pod("p1").unwrap().status, PodStatus::Terminated);
+    s.upsert_pod(make_pod("p1", "running"), Some(999));
+    s.upsert_pod(make_pod("p1", "terminated"), None);
+    assert_eq!(s.get_pod("p1").unwrap().status, "terminated");
 }
 
 #[test]
 fn upsert_syncs_current_pod() {
     let mut s = PodState::new();
-    s.set_current_pod(Some(make_pod("p1", PodStatus::Running)));
-    s.upsert_pod(make_pod("p1", PodStatus::Terminated), Some(200));
-    assert_eq!(s.current_pod().unwrap().status, PodStatus::Terminated);
+    s.set_current_pod(Some(make_pod("p1", "running")));
+    s.upsert_pod(make_pod("p1", "terminated"), Some(200));
+    assert_eq!(s.current_pod().unwrap().status, "terminated");
 }
 
 #[test]
 fn upsert_does_not_touch_unrelated_current_pod() {
     let mut s = PodState::new();
-    s.set_current_pod(Some(make_pod("other", PodStatus::Running)));
-    s.upsert_pod(make_pod("p1", PodStatus::Terminated), None);
-    assert_eq!(s.current_pod().unwrap().key, "other");
-    assert_eq!(s.current_pod().unwrap().status, PodStatus::Running);
+    s.set_current_pod(Some(make_pod("other", "running")));
+    s.upsert_pod(make_pod("p1", "terminated"), None);
+    assert_eq!(s.current_pod().unwrap().pod_key, "other");
+    assert_eq!(s.current_pod().unwrap().status, "running");
 }
 
 #[test]
 fn update_pod_status_with_timestamp_guard() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(100));
-    s.update_pod_status("p1", PodStatus::Terminated, None, None, None, Some(50));
-    assert_eq!(s.get_pod("p1").unwrap().status, PodStatus::Running);
+    s.upsert_pod(make_pod("p1", "running"), Some(100));
+    s.update_pod_status("p1", "terminated", None, None, None, Some(50));
+    assert_eq!(s.get_pod("p1").unwrap().status, "running");
 
     s.update_pod_status(
         "p1",
-        PodStatus::Terminated,
+        "terminated",
         Some("done"),
         Some("E001"),
         Some("timeout"),
         Some(200),
     );
     let p = s.get_pod("p1").unwrap();
-    assert_eq!(p.status, PodStatus::Terminated);
-    assert_eq!(p.agent_status.as_deref(), Some("done"));
+    assert_eq!(p.status, "terminated");
+    assert_eq!(p.agent_status, "done");
     assert_eq!(p.error_code.as_deref(), Some("E001"));
     assert_eq!(p.error_message.as_deref(), Some("timeout"));
 }
@@ -101,17 +101,17 @@ fn update_pod_status_with_timestamp_guard() {
 #[test]
 fn update_pod_status_syncs_current_pod() {
     let mut s = PodState::new();
-    let pod = make_pod("p1", PodStatus::Running);
+    let pod = make_pod("p1", "running");
     s.upsert_pod(pod.clone(), None);
     s.set_current_pod(Some(pod));
-    s.update_pod_status("p1", PodStatus::Terminated, None, None, None, None);
-    assert_eq!(s.current_pod().unwrap().status, PodStatus::Terminated);
+    s.update_pod_status("p1", "terminated", None, None, None, None);
+    assert_eq!(s.current_pod().unwrap().status, "terminated");
 }
 
 #[test]
 fn update_title_with_guard() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(100));
+    s.upsert_pod(make_pod("p1", "running"), Some(100));
     s.update_pod_title("p1", "New Title", Some(50));
     assert!(s.get_pod("p1").unwrap().title.is_none());
 
@@ -122,7 +122,7 @@ fn update_title_with_guard() {
 #[test]
 fn update_alias_no_guard() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), Some(999));
+    s.upsert_pod(make_pod("p1", "running"), Some(999));
     s.update_pod_alias("p1", "my-alias");
     assert_eq!(s.get_pod("p1").unwrap().alias.as_deref(), Some("my-alias"));
 }
@@ -130,7 +130,7 @@ fn update_alias_no_guard() {
 #[test]
 fn update_alias_syncs_current_pod() {
     let mut s = PodState::new();
-    let pod = make_pod("p1", PodStatus::Running);
+    let pod = make_pod("p1", "running");
     s.upsert_pod(pod.clone(), None);
     s.set_current_pod(Some(pod));
     s.update_pod_alias("p1", "alias2");
@@ -155,7 +155,7 @@ fn init_progress_lifecycle() {
 #[test]
 fn remove_pod_cleans_up_everything() {
     let mut s = PodState::new();
-    let pod = make_pod("p1", PodStatus::Running);
+    let pod = make_pod("p1", "running");
     s.upsert_pod(pod.clone(), Some(100));
     s.set_current_pod(Some(pod));
     s.update_init_progress("p1", "ready", 1.0, None);
@@ -170,8 +170,8 @@ fn remove_pod_cleans_up_everything() {
 #[test]
 fn remove_pod_preserves_unrelated_current() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("p1", PodStatus::Running), None);
-    s.set_current_pod(Some(make_pod("other", PodStatus::Running)));
+    s.upsert_pod(make_pod("p1", "running"), None);
+    s.set_current_pod(Some(make_pod("other", "running")));
     s.remove_pod("p1");
     assert!(s.current_pod().is_some());
 }
@@ -179,8 +179,8 @@ fn remove_pod_preserves_unrelated_current() {
 #[test]
 fn set_pods_replaces_list() {
     let mut s = PodState::new();
-    s.upsert_pod(make_pod("old", PodStatus::Running), None);
-    s.set_pods(vec![make_pod("a", PodStatus::Running), make_pod("b", PodStatus::Pending)]);
+    s.upsert_pod(make_pod("old", "running"), None);
+    s.set_pods(vec![make_pod("a", "running"), make_pod("b", "pending")]);
     assert_eq!(s.pods().len(), 2);
     assert!(s.get_pod("old").is_none());
 }

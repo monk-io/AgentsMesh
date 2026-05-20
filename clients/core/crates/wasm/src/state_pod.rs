@@ -1,6 +1,5 @@
-
 use agentsmesh_state::pod_state::PodState;
-use agentsmesh_types::Pod;
+use agentsmesh_types::proto_pod_v1::Pod;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -52,10 +51,9 @@ impl WasmPodState {
         error_message: Option<String>,
         timestamp: Option<i64>,
     ) {
-        let parsed = crate::parse_status::<agentsmesh_types::PodStatus>(status);
         self.inner.update_pod_status(
             pod_key,
-            parsed,
+            status,
             agent_status.as_deref(),
             error_code.as_deref(),
             error_message.as_deref(),

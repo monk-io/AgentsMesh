@@ -4,10 +4,8 @@ use std::sync::RwLock;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::pod_state::PodState;
 use agentsmesh_types::proto_pod_v1 as pod_proto;
-use agentsmesh_types::{Pod, PodStatus, CreatePodRequest};
+use agentsmesh_types::proto_pod_v1::Pod;
 use prost::Message;
-
-use crate::parse_status;
 
 fn sidebar_status_param(filter: &str) -> Option<&'static str> {
     match filter {
@@ -49,9 +47,8 @@ impl PodService {
         agent_status: Option<String>, error_code: Option<String>,
         error_message: Option<String>, timestamp: Option<i64>,
     ) {
-        let parsed = parse_status::<PodStatus>(status);
         self.state.write().unwrap().update_pod_status(
-            pod_key, parsed, agent_status.as_deref(),
+            pod_key, status, agent_status.as_deref(),
             error_code.as_deref(), error_message.as_deref(), timestamp,
         );
     }
@@ -78,9 +75,7 @@ impl PodService {
     ) -> Result<String, String> {
         // runner_id filter is REST-only — proto.pod.v1.ListPodsRequest drops
         // it because the new surface routes per-runner lookup through
-        // RunnerService.QuerySandboxes / ListRunnerPods. The few legacy
-        // callers passing runner_id (none in active web code post-PR #340)
-        // would have to switch to the runner-scoped endpoint.
+        // RunnerService.QuerySandboxes / ListRunnerPods.
         let _ = runner_id;
         let req = pod_proto::ListPodsRequest {
             org_slug: self.client.current_org_slug(),
@@ -93,7 +88,7 @@ impl PodService {
         let total = resp.total;
         let resp_limit = resp.limit;
         let resp_offset = resp.offset;
-        let pods: Vec<Pod> = resp.items.into_iter().map(crate::proto_convert::pod::from_proto).collect();
+        let pods: Vec<Pod> = resp.items;
         self.state.write().unwrap().set_pods(pods.clone());
         let envelope = serde_json::json!({
             "pods": pods,
@@ -118,7 +113,7 @@ impl PodService {
         };
         let resp = self.client.list_pods_connect(&req).await.map_err(crate::wire)?;
         let total = resp.total;
-        let pods: Vec<Pod> = resp.items.into_iter().map(crate::proto_convert::pod::from_proto).collect();
+        let pods: Vec<Pod> = resp.items;
         let has_more = (pods.len() as i64) < total;
         self.state.write().unwrap().set_pods(pods.clone());
         let result = serde_json::json!({
@@ -143,7 +138,7 @@ impl PodService {
         };
         let resp = self.client.list_pods_connect(&req).await.map_err(crate::wire)?;
         let total = resp.total;
-        let new_pods: Vec<Pod> = resp.items.into_iter().map(crate::proto_convert::pod::from_proto).collect();
+        let new_pods: Vec<Pod> = resp.items;
         {
             let mut state = self.state.write().unwrap();
             for pod in &new_pods {
@@ -166,8 +161,7 @@ impl PodService {
             org_slug: self.client.current_org_slug(),
             pod_key: pod_key.to_string(),
         };
-        let resp = self.client.get_pod_connect(&req).await.map_err(crate::wire)?;
-        let pod = crate::proto_convert::pod::from_proto(resp);
+        let pod = self.client.get_pod_connect(&req).await.map_err(crate::wire)?;
         self.state.write().unwrap().upsert_pod(pod.clone(), None);
         serde_json::to_string(&pod).map_err(crate::wire)
     }
@@ -179,7 +173,7 @@ impl PodService {
         };
         self.client.terminate_pod_connect(&req).await.map_err(crate::wire)?;
         self.state.write().unwrap().update_pod_status(
-            pod_key, PodStatus::Terminated, None, None, None, None,
+            pod_key, "terminated", None, None, None, None,
         );
         Ok(())
     }
@@ -201,8 +195,7 @@ impl PodService {
                     org_slug: self.client.current_org_slug(),
                     pod_key: pod_key.to_string(),
                 };
-                if let Ok(pod_proto_msg) = self.client.get_pod_connect(&get_req).await {
-                    let pod = crate::proto_convert::pod::from_proto(pod_proto_msg);
+                if let Ok(pod) = self.client.get_pod_connect(&get_req).await {
                     self.state.write().unwrap().upsert_pod(pod, None);
                 }
                 Err(e.to_string())
@@ -215,17 +208,11 @@ impl PodService {
             org_slug: self.client.current_org_slug(),
             pod_key: pod_key.to_string(),
         };
-        let info_proto = self.client.get_pod_connection_connect(&req).await.map_err(crate::wire)?;
-        let info = crate::proto_convert::pod::connection_info(info_proto);
+        let info = self.client.get_pod_connection_connect(&req).await.map_err(crate::wire)?;
         serde_json::to_string(&info).map_err(crate::wire)
     }
 
     // -------- Connect-RPC (binary wire) --------
-    //
-    // Each `*_connect` method takes prost-encoded bytes and returns
-    // prost-encoded bytes — matching the wasm bridge's `Result<Vec<u8>, String>`
-    // surface (conventions §2.5). Caller (TS) encodes via
-    // @bufbuild/protobuf .toBinary() and decodes via .fromBinary().
 
     pub async fn list_pods_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
         let req = pod_proto::ListPodsRequest::decode(request_bytes)

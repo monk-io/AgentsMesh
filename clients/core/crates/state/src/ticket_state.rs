@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use agentsmesh_persistence::{StorageBackend, TicketRepo};
-use agentsmesh_types::{BoardColumn, Label, Pod, Ticket, TicketPriority, TicketStatus};
+use agentsmesh_types::proto_pod_v1::Pod;
+use agentsmesh_types::{BoardColumn, Label, Ticket, TicketPriority, TicketStatus};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewMode {

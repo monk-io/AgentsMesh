@@ -1,9 +1,29 @@
+// R2 cross-domain bridge: mesh domain still uses legacy `agentsmesh_types::PodStatus`
+// enum (MeshNode.status). Until mesh is migrated to proto types, expose
+// `From<PodStatus> for PodStatusDto` so the ffi/dto/blocks_mesh adapter
+// keeps compiling. Delete this impl together with `types::PodStatus`.
+impl From<agentsmesh_types::PodStatus> for PodStatusDto {
+    fn from(s: agentsmesh_types::PodStatus) -> Self {
+        use agentsmesh_types::PodStatus as P;
+        match s {
+            P::Pending => Self::Pending,
+            P::Creating => Self::Creating,
+            P::Initializing => Self::Initializing,
+            P::Running => Self::Running,
+            P::Paused => Self::Paused,
+            P::Stopping => Self::Stopping,
+            P::Disconnected => Self::Disconnected,
+            P::Orphaned => Self::Orphaned,
+            P::Completed => Self::Completed,
+            P::Terminated => Self::Terminated,
+            P::Error => Self::Error,
+            P::Failed => Self::Failed,
+            P::Unknown => Self::Unknown,
+        }
+    }
+}
+
 use agentsmesh_types::proto_pod_v1 as pod_proto;
-use agentsmesh_types::{
-    CreatePodRequest, CreatePodResponse, Pod, PodAgentInfo, PodConnectionInfo, PodCreatedByInfo,
-    PodListResponse,
-    PodLoopInfo, PodRepositoryInfo, PodRunnerInfo, PodStatus, PodTicketInfo,
-};
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum PodStatusDto {
@@ -22,23 +42,24 @@ pub enum PodStatusDto {
     Unknown,
 }
 
-impl From<PodStatus> for PodStatusDto {
-    fn from(s: PodStatus) -> Self {
-        match s {
-            PodStatus::Pending => Self::Pending,
-            PodStatus::Creating => Self::Creating,
-            PodStatus::Initializing => Self::Initializing,
-            PodStatus::Running => Self::Running,
-            PodStatus::Paused => Self::Paused,
-            PodStatus::Stopping => Self::Stopping,
-            PodStatus::Disconnected => Self::Disconnected,
-            PodStatus::Orphaned => Self::Orphaned,
-            PodStatus::Completed => Self::Completed,
-            PodStatus::Terminated => Self::Terminated,
-            PodStatus::Error => Self::Error,
-            PodStatus::Failed => Self::Failed,
-            PodStatus::Unknown => Self::Unknown,
-        }
+// R2: PodStatus enum is gone — wire is `string status` in proto. Parse the
+// wire-string into the UniFFI enum here so Swift consumers still get the
+// strongly-typed enum surface.
+fn parse_pod_status(s: &str) -> PodStatusDto {
+    match s {
+        "pending" => PodStatusDto::Pending,
+        "creating" => PodStatusDto::Creating,
+        "initializing" => PodStatusDto::Initializing,
+        "running" => PodStatusDto::Running,
+        "paused" => PodStatusDto::Paused,
+        "stopping" => PodStatusDto::Stopping,
+        "disconnected" => PodStatusDto::Disconnected,
+        "orphaned" => PodStatusDto::Orphaned,
+        "completed" => PodStatusDto::Completed,
+        "terminated" => PodStatusDto::Terminated,
+        "error" => PodStatusDto::Error,
+        "failed" => PodStatusDto::Failed,
+        _ => PodStatusDto::Unknown,
     }
 }
 
@@ -49,13 +70,9 @@ pub struct PodRunnerInfoDto {
     pub status: Option<String>,
 }
 
-impl From<PodRunnerInfo> for PodRunnerInfoDto {
-    fn from(r: PodRunnerInfo) -> Self {
-        Self {
-            id: r.id,
-            node_id: r.node_id,
-            status: r.status,
-        }
+impl From<pod_proto::PodRunnerInfo> for PodRunnerInfoDto {
+    fn from(r: pod_proto::PodRunnerInfo) -> Self {
+        Self { id: r.id, node_id: r.node_id, status: r.status }
     }
 }
 
@@ -65,12 +82,9 @@ pub struct PodAgentInfoDto {
     pub slug: Option<String>,
 }
 
-impl From<PodAgentInfo> for PodAgentInfoDto {
-    fn from(a: PodAgentInfo) -> Self {
-        Self {
-            name: a.name,
-            slug: a.slug,
-        }
+impl From<pod_proto::PodAgentInfo> for PodAgentInfoDto {
+    fn from(a: pod_proto::PodAgentInfo) -> Self {
+        Self { name: a.name, slug: a.slug }
     }
 }
 
@@ -82,14 +96,9 @@ pub struct PodRepositoryInfoDto {
     pub provider_type: Option<String>,
 }
 
-impl From<PodRepositoryInfo> for PodRepositoryInfoDto {
-    fn from(r: PodRepositoryInfo) -> Self {
-        Self {
-            id: r.id,
-            name: r.name,
-            slug: r.slug,
-            provider_type: r.provider_type,
-        }
+impl From<pod_proto::PodRepositoryInfo> for PodRepositoryInfoDto {
+    fn from(r: pod_proto::PodRepositoryInfo) -> Self {
+        Self { id: r.id, name: r.name, slug: r.slug, provider_type: r.provider_type }
     }
 }
 
@@ -100,13 +109,9 @@ pub struct PodTicketInfoDto {
     pub title: Option<String>,
 }
 
-impl From<PodTicketInfo> for PodTicketInfoDto {
-    fn from(t: PodTicketInfo) -> Self {
-        Self {
-            id: t.id,
-            slug: t.slug,
-            title: t.title,
-        }
+impl From<pod_proto::PodTicketInfo> for PodTicketInfoDto {
+    fn from(t: pod_proto::PodTicketInfo) -> Self {
+        Self { id: t.id, slug: t.slug, title: t.title }
     }
 }
 
@@ -117,13 +122,9 @@ pub struct PodLoopInfoDto {
     pub slug: Option<String>,
 }
 
-impl From<PodLoopInfo> for PodLoopInfoDto {
-    fn from(l: PodLoopInfo) -> Self {
-        Self {
-            id: l.id,
-            name: l.name,
-            slug: l.slug,
-        }
+impl From<pod_proto::PodLoopInfo> for PodLoopInfoDto {
+    fn from(l: pod_proto::PodLoopInfo) -> Self {
+        Self { id: l.id, name: l.name, slug: l.slug }
     }
 }
 
@@ -134,14 +135,14 @@ pub struct PodCreatedByInfoDto {
     pub name: Option<String>,
 }
 
-impl From<PodCreatedByInfo> for PodCreatedByInfoDto {
-    fn from(u: PodCreatedByInfo) -> Self {
-        Self {
-            id: u.id,
-            username: u.username,
-            name: u.name,
-        }
+impl From<pod_proto::PodCreatedByInfo> for PodCreatedByInfoDto {
+    fn from(u: pod_proto::PodCreatedByInfo) -> Self {
+        Self { id: u.id, username: u.username, name: u.name }
     }
+}
+
+fn opt_str(s: String) -> Option<String> {
+    if s.is_empty() { None } else { Some(s) }
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -180,181 +181,12 @@ pub struct PodDto {
     pub error_message: Option<String>,
 }
 
-impl From<Pod> for PodDto {
-    fn from(p: Pod) -> Self {
-        Self {
-            key: p.key,
-            id: p.id,
-            status: p.status.into(),
-            agent_status: p.agent_status,
-            alias: p.alias,
-            title: p.title,
-            agent_slug: p.agent_slug,
-            runner_id: p.runner_id,
-            runner_name: p.runner_name,
-            user_id: p.user_id,
-            ticket_slug: p.ticket_slug,
-            channel_id: p.channel_id,
-            runner: p.runner.map(Into::into),
-            agent: p.agent.map(Into::into),
-            repository: p.repository.map(Into::into),
-            ticket: p.ticket.map(Into::into),
-            loop_info: p.loop_info.map(Into::into),
-            created_by: p.created_by.map(Into::into),
-            prompt: p.prompt,
-            branch_name: p.branch_name,
-            sandbox_path: p.sandbox_path,
-            started_at: p.started_at,
-            finished_at: p.finished_at,
-            last_activity: p.last_activity,
-            created_at: p.created_at,
-            updated_at: p.updated_at,
-            interaction_mode: p.interaction_mode,
-            perpetual: p.perpetual,
-            restart_count: p.restart_count,
-            last_restart_at: p.last_restart_at,
-            error_code: p.error_code,
-            error_message: p.error_message,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct PodConnectionInfoDto {
-    pub relay_url: String,
-    pub token: String,
-    pub pod_key: String,
-}
-
-impl From<PodConnectionInfo> for PodConnectionInfoDto {
-    fn from(i: PodConnectionInfo) -> Self {
-        Self {
-            relay_url: i.relay_url,
-            token: i.token,
-            pod_key: i.pod_key,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct CreatePodRequestDto {
-    pub agent_slug: String,
-    pub agentfile_layer: Option<String>,
-    pub runner_id: Option<i64>,
-    pub alias: Option<String>,
-    pub ticket_slug: Option<String>,
-    pub cols: Option<u16>,
-    pub rows: Option<u16>,
-    pub source_pod_key: Option<String>,
-    pub resume_agent_session: Option<bool>,
-    pub perpetual: Option<bool>,
-}
-
-impl From<CreatePodRequestDto> for CreatePodRequest {
-    fn from(d: CreatePodRequestDto) -> Self {
-        Self {
-            agent_slug: d.agent_slug,
-            agentfile_layer: d.agentfile_layer,
-            runner_id: d.runner_id,
-            alias: d.alias,
-            ticket_slug: d.ticket_slug,
-            cols: d.cols,
-            rows: d.rows,
-            source_pod_key: d.source_pod_key,
-            resume_agent_session: d.resume_agent_session,
-            perpetual: d.perpetual,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct PodListResponseDto {
-    pub pods: Vec<PodDto>,
-    pub total: Option<i64>,
-}
-
-impl From<PodListResponse> for PodListResponseDto {
-    fn from(r: PodListResponse) -> Self {
-        Self {
-            pods: r.pods.into_iter().map(PodDto::from).collect(),
-            total: r.total,
-        }
-    }
-}
-
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct CreatePodResponseDto {
-    pub pod: PodDto,
-    pub warning: Option<String>,
-}
-
-impl From<CreatePodResponse> for CreatePodResponseDto {
-    fn from(r: CreatePodResponse) -> Self {
-        Self {
-            pod: r.pod.into(),
-            warning: r.warning,
-        }
-    }
-}
-
-// ── Connect / prost mappings ──
-//
-// Proto Pod uses required `status: string`; map it through the wire enum
-// (PodStatus) so the conversion lives in one place — there's no separate
-// dto-level parser.
-
-
-fn opt_str(s: String) -> Option<String> {
-    if s.is_empty() { None } else { Some(s) }
-}
-
-impl From<pod_proto::PodRunnerInfo> for PodRunnerInfoDto {
-    fn from(r: pod_proto::PodRunnerInfo) -> Self {
-        Self { id: r.id, node_id: r.node_id, status: r.status }
-    }
-}
-
-impl From<pod_proto::PodAgentInfo> for PodAgentInfoDto {
-    fn from(a: pod_proto::PodAgentInfo) -> Self {
-        Self { name: a.name, slug: a.slug }
-    }
-}
-
-impl From<pod_proto::PodRepositoryInfo> for PodRepositoryInfoDto {
-    fn from(r: pod_proto::PodRepositoryInfo) -> Self {
-        Self {
-            id: r.id,
-            name: r.name,
-            slug: r.slug,
-            provider_type: r.provider_type,
-        }
-    }
-}
-
-impl From<pod_proto::PodTicketInfo> for PodTicketInfoDto {
-    fn from(t: pod_proto::PodTicketInfo) -> Self {
-        Self { id: t.id, slug: t.slug, title: t.title }
-    }
-}
-
-impl From<pod_proto::PodLoopInfo> for PodLoopInfoDto {
-    fn from(l: pod_proto::PodLoopInfo) -> Self {
-        Self { id: l.id, name: l.name, slug: l.slug }
-    }
-}
-
-impl From<pod_proto::PodCreatedByInfo> for PodCreatedByInfoDto {
-    fn from(u: pod_proto::PodCreatedByInfo) -> Self {
-        Self { id: u.id, username: u.username, name: u.name }
-    }
-}
-
 impl From<pod_proto::Pod> for PodDto {
     fn from(p: pod_proto::Pod) -> Self {
         Self {
             key: p.pod_key,
             id: Some(p.id),
-            status: agentsmesh_services::parse_status::<PodStatus>(&p.status).into(),
+            status: parse_pod_status(&p.status),
             agent_status: opt_str(p.agent_status),
             alias: p.alias,
             title: p.title,
@@ -388,10 +220,37 @@ impl From<pod_proto::Pod> for PodDto {
     }
 }
 
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PodConnectionInfoDto {
+    pub relay_url: String,
+    pub token: String,
+    pub pod_key: String,
+}
+
 impl From<pod_proto::PodConnectionInfo> for PodConnectionInfoDto {
     fn from(i: pod_proto::PodConnectionInfo) -> Self {
         Self { relay_url: i.relay_url, token: i.token, pod_key: i.pod_key }
     }
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct CreatePodRequestDto {
+    pub agent_slug: String,
+    pub agentfile_layer: Option<String>,
+    pub runner_id: Option<i64>,
+    pub alias: Option<String>,
+    pub ticket_slug: Option<String>,
+    pub cols: Option<u16>,
+    pub rows: Option<u16>,
+    pub source_pod_key: Option<String>,
+    pub resume_agent_session: Option<bool>,
+    pub perpetual: Option<bool>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PodListResponseDto {
+    pub pods: Vec<PodDto>,
+    pub total: Option<i64>,
 }
 
 impl From<pod_proto::ListPodsResponse> for PodListResponseDto {
@@ -401,6 +260,12 @@ impl From<pod_proto::ListPodsResponse> for PodListResponseDto {
             total: Some(r.total),
         }
     }
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct CreatePodResponseDto {
+    pub pod: PodDto,
+    pub warning: Option<String>,
 }
 
 impl From<pod_proto::CreatePodResponse> for CreatePodResponseDto {
