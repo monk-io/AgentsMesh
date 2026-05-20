@@ -32,7 +32,7 @@ export interface SharedElectronFixtures {
   sharedPage: Page;
 }
 
-export const test = base.extend<{}, SharedElectronFixtures>({
+export const test = base.extend<Record<string, never>, SharedElectronFixtures>({
   sharedElectronApp: [
     async ({}, use) => {
       const ciArgs = isCi() && process.platform === "linux"
