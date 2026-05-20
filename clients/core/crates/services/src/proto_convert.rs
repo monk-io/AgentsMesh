@@ -1,18 +1,12 @@
 // Proto → legacy serde-shape conversions for the dual-track Connect
-// migration. Service public method signatures (e.g., `fetch_runners`,
-// `fetch_repositories`) preserve the legacy JSON wire shape so wasm bridge /
-// iOS FFI / node-bridge consumers don't change. The internal implementation
-// calls Connect-RPC and routes the prost response through these converters
-// back to the legacy shape.
+// migration. Only the `runner` projector is left — every other domain's
+// state crate now stores the proto type directly (R2-S2-{Pod,Mesh,Billing,
+// Org,Notification,Message,Repository}). The runner module will follow.
 //
-// R2 progress: the `pod` module has been retired — PodState cache now stores
-// proto.pod.v1.Pod directly (see clients/core/crates/state/src/pod_state.rs).
-// Remaining modules (runner / repository) get retired as their respective
-// state crates migrate. The ticket module is already empty.
+// Drop this file together with the runner_state migration.
 
-use agentsmesh_types::proto_repository_v1 as repo_proto;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::{Repository, Runner};
+use agentsmesh_types::Runner;
 
 pub mod runner {
     use super::*;
@@ -25,9 +19,9 @@ pub mod runner {
             // `node_id`, so we surface node_id as the display name here — keeps
             // existing state cache consumers (RunnerListItem) rendering.
             name: r.node_id.clone(),
-            node_id: super::option_string(&r.node_id),
-            description: super::option_string(&r.description),
-            status: super::parse_status(&r.status),
+            node_id: option_string(&r.node_id),
+            description: option_string(&r.description),
+            status: parse_status(&r.status),
             version: r.runner_version,
             max_concurrent_pods: r.max_concurrent_pods,
             active_pod_count: r.current_pods,
@@ -43,36 +37,11 @@ pub mod runner {
             } else {
                 Some(r.available_agents)
             },
-            created_at: super::option_string(&r.created_at),
-            updated_at: super::option_string(&r.updated_at),
+            created_at: option_string(&r.created_at),
+            updated_at: option_string(&r.updated_at),
         }
     }
 }
-
-pub mod repository {
-    use super::*;
-
-    pub fn from_proto(r: repo_proto::Repository) -> Repository {
-        Repository {
-            id: r.id,
-            name: r.name,
-            slug: super::option_string(&r.slug),
-            provider_type: super::option_string(&r.provider_type),
-            provider_base_url: super::option_string(&r.provider_base_url),
-            http_clone_url: super::option_string(&r.http_clone_url),
-            ssh_clone_url: super::option_string(&r.ssh_clone_url),
-            external_id: super::option_string(&r.external_id),
-            default_branch: super::option_string(&r.default_branch),
-            ticket_prefix: r.ticket_prefix,
-            visibility: super::option_string(&r.visibility),
-            is_active: Some(r.is_active),
-            created_at: super::option_string(&r.created_at),
-            updated_at: super::option_string(&r.updated_at),
-        }
-    }
-}
-
-pub mod ticket {}
 
 fn option_string(s: &str) -> Option<String> {
     if s.is_empty() { None } else { Some(s.to_string()) }
