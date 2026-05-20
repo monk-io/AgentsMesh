@@ -11,7 +11,6 @@ mod automation;
 mod billing_dto;
 mod blocks_mesh;
 mod channel;
-mod message;
 mod misc;
 mod pod;
 mod repository_dto;
@@ -57,11 +56,6 @@ pub use channel::{
     CreateChannelRequestDto, MessagePreviewDto, SenderAgentInfoDto, SenderPodInfoDto,
     UpdateChannelRequestDto,
 };
-pub use message::{
-    DeadLetterEntryDto, DeadLetterListResponseDto, DirectMessageDto, DirectMessageListResponseDto,
-    ReplayDeadLetterResponseDto, SendDirectMessageRequestDto, UnreadCountResponseDto,
-};
-pub(crate) use message::mark_messages_read_req;
 pub use ticket::{
     BoardColumnDto, BoardResponseDto, CreateLabelRequestDto, CreateTicketRequestDto, LabelDto,
     LabelListResponseDto, TicketDto, TicketListResponseDto, TicketPriorityDto, TicketStatusDto,
