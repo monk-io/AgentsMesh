@@ -1,9 +1,26 @@
 use std::sync::Arc;
 
 use agentsmesh_persistence::StorageBackend;
-use agentsmesh_types::{OrgMemberView, Organization};
+use agentsmesh_types::Organization;
+use serde::{Deserialize, Serialize};
 
 use crate::persist_helpers::JsonStore;
+
+/// Flat view of an organization member, projected from `proto.org.v1.OrgMember`
+/// joined with the embedded `User`. Client-side aggregated shape — not a wire
+/// type. Lives in the state crate because it is purely a cache projection
+/// (no Connect-RPC counterpart).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrgMemberView {
+    pub id: i64,
+    pub user_id: i64,
+    pub username: String,
+    pub email: Option<String>,
+    pub name: Option<String>,
+    pub avatar_url: Option<String>,
+    pub role: String,
+    pub joined_at: Option<String>,
+}
 
 pub struct OrgState {
     organizations: Vec<Organization>,

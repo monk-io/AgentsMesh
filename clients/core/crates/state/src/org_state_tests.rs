@@ -1,6 +1,6 @@
-use agentsmesh_types::{OrgMemberView, Organization};
+use agentsmesh_types::Organization;
 
-use crate::org_state::OrgState;
+use crate::org_state::{OrgMemberView, OrgState};
 
 fn make_org(id: i64, name: &str) -> Organization {
     Organization { id, name: name.to_string(), slug: name.to_lowercase(), role: None, logo_url: None, subscription_plan: None, subscription_status: None }
