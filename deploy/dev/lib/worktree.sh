@@ -9,7 +9,21 @@
 # Worktree name → docker-compose project name suffix.
 # In a worktree the git-dir is `.git/worktrees/<name>`; in the main checkout
 # it's plain `.git`, so we fall back to the current branch.
+#
+# `AGENTSMESH_WORKTREE_NAME` env override takes precedence. Required by CI
+# shards: detached-HEAD checkouts (PR + push events) resolve to the literal
+# string "HEAD" → slug "head", so every PR / every shard collapses onto the
+# same compose project name and the same backend / DB / runner container.
+# Two shards on the same self-hosted host then end up sharing the dev-org
+# pod table — a `terminateAllPods()` cleanup hook in one shard wipes the
+# in-flight pod of the other. The override is opt-in; local devs and the
+# main worktree continue to use the git-derived name.
 get_worktree_name() {
+    if [[ -n "${AGENTSMESH_WORKTREE_NAME:-}" ]]; then
+        echo "$AGENTSMESH_WORKTREE_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]'
+        return
+    fi
+
     local git_dir
     git_dir=$(git rev-parse --git-dir 2>/dev/null)
 
