@@ -30,7 +30,6 @@ import { ElectronBlockstoreService } from './blockstore';
 import { ElectronLocalRunnerService } from './local_runner';
 import { invoke } from './invoke';
 import {
-  ElectronOrgState, ElectronUserState, ElectronGitProviderState, ElectronRepoState,
   ElectronAcpManager, ElectronRelayManager,
 } from './state_adapters';
 
@@ -84,6 +83,7 @@ export function createElectronServiceProvider(baseUrl = '') {
   const loopService = new ElectronLoopService();
   const autopilotService = new ElectronAutopilotService();
   const meshService = new ElectronMeshService();
+  const repositoryService = new ElectronRepositoryService();
   // AuthManager is constructed first so ApiClient can borrow it as the org
   // slug source (Plan I6 SSOT). Order matters here.
   const authManager = new ElectronAuthService(baseUrl);
@@ -100,7 +100,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     meshService,
     billingService: new ElectronBillingService(),
     extensionService: new ElectronExtensionService(),
-    repositoryService: new ElectronRepositoryService(),
+    repositoryService,
     invitationService: new ElectronInvitationService(),
     apiKeyService: new ElectronApiKeyService(),
     bindingService: new ElectronBindingService(),
@@ -128,10 +128,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     channelState: channelService,
     loopState: loopService,
     autopilotState: autopilotService,
-    orgState: new ElectronOrgState(),
-    userState: new ElectronUserState(),
-    gitProviderState: new ElectronGitProviderState(),
-    repoState: new ElectronRepoState(),
+    repoState: repositoryService,
     acpManager: new ElectronAcpManager(),
     relayManager: new ElectronRelayManager(),
   };
