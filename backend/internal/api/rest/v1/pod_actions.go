@@ -2,6 +2,7 @@ package v1
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
@@ -22,6 +23,21 @@ func (h *PodHandler) TerminatePod(c *gin.Context) {
 	}
 
 	tenant := middleware.GetTenant(c)
+	// Caller breadcrumbs: e2e flaky investigations regularly hit
+	// pods being terminated within ~500 ms of creation, but the
+	// runner-side log only records "Received terminate_pod" — it
+	// doesn't tell us *who* sent it. This slog line gives us actor
+	// + IP + User-Agent + optional X-E2E-Caller for the one REST
+	// path that can fire sub-second, which is enough to pinpoint
+	// the spec or worker that's racing.
+	slog.WarnContext(c.Request.Context(), "TerminatePod called",
+		"pod_key", podKey,
+		"actor_user_id", tenant.UserID,
+		"actor_ip", c.ClientIP(),
+		"user_agent", c.Request.UserAgent(),
+		"e2e_caller", c.GetHeader("X-E2E-Caller"),
+	)
+
 	sub := policy.NewSubject(tenant.OrganizationID, tenant.UserID, tenant.UserRole)
 	if !policy.PodPolicy.AllowWrite(sub, h.podResourceWithGrants(c.Request.Context(), podKey, pod.OrganizationID, pod.CreatedByID)) {
 		apierr.ForbiddenAccess(c)
