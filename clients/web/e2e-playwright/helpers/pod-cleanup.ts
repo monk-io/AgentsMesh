@@ -32,6 +32,11 @@ export async function terminateAllPods(): Promise<number> {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
+              // Tag this call so the backend TerminatePod handler's
+              // caller-info slog line reveals it's the test helper.
+              // Anything else hitting that endpoint within ~500 ms of
+              // a create_pod is a flaky-race smoking gun.
+              "X-E2E-Caller": "terminateAllPods",
             },
             body: "{}",
           }
