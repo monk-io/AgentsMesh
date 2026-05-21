@@ -118,8 +118,15 @@ export async function createPodAndWaitRunning(args: {
  *
  * Attempts immediately on entry so the typical case (file already there)
  * doesn't pay the 500ms backoff at all.
+ *
+ * 60s timeout (was 30s): the full chain is runner.gRPC stream →
+ * create_pod RPC → PTY spawn → bash → `echo ready; env > /tmp/dump`,
+ * which on a cold self-hosted runner with docker.io pulls + mTLS
+ * cert exchange routinely takes 30-45s. PR #410's per-shard backend
+ * isolation removed the cross-shard `terminateAllPods` race; what
+ * remains is genuine cold-start latency, not a race.
  */
-export async function readEnvDumpFromRunner(timeoutMs = 30_000): Promise<string> {
+export async function readEnvDumpFromRunner(timeoutMs = 60_000): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   let lastErr: string | undefined;
   while (true) {
