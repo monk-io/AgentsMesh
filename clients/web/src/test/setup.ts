@@ -6,8 +6,6 @@ const h = vi.hoisted(() => {
   const mkStore = () => ({ v: '' as string });
   const pod = { pods: '[]', current: '' };
   const runner = { list: '[]', available: '[]', current: '' };
-  const org = { orgs: '[]', current: '', members: '[]' };
-  const user = { profile: '' };
   const channel = {
     list: '[]', current: null as bigint | null,
     msgs: new Map<string, { json: string; hasMore: boolean }>(),
@@ -26,8 +24,6 @@ const h = vi.hoisted(() => {
   function reset() {
     pod.pods = '[]'; pod.current = '';
     runner.list = '[]'; runner.available = '[]'; runner.current = '';
-    org.orgs = '[]'; org.current = ''; org.members = '[]';
-    user.profile = '';
     channel.list = '[]'; channel.current = null;
     channel.msgs.clear(); channel.unread.clear();
     ticket.list = '[]'; ticket.labels = '[]'; ticket.boardCols = '[]'; ticket.current = '';
@@ -39,7 +35,7 @@ const h = vi.hoisted(() => {
     autopilot.iterations.clear(); autopilot.thinkings.clear(); autopilot.thinkingHistory.clear();
   }
 
-  return { pod, runner, org, user, channel, ticket, mesh, loop, gitProvider, repo, autopilot, reset };
+  return { pod, runner, channel, ticket, mesh, loop, gitProvider, repo, autopilot, reset };
 })
 
 const acpMgr = createAcpManager()
@@ -178,59 +174,6 @@ vi.mock('@/lib/wasm-core', () => {
         const arr = JSON.parse(h.runner[field]) as { id: number }[]
         h.runner[field] = JSON.stringify(arr.filter((x) => x.id !== Number(id)))
       }
-    }),
-  }
-
-  const orgState = {
-    set_organizations: fn((j: string) => { h.org.orgs = j }),
-    organizations_json: fn(() => h.org.orgs),
-    add_organization: fn((j: string) => {
-      const arr = JSON.parse(h.org.orgs); arr.push(JSON.parse(j)); h.org.orgs = JSON.stringify(arr)
-    }),
-    update_organization: fn((id: number, j: string) => {
-      const arr = JSON.parse(h.org.orgs) as { id: number }[]
-      const idx = arr.findIndex((o) => o.id === id)
-      if (idx >= 0) { arr[idx] = JSON.parse(j); h.org.orgs = JSON.stringify(arr) }
-      const cur = h.org.current ? JSON.parse(h.org.current) as { id: number } : null
-      if (cur?.id === id) h.org.current = j
-    }),
-    remove_organization: fn((id: number) => {
-      const arr = JSON.parse(h.org.orgs) as { id: number }[]
-      h.org.orgs = JSON.stringify(arr.filter((o) => o.id !== id))
-      const cur = h.org.current ? JSON.parse(h.org.current) as { id: number } : null
-      if (cur?.id === id) h.org.current = ''
-    }),
-    set_current_org: fn((j: string) => { h.org.current = j }),
-    current_org_json: fn(() => h.org.current || undefined),
-    set_members: fn((j: string) => { h.org.members = j }),
-    members_json: fn(() => h.org.members),
-    add_member: fn((j: string) => {
-      const arr = JSON.parse(h.org.members); arr.push(JSON.parse(j)); h.org.members = JSON.stringify(arr)
-    }),
-    update_member: fn((userId: number, j: string) => {
-      const arr = JSON.parse(h.org.members) as { user_id: number }[]
-      const idx = arr.findIndex((m) => m.user_id === userId)
-      if (idx >= 0) { arr[idx] = JSON.parse(j); h.org.members = JSON.stringify(arr) }
-    }),
-    remove_member: fn((id: string) => {
-      const arr = JSON.parse(h.org.members) as { user_id?: number; id?: number }[]
-      h.org.members = JSON.stringify(arr.filter((m) => String(m.user_id) !== id && String(m.id) !== id))
-    }),
-  }
-
-  const userState = {
-    set_profile: fn((j: string) => { h.user.profile = j }),
-    profile_json: fn(() => h.user.profile || undefined),
-    add_identity: fn((j: string) => {
-      if (!h.user.profile) return
-      const prof = JSON.parse(h.user.profile)
-      prof.identities = [...(prof.identities || []), JSON.parse(j)]
-      h.user.profile = JSON.stringify(prof)
-    }),
-    remove_identity: fn(),
-    identities_json: fn(() => {
-      if (!h.user.profile) return '[]'
-      return JSON.stringify(JSON.parse(h.user.profile).identities || [])
     }),
   }
 
@@ -546,13 +489,6 @@ vi.mock('@/lib/wasm-core', () => {
     cancel_run: fn().mockResolvedValue(undefined),
   }
 
-  const gitProviderState = {
-    set_providers: fn(), providers_json: fn(() => '[]'),
-    set_current_provider: fn(), current_provider_json: fn(),
-    add_provider: fn(), update_provider: fn(), remove_provider: fn(),
-    set_available_projects: fn(), available_projects_json: fn(() => '[]'),
-  }
-
   const repoState = {
     set_repositories: fn(), repositories_json: fn(() => h.repo.list),
     set_current_repo: fn(), current_repo_json: fn(() => h.repo.current || undefined),
@@ -597,9 +533,6 @@ vi.mock('@/lib/wasm-core', () => {
     getMeshState: fn(() => meshState),
     getMeshService: fn(() => meshState),
     getAcpManager: fn(() => acpMgr),
-    getOrgState: fn(() => orgState),
-    getUserState: fn(() => userState),
-    getGitProviderState: fn(() => gitProviderState),
     getRepoState: fn(() => repoState),
     getAutopilotState: fn(() => autopilotState),
     getAutopilotService: fn(() => autopilotState),

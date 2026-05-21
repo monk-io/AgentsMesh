@@ -320,18 +320,6 @@ export interface IFileService {
   upload_file(file_data: Uint8Array, filename: string, content_type: string): Promise<string>;
 }
 
-export interface IGitProviderState {
-  add_provider(json: string): void;
-  available_projects_json(): string;
-  current_provider_json(): any;
-  providers_json(): string;
-  remove_provider(id: string): void;
-  set_available_projects(json: string): void;
-  set_current_provider(json: string): void;
-  set_providers(json: string): void;
-  update_provider(id: string, json: string): void;
-}
-
 export interface IInvitationService {
   accept(token: string): Promise<void>;
   create(json: string): Promise<string>;
@@ -459,21 +447,6 @@ export interface IOrgApiService {
   remove_member(slug: string, user_id: bigint): Promise<void>;
   update(slug: string, json: string): Promise<string>;
   update_member_role(slug: string, user_id: bigint, json: string): Promise<string>;
-}
-
-export interface IOrgState {
-  add_member(json: string): void;
-  add_organization(json: string): void;
-  current_org_json(): any;
-  members_json(): string;
-  organizations_json(): string;
-  remove_member(id: string): void;
-  remove_organization(id: number): void;
-  set_current_org(json: string): void;
-  set_members(json: string): void;
-  set_organizations(json: string): void;
-  update_member(user_id: number, json: string): void;
-  update_organization(id: number, json: string): void;
 }
 
 export interface IPodService {
@@ -716,12 +689,4 @@ export interface IUserCredentialService {
   update_agent_credential(id: bigint, json: string): Promise<string>;
   update_git_credential(id: bigint, json: string): Promise<string>;
   update_repo_provider(id: bigint, json: string): Promise<string>;
-}
-
-export interface IUserState {
-  add_identity(json: string): void;
-  identities_json(): string;
-  profile_json(): any;
-  remove_identity(id: string): void;
-  set_profile(json: string): void;
 }

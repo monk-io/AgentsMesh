@@ -3,51 +3,8 @@
 // Channel / Loop / Autopilot live on the corresponding `ElectronXxxService`
 // classes — the provider aliases `xxxState` to the same instance so sync
 // getters on the state facet see real cache instead of stub "[]".
-export class ElectronOrgState {
-  organizations_json(): string { return "[]"; }
-  current_org_json(): unknown { return null; }
-  members_json(): string { return "[]"; }
-  set_organizations(_json: string) {}
-  set_current_org(_json: string) {}
-  set_members(_json: string) {}
-  add_organization(_json: string) {}
-  remove_organization(_id: number) {}
-  update_organization(_id: number, _json: string) {}
-  add_member(_json: string) {}
-  remove_member(_id: string) {}
-  update_member(_id: number, _json: string) {}
-}
-
-export class ElectronUserState {
-  profile_json(): unknown { return null; }
-  set_profile(_json: string) {}
-  add_identity(_json: string) {}
-}
-
-export class ElectronGitProviderState {
-  providers_json(): string { return "[]"; }
-  current_provider_json(): unknown { return null; }
-  available_projects_json(): string { return "[]"; }
-  set_providers(_json: string) {}
-  set_current_provider(_json: string) {}
-  add_provider(_json: string) {}
-  update_provider(_id: string, _json: string) {}
-  remove_provider(_id: string) {}
-  set_available_projects(_json: string) {}
-}
-
-export class ElectronRepoState {
-  repositories_json(): string { return "[]"; }
-  current_repo_json(): unknown { return null; }
-  branches_json(): string { return "[]"; }
-  set_repositories(_json: string) {}
-  set_current_repo(_json: string) {}
-  add_repository(_json: string) {}
-  update_repository(_id: string, _json: string) {}
-  remove_repository(_id: string) {}
-  set_branches(_json: string) {}
-}
-
+// Repository was migrated to this pattern — its state lives on
+// `ElectronRepositoryService` now.
 export class ElectronAcpManager {
   get_session_json(_podKey: string): unknown { return null; }
   add_content_chunk(_pk: string, _text: string, _role: string) {}
