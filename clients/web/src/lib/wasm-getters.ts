@@ -12,8 +12,8 @@ import {
   WasmSupportTicketService, WasmAuthApiService,
   WasmBlockstoreService,
   WasmRunnerState, WasmMeshState, WasmTicketState, WasmChannelState,
-  WasmLoopState, WasmAcpSessionManager, WasmOrgState, WasmUserState,
-  WasmGitProviderState, WasmRepoState, WasmAutopilotState, WasmRelayManager,
+  WasmLoopState, WasmAcpSessionManager,
+  WasmRepoState, WasmAutopilotState, WasmRelayManager,
 } from "agentsmesh-wasm";
 import { registerServiceProvider } from "@agentsmesh/service-runtime";
 
@@ -61,9 +61,6 @@ export function registerAll(client: WasmApiClient, authManager: WasmAuthManager)
     channelState: new WasmChannelState(),
     loopState: new WasmLoopState(),
     acpManager: new WasmAcpSessionManager(),
-    orgState: new WasmOrgState(),
-    userState: new WasmUserState(),
-    gitProviderState: new WasmGitProviderState(),
     repoState: new WasmRepoState(),
     autopilotState: new WasmAutopilotState(),
     relayManager: new WasmRelayManager(),
@@ -85,7 +82,7 @@ export {
   getUserCredentialService, getEnvBundleService, getOrgApiService, getAgentService,
   getTicketRelationsService, getFileService, getSupportTicketService,
   getAuthApiService, getRunnerState, getMeshState, getTicketState,
-  getChannelState, getLoopState, getAcpManager, getOrgState,
-  getUserState, getGitProviderState, getRepoState,
+  getChannelState, getLoopState, getAcpManager,
+  getRepoState,
   getAutopilotState, getRelayManager, getBlockstoreService,
 } from "@agentsmesh/service-runtime";

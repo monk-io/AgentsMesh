@@ -7,15 +7,12 @@ use crate::acp_session::AcpSessionManager;
 use crate::autopilot_state::AutopilotState;
 use crate::channel_state::ChannelState;
 use crate::event_dispatch;
-use crate::git_provider_state::GitProviderState;
 use crate::loop_state::LoopState;
 use crate::mesh_state::MeshState;
-use crate::org_state::OrgState;
 use crate::pod_state::PodState;
 use crate::repo_state::RepoState;
 use crate::runner_state::RunnerState;
 use crate::ticket_state::TicketState;
-use crate::user_state::UserState;
 
 pub struct AppState {
     pub pods: PodState,
@@ -26,9 +23,6 @@ pub struct AppState {
     pub mesh: MeshState,
     pub autopilot: AutopilotState,
     pub acp: AcpSessionManager,
-    pub org: OrgState,
-    pub user: UserState,
-    pub git: GitProviderState,
     pub repo: RepoState,
 }
 
@@ -43,9 +37,6 @@ impl AppState {
             mesh: MeshState::default(),
             autopilot: AutopilotState::default(),
             acp: AcpSessionManager::new(),
-            org: OrgState::new(),
-            user: UserState::new(),
-            git: GitProviderState::new(),
             repo: RepoState::new(),
         }
     }
@@ -60,9 +51,6 @@ impl AppState {
             mesh: MeshState::default(),
             autopilot: AutopilotState::default(),
             acp: AcpSessionManager::new(),
-            org: OrgState::with_storage(backend.clone()),
-            user: UserState::with_storage(backend.clone()),
-            git: GitProviderState::with_storage(backend.clone()),
             repo: RepoState::with_storage(backend),
         }
     }

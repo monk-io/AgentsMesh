@@ -8,15 +8,12 @@ pub mod blockstore_state;
 pub mod channel_state;
 pub mod event_dispatch;
 mod persist_helpers;
-pub mod git_provider_state;
 pub mod loop_state;
 pub mod mesh_state;
-pub mod org_state;
 pub mod pod_state;
 pub mod repo_state;
 pub mod runner_state;
 pub mod ticket_state;
-pub mod user_state;
 
 #[cfg(test)]
 mod acp_session_tests;
@@ -34,12 +31,6 @@ mod pod_state_tests;
 mod runner_state_tests;
 #[cfg(test)]
 mod ticket_state_tests;
-#[cfg(test)]
-mod org_state_tests;
-#[cfg(test)]
-mod user_state_tests;
-#[cfg(test)]
-mod git_provider_state_tests;
 #[cfg(test)]
 mod repo_state_tests;
 #[cfg(test)]
