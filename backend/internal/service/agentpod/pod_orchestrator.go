@@ -15,7 +15,6 @@ import (
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
-// Typed errors returned by PodOrchestrator.
 var (
 	ErrMissingRunnerID            = errors.New("runner_id is required")
 	ErrMissingAgentSlug           = errors.New("agent_slug is required")
@@ -23,6 +22,7 @@ var (
 	ErrSourcePodAccessDenied      = errors.New("source pod belongs to different organization")
 	ErrSourcePodNotTerminated     = errors.New("source pod is not terminated")
 	ErrSourcePodAlreadyResumed    = errors.New("source pod already resumed")
+	ErrResumeAgentMismatch        = errors.New("resume requires same agent as source pod")
 	ErrResumeRunnerMismatch       = errors.New("resume requires same runner")
 	ErrConfigBuildFailed          = errors.New("failed to build pod configuration")
 	ErrInvalidAgentfileLayer        = errors.New("invalid agentfile layer")
@@ -44,30 +44,22 @@ type OrchestrateCreatePodRequest struct {
 	TicketID            *int64
 	TicketSlug          *string
 	Alias               *string
-	CredentialProfileID *int64
-	AgentfileLayer      *string // SSOT for all CONFIG, MODE, PROMPT, REPO, BRANCH, CREDENTIAL
+	AgentfileLayer      *string // SSOT for all CONFIG, MODE, PROMPT, REPO, BRANCH, USE_ENV_BUNDLE
 	Cols                int32
 	Rows                int32
 
-	// Resume mode
 	SourcePodKey       string
 	ResumeAgentSession *bool
 
-	// Perpetual mode: Runner auto-restarts agent on clean exit
 	Perpetual bool
 
-	// BranchName is only set internally by handleResumeMode (inherited from source pod).
-	// Not accepted from external callers — use AgentFile BRANCH declaration instead.
 	BranchName *string
 }
 
-// OrchestrateCreatePodResult is the result of a successful Pod creation.
 type OrchestrateCreatePodResult struct {
 	Pod     *podDomain.Pod
 	Warning string
 }
-
-// --- Narrow interfaces for PodOrchestrator dependencies ---
 
 type PodCoordinatorForOrchestrator interface {
 	CreatePod(ctx context.Context, runnerID int64, cmd *runnerv1.CreatePodCommand) error
@@ -104,12 +96,10 @@ type AgentResolverForOrchestrator interface {
 	GetAgent(ctx context.Context, slug string) (*agentDomain.Agent, error)
 }
 
-// UserConfigQueryForOrchestrator provides user's personal agent config preferences.
 type UserConfigQueryForOrchestrator interface {
 	GetUserConfigPrefs(ctx context.Context, userID int64, agentSlug string) map[string]interface{}
 }
 
-// PodOrchestratorDeps holds all dependencies for PodOrchestrator.
 type PodOrchestratorDeps struct {
 	PodService      *PodService
 	ConfigBuilder   *agent.ConfigBuilder
@@ -125,7 +115,6 @@ type PodOrchestratorDeps struct {
 	PodRepo         podDomain.PodRepository
 }
 
-// PodOrchestrator encapsulates the complete Pod creation workflow.
 type PodOrchestrator struct {
 	podService      *PodService
 	configBuilder   *agent.ConfigBuilder
@@ -141,16 +130,13 @@ type PodOrchestrator struct {
 	podRepo         podDomain.PodRepository
 }
 
-// agentfileResolved carries values extracted from AgentFile Layer processing.
-// Separates intermediate state from the original request to keep req read-only.
 type agentfileResolved struct {
 	InteractionMode      string
-	BranchName           string
-	PermissionMode       string
-	RepositoryID         *int64
-	Prompt               string
+	BranchName            string
+	RepositoryID          *int64
+	Prompt                string
 	MergedAgentfileSource string
-	CredentialProfile    string
+	ConfigValues          agentDomain.ConfigValues
 }
 
 func NewPodOrchestrator(deps *PodOrchestratorDeps) *PodOrchestrator {

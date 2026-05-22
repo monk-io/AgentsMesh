@@ -33,11 +33,11 @@ test.describe("Personal Agent Configuration", () => {
   });
 
   /**
-   * TC-AGENT-003: Add custom API credential
+   * TC-AGENT-003: Add custom credential EnvBundle via the new API
    */
-  test("add and delete custom API credential", async ({ api, db }) => {
+  test("add and delete custom credential bundle", async ({ api, db }) => {
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Test Credential'`
+      `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`
     );
     const cc = await api.connect();
     const created = await cc.userAgentCredential.createAgentCredentialProfile({
@@ -49,7 +49,7 @@ test.describe("Personal Agent Configuration", () => {
     expect(created.id).toBeTruthy();
 
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Test Credential'`
+      `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`
     );
   });
 

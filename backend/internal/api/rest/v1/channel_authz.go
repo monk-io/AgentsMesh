@@ -11,9 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// requireChannelAccess fetches a channel, validates org ownership, and enforces
-// visibility rules (private channels require membership). Returns the channel
-// and true on success, or writes an error response and returns false.
 func (h *ChannelHandler) requireChannelAccess(c *gin.Context) (*channel.Channel, bool) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -31,6 +28,24 @@ func (h *ChannelHandler) requireChannelAccess(c *gin.Context) (*channel.Channel,
 		return nil, false
 	}
 
+	return h.checkChannelAccess(c, ch)
+}
+
+func (h *ChannelHandler) requireChannelAccessBySlug(c *gin.Context) (*channel.Channel, bool) {
+	tenant := middleware.GetTenant(c)
+	ch, err := h.channelService.GetChannelBySlug(c.Request.Context(), tenant.OrganizationID, c.Param("slug"))
+	if err != nil {
+		if errors.Is(err, channelService.ErrChannelNotFound) {
+			apierr.ResourceNotFound(c, "Channel not found")
+		} else {
+			apierr.InternalError(c, "Failed to get channel")
+		}
+		return nil, false
+	}
+	return h.checkChannelAccess(c, ch)
+}
+
+func (h *ChannelHandler) checkChannelAccess(c *gin.Context, ch *channel.Channel) (*channel.Channel, bool) {
 	tenant := middleware.GetTenant(c)
 	if ch.OrganizationID != tenant.OrganizationID {
 		apierr.ForbiddenAccess(c)

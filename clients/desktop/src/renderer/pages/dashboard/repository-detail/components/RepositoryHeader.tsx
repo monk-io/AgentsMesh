@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RepositoryData } from "@/lib/api";
 import { useTranslations } from "next-intl";
@@ -12,10 +13,10 @@ interface RepositoryHeaderProps {
 
 export function RepositoryHeader({ repository, onEdit, onDelete }: RepositoryHeaderProps) {
   const t = useTranslations();
+  const { org } = useParams<{ org: string }>();
 
   return (
     <>
-      {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-start gap-4">
           <div className="mt-1 text-muted-foreground">
@@ -48,9 +49,8 @@ export function RepositoryHeader({ repository, onEdit, onDelete }: RepositoryHea
         </div>
       </div>
 
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link href="../repositories" className="hover:text-foreground">
+        <Link href={`/${org}/infra?tab=repositories`} className="hover:text-foreground">
           {t("repositories.title")}
         </Link>
         <span>/</span>

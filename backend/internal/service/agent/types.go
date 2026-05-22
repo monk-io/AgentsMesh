@@ -1,21 +1,14 @@
 package agent
 
-// CreateCredentialProfileParams contains parameters for creating a credential profile
-type CreateCredentialProfileParams struct {
-	AgentSlug  string
-	Name         string
-	Description  *string
-	IsRunnerHost bool
-	Credentials  map[string]string // Plaintext credentials to be encrypted
-	IsDefault    bool
-}
+import (
+	"context"
 
-// UpdateCredentialProfileParams contains parameters for updating a credential profile
-type UpdateCredentialProfileParams struct {
-	Name         *string
-	Description  *string
-	IsRunnerHost *bool
-	Credentials  map[string]string // If provided, will replace existing credentials
-	IsDefault    *bool
-	IsActive     *bool
+	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+)
+
+// AgentProvider is the minimal lookup interface depended on by services that
+// only need to validate "does this agent exist" without taking a full
+// AgentService dependency.
+type AgentProvider interface {
+	GetAgent(ctx context.Context, slug string) (*agentDomain.Agent, error)
 }

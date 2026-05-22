@@ -24,7 +24,6 @@ fn trim_tool_calls(tool_calls: &mut HashMap<String, AcpToolCall>) {
         .iter()
         .map(|(k, v)| (k.clone(), v.timestamp, v.status == "running"))
         .collect();
-    // Non-running (evictable) sort before running; oldest first within each group
     entries.sort_by(|a, b| a.2.cmp(&b.2).then(a.1.cmp(&b.1)));
     for (key, _, _) in entries.iter().take(to_remove) {
         tool_calls.remove(key);
@@ -183,6 +182,16 @@ impl AcpSessionManager {
             timestamp: now_millis(),
         });
         cap_vec(&mut session.logs, MAX_LOGS);
+    }
+
+    pub fn update_configuration(&mut self, pod_key: &str, update: AcpConfiguration) {
+        let session = self.get_or_create_session(pod_key);
+        if !update.permission_mode.is_empty() {
+            session.configuration.permission_mode = update.permission_mode;
+        }
+        if !update.model.is_empty() {
+            session.configuration.model = update.model;
+        }
     }
 
     pub fn clear_session(&mut self, pod_key: &str) {

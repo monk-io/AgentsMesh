@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	channelDomain "github.com/anthropics/agentsmesh/backend/internal/domain/channel"
+	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/service/ticket"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
@@ -21,7 +21,6 @@ type ChannelHandler struct {
 	ticketService  *ticket.Service
 }
 
-// NewChannelHandler creates a new channel handler
 func NewChannelHandler(channelService *channel.Service, ticketService *ticket.Service) *ChannelHandler {
 	return &ChannelHandler{
 		channelService: channelService,
@@ -29,15 +28,12 @@ func NewChannelHandler(channelService *channel.Service, ticketService *ticket.Se
 	}
 }
 
-// ListChannelsRequest represents channel list request
 type ListChannelsRequest struct {
 	RepositoryID    *int64  `form:"repository_id"`
 	TicketSlug      *string `form:"ticket_slug"`
 	IncludeArchived bool    `form:"include_archived"`
 }
 
-// ListChannels lists channels
-// GET /api/v1/organizations/:slug/channels
 func (h *ChannelHandler) ListChannels(c *gin.Context) {
 	var req ListChannelsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -48,12 +44,10 @@ func (h *ChannelHandler) ListChannels(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 	ctx := c.Request.Context()
 
-	// Resolve ticket slug to ID for filtering
 	var ticketID *int64
 	if req.TicketSlug != nil && *req.TicketSlug != "" {
 		t, err := h.ticketService.GetTicketByIDOrSlug(ctx, tenant.OrganizationID, *req.TicketSlug)
 		if err != nil {
-			// If ticket not found, return empty results
 			c.JSON(http.StatusOK, gin.H{"channels": []interface{}{}, "total": 0})
 			return
 		}
@@ -75,7 +69,6 @@ func (h *ChannelHandler) ListChannels(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"channels": channels, "total": total})
 }
 
-// CreateChannelRequest represents channel creation request
 type CreateChannelRequest struct {
 	Name         string  `json:"name" binding:"required,min=2,max=100"`
 	Description  string  `json:"description"`
@@ -86,8 +79,6 @@ type CreateChannelRequest struct {
 	MemberIDs    []int64 `json:"member_ids"`
 }
 
-// CreateChannel creates a new channel
-// POST /api/v1/organizations/:slug/channels
 func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 	var req CreateChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -102,7 +93,6 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 		desc = &req.Description
 	}
 
-	// Resolve ticket slug to ID
 	var ticketID *int64
 	if req.TicketSlug != nil && *req.TicketSlug != "" {
 		t, err := h.ticketService.GetTicketByIDOrSlug(c.Request.Context(), tenant.OrganizationID, *req.TicketSlug)
@@ -132,7 +122,6 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 		return
 	}
 
-	// Return channel with membership info for the creator
 	enriched, err := h.channelService.GetChannelForUser(c.Request.Context(), ch.ID, tenant.UserID)
 	if err != nil {
 		c.JSON(http.StatusCreated, gin.H{"channel": ch})
@@ -141,8 +130,6 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"channel": enriched})
 }
 
-// GetChannel returns channel by ID
-// GET /api/v1/organizations/:slug/channels/:id
 func (h *ChannelHandler) GetChannel(c *gin.Context) {
 	ch, ok := h.requireChannelAccess(c)
 	if !ok {
@@ -157,15 +144,29 @@ func (h *ChannelHandler) GetChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"channel": enriched})
 }
 
-// UpdateChannelRequest represents channel update request
+// GetChannelBySlug serves /channels/by-slug/:slug — the post-Phase-4
+// identifier-first lookup path. Keep alongside GetChannel-by-ID for now;
+// the legacy /:id route remains live for callers with integer references.
+func (h *ChannelHandler) GetChannelBySlug(c *gin.Context) {
+	ch, ok := h.requireChannelAccessBySlug(c)
+	if !ok {
+		return
+	}
+	tenant := middleware.GetTenant(c)
+	enriched, err := h.channelService.GetChannelForUser(c.Request.Context(), ch.ID, tenant.UserID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"channel": ch})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"channel": enriched})
+}
+
 type UpdateChannelRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Document    string `json:"document"`
 }
 
-// UpdateChannel updates a channel
-// PUT /api/v1/organizations/:slug/channels/:id
 func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 	ch, ok := h.requireChannelAccess(c)
 	if !ok {

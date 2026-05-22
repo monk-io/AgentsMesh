@@ -15,6 +15,7 @@ import { ElectronNotificationService } from './notification';
 import { ElectronOrgService } from './org';
 import { ElectronUserService } from './user';
 import { ElectronUserCredentialService } from './user_credential';
+import { ElectronEnvBundleService } from './env_bundle';
 import { ElectronAgentService } from './agent';
 import { ElectronSSOService } from './sso';
 import { ElectronFileService } from './file';
@@ -28,7 +29,6 @@ import { ElectronBlockstoreService } from './blockstore';
 import { ElectronLocalRunnerService } from './local_runner';
 import { invoke } from './invoke';
 import {
-  ElectronOrgState, ElectronUserState, ElectronGitProviderState, ElectronRepoState,
   ElectronAcpManager, ElectronRelayManager,
 } from './state_adapters';
 
@@ -127,6 +127,7 @@ export function createElectronServiceProvider(baseUrl = '') {
   const loopService = new ElectronLoopService();
   const autopilotService = new ElectronAutopilotService();
   const meshService = new ElectronMeshService();
+  const repositoryService = new ElectronRepositoryService();
   // AuthManager is constructed first so ApiClient can borrow it as the org
   // slug source (Plan I6 SSOT). Order matters here.
   const authManager = new ElectronAuthService(baseUrl);
@@ -143,7 +144,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     meshService: withConnectFallback(meshService, "proto.mesh.v1.MeshService"),
     billingService: withConnectFallback(new ElectronBillingService(), "proto.billing.v1.BillingService"),
     extensionService: withConnectFallback(new ElectronExtensionService(), "proto.extension.v1.SkillRegistryService"),
-    repositoryService: withConnectFallback(new ElectronRepositoryService(), "proto.repository.v1.RepositoryService"),
+    repositoryService: withConnectFallback(repositoryService, "proto.repository.v1.RepositoryService"),
     invitationService: withConnectFallback(new ElectronInvitationConnectService(), "proto.invitation.v1.InvitationService"),
     apiKeyService: withConnectFallback(new ElectronApiKeyService(), "proto.apikey.v1.ApiKeyService"),
     bindingService: withConnectFallback(new ElectronBindingService(), "proto.binding.v1.BindingService"),
@@ -155,6 +156,7 @@ export function createElectronServiceProvider(baseUrl = '') {
       "proto.user_credential.v1.UserRepositoryProviderService",
       USER_CREDENTIAL_METHOD_OVERRIDES,
     ),
+    envBundleService: new ElectronEnvBundleService(),
     agentService: withConnectFallback(new ElectronAgentService(), "proto.agent.v1.AgentService"),
     ssoService: withConnectFallback(new ElectronSSOService(), "proto.sso.v1.SSOService"),
     fileService: withConnectFallback(new ElectronFileService(), "proto.file.v1.FileService"),
@@ -173,10 +175,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     channelState: channelService,
     loopState: loopService,
     autopilotState: autopilotService,
-    orgState: new ElectronOrgState(),
-    userState: new ElectronUserState(),
-    gitProviderState: new ElectronGitProviderState(),
-    repoState: new ElectronRepoState(),
+    repoState: repositoryService,
     acpManager: new ElectronAcpManager(),
     relayManager: new ElectronRelayManager(),
   };

@@ -32,17 +32,14 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
   const orgSlug = currentOrg?.slug ?? "";
   const [installing, setInstalling] = useState(false);
 
-  // Marketplace state
   const [marketSkills, setMarketSkills] = useState<SkillMarketItem[]>([]);
   const [marketQuery, setMarketQuery] = useState("");
   const [loadingMarket, setLoadingMarket] = useState(false);
 
-  // GitHub form state
   const [githubUrl, setGithubUrl] = useState("");
   const [githubBranch, setGithubBranch] = useState("");
   const [githubPath, setGithubPath] = useState("");
 
-  // Upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadMarketSkills = useCallback(async (query?: string) => {
@@ -121,7 +118,6 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
         toast.error(getLocalizedErrorMessage(error, t, t("extensions.failedToInstall")));
       } finally {
         setInstalling(false);
-        // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }

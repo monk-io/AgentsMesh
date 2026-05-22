@@ -6,22 +6,19 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 )
 
-// AgentConfigProvider provides agent configuration data for ConfigBuilder
+// AgentConfigProvider provides agent lookups for ConfigBuilder. Credential
+// resolution moved out: EnvBundles are loaded directly through
+// ConfigBuilder.envBundleSvc in buildEnvBundleContext, mirroring how MCP
+// servers are exposed to AgentFile eval.
 type AgentConfigProvider interface {
-	// GetAgent returns an agent by slug
 	GetAgent(ctx context.Context, slug string) (*agent.Agent, error)
-	// GetEffectiveCredentialsForPod returns credentials for pod injection
-	GetEffectiveCredentialsForPod(ctx context.Context, userID int64, agentSlug string, profileID *int64) (agent.EncryptedCredentials, bool, error)
-	// ResolveCredentialsByName resolves credentials by profile name from AgentFile CREDENTIAL declaration
-	ResolveCredentialsByName(ctx context.Context, userID int64, agentSlug, profileName string) (agent.EncryptedCredentials, bool, error)
 }
 
 // ConfigBuildRequest contains all the information needed to build a pod config
 type ConfigBuildRequest struct {
-	AgentSlug           string
-	OrganizationID      int64
-	UserID              int64
-	CredentialProfileID *int64
+	AgentSlug      string
+	OrganizationID int64
+	UserID         int64
 
 	// RepositoryID is the repository this pod belongs to (for loading installed extensions)
 	RepositoryID *int64
@@ -70,26 +67,12 @@ type ConfigBuildRequest struct {
 	// Populated by orchestrator's extractFromAgentfileLayer when AgentfileLayer is provided.
 	// When empty (resume mode or no layer): buildFromAgentfile falls back to agent's base AgentFile.
 	MergedAgentfileSource string
-
-	// CredentialProfile is the CREDENTIAL declaration value extracted from merged AgentFile.
-	// Pre-extracted by orchestrator to avoid re-parsing AgentFile in ConfigBuilder.
-	// When non-empty, overrides CredentialProfileID for credential resolution.
-	CredentialProfile string
 }
 
 // ConfigSchemaResponse is the config schema returned to frontend
 // Frontend is responsible for i18n translation using slug + field.name as key
 type ConfigSchemaResponse struct {
-	Fields           []ConfigFieldResponse     `json:"fields"`
-	CredentialFields []CredentialFieldResponse `json:"credential_fields,omitempty"`
-}
-
-// CredentialFieldResponse describes a credential field from AgentFile ENV SECRET/TEXT declarations.
-// Frontend uses these to dynamically render credential profile forms.
-type CredentialFieldResponse struct {
-	Name     string `json:"name"` // Full ENV name, e.g. "ANTHROPIC_API_KEY"
-	Type     string `json:"type"` // "secret" or "text"
-	Optional bool   `json:"optional"`
+	Fields []ConfigFieldResponse `json:"fields"`
 }
 
 // ConfigFieldResponse is a config field returned to frontend

@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GitBranch, CircleOff } from "lucide-react";
-import { type RepositoryData } from "@/lib/api";
-import { listRepositories } from "@/lib/api/repositoryConnect";
-import { useCurrentOrg } from "@/stores/auth";
+import { useRepositories, useRepositoryStore } from "@/stores/repository";
 import type { Ticket } from "@/stores/ticket";
 import { FilterSection } from "./FilterSection";
 
-/** Max repos shown before "show more" */
 const INITIAL_VISIBLE_COUNT = 5;
 
-/** Sentinel value representing tickets with no repository */
 export const NO_REPOSITORY_ID = 0;
 
 interface RepoFilterSectionProps {
@@ -24,10 +20,6 @@ interface RepoFilterSectionProps {
   t: (key: string) => string;
 }
 
-/**
- * RepoFilterSection - Repository checkbox filter with show more/less.
- * Loads repository list from API on mount, derives ticket counts from allTickets.
- */
 export function RepoFilterSection({
   expanded,
   onExpandedChange,
@@ -36,29 +28,15 @@ export function RepoFilterSection({
   allTickets,
   t,
 }: RepoFilterSectionProps) {
-  const currentOrg = useCurrentOrg();
-  const [repositories, setRepositories] = useState<RepositoryData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const allRepos = useRepositories();
+  const loading = useRepositoryStore((s) => s.isLoading);
+  const fetchRepositories = useRepositoryStore((s) => s.fetchRepositories);
   const [showAll, setShowAll] = useState(false);
 
-  const loadRepos = useCallback(async () => {
-    if (!currentOrg) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const res = await listRepositories(currentOrg.slug);
-      setRepositories(res.items.filter((r) => r.is_active));
-    } catch {
-      // Silently fail — filter section simply won't render
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrg]);
+  useEffect(() => { fetchRepositories(); }, [fetchRepositories]);
 
-  useEffect(() => { loadRepos(); }, [loadRepos]);
+  const repositories = useMemo(() => allRepos.filter((r) => r.is_active), [allRepos]);
 
-  // Count tickets per repository (0 = no repository)
   const repoCounts = useMemo(() => {
     if (!allTickets) return {};
     const counts: Record<number, number> = {};
@@ -69,7 +47,6 @@ export function RepoFilterSection({
     return counts;
   }, [allTickets]);
 
-  // Sort repos: those with tickets first (descending count), then alphabetical
   const sortedRepos = useMemo(() => {
     return [...repositories].sort((a, b) => {
       const countDiff = (repoCounts[b.id] || 0) - (repoCounts[a.id] || 0);

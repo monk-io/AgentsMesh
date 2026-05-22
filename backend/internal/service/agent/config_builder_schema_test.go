@@ -4,79 +4,79 @@ import (
 	"context"
 	"testing"
 
+	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetConfigSchema_CredentialFields(t *testing.T) {
-	db := setupConfigBuilderTestDB(t)
-
-	db.Exec(`INSERT INTO agents (slug, name, launch_command, is_builtin, is_active, agentfile_source)
-		VALUES ('claude-code', 'Claude Code', 'claude', 1, 1, 'AGENT claude
-EXECUTABLE claude
-CONFIG model SELECT("", "sonnet", "opus") = ""
-ENV ANTHROPIC_API_KEY SECRET OPTIONAL
-ENV ANTHROPIC_AUTH_TOKEN SECRET OPTIONAL
-ENV ANTHROPIC_BASE_URL TEXT OPTIONAL
-ENV FIXED_VALUE = "hello"
-MCP ON')`)
-
-	provider := createTestProvider(db)
-	builder := NewConfigBuilder(provider)
-
-	schema, err := builder.GetConfigSchema(context.Background(), "claude-code")
-	require.NoError(t, err)
-	require.NotNil(t, schema)
-
-	// CONFIG fields
-	require.Len(t, schema.Fields, 1)
-	assert.Equal(t, "model", schema.Fields[0].Name)
-
-	// Credential fields: only ENV with SECRET/TEXT source, not fixed-value ENV
-	require.Len(t, schema.CredentialFields, 3)
-
-	assert.Equal(t, "ANTHROPIC_API_KEY", schema.CredentialFields[0].Name)
-	assert.Equal(t, "secret", schema.CredentialFields[0].Type)
-	assert.True(t, schema.CredentialFields[0].Optional)
-
-	assert.Equal(t, "ANTHROPIC_AUTH_TOKEN", schema.CredentialFields[1].Name)
-	assert.Equal(t, "secret", schema.CredentialFields[1].Type)
-
-	assert.Equal(t, "ANTHROPIC_BASE_URL", schema.CredentialFields[2].Name)
-	assert.Equal(t, "text", schema.CredentialFields[2].Type)
+// stubAgentProvider returns a pre-built agent without touching the DB. Lets
+// schema tests exercise ResolveConfigSchema with any AgentFile source string,
+// including malformed ones, without seeding fixtures.
+type stubAgentProvider struct {
+	agent *agentDomain.Agent
+	err   error
 }
 
-func TestGetConfigSchema_NoCredentialFields(t *testing.T) {
-	db := setupConfigBuilderTestDB(t)
-
-	db.Exec(`INSERT INTO agents (slug, name, launch_command, is_builtin, is_active, agentfile_source)
-		VALUES ('opencode', 'OpenCode', 'opencode', 1, 1, 'AGENT opencode
-EXECUTABLE opencode
-MODE pty')`)
-
-	provider := createTestProvider(db)
-	builder := NewConfigBuilder(provider)
-
-	schema, err := builder.GetConfigSchema(context.Background(), "opencode")
-	require.NoError(t, err)
-	require.NotNil(t, schema)
-
-	assert.Empty(t, schema.CredentialFields)
+func (s *stubAgentProvider) GetAgent(_ context.Context, _ string) (*agentDomain.Agent, error) {
+	return s.agent, s.err
 }
 
-func TestGetConfigSchema_NoAgentfile(t *testing.T) {
-	db := setupConfigBuilderTestDB(t)
+func TestResolveConfigSchema_ExtractsConfigFields(t *testing.T) {
+	src := `AGENT claude
+CONFIG model SELECT("", "sonnet", "opus") = "sonnet"
+CONFIG mcp_enabled BOOL = true
+CONFIG permission_mode SELECT("default", "plan", "bypassPermissions") = "bypassPermissions"
+`
+	p := &stubAgentProvider{
+		agent: &agentDomain.Agent{Slug: "claude-code", AgentfileSource: &src},
+	}
 
-	db.Exec(`INSERT INTO agents (slug, name, launch_command, is_builtin, is_active)
-		VALUES ('custom', 'Custom Agent', 'custom', 0, 1)`)
-
-	provider := createTestProvider(db)
-	builder := NewConfigBuilder(provider)
-
-	schema, err := builder.GetConfigSchema(context.Background(), "custom")
+	schema, err := ResolveConfigSchema(context.Background(), p, "claude-code")
 	require.NoError(t, err)
-	require.NotNil(t, schema)
+	require.Len(t, schema.Fields, 3)
 
+	byName := map[string]ConfigFieldResponse{}
+	for _, f := range schema.Fields {
+		byName[f.Name] = f
+	}
+
+	model := byName["model"]
+	assert.Equal(t, "select", model.Type)
+	assert.Equal(t, "sonnet", model.Default)
+	require.Len(t, model.Options, 3)
+	assert.Equal(t, "", model.Options[0].Value)
+
+	mcp := byName["mcp_enabled"]
+	assert.Equal(t, "boolean", mcp.Type)
+	assert.Equal(t, true, mcp.Default)
+
+	pm := byName["permission_mode"]
+	assert.Equal(t, "select", pm.Type)
+	assert.Equal(t, "bypassPermissions", pm.Default)
+}
+
+func TestResolveConfigSchema_EmptyAgentfileReturnsEmptySchema(t *testing.T) {
+	p := &stubAgentProvider{
+		agent: &agentDomain.Agent{Slug: "x", AgentfileSource: nil},
+	}
+
+	schema, err := ResolveConfigSchema(context.Background(), p, "x")
+	require.NoError(t, err)
 	assert.Empty(t, schema.Fields)
-	assert.Empty(t, schema.CredentialFields)
+}
+
+func TestResolveConfigSchema_PropagatesProviderError(t *testing.T) {
+	p := &stubAgentProvider{err: assert.AnError}
+	_, err := ResolveConfigSchema(context.Background(), p, "missing")
+	assert.ErrorIs(t, err, assert.AnError)
+}
+
+func TestResolveConfigSchema_AgentFileParseError(t *testing.T) {
+	src := `INVALID @@@ not real syntax`
+	p := &stubAgentProvider{
+		agent: &agentDomain.Agent{Slug: "x", AgentfileSource: &src},
+	}
+
+	_, err := ResolveConfigSchema(context.Background(), p, "x")
+	assert.Error(t, err, "garbage AgentFile must surface as parse error, not silent empty schema")
 }

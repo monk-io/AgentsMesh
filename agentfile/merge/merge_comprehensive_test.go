@@ -165,13 +165,13 @@ BRANCH "main"
 func TestMerge_RemoveNonExistent(t *testing.T) {
 	base := parse(t, `
 AGENT test
-ENV KEY1 SECRET
+USE_ENV_BUNDLE "creds"
 `)
 	slice := parse(t, `REMOVE ENV NONEXISTENT`)
 	Merge(base, slice)
 
 	ctx := eval.NewContext(nil)
-	ctx.Credentials = map[string]string{"KEY1": "val"}
+	ctx.EnvBundles = map[string]map[string]string{"creds": {"KEY1": "val"}}
 	require.NoError(t, eval.Eval(base, ctx))
 	eval.ApplyRemoves(ctx.Result)
 	// Should not error, KEY1 still present

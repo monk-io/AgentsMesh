@@ -60,7 +60,6 @@ export function McpMarketSettings({ t }: McpMarketSettingsProps) {
     }
   }, [orgSlug]);
 
-  // Debounced search – also handles initial load (search starts as "")
   useEffect(() => {
     const mounted = { current: true };
     const timer = setTimeout(() => {

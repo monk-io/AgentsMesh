@@ -12,10 +12,12 @@
 // workspace to consume.
 
 mod enums;
+mod env_bundle;
 mod runner;
 mod service_error;
 
 pub use enums::*;
+pub use env_bundle::*;
 pub use runner::*;
 pub use service_error::*;
 

@@ -8,25 +8,26 @@ import (
 	"github.com/anthropics/agentsmesh/agentfile/parser"
 )
 
-// GetConfigSchema returns the config schema for an agent.
-// CONFIG declarations are extracted from the AgentFile source.
-func (b *ConfigBuilder) GetConfigSchema(ctx context.Context, agentSlug string) (*ConfigSchemaResponse, error) {
-	agentDef, err := b.provider.GetAgent(ctx, agentSlug)
+// ResolveConfigSchema returns the config schema for an agent. After the
+// EnvBundle refactor it serves only AgentFile CONFIG declarations — credential
+// field schemas live entirely in the frontend's per-agent form spec.
+//
+// It only needs to look up the agent + parse its AgentFile, so it lives at
+// package scope instead of on ConfigBuilder. This lets callers (e.g.
+// AgentHandler) ask for schemas without standing up the full Pod-build
+// dependency graph (EnvBundle loader, extension provider).
+func ResolveConfigSchema(ctx context.Context, provider AgentConfigProvider, agentSlug string) (*ConfigSchemaResponse, error) {
+	agentDef, err := provider.GetAgent(ctx, agentSlug)
 	if err != nil {
 		return nil, err
 	}
-	if agentDef.AgentfileSource != nil && *agentDef.AgentfileSource != "" {
-		return b.getConfigSchemaFromAgentfile(*agentDef.AgentfileSource)
+	if agentDef.AgentfileSource == nil || *agentDef.AgentfileSource == "" {
+		return &ConfigSchemaResponse{Fields: []ConfigFieldResponse{}}, nil
 	}
-	// No AgentFile = empty schema
-	return &ConfigSchemaResponse{
-		Fields:           []ConfigFieldResponse{},
-		CredentialFields: []CredentialFieldResponse{},
-	}, nil
+	return configSchemaFromAgentfile(*agentDef.AgentfileSource)
 }
 
-// getConfigSchemaFromAgentfile parses an AgentFile and extracts CONFIG declarations as schema.
-func (b *ConfigBuilder) getConfigSchemaFromAgentfile(source string) (*ConfigSchemaResponse, error) {
+func configSchemaFromAgentfile(source string) (*ConfigSchemaResponse, error) {
 	prog, errs := parser.Parse(source)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("agentfile parse errors: %v", errs)
@@ -50,17 +51,5 @@ func (b *ConfigBuilder) getConfigSchemaFromAgentfile(source string) (*ConfigSche
 		}
 		result.Fields = append(result.Fields, field)
 	}
-
-	// Extract credential fields from ENV SECRET/TEXT declarations
-	for _, env := range spec.Env {
-		if env.Source != "" {
-			result.CredentialFields = append(result.CredentialFields, CredentialFieldResponse{
-				Name:     env.Name,
-				Type:     env.Source,
-				Optional: env.Optional,
-			})
-		}
-	}
-
 	return result, nil
 }

@@ -1,102 +1,111 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  type CredentialField,
-  type CredentialProfileData,
-  type CredentialProfilesByAgent,
-  type AgentData,
-} from "@/lib/api";
-import {
-  listAgentCredentialProfiles,
-  createAgentCredentialProfile,
-  updateAgentCredentialProfile,
-  deleteAgentCredentialProfile,
-  setDefaultAgentCredentialProfile,
-} from "@/lib/api/userAgentCredential";
-import { listAgents, getAgentConfigSchema } from "@/lib/api/agentConnect";
-import { useCurrentOrg } from "@/stores/auth";
+import { type AgentData } from "@/lib/api";
+import { getAgentService, getEnvBundleService } from "@/lib/wasm-core";
 import type { AgentCredentialsState, AgentCredentialsActions, CredentialFormData } from "./types";
+import type {
+  CredentialProfileViewModel,
+  CredentialProfilesByAgent,
+} from "../_shared/credentialViewModel";
 
-/**
- * Custom hook for managing agent credentials state and actions.
- * Fetches credential field definitions from config-schema API (AgentFile SSOT).
- */
+// EnvBundle wire shape from the backend (flat list). The settings page still
+// thinks in per-agent groups, so this hook adapts EnvBundle rows into the
+// settings-private CredentialProfileViewModel grouped by agent slug.
+interface WireEnvBundle {
+  id: number;
+  agent_slug?: string | null;
+  name: string;
+  description?: string | null;
+  kind: string;
+  kind_primary: boolean;
+  is_active: boolean;
+  configured_fields?: string[];
+  configured_values?: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+}
+
+function bundleToProfile(b: WireEnvBundle): CredentialProfileViewModel {
+  return {
+    id: b.id,
+    agent_slug: b.agent_slug ?? "",
+    name: b.name,
+    description: b.description ?? undefined,
+    is_default: b.kind_primary,
+    is_active: b.is_active,
+    configured_fields: b.configured_fields,
+    configured_values: b.configured_values,
+    created_at: b.created_at,
+    updated_at: b.updated_at,
+  };
+}
+
+function groupByAgent(bundles: WireEnvBundle[]): CredentialProfilesByAgent[] {
+  const groups: Record<string, CredentialProfilesByAgent> = {};
+  for (const b of bundles) {
+    const slug = b.agent_slug ?? "";
+    if (!groups[slug]) {
+      groups[slug] = { agent_slug: slug, agent_name: "", profiles: [] };
+    }
+    groups[slug].profiles.push(bundleToProfile(b));
+  }
+  return Object.values(groups);
+}
+
 export function useAgentCredentials(
   t: (key: string) => string
 ): AgentCredentialsState & AgentCredentialsActions {
-  const currentOrg = useCurrentOrg();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Data state
   const [profilesByAgent, setProfilesByAgent] = useState<CredentialProfilesByAgent[]>([]);
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
-  const [runnerHostDefaults, setRunnerHostDefaults] = useState<Set<string>>(new Set());
-  const [credentialFieldsByAgent, setCredentialFieldsByAgent] = useState<Map<string, CredentialField[]>>(new Map());
+  const [agentsWithoutPrimaryBundle, setAgentsWithoutPrimaryBundle] = useState<Set<string>>(new Set());
 
-  // Load data
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      if (!currentOrg) {
-        setLoading(false);
-        return;
-      }
-
-      const [profilesRes, agentsRes] = await Promise.all([
-        listAgentCredentialProfiles(),
-        listAgents(currentOrg.slug),
+      const [bundlesRes, agentsRes] = await Promise.all([
+        getEnvBundleService().list("credential", "").then((j: string) => JSON.parse(j)),
+        getAgentService().list_agents().then((j: string) => JSON.parse(j)),
       ]);
 
-      setProfilesByAgent(profilesRes.items || []);
-      const agentList = [...agentsRes.builtin_agents, ...agentsRes.custom_agents];
+      const grouped = groupByAgent(bundlesRes.items || []);
+      setProfilesByAgent(grouped);
+      const agentList = [
+        ...(agentsRes.builtin_agents || []),
+        ...(agentsRes.custom_agents || []),
+        ...(agentsRes.agents || []),
+      ];
       setAgents(agentList);
 
-      // Fetch credential fields for all agents in parallel
-      const fieldsMap = new Map<string, CredentialField[]>();
-      const schemaResults = await Promise.allSettled(
-        agentList.map((a: AgentData) => getAgentConfigSchema(currentOrg.slug, a.slug))
-      );
-      agentList.forEach((a: AgentData, i: number) => {
-        const result = schemaResults[i];
-        if (result.status === "fulfilled") {
-          fieldsMap.set(a.slug, result.value.credential_fields || []);
+      const noPrimarySet = new Set<string>();
+      agentList.forEach((a: AgentData) => noPrimarySet.add(a.slug));
+      grouped.forEach((g) => {
+        if (g.profiles.some((p) => p.is_default)) {
+          noPrimarySet.delete(g.agent_slug);
         }
       });
-      setCredentialFieldsByAgent(fieldsMap);
+      setAgentsWithoutPrimaryBundle(noPrimarySet);
 
-      // Determine which agents have RunnerHost as default
-      const runnerHostDefaultSet = new Set<string>();
-      const agentSlugs = agentList.map((a: AgentData) => a.slug);
-      agentSlugs.forEach((slug: string) => runnerHostDefaultSet.add(slug));
-      (profilesRes.items || []).forEach((item: CredentialProfilesByAgent) => {
-        if (item.profiles.some((p: CredentialProfileData) => p.is_default)) {
-          runnerHostDefaultSet.delete(item.agent_slug);
-        }
-      });
-      setRunnerHostDefaults(runnerHostDefaultSet);
-
-      // Auto-expand first agent or those with profiles
       const expandedIds = new Set<string>();
-      if (agentList.length > 0) {
-        expandedIds.add(agentList[0].slug);
-      }
-      (profilesRes.items || []).forEach((item: CredentialProfilesByAgent) => {
-        if (item.profiles.length > 0) expandedIds.add(item.agent_slug);
+      if (agentList.length > 0) expandedIds.add(agentList[0].slug);
+      grouped.forEach((g) => {
+        if (g.profiles.length > 0) expandedIds.add(g.agent_slug);
       });
       setExpandedAgents(expandedIds);
     } catch (err) {
-      console.error("Failed to load agent credentials:", err);
+      console.error("Failed to load env bundles:", err);
       setError(t("settings.agentCredentials.failedToLoad"));
     } finally {
       setLoading(false);
     }
-  }, [currentOrg, t]);
+  }, [t]);
 
   useEffect(() => {
     loadData();
@@ -111,19 +120,22 @@ export function useAgentCredentials(
     });
   }, []);
 
-  const handleSetRunnerHostDefault = useCallback(async (agentSlug: string) => {
+  const handleClearPrimaryBundle = useCallback(async (agentSlug: string) => {
     try {
       setError(null);
       const group = profilesByAgent.find((g) => g.agent_slug === agentSlug);
       const currentDefault = group?.profiles.find((p) => p.is_default);
       if (currentDefault) {
-        await updateAgentCredentialProfile(currentDefault.id, { is_default: false });
+        await getEnvBundleService().update(
+          BigInt(currentDefault.id),
+          JSON.stringify({ kind_primary: false })
+        );
       }
       setSuccess(t("settings.agentCredentials.defaultSet"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("Failed to set RunnerHost as default:", err);
+      console.error("Failed to clear primary bundle:", err);
       setError(t("settings.agentCredentials.failedToSetDefault"));
     }
   }, [profilesByAgent, loadData, t]);
@@ -131,12 +143,12 @@ export function useAgentCredentials(
   const handleSetDefault = useCallback(async (profileId: number) => {
     try {
       setError(null);
-      await setDefaultAgentCredentialProfile(profileId);
+      await getEnvBundleService().set_primary(BigInt(profileId));
       setSuccess(t("settings.agentCredentials.defaultSet"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("Failed to set default:", err);
+      console.error("Failed to set primary:", err);
       setError(t("settings.agentCredentials.failedToSetDefault"));
     }
   }, [loadData, t]);
@@ -144,63 +156,61 @@ export function useAgentCredentials(
   const handleDelete = useCallback(async (profileId: number) => {
     try {
       setError(null);
-      await deleteAgentCredentialProfile(profileId);
+      await getEnvBundleService().delete(BigInt(profileId));
       setSuccess(t("settings.agentCredentials.profileDeleted"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("Failed to delete profile:", err);
+      console.error("Failed to delete bundle:", err);
       setError(t("settings.agentCredentials.failedToDelete"));
     }
   }, [loadData, t]);
 
-  // Save credential profile — credentials keys are full ENV names from AgentFile.
   const handleSaveProfile = useCallback(async (
     agentSlug: string,
     data: CredentialFormData,
-    editingProfile: CredentialProfileData | null
+    editingProfile: CredentialProfileViewModel | null
   ) => {
-    const credentials = Object.keys(data.credentials).length > 0 ? data.credentials : undefined;
-
     try {
       if (editingProfile) {
-        await updateAgentCredentialProfile(editingProfile.id, {
-          name: data.name,
-          description: data.description || undefined,
-          is_runner_host: false,
-          credentials,
-        });
+        await getEnvBundleService().update(
+          BigInt(editingProfile.id),
+          JSON.stringify({
+            name: data.name,
+            description: data.description || undefined,
+            data: Object.keys(data.credentials).length > 0 ? data.credentials : undefined,
+          })
+        );
         setSuccess(t("settings.agentCredentials.profileUpdated"));
       } else {
-        await createAgentCredentialProfile({
-          agent_slug: agentSlug,
-          name: data.name,
-          description: data.description || undefined,
-          is_runner_host: false,
-          credentials: data.credentials,
-          is_default: false,
-        });
+        await getEnvBundleService().create(
+          JSON.stringify({
+            agent_slug: agentSlug,
+            name: data.name,
+            description: data.description || undefined,
+            kind: "credential",
+            data: data.credentials,
+          })
+        );
         setSuccess(t("settings.agentCredentials.profileCreated"));
       }
-
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      console.error("Failed to save credential profile:", err);
+      console.error("Failed to save env bundle:", err);
       throw err;
     }
   }, [loadData, t]);
 
-  const getProfilesForAgent = useCallback((agentSlug: string): CredentialProfileData[] => {
+  const getProfilesForAgent = useCallback((agentSlug: string): CredentialProfileViewModel[] => {
     const group = profilesByAgent.find((g) => g.agent_slug === agentSlug);
     return group?.profiles || [];
   }, [profilesByAgent]);
 
   return {
     loading, error, success,
-    profilesByAgent, agents, expandedAgents, runnerHostDefaults,
-    credentialFieldsByAgent,
-    toggleAgent, handleSetRunnerHostDefault, handleSetDefault,
+    profilesByAgent, agents, expandedAgents, agentsWithoutPrimaryBundle,
+    toggleAgent, handleClearPrimaryBundle, handleSetDefault,
     handleDelete, handleSaveProfile, getProfilesForAgent,
     setError, setSuccess,
   };

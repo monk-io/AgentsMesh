@@ -7,7 +7,8 @@ import { ConfigForm } from "@/components/ide/ConfigForm";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { RunnerSelect } from "./RunnerSelect";
-import { CredentialSelect } from "./CredentialSelect";
+import { CredentialBundleSelect } from "./CredentialBundleSelect";
+import { EnvBundleMultiSelect } from "./EnvBundleMultiSelect";
 import { RepositorySelect, BranchInput } from "./RepositorySelect";
 import { AdvancedOptions } from "./AdvancedOptions";
 import { AgentfileLayerEditor } from "./AgentfileLayerEditor";
@@ -41,9 +42,6 @@ export function AdvancedFormSection({
 }: AdvancedFormSectionProps) {
   const t = useTranslations();
 
-  // When source mode is ON, hide form sections represented in the AgentFile Layer
-  // (ConfigForm, RepositorySelect, BranchInput, CredentialSelect)
-  // Keep: Alias, RunnerSelect (not represented in AgentFile Layer)
   const hideFormSections = form.rawLayerMode;
 
   return (
@@ -93,12 +91,21 @@ export function AdvancedFormSection({
       {/* Form-mode-only sections (hidden when source mode is ON) */}
       {!hideFormSections && (
         <>
-          {/* Credential Profile Select */}
-          <CredentialSelect
-            profiles={form.credentialProfiles}
-            selectedProfileId={form.selectedCredentialProfile}
-            onSelect={form.setSelectedCredentialProfile}
-            loading={form.loadingCredentials}
+          {/* API Credential — single-select dropdown */}
+          <CredentialBundleSelect
+            bundles={form.envBundles.filter((b) => b.kind === "credential")}
+            selectedBundleName={form.selectedCredentialName}
+            onSelect={form.setSelectedCredentialName}
+            loading={form.loadingBundles}
+            t={t}
+          />
+
+          {/* Runtime EnvBundle — ordered multi-select */}
+          <EnvBundleMultiSelect
+            bundles={form.envBundles.filter((b) => b.kind === "runtime")}
+            selectedBundleNames={form.selectedRuntimeBundleNames}
+            onChange={form.setSelectedRuntimeBundleNames}
+            loading={form.loadingBundles}
             t={t}
           />
 
@@ -155,7 +162,7 @@ export function AdvancedFormSection({
         onRawTextChange={form.setRawLayerText}
         configFields={configFields}
         repositories={repositories}
-        credentialProfiles={form.credentialProfiles}
+        envBundles={form.envBundles}
         t={t}
       />
     </AdvancedOptions>

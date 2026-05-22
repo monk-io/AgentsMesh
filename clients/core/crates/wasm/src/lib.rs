@@ -37,20 +37,18 @@ mod service_ticket_relations;
 mod service_token_usage;
 mod service_user;
 mod service_user_credential;
+mod service_env_bundle;
 mod ws_transport;
 mod state_acp;
 mod state_app;
 mod state_autopilot;
 mod state_channel;
-mod state_git;
 mod state_loop;
 mod state_mesh;
-mod state_org;
 mod state_pod;
 mod state_repo;
 mod state_runner;
 mod state_ticket;
-mod state_user;
 
 pub use api::*;
 pub use auth::*;
@@ -84,15 +82,14 @@ pub use service_ticket_relations::*;
 pub use service_token_usage::*;
 pub use service_user::*;
 pub use service_user_credential::*;
+pub use service_env_bundle::*;
 pub use ws_transport::*;
 pub use state_acp::*;
 pub use state_app::*;
 pub use state_autopilot::*;
 pub use state_channel::*;
-pub use state_git::*;
 pub use state_loop::*;
 pub use state_mesh::*;
-pub use state_org::*;
 pub use state_pod::*;
 pub use state_repo::*;
 pub use state_runner::*;
@@ -113,4 +110,18 @@ pub fn init_panic_hook() {
 #[wasm_bindgen]
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+// Idempotent: repeated calls (React StrictMode double-init) are no-ops.
+#[wasm_bindgen]
+pub fn init_logger(level: String) -> Result<(), JsValue> {
+    agentsmesh_logging::init(agentsmesh_logging::LogConfig::wasm_console(level))
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    agentsmesh_logging::install_panic_hook();
+    Ok(())
+}
+
+#[wasm_bindgen]
+pub fn log_event(level: String, target: String, msg: String) {
+    agentsmesh_logging::log_event(&level, &target, &msg);
 }

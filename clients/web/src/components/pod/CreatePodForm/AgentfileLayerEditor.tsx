@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { AgentfileCodeEditor } from "./AgentfileCodeEditor";
 import type { AgentfileCompletionContext } from "@/lib/codemirror-agentfile";
 import type { ConfigField } from "@/lib/api";
-import type { RepositoryData, AgentData, CredentialProfileData } from "@/lib/api";
+import type { RepositoryData, AgentData, EnvBundleSummary } from "@/lib/api";
 
 interface AgentfileLayerEditorProps {
   generatedLayer: string;
@@ -25,8 +25,8 @@ interface AgentfileLayerEditorProps {
   agents?: AgentData[];
   /** Available repositories for REPO/BRANCH completions */
   repositories?: RepositoryData[];
-  /** Credential profiles for CREDENTIAL completions */
-  credentialProfiles?: CredentialProfileData[];
+  /** EnvBundles for USE_ENV_BUNDLE completions */
+  envBundles?: EnvBundleSummary[];
   t: (key: string) => string;
 }
 
@@ -39,7 +39,7 @@ export function AgentfileLayerEditor({
   configFields = [],
   agents,
   repositories,
-  credentialProfiles,
+  envBundles,
   t,
 }: AgentfileLayerEditorProps) {
   // Build completion context from all available data sources
@@ -51,11 +51,10 @@ export function AgentfileLayerEditor({
       name: r.name,
       default_branch: r.default_branch,
     })),
-    credentialProfiles: credentialProfiles?.map((p) => ({
-      name: p.name,
-      description: p.description,
+    envBundles: envBundles?.map((b) => ({
+      name: b.name,
     })),
-  }), [configFields, agents, repositories, credentialProfiles]);
+  }), [configFields, agents, repositories, envBundles]);
 
   return (
     <div className="space-y-2 border-t pt-3">

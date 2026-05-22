@@ -1,7 +1,6 @@
 import { vi } from "vitest";
 import { POD_MODE_PTY } from "@/lib/pod-modes";
 
-// Mock functions
 export const mockSetSelectedRunnerId = vi.fn();
 export const mockFormReset = vi.fn();
 export const mockFormSubmit = vi.fn();
@@ -10,7 +9,6 @@ export const mockSetAlias = vi.fn();
 export const mockSetSelectedAgent = vi.fn();
 export const mockResetPluginConfig = vi.fn();
 
-// Default mock values
 export const defaultPodCreationData = {
   runners: [],
   repositories: [],
@@ -26,16 +24,18 @@ export const defaultFormState = {
   selectedAgent: null,
   selectedRepository: null,
   selectedBranch: "",
-  selectedCredentialProfile: 0,
+  selectedCredentialName: "",
+  selectedRuntimeBundleNames: [] as string[],
   interactionMode: POD_MODE_PTY,
   prompt: "",
   alias: "",
-  credentialProfiles: [],
-  loadingCredentials: false,
+  envBundles: [],
+  loadingBundles: false,
   setSelectedAgent: mockSetSelectedAgent,
   setSelectedRepository: vi.fn(),
   setSelectedBranch: vi.fn(),
-  setSelectedCredentialProfile: vi.fn(),
+  setSelectedCredentialName: vi.fn(),
+  setSelectedRuntimeBundleNames: vi.fn(),
   setInteractionMode: vi.fn(),
   setPrompt: mockSetPrompt,
   setAlias: mockSetAlias,
@@ -45,12 +45,12 @@ export const defaultFormState = {
   supportedModes: [POD_MODE_PTY],
   loading: false,
   error: null,
+  warning: null,
   validationErrors: {},
   isValid: false,
   reset: mockFormReset,
   validate: vi.fn(),
   submit: mockFormSubmit,
-  // AgentFile Layer
   rawLayerMode: false,
   rawLayerText: "",
   agentfileLayer: "",
@@ -66,7 +66,6 @@ export const defaultConfigOptions = {
   resetConfig: mockResetPluginConfig,
 };
 
-// Common test data
 export const mockRunner = {
   id: 1,
   node_id: "runner-1",

@@ -46,7 +46,6 @@ export function WebhookSettingsCard({
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState<CopiedField>(null);
 
-  // Load webhook status
   const loadStatus = useCallback(async () => {
     if (!orgSlug) return;
     try {
@@ -67,7 +66,6 @@ export function WebhookSettingsCard({
     loadStatus();
   }, [loadStatus]);
 
-  // Register webhook
   const handleRegister = useCallback(async () => {
     if (!orgSlug) return;
     try {
@@ -85,7 +83,6 @@ export function WebhookSettingsCard({
     }
   }, [repository.id, loadStatus, onStatusChange, t, orgSlug]);
 
-  // Delete webhook
   const handleDelete = useCallback(async () => {
     if (!orgSlug) return;
     try {
@@ -105,7 +102,6 @@ export function WebhookSettingsCard({
     }
   }, [repository.id, loadStatus, onStatusChange, t, orgSlug]);
 
-  // Mark as configured (for manual setup)
   const handleMarkConfigured = useCallback(async () => {
     if (!orgSlug) return;
     try {
@@ -124,7 +120,6 @@ export function WebhookSettingsCard({
     }
   }, [repository.id, loadStatus, onStatusChange, t, orgSlug]);
 
-  // Get webhook secret for manual setup
   const handleGetSecret = useCallback(async () => {
     if (!orgSlug) return;
     try {
@@ -146,7 +141,6 @@ export function WebhookSettingsCard({
     }
   }, [repository.id, t, orgSlug]);
 
-  // Copy to clipboard
   const handleCopy = useCallback(
     async (text: string, type: "url" | "secret") => {
       try {
@@ -154,7 +148,6 @@ export function WebhookSettingsCard({
         setCopied(type);
         setTimeout(() => setCopied(null), 2000);
       } catch {
-        // Ignore clipboard errors
       }
     },
     []

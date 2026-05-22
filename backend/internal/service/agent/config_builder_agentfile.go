@@ -8,6 +8,7 @@ import (
 	"github.com/anthropics/agentsmesh/agentfile/eval"
 	"github.com/anthropics/agentsmesh/agentfile/parser"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
@@ -17,9 +18,11 @@ const (
 	PlaceholderWorkDir     = "{{work_dir}}"
 )
 
-// buildFromAgentfile evaluates the agent's AgentFile with placeholder sandbox paths
-// and produces a complete CreatePodCommand. Runner only needs to substitute
-// placeholders with real paths — no AgentFile parsing needed on Runner side.
+// buildFromAgentfile evaluates the agent's AgentFile with placeholder sandbox
+// paths and produces a CreatePodCommand. Credential injection is handled by
+// AgentFile USE_ENV_BUNDLE declarations referencing entries in the eval
+// context's EnvBundles map; the backend no longer threads a parallel
+// credential blob through CreatePodCommand.
 func (b *ConfigBuilder) buildFromAgentfile(
 	ctx context.Context,
 	req *ConfigBuildRequest,
@@ -30,21 +33,12 @@ func (b *ConfigBuilder) buildFromAgentfile(
 		return nil, fmt.Errorf("agent %s: MergedAgentfileSource is empty (AgentFile resolve should always produce it)", req.AgentSlug)
 	}
 
-	// Get credentials
-	var creds agent.EncryptedCredentials
-	var isRunnerHost bool
-	var err error
-	if req.CredentialProfile != "" {
-		creds, isRunnerHost, err = b.provider.ResolveCredentialsByName(ctx, req.UserID, req.AgentSlug, req.CredentialProfile)
-	} else {
-		creds, isRunnerHost, err = b.provider.GetEffectiveCredentialsForPod(ctx, req.UserID, req.AgentSlug, req.CredentialProfileID)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get credentials: %w", err)
-	}
-
 	// Build MCP context
 	builtinMCP, installedMCP := b.buildMCPContext(ctx, req, agentDef.Slug)
+
+	// Build EnvBundle context (mirror of MCP pattern: load every visible
+	// bundle, decrypt, expose by name to eval; USE_ENV_BUNDLE picks).
+	envBundles := b.buildEnvBundleContext(ctx, req, agentDef.Slug)
 
 	// Parse and eval AgentFile with placeholder context
 	prog, errs := parser.Parse(mergedSource)
@@ -52,7 +46,7 @@ func (b *ConfigBuilder) buildFromAgentfile(
 		return nil, fmt.Errorf("agentfile parse error: %v", errs[0])
 	}
 
-	evalCtx := buildEvalContext(req, creds, isRunnerHost, builtinMCP, installedMCP)
+	evalCtx := buildEvalContext(req, builtinMCP, installedMCP, envBundles)
 	if err := eval.Eval(prog, evalCtx); err != nil {
 		return nil, fmt.Errorf("agentfile eval error: %w", err)
 	}
@@ -67,7 +61,7 @@ func (b *ConfigBuilder) buildFromAgentfile(
 		effectiveReq.PreparationTimeout = evalCtx.Result.Setup.Timeout
 	}
 
-	cmd := buildResultToProto(&effectiveReq, evalCtx.Result, creds, isRunnerHost)
+	cmd := buildResultToProto(&effectiveReq, evalCtx.Result)
 	cmd.ResourcesToDownload = b.buildSkillResources(ctx, req, agentDef.Slug)
 	return cmd, nil
 }
@@ -113,4 +107,20 @@ func skillTargetPath(agentSlug, skillSlug string) string {
 	default:
 		return "{{.sandbox.root_path}}/skills/" + skillSlug
 	}
+}
+
+// buildEnvBundleContext loads every bundle visible to the user/org for this
+// agent, decrypts credential-kind values, and returns a name → KV map for
+// the eval phase to consume via USE_ENV_BUNDLE declarations.
+//
+// Mirrors buildMCPContext: tolerant — load failure degrades to "no bundles
+// loaded" rather than aborting Pod creation. AgentFile declarations referring
+// to missing bundles are silently skipped (warn-only) in evalUseEnvBundleDecl.
+func (b *ConfigBuilder) buildEnvBundleContext(ctx context.Context, req *ConfigBuildRequest, agentSlug string) map[string]map[string]string {
+	bundles, err := b.envBundleSvc.GetEffectiveForUser(ctx, req.UserID, req.OrganizationID, agentSlug)
+	if err != nil {
+		slog.WarnContext(ctx, "Failed to load env bundles for agentfile", "agent_slug", agentSlug, "error", err)
+		return nil
+	}
+	return envbundleservice.AsContextMap(bundles)
 }

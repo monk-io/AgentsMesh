@@ -1,5 +1,5 @@
 import { invoke } from "./invoke";
-import type { IRepositoryService } from "@agentsmesh/service-interface";
+import type { IRepositoryService, IRepoState } from "@agentsmesh/service-interface";
 
 // Web's wasm-side `WasmRepositoryService` exposes `<verb>Connect(bytes)`
 // methods. The hand-written IPC handlers on the Rust napi side only
@@ -19,7 +19,45 @@ async function connectCall(method: string, request: Uint8Array): Promise<Uint8Ar
   return resp instanceof Uint8Array ? resp : new Uint8Array(resp);
 }
 
-export class ElectronRepositoryService implements IRepositoryService {
+// Service-is-State-superset 模式（对齐 ElectronPodService）：内部 cache 由 Service 持有，
+// provider 让 repoState 别名同一实例，renderer 端 useRepositories() 读到的就是这里的 cache。
+export class ElectronRepositoryService implements IRepositoryService, IRepoState {
+  private _repositoriesCache = "[]";
+  private _currentRepoCache: string | null = null;
+  private _branchesCache = "[]";
+
+  // ===== IRepoState =====
+
+  repositories_json(): string { return this._repositoriesCache; }
+  current_repo_json(): unknown { return this._currentRepoCache; }
+  branches_json(): string { return this._branchesCache; }
+
+  set_repositories(json: string): void { this._repositoriesCache = json || "[]"; }
+  set_current_repo(json: string): void { this._currentRepoCache = json || null; }
+  set_branches(json: string): void { this._branchesCache = json || "[]"; }
+
+  add_repository(json: string): void {
+    const repo = JSON.parse(json) as { id: number };
+    const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
+    repos.push(repo);
+    this._repositoriesCache = JSON.stringify(repos);
+  }
+
+  update_repository(id: string, json: string): void {
+    const updated = JSON.parse(json) as { id: number };
+    const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
+    const idx = repos.findIndex(r => String(r.id) === id);
+    if (idx >= 0) repos[idx] = updated;
+    this._repositoriesCache = JSON.stringify(repos);
+  }
+
+  remove_repository(id: string): void {
+    const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
+    this._repositoriesCache = JSON.stringify(repos.filter(r => String(r.id) !== id));
+  }
+
+  // ===== IRepositoryService =====
+
   async list(): Promise<string> {
     return invoke<string>("repositoryList");
   }

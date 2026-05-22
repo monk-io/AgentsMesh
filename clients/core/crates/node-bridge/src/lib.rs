@@ -34,6 +34,7 @@ pub struct AppState {
     org: Arc<Mutex<OrgApiService>>,
     user: Arc<Mutex<UserApiService>>,
     user_credential: Arc<Mutex<UserCredentialService>>,
+    env_bundle: Arc<Mutex<EnvBundleService>>,
     agent: Arc<Mutex<AgentService>>,
     file: Arc<Mutex<FileService>>,
     support_ticket: Arc<Mutex<SupportTicketService>>,
@@ -54,9 +55,6 @@ impl AppState {
         let _ = std::fs::create_dir_all(&dir);
         let storage: Arc<dyn PersistentStorage> = Arc::new(FileStorage::new(dir));
         let auth = Arc::new(AuthManager::new(base_url.clone(), storage));
-        // Don't auto-restore — desktop renderer must call `auth_bootstrap()`
-        // explicitly so identity is validated against the live backend before
-        // RootRedirect makes routing decisions.
         let local_runner = Arc::new(LocalRunnerManager::from_default_home(base_url.clone()));
         let client = Arc::new(ApiClient::new(base_url, auth.clone()));
         let c = client.clone();
@@ -77,6 +75,7 @@ impl AppState {
             org: Arc::new(Mutex::new(OrgApiService::new(c.clone()))),
             user: Arc::new(Mutex::new(UserApiService::new(c.clone()))),
             user_credential: Arc::new(Mutex::new(UserCredentialService::new(c.clone()))),
+            env_bundle: Arc::new(Mutex::new(EnvBundleService::new(c.clone()))),
             agent: Arc::new(Mutex::new(AgentService::new(c.clone()))),
             file: Arc::new(Mutex::new(FileService::new(c.clone()))),
             support_ticket: Arc::new(Mutex::new(SupportTicketService::new(c.clone()))),
@@ -93,7 +92,6 @@ impl AppState {
         })
     }
 
-    // ===== Raw HTTP (legacy callers that bypass typed services) =====
     #[napi]
     pub async fn api_get(&self, endpoint: String) -> napi::Result<String> {
         let v: serde_json::Value = self.client.get(&endpoint).await.map_err(err)?;
@@ -144,7 +142,6 @@ impl AppState {
         self.client.org_path(&path)
     }
 
-    // ===== Auth =====
     #[napi]
     pub async fn auth_login(&self, email: String, password: String) -> napi::Result<String> {
         let session = self.auth.login(&email, &password).await.map_err(err)?;
@@ -173,10 +170,6 @@ impl AppState {
         self.auth.is_authenticated()
     }
 
-    /// Token's `expires_at` (unix seconds). `None` if not signed in.
-    /// Renderer-side adapter caches this so its sync `is_authenticated()`
-    /// can compare against `Date.now()` without an IPC round-trip on
-    /// every render — matches the WASM `is_authenticated()` semantics.
     #[napi]
     pub fn auth_get_expires_at(&self) -> Option<i64> {
         self.auth.expires_at()
@@ -242,6 +235,19 @@ impl AppState {
     pub fn auth_clear_session(&self) {
         self.auth.clear();
     }
+}
+
+#[napi]
+pub fn init_logger(log_dir: String, level: String) -> napi::Result<()> {
+    agentsmesh_logging::init(agentsmesh_logging::LogConfig::file(log_dir, level))
+        .map_err(err)?;
+    agentsmesh_logging::install_panic_hook();
+    Ok(())
+}
+
+#[napi]
+pub fn log_event(level: String, target: String, msg: String) {
+    agentsmesh_logging::log_event(&level, &target, &msg);
 }
 
 mod commands;

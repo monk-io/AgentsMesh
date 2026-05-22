@@ -1,18 +1,7 @@
-/**
- * ACP event dispatcher — routes relay messages to the acpSession store.
- *
- * Extracted from AgentPanel so that:
- * 1. Store-layer logic doesn't live in a UI component
- * 2. Other consumers (e.g. RealtimeProvider) can reuse the same dispatcher
- */
 
 import { useAcpSessionStore } from "@/stores/acpSession";
 import { MsgType } from "@/stores/relayProtocol";
 
-/**
- * Dispatch an ACP relay event to the acpSessionStore.
- * Safe to call from any context — wraps all operations in try-catch.
- */
 export function dispatchAcpRelayEvent(podKey: string, msgType: number, payload: unknown): void {
   try {
     const data = payload as Record<string, unknown>;
@@ -31,7 +20,6 @@ export function dispatchAcpRelayEvent(podKey: string, msgType: number, payload: 
 
 type AcpStore = ReturnType<typeof useAcpSessionStore.getState>;
 
-/** Route a single ACP event to the appropriate store mutation. */
 function dispatchEvent(
   store: AcpStore,
   podKey: string,
@@ -82,19 +70,29 @@ function dispatchEvent(
         store.addLog(podKey, data.level as string, data.message as string);
       }
       break;
+    case "configChanged":
+      store.updateConfiguration(podKey, {
+        permissionMode: data.permissionMode as string | undefined,
+        model: data.model as string | undefined,
+      });
+      break;
+    case "configChangeFailed":
+      // Surface as a warn log so AcpActivityStream's LogEntry renders it.
+      // No retry / rollback — the wasm session still holds the old value,
+      // so the Selector simply stays on the previous label after error.
+      store.addLog(podKey, "warn", `Config change failed (${data.field}=${data.value}): ${data.message}`);
+      break;
     default:
       console.warn("[ACP] Unknown event type:", eventType);
   }
 }
 
-/** Replay a full session snapshot into the store. */
 function dispatchSnapshot(
   store: AcpStore,
   podKey: string,
   sessionId: string,
   data: Record<string, unknown>,
 ): void {
-  // Clear first, then replay in order: state -> plan -> toolCalls -> messages -> permissions.
   store.clearSession(podKey);
 
   if (data.state) {
@@ -103,7 +101,6 @@ function dispatchSnapshot(
   if (Array.isArray(data.plan)) {
     store.updatePlan(podKey, sessionId, data.plan as Parameters<AcpStore["updatePlan"]>[2]);
   }
-  // Replay tool calls from snapshot (includes status + result in one object)
   if (Array.isArray(data.toolCalls)) {
     for (const tc of data.toolCalls as Array<{
       toolCallId: string;
@@ -131,6 +128,18 @@ function dispatchSnapshot(
       store.addContentChunk(podKey, sessionId, msg.text, msg.role);
     }
   }
+  if (Array.isArray(data.thinkings)) {
+    for (const t of data.thinkings as Array<{ text?: string }>) {
+      if (t.text) store.addThinking(podKey, sessionId, t.text);
+    }
+  }
+  if (Array.isArray(data.logs)) {
+    for (const log of data.logs as Array<{ level?: string; message?: string }>) {
+      if (log.level && log.message) {
+        store.addLog(podKey, log.level, log.message);
+      }
+    }
+  }
   if (Array.isArray(data.pendingPermissions)) {
     for (const perm of data.pendingPermissions as Array<{
       requestId: string;
@@ -140,5 +149,12 @@ function dispatchSnapshot(
     }>) {
       store.addPermissionRequest(podKey, perm);
     }
+  }
+  if (data.configuration && typeof data.configuration === "object") {
+    const cfg = data.configuration as { permissionMode?: string; model?: string };
+    store.updateConfiguration(podKey, {
+      permissionMode: cfg.permissionMode,
+      model: cfg.model,
+    });
   }
 }

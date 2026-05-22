@@ -1,8 +1,5 @@
 package testkit
 
-// supportTableDDLs returns DDLs for extensions, API keys, promo codes,
-// support tickets, invitations, SSO configs, notifications, token usage,
-// agent messages, and custom agents.
 func supportTableDDLs() []string {
 	return []string{
 		`CREATE TABLE IF NOT EXISTS installed_mcp_servers (
@@ -38,7 +35,6 @@ func supportTableDDLs() []string {
 			auth_type TEXT DEFAULT 'none', auth_credential TEXT,
 			last_synced_at DATETIME, last_commit_sha TEXT,
 			sync_status TEXT DEFAULT 'pending', sync_error TEXT,
-			skill_count INTEGER DEFAULT 0,
 			is_active INTEGER NOT NULL DEFAULT 1,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -79,7 +75,8 @@ func supportTableDDLs() []string {
 		)`,
 		`CREATE TABLE IF NOT EXISTS api_keys (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL, name TEXT NOT NULL, description TEXT,
+			organization_id INTEGER NOT NULL, name TEXT NOT NULL, slug TEXT,
+			description TEXT,
 			key_prefix TEXT NOT NULL, key_hash TEXT NOT NULL UNIQUE,
 			scopes TEXT NOT NULL DEFAULT '[]',
 			is_enabled INTEGER NOT NULL DEFAULT 1,

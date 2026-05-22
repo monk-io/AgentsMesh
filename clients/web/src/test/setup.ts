@@ -2,16 +2,10 @@ import '@testing-library/jest-dom'
 import { vi, afterEach } from 'vitest'
 import { createAcpManager } from './wasm-mock-acp'
 
-// ---------------------------------------------------------------------------
-// Hoisted state: survives vi.mock hoisting, resets between tests
-// ---------------------------------------------------------------------------
 const h = vi.hoisted(() => {
-  // Simple JSON state store
   const mkStore = () => ({ v: '' as string });
   const pod = { pods: '[]', current: '' };
   const runner = { list: '[]', available: '[]', current: '' };
-  const org = { orgs: '[]', current: '', members: '[]' };
-  const user = { profile: '' };
   const channel = {
     list: '[]', current: null as bigint | null,
     msgs: new Map<string, { json: string; hasMore: boolean }>(),
@@ -30,8 +24,6 @@ const h = vi.hoisted(() => {
   function reset() {
     pod.pods = '[]'; pod.current = '';
     runner.list = '[]'; runner.available = '[]'; runner.current = '';
-    org.orgs = '[]'; org.current = ''; org.members = '[]';
-    user.profile = '';
     channel.list = '[]'; channel.current = null;
     channel.msgs.clear(); channel.unread.clear();
     ticket.list = '[]'; ticket.labels = '[]'; ticket.boardCols = '[]'; ticket.current = '';
@@ -43,14 +35,12 @@ const h = vi.hoisted(() => {
     autopilot.iterations.clear(); autopilot.thinkings.clear(); autopilot.thinkingHistory.clear();
   }
 
-  return { pod, runner, org, user, channel, ticket, mesh, loop, gitProvider, repo, autopilot, reset };
+  return { pod, runner, channel, ticket, mesh, loop, gitProvider, repo, autopilot, reset };
 })
 
 const acpMgr = createAcpManager()
 
-// ---------------------------------------------------------------------------
 // Mock WASM Core
-// ---------------------------------------------------------------------------
 vi.mock('@/lib/wasm-core', () => {
   const fn = vi.fn
 
@@ -102,7 +92,6 @@ vi.mock('@/lib/wasm-core', () => {
     _reset: () => { authBox.user = null; authBox.current_org = null; authBox.organizations = []; },
   }
 
-  // --- Pod state / service ---
   const podState = {
     set_pods: fn((j: string) => { h.pod.pods = j }),
     pods_json: fn(() => h.pod.pods),
@@ -145,7 +134,6 @@ vi.mock('@/lib/wasm-core', () => {
       const p = list.find((x) => x.pod_key === key)
       return p ? JSON.stringify(p) : undefined
     }),
-    // Service async methods (return resolved promises by default)
     fetch_pods: fn().mockResolvedValue(JSON.stringify({ pods: [], total: 0 })),
     fetch_pod: fn().mockResolvedValue('{}'),
     fetch_sidebar_pods: fn().mockResolvedValue(JSON.stringify({ pods: [], total: 0, hasMore: false })),
@@ -166,7 +154,6 @@ vi.mock('@/lib/wasm-core', () => {
     list_pods_by_ticket_connect: fn().mockResolvedValue(new Uint8Array()),
   }
 
-  // --- Runner state ---
   const runnerState = {
     set_runners: fn((j: string) => { h.runner.list = j }),
     runners_json: fn(() => h.runner.list),
@@ -217,62 +204,6 @@ vi.mock('@/lib/wasm-core', () => {
     deleteRunnerTokenConnect: fn().mockResolvedValue(new Uint8Array()),
   }
 
-  // --- Org state ---
-  const orgState = {
-    set_organizations: fn((j: string) => { h.org.orgs = j }),
-    organizations_json: fn(() => h.org.orgs),
-    add_organization: fn((j: string) => {
-      const arr = JSON.parse(h.org.orgs); arr.push(JSON.parse(j)); h.org.orgs = JSON.stringify(arr)
-    }),
-    update_organization: fn((id: number, j: string) => {
-      const arr = JSON.parse(h.org.orgs) as { id: number }[]
-      const idx = arr.findIndex((o) => o.id === id)
-      if (idx >= 0) { arr[idx] = JSON.parse(j); h.org.orgs = JSON.stringify(arr) }
-      const cur = h.org.current ? JSON.parse(h.org.current) as { id: number } : null
-      if (cur?.id === id) h.org.current = j
-    }),
-    remove_organization: fn((id: number) => {
-      const arr = JSON.parse(h.org.orgs) as { id: number }[]
-      h.org.orgs = JSON.stringify(arr.filter((o) => o.id !== id))
-      const cur = h.org.current ? JSON.parse(h.org.current) as { id: number } : null
-      if (cur?.id === id) h.org.current = ''
-    }),
-    set_current_org: fn((j: string) => { h.org.current = j }),
-    current_org_json: fn(() => h.org.current || undefined),
-    set_members: fn((j: string) => { h.org.members = j }),
-    members_json: fn(() => h.org.members),
-    add_member: fn((j: string) => {
-      const arr = JSON.parse(h.org.members); arr.push(JSON.parse(j)); h.org.members = JSON.stringify(arr)
-    }),
-    update_member: fn((userId: number, j: string) => {
-      const arr = JSON.parse(h.org.members) as { user_id: number }[]
-      const idx = arr.findIndex((m) => m.user_id === userId)
-      if (idx >= 0) { arr[idx] = JSON.parse(j); h.org.members = JSON.stringify(arr) }
-    }),
-    remove_member: fn((id: string) => {
-      const arr = JSON.parse(h.org.members) as { user_id?: number; id?: number }[]
-      h.org.members = JSON.stringify(arr.filter((m) => String(m.user_id) !== id && String(m.id) !== id))
-    }),
-  }
-
-  // --- User state ---
-  const userState = {
-    set_profile: fn((j: string) => { h.user.profile = j }),
-    profile_json: fn(() => h.user.profile || undefined),
-    add_identity: fn((j: string) => {
-      if (!h.user.profile) return
-      const prof = JSON.parse(h.user.profile)
-      prof.identities = [...(prof.identities || []), JSON.parse(j)]
-      h.user.profile = JSON.stringify(prof)
-    }),
-    remove_identity: fn(),
-    identities_json: fn(() => {
-      if (!h.user.profile) return '[]'
-      return JSON.stringify(JSON.parse(h.user.profile).identities || [])
-    }),
-  }
-
-  // --- Channel state ---
   const cKey = (id: bigint | number) => String(id)
   const channelState = {
     set_channels: fn((j: string) => { h.channel.list = j }),
@@ -284,7 +215,6 @@ vi.mock('@/lib/wasm-core', () => {
       const ch = list.find((c) => c.id === Number(h.channel.current))
       return ch ? JSON.stringify(ch) : undefined
     }),
-    // Single channel CRUD
     get_channel_json: fn((id: bigint) => {
       const list = JSON.parse(h.channel.list) as { id: number }[]
       const ch = list.find((c) => c.id === Number(id))
@@ -317,7 +247,6 @@ vi.mock('@/lib/wasm-core', () => {
         return c.name.toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q)
       }))
     }),
-    // Atomic select
     select_channel: fn((id?: bigint) => {
       if (id === undefined) { h.channel.current = null; return undefined }
       h.channel.current = id
@@ -326,10 +255,8 @@ vi.mock('@/lib/wasm-core', () => {
       const ch = list.find((c) => c.id === Number(id))
       return ch ? JSON.stringify(ch) : undefined
     }),
-    // Current user
     set_current_user: fn(),
     set_current_user_id: fn(),
-    // Messages
     set_messages: fn((chId: bigint, json: string, hasMore: boolean) => {
       h.channel.msgs.set(cKey(chId), { json, hasMore })
     }),
@@ -383,7 +310,6 @@ vi.mock('@/lib/wasm-core', () => {
       const msgs = JSON.parse(entry.json) as { id: number }[]
       h.channel.msgs.set(k, { json: JSON.stringify(msgs.filter((m) => m.id !== Number(msgId))), hasMore: entry.hasMore })
     }),
-    // Unread counts
     set_unread_counts: fn((json: string) => {
       const counts = JSON.parse(json) as Record<string, number>
       h.channel.unread.clear()
@@ -399,19 +325,16 @@ vi.mock('@/lib/wasm-core', () => {
       for (const [k, v] of h.channel.unread.entries()) { if (v > 0) obj[k] = v }
       return JSON.stringify(obj)
     }),
-    // Mention counts (stub)
     increment_mention: fn(),
     clear_channel_mentions: fn(),
     get_mention_count: fn(() => 0),
     total_mention_count: fn(() => 0),
     set_mention_counts: fn(),
     mention_counts_json: fn(() => '{}'),
-    // Sorting
     sorted_channel_ids_json: fn(() => '[]'),
     total_unread_count: fn(() => {
       let total = 0; for (const v of h.channel.unread.values()) total += v; return total
     }),
-    // Preview
     get_last_message_json: fn(() => undefined),
     set_last_message: fn(),
     // Service async methods (API calls via WASM)
@@ -467,7 +390,6 @@ vi.mock('@/lib/wasm-core', () => {
     }),
   }
 
-  // --- Ticket state ---
   const ticketState = {
     set_tickets: fn((j: string) => { h.ticket.list = j }),
     tickets_json: fn(() => h.ticket.list),
@@ -517,7 +439,6 @@ vi.mock('@/lib/wasm-core', () => {
         return true
       }))
     }),
-    // Board columns
     board_columns_json: fn(() => h.ticket.boardCols),
     set_board_columns: fn((j: string) => {
       h.ticket.boardCols = j
@@ -530,7 +451,6 @@ vi.mock('@/lib/wasm-core', () => {
       if (col) { col.tickets.push(...JSON.parse(j)); h.ticket.boardCols = JSON.stringify(cols) }
       h.ticket.list = JSON.stringify(cols.flatMap((c) => c.tickets))
     }),
-    // Labels
     labels_json: fn(() => h.ticket.labels),
     set_labels: fn((j: string) => { h.ticket.labels = j }),
     add_label: fn((j: string) => {
@@ -540,10 +460,18 @@ vi.mock('@/lib/wasm-core', () => {
       const arr = JSON.parse(h.ticket.labels) as { id: number }[]
       h.ticket.labels = JSON.stringify(arr.filter((l) => l.id !== id))
     }),
-    // Current ticket
     current_ticket_json: fn(() => h.ticket.current || undefined),
     set_current_ticket: fn((j: string) => { h.ticket.current = j }),
-    // REST-only (MeshService owns ticket→pod lookup)
+    fetch_tickets: fn().mockResolvedValue(JSON.stringify({ tickets: [], total: 0 })),
+    fetch_ticket: fn().mockResolvedValue('{}'),
+    create_ticket: fn().mockResolvedValue('{}'),
+    update_ticket_api: fn().mockResolvedValue('{}'),
+    delete_ticket: fn().mockResolvedValue(undefined),
+    update_status: fn().mockResolvedValue(undefined),
+    fetch_board: fn().mockResolvedValue(JSON.stringify({ board: { columns: [], priority_counts: {} } })),
+    fetch_labels: fn().mockResolvedValue(JSON.stringify({ labels: [] })),
+    get_sub_tickets: fn().mockResolvedValue(JSON.stringify({ sub_tickets: [] })),
+    get_pods: fn().mockResolvedValue(JSON.stringify({ pods: [] })),
     get_ticket_pods: fn().mockResolvedValue(JSON.stringify({ pods: [] })),
     ticket_pods_json: fn(() => '[]'),
     // Connect-RPC binary wire — every adapter call resolves to an empty
@@ -567,7 +495,6 @@ vi.mock('@/lib/wasm-core', () => {
     remove_label_connect: fn().mockResolvedValue(new Uint8Array()),
   }
 
-  // --- Mesh state ---
   const meshState = {
     topology_json: fn(() => h.mesh.topo || undefined),
     clear_topology: fn(() => { h.mesh.topo = '' }),
@@ -587,7 +514,6 @@ vi.mock('@/lib/wasm-core', () => {
     createPodForTicketConnect: fn().mockResolvedValue(new Uint8Array()),
   }
 
-  // --- Loop state ---
   const loopState = {
     set_loops: fn((j: string) => { h.loop.list = j }),
     loops_json: fn(() => h.loop.list),
@@ -601,7 +527,6 @@ vi.mock('@/lib/wasm-core', () => {
     update_loop_local: fn(),
     add_run: fn(), set_runs: fn(), append_runs: fn(),
     update_run_status: fn(), runs_json: fn(() => '[]'), clear_runs: fn(),
-    // Service async methods
     fetch_loops: fn().mockResolvedValue(JSON.stringify({ loops: [], total: 0 })),
     fetch_loop: fn().mockResolvedValue('{}'),
     create_loop: fn().mockResolvedValue('{}'),
@@ -625,15 +550,6 @@ vi.mock('@/lib/wasm-core', () => {
     cancelRunConnect: fn().mockResolvedValue(new Uint8Array()),
   }
 
-  // --- Git provider state ---
-  const gitProviderState = {
-    set_providers: fn(), providers_json: fn(() => '[]'),
-    set_current_provider: fn(), current_provider_json: fn(),
-    add_provider: fn(), update_provider: fn(), remove_provider: fn(),
-    set_available_projects: fn(), available_projects_json: fn(() => '[]'),
-  }
-
-  // --- Repo state ---
   const repoState = {
     set_repositories: fn(), repositories_json: fn(() => h.repo.list),
     set_current_repo: fn(), current_repo_json: fn(() => h.repo.current || undefined),
@@ -641,7 +557,6 @@ vi.mock('@/lib/wasm-core', () => {
     set_branches: fn(), branches_json: fn(() => h.repo.branches),
   }
 
-  // --- Autopilot state ---
   const autopilotState = {
     set_controllers: fn(), controllers_json: fn(() => h.autopilot.controllers),
     set_current_controller: fn(), current_controller_json: fn(() => h.autopilot.current || undefined),
@@ -679,9 +594,6 @@ vi.mock('@/lib/wasm-core', () => {
     getMeshState: fn(() => meshState),
     getMeshService: fn(() => meshState),
     getAcpManager: fn(() => acpMgr),
-    getOrgState: fn(() => orgState),
-    getUserState: fn(() => userState),
-    getGitProviderState: fn(() => gitProviderState),
     getRepoState: fn(() => repoState),
     getAutopilotState: fn(() => autopilotState),
     getAutopilotService: fn(() => autopilotState),
@@ -861,13 +773,6 @@ vi.mock('@/lib/wasm-core', () => {
       get_default_git_credential: fn().mockResolvedValue('{}'),
       set_default_git_credential: fn().mockResolvedValue(undefined),
       clear_default_git_credential: fn().mockResolvedValue(undefined),
-      list_agent_credentials: fn().mockResolvedValue('{"credentials":[]}'),
-      list_agent_credentials_for_agent: fn().mockResolvedValue('{"credentials":[]}'),
-      create_agent_credential: fn().mockResolvedValue('{}'),
-      get_agent_credential: fn().mockResolvedValue('{}'),
-      update_agent_credential: fn().mockResolvedValue('{}'),
-      delete_agent_credential: fn().mockResolvedValue(undefined),
-      set_default_agent_credential: fn().mockResolvedValue(undefined),
       list_repo_providers: fn().mockResolvedValue('{"providers":[]}'),
       create_repo_provider: fn().mockResolvedValue('{}'),
       get_repo_provider: fn().mockResolvedValue('{}'),
@@ -876,6 +781,14 @@ vi.mock('@/lib/wasm-core', () => {
       set_default_repo_provider: fn().mockResolvedValue(undefined),
       test_repo_provider: fn().mockResolvedValue(undefined),
       list_provider_repositories: fn().mockResolvedValue('{"repositories":[]}'),
+    })),
+    getEnvBundleService: fn(() => ({
+      list: fn().mockResolvedValue('{"items":[]}'),
+      get: fn().mockResolvedValue('{}'),
+      create: fn().mockResolvedValue('{}'),
+      update: fn().mockResolvedValue('{}'),
+      delete: fn().mockResolvedValue(undefined),
+      set_primary: fn().mockResolvedValue('{}'),
     })),
     getOrgApiService: fn(() => ({
       list: fn().mockResolvedValue('{"organizations":[]}'),
@@ -995,9 +908,6 @@ vi.mock('agentsmesh-wasm', () => ({
   version: vi.fn(() => '0.1.0-test'),
 }))
 
-// ---------------------------------------------------------------------------
-// Browser mocks
-// ---------------------------------------------------------------------------
 const createLocalStorageMock = () => {
   let store: Record<string, string> = {}
   return {

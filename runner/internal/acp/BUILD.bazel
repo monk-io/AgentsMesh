@@ -4,6 +4,7 @@ go_library(
     name = "acp",
     srcs = [
         "client.go",
+        "client_callbacks.go",
         "client_internal.go",
         "client_session.go",
         "handler.go",
@@ -13,11 +14,14 @@ go_library(
         "request_tracker.go",
         "transport.go",
         "transport_acp.go",
+        "transport_acp_control.go",
+        "transport_acp_session.go",
         "types.go",
         "writer.go",
     ],
     importpath = "github.com/anthropics/agentsmesh/runner/internal/acp",
     visibility = ["//runner:__subpackages__"],
+    deps = ["//runner/internal/processmgr"],
 )
 
 alias(
@@ -54,5 +58,8 @@ go_test(
         "writer_test.go",
     ],
     embed = [":acp"],
-    deps = ["@com_github_stretchr_testify//assert"],
+    deps = [
+        "//runner/internal/processmgr",
+        "@com_github_stretchr_testify//assert",
+    ],
 )

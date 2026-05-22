@@ -5,11 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 )
 
-// fetchGitHubPrimaryEmail fetches the primary verified email from GitHub
-// /user/emails API when the public profile email is empty.
 func fetchGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/emails", nil)
 	if err != nil {
@@ -37,13 +34,11 @@ func fetchGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, e
 		return "", err
 	}
 
-	// Prefer primary + verified email
 	for _, e := range emails {
 		if e.Primary && e.Verified {
 			return e.Email, nil
 		}
 	}
-	// Fall back to any verified email
 	for _, e := range emails {
 		if e.Verified {
 			return e.Email, nil
@@ -52,7 +47,6 @@ func fetchGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, e
 	return "", nil
 }
 
-// parseGitHubUserInfo parses GitHub user info
 func parseGitHubUserInfo(body []byte) (*UserInfo, error) {
 	var data struct {
 		ID        int64  `json:"id"`
@@ -73,7 +67,6 @@ func parseGitHubUserInfo(body []byte) (*UserInfo, error) {
 	}, nil
 }
 
-// parseGoogleUserInfo parses Google user info
 func parseGoogleUserInfo(body []byte) (*UserInfo, error) {
 	var data struct {
 		ID            string `json:"id"`
@@ -88,18 +81,16 @@ func parseGoogleUserInfo(body []byte) (*UserInfo, error) {
 	if !data.VerifiedEmail {
 		return nil, fmt.Errorf("google email %s is not verified", data.Email)
 	}
-	// Generate username from email
-	username := strings.Split(data.Email, "@")[0]
+	// Google has no native username; downstream user_oauth derives one via
+	// EnsureUniqueUsername from email/name.
 	return &UserInfo{
 		ID:        data.ID,
-		Username:  username,
 		Email:     data.Email,
 		Name:      data.Name,
 		AvatarURL: data.Picture,
 	}, nil
 }
 
-// parseGitLabUserInfo parses GitLab user info
 func parseGitLabUserInfo(body []byte) (*UserInfo, error) {
 	var data struct {
 		ID        int64  `json:"id"`
@@ -120,7 +111,6 @@ func parseGitLabUserInfo(body []byte) (*UserInfo, error) {
 	}, nil
 }
 
-// parseGiteeUserInfo parses Gitee user info
 func parseGiteeUserInfo(body []byte) (*UserInfo, error) {
 	var data struct {
 		ID        int64  `json:"id"`

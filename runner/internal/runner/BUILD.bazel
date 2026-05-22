@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "agents_import.go",
         "autopilot_store.go",
+        "claude_initial_config.go",
         "handler_autopilot.go",
         "handler_events.go",
         "handler_events_osc.go",
@@ -112,6 +113,7 @@ go_test(
     name = "runner_test",
     srcs = [
         "autopilot_store_test.go",
+        "claude_initial_config_test.go",
         "copy_dir_selective_test.go",
         "log_collector_test.go",
         "managed_state_detector_test.go",
@@ -131,6 +133,7 @@ go_test(
         "message_handler_relay_connections_test.go",
         "message_handler_relay_deadlock_test.go",
         "message_handler_relay_test.go",
+        "message_handler_send_prompt_test.go",
         "message_handler_terminal_test.go",
         "message_handler_upgrade_apply_test.go",
         "message_handler_upgrade_test.go",
@@ -190,3 +193,12 @@ go_test(
         "@io_opentelemetry_go_otel_sdk//trace",
     ],
 )
+
+# NOTE: //runner/internal/runner has 9 *_integration_test.go files behind the
+# `integration` build tag. They are NOT wired as a Bazel target because they
+# depend on backend-side AgentFile evaluation (Pod creation expects backend
+# to populate launch_command) — a fixture this package alone cannot provide.
+# acp_pod_e2e_mock_test.go was updated to initialize processmgr in its
+# TestMain so that if the suite is ever wired up, it will not crash with
+# ErrManagerNotInitialized. Wiring the target plus a backend fixture is a
+# separate follow-up; tracked outside this PR.

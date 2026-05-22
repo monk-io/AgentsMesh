@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { ShareDialog } from "@/components/shared/ShareDialog";
@@ -17,6 +18,7 @@ interface RepositoryHeaderProps {
 
 export function RepositoryHeader({ repository, onEdit, onDelete }: RepositoryHeaderProps) {
   const t = useTranslations();
+  const { org } = useParams<{ org: string }>();
   const [shareOpen, setShareOpen] = useState(false);
 
   return (
@@ -61,7 +63,7 @@ export function RepositoryHeader({ repository, onEdit, onDelete }: RepositoryHea
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link href="../infra?tab=repositories" className="hover:text-foreground">
+        <Link href={`/${org}/infra?tab=repositories`} className="hover:text-foreground">
           {t("repositories.title")}
         </Link>
         <span>/</span>

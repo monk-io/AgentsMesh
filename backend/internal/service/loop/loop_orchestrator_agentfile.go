@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	loopDomain "github.com/anthropics/agentsmesh/backend/internal/domain/loop"
 	agentpodSvc "github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
@@ -21,12 +22,25 @@ func (o *LoopOrchestrator) buildLoopAgentfileLayer(ctx context.Context, loop *lo
 		lines = append(lines, fmt.Sprintf("PROMPT %s", serialize.QuoteString(resolvedPrompt)))
 	}
 
+	// USE_ENV_BUNDLE bindings — one line per name in the Loop's ordered
+	// list. Backend's ConfigBuilder loads each matching EnvBundle from the
+	// user's scope and merges KV into the Pod env in declaration order
+	// (later bundles override earlier ones on conflicting keys, mirroring
+	// Pod creation). Unknown names are warn-only at eval time, so a
+	// renamed/deleted bundle won't fail Loop creation.
+	for _, bundleName := range loop.UsedEnvBundles {
+		if bundleName == "" {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf(`USE_ENV_BUNDLE %s`, serialize.QuoteString(bundleName)))
+	}
+
 	// Permission mode
 	permissionMode := loop.PermissionMode
 	if permissionMode == "" {
 		permissionMode = "bypassPermissions"
 	}
-	lines = append(lines, fmt.Sprintf(`CONFIG permission_mode = "%s"`, permissionMode))
+	lines = append(lines, fmt.Sprintf(`CONFIG %s = "%s"`, agentDomain.ConfigKeyPermissionMode, permissionMode))
 
 	// Config overrides
 	var configOverrides map[string]interface{}
@@ -34,7 +48,7 @@ func (o *LoopOrchestrator) buildLoopAgentfileLayer(ctx context.Context, loop *lo
 		_ = json.Unmarshal(loop.ConfigOverrides, &configOverrides)
 	}
 	for k, v := range configOverrides {
-		if k == "permission_mode" {
+		if k == agentDomain.ConfigKeyPermissionMode {
 			continue // already handled above
 		}
 		lines = append(lines, fmt.Sprintf("CONFIG %s = %s", k, serialize.FormatValue(v)))

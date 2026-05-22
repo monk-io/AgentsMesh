@@ -6,17 +6,16 @@ import (
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/agentfile/eval"
-	agentDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
 // buildEvalContext creates the AgentFile eval context with placeholder sandbox paths.
 // CONFIG values are populated by CONFIG declarations during eval (resolve step already injected defaults).
+// EnvBundles are loaded by buildEnvBundleContext and consumed by USE_ENV_BUNDLE declarations.
 func buildEvalContext(
 	req *ConfigBuildRequest,
-	creds agentDomain.EncryptedCredentials,
-	isRunnerHost bool,
 	builtinMCP, installedMCP map[string]interface{},
+	envBundles map[string]map[string]string,
 ) *eval.Context {
 	vars := map[string]interface{}{
 		"config": make(map[string]interface{}), // filled by CONFIG declarations during eval
@@ -36,18 +35,17 @@ func buildEvalContext(
 	}
 
 	ctx := eval.NewContext(vars)
-	ctx.Credentials = credentialsToMap(creds)
-	ctx.IsRunnerHost = isRunnerHost
+	ctx.EnvBundles = envBundles
 	return ctx
 }
 
 // buildResultToProto converts eval.BuildResult to a CreatePodCommand proto.
 // Paths contain placeholders ({{sandbox_root}}, {{work_dir}}) for Runner to resolve.
+// EnvVars carries all environment values destined for the pod process — including
+// any merged in by USE_ENV_BUNDLE eval. There's no separate Credentials channel.
 func buildResultToProto(
 	req *ConfigBuildRequest,
 	br *eval.BuildResult,
-	creds agentDomain.EncryptedCredentials,
-	isRunnerHost bool,
 ) *runnerv1.CreatePodCommand {
 	// Convert dirs + files to proto FileToCreate list
 	var files []*runnerv1.FileToCreate
@@ -70,9 +68,6 @@ func buildResultToProto(
 		prompt = req.Prompt
 	}
 
-	// Prompt injection into LaunchArgs is handled by Runner (based on PromptPosition).
-	// Backend only passes Prompt and PromptPosition as separate proto fields.
-
 	// Determine interaction mode
 	mode := br.Mode
 	if mode == "" {
@@ -91,8 +86,6 @@ func buildResultToProto(
 		InteractionMode: mode,
 		Prompt:          prompt,
 		PromptPosition:  br.PromptPosition,
-		Credentials:     credentialsToMap(creds),
-		IsRunnerHost:    isRunnerHost,
 	}
 }
 
@@ -149,15 +142,4 @@ func (b *ConfigBuilder) buildMCPContext(ctx context.Context, req *ConfigBuildReq
 	}
 
 	return builtinMCP, installedMCP
-}
-
-func credentialsToMap(creds agentDomain.EncryptedCredentials) map[string]string {
-	if creds == nil {
-		return nil
-	}
-	result := make(map[string]string, len(creds))
-	for k, v := range creds {
-		result[k] = v
-	}
-	return result
 }

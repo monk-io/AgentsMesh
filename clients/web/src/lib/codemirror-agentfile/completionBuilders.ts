@@ -1,14 +1,6 @@
-/**
- * Completion builders for AgentFile autocomplete.
- * Converts domain data (agents, repos, credentials, config) into CodeMirror completions.
- */
 import type { Completion } from "@codemirror/autocomplete";
 import type { ConfigField, ConfigFieldOption } from "@/lib/api";
 import type { AgentfileCompletionContext } from "./autocomplete";
-
-// ---------------------------------------------------------------------------
-// Static value completions
-// ---------------------------------------------------------------------------
 
 export const MODE_VALUES: Completion[] = [
   { label: "pty", type: "constant", detail: "Terminal mode" },
@@ -26,10 +18,6 @@ export const PROMPT_POSITION_VALUES: Completion[] = [
   { label: "append", type: "constant", detail: "Append to launch args" },
   { label: "none", type: "constant", detail: "Do not inject prompt" },
 ];
-
-// ---------------------------------------------------------------------------
-// Dynamic builders
-// ---------------------------------------------------------------------------
 
 export function buildFieldCompletions(fields: ConfigField[]): Completion[] {
   return fields.map((f) => ({
@@ -98,13 +86,13 @@ export function buildBranchCompletions(
   }));
 }
 
-export function buildCredentialCompletions(
-  profiles: AgentfileCompletionContext["credentialProfiles"]
+export function buildEnvBundleCompletions(
+  bundles: AgentfileCompletionContext["envBundles"]
 ): Completion[] {
-  if (!profiles?.length) return [];
-  return profiles.map((p) => ({
-    label: `"${p.name}"`,
+  if (!bundles?.length) return [];
+  return bundles.map((b) => ({
+    label: `"${b.name}"`,
     type: "constant",
-    detail: p.description || "credential profile",
+    detail: b.description || "env bundle",
   }));
 }

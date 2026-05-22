@@ -11,20 +11,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CreatePodRequest represents pod creation request.
-// Pod configuration (MODE, CONFIG, REPO, BRANCH, CREDENTIAL, PROMPT) is conveyed via AgentfileLayer (SSOT).
+// CreatePodRequest represents pod creation request. After the EnvBundle
+// refactor every aspect of pod configuration — including which credential
+// bundle to mount — is expressed inside `agentfile_layer`. The legacy
+// `credential_profile_id` field has been removed; clients should emit
+// `USE_ENV_BUNDLE "name"` in the layer instead.
 type CreatePodRequest struct {
-	AgentSlug    string  `json:"agent_slug"`    // Required: determines base AgentFile
-	RunnerID     int64   `json:"runner_id"`     // Optional: auto-select if omitted
-	TicketSlug   *string `json:"ticket_slug"`   // Optional: associate with ticket
-	Alias        *string `json:"alias"`         // Optional: display name (max 100 chars)
+	AgentSlug  string  `json:"agent_slug"`  // Required: determines base AgentFile
+	RunnerID   int64   `json:"runner_id"`   // Optional: auto-select if omitted
+	TicketSlug *string `json:"ticket_slug"` // Optional: associate with ticket
+	Alias      *string `json:"alias"`       // Optional: display name (max 100 chars)
 
-	// AgentFile Layer — SSOT for all pod configuration (MODE, CONFIG, REPO, BRANCH, CREDENTIAL, PROMPT)
+	// AgentFile Layer — SSOT for all pod configuration (MODE, CONFIG, REPO,
+	// BRANCH, USE_ENV_BUNDLE, PROMPT).
 	AgentfileLayer *string `json:"agentfile_layer"`
 
 	// Platform-level ID references (cannot be expressed as AgentFile declarations)
-	RepositoryID        *int64 `json:"repository_id,omitempty"`
-	CredentialProfileID *int64 `json:"credential_profile_id,omitempty"`
+	RepositoryID *int64 `json:"repository_id,omitempty"`
 
 	// Terminal size (from browser xterm.js)
 	Cols int32 `json:"cols"`
@@ -65,20 +68,19 @@ func (h *PodHandler) CreatePod(c *gin.Context) {
 
 	// Build orchestration request (protocol adaptation: HTTP → service layer)
 	orchReq := &agentpod.OrchestrateCreatePodRequest{
-		OrganizationID:      tenant.OrganizationID,
-		UserID:              tenant.UserID,
-		RunnerID:            req.RunnerID,
-		AgentSlug:           req.AgentSlug,
-		RepositoryID:        req.RepositoryID,
-		TicketSlug:          req.TicketSlug,
-		Alias:               req.Alias,
-		CredentialProfileID: req.CredentialProfileID,
-		AgentfileLayer:      req.AgentfileLayer,
-		Cols:                req.Cols,
-		Rows:                req.Rows,
-		SourcePodKey:        req.SourcePodKey,
-		ResumeAgentSession:  req.ResumeAgentSession,
-		Perpetual:           req.Perpetual != nil && *req.Perpetual,
+		OrganizationID:     tenant.OrganizationID,
+		UserID:             tenant.UserID,
+		RunnerID:           req.RunnerID,
+		AgentSlug:          req.AgentSlug,
+		RepositoryID:       req.RepositoryID,
+		TicketSlug:         req.TicketSlug,
+		Alias:              req.Alias,
+		AgentfileLayer:     req.AgentfileLayer,
+		Cols:               req.Cols,
+		Rows:               req.Rows,
+		SourcePodKey:       req.SourcePodKey,
+		ResumeAgentSession: req.ResumeAgentSession,
+		Perpetual:          req.Perpetual != nil && *req.Perpetual,
 	}
 
 	result, err := h.orchestrator.CreatePod(c.Request.Context(), orchReq)

@@ -124,7 +124,7 @@ export function useRunnerDetail(t: (key: string) => string) {
     if (!confirmed) return;
     try {
       await runnerApi.delete(runner.id);
-      router.push("../runners");
+      router.push(`/${params.org}/infra?tab=runners`);
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }

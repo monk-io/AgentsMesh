@@ -58,7 +58,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
       // encode/decode and maps to the snake_case web shapes.
       const res = await getRunnerConnect(orgSlug, runnerId);
       setRunner(res.runner);
-      setRelayConnections(res.relay_connections);
+      setRelayConnections(res.relay_connections || []);
       setLatestRunnerVersion(res.latest_runner_version);
     } catch (error) {
       console.error("Failed to load runner:", error);
@@ -140,7 +140,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
     if (!confirmed) return;
     try {
       await deleteRunnerConnect(orgSlug, runner.id);
-      router.push("../runners");
+      router.push(`/${params.org}/infra?tab=runners`);
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }

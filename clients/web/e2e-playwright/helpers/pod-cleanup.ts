@@ -51,7 +51,14 @@ export async function terminateAllPods(): Promise<number> {
       if (!pod.podKey) continue;
       await fetch(`${baseUrl}/proto.pod.v1.PodService/TerminatePod`, {
         method: "POST",
-        headers: authedHeaders,
+        headers: {
+          ...authedHeaders,
+          // Tag this call so the backend TerminatePod handler's
+          // caller-info slog line reveals it's the test helper.
+          // Anything else hitting that endpoint within ~500 ms of
+          // a create_pod is a flaky-race smoking gun.
+          "X-E2E-Caller": "terminateAllPods",
+        },
         body: JSON.stringify({ orgSlug: TEST_ORG_SLUG, podKey: pod.podKey }),
       }).catch(() => {});
       count++;

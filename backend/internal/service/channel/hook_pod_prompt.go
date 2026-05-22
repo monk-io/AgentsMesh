@@ -9,22 +9,16 @@ import (
 	channelDomain "github.com/anthropics/agentsmesh/backend/internal/domain/channel"
 )
 
-// podMentionTextLen matches the frontend's mentionText = podKey.slice(0, 8)
 const podMentionTextLen = 8
 
-// PodPromptRouter sends prompts to a pod (mode-agnostic: PTY or ACP).
 type PodPromptRouter interface {
 	RoutePrompt(podKey string, prompt string) error
 }
 
-// SystemMessageWriter creates system messages directly (bypassing hooks to avoid recursion)
 type SystemMessageWriter interface {
 	CreateMessage(ctx context.Context, msg *channelDomain.Message) error
 }
 
-// NewPodPromptHook creates a hook that sends @mentioned pod content to their PTYs.
-// When a pod is unreachable, it writes a system message to the channel so the user
-// gets visible feedback instead of silent failure.
 func NewPodPromptHook(router PodPromptRouter, msgWriter SystemMessageWriter) PostSendHook {
 	return func(ctx context.Context, mc *MessageContext) error {
 		if router == nil || mc.Mentions == nil || len(mc.Mentions.PodKeys) == 0 {
@@ -34,18 +28,16 @@ func NewPodPromptHook(router PodPromptRouter, msgWriter SystemMessageWriter) Pos
 		prompt := buildPodPrompt(mc.Message.Body, mc.Channel.Name, mc.Channel.ID, mc.Mentions.PodKeys)
 
 		for _, podKey := range mc.Mentions.PodKeys {
-			// Skip if the message was sent by this pod (don't echo back)
 			if mc.Message.SenderPod != nil && *mc.Message.SenderPod == podKey {
 				continue
 			}
 
-			if err := router.RoutePrompt(podKey, prompt+"\r"); err != nil {
+			if err := router.RoutePrompt(podKey, prompt); err != nil {
 				slog.WarnContext(ctx, "pod unreachable for prompt",
 					"pod_key", podKey,
 					"channel", mc.Channel.Name,
 					"error", err,
 				)
-				// Write a system message so the user knows the pod didn't receive it
 				writeOfflineNotice(ctx, msgWriter, mc.Message.ChannelID, podKey)
 				continue
 			}
@@ -55,8 +47,6 @@ func NewPodPromptHook(router PodPromptRouter, msgWriter SystemMessageWriter) Pos
 	}
 }
 
-// writeOfflineNotice creates a system message indicating that a pod is offline.
-// Uses the repo directly to bypass the PostSendHook pipeline (avoids recursion).
 func writeOfflineNotice(ctx context.Context, w SystemMessageWriter, channelID int64, podKey string) {
 	if w == nil {
 		return
@@ -80,18 +70,19 @@ func stripPodMentions(content string, podKeys []string) string {
 		if len(mention) > podMentionTextLen {
 			mention = mention[:podMentionTextLen]
 		}
-		// Strip "@mention " (with trailing space) first, then bare "@mention"
 		result = strings.ReplaceAll(result, "@"+mention+" ", "")
 		result = strings.ReplaceAll(result, "@"+mention, "")
 	}
 	return strings.TrimSpace(result)
 }
 
-// buildPodPrompt builds a context-aware prompt matching the frontend's buildChannelPrompt.
-// Strips @pod mentions from content and wraps with channel context + reply instruction.
-// Includes channel_id so agents without built-in skills (e.g. Codex) can use
-// the send_channel_message MCP tool to reply directly.
 func buildPodPrompt(content, channelName string, channelID int64, podKeys []string) string {
 	rawPrompt := stripPodMentions(content, podKeys)
-	return fmt.Sprintf("Message from channel(#%s, channel_id=%d): %s\n\nIf you finish it, please reply to this channel using send_channel_message(channel_id=%d).", channelName, channelID, rawPrompt, channelID)
+	// PTY submits via runner.OnSendPrompt's trailing \r write; any embedded
+	// \n/\r in the body either pre-submits a partial prompt or sinks the
+	// final \r into the TUI's paste buffer. Flatten to a single line.
+	rawPrompt = ptyPromptFlattener.Replace(rawPrompt)
+	return fmt.Sprintf("Message from channel(#%s, channel_id=%d): %s. If you finish it, please reply to this channel using send_channel_message(channel_id=%d).", channelName, channelID, rawPrompt, channelID)
 }
+
+var ptyPromptFlattener = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ")

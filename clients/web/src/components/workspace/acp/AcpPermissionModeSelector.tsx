@@ -1,64 +1,57 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { Shield, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { relayPool } from "@/stores/relayConnection";
+import { useAcpSessionField } from "@/stores/acpSession";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const MODES = [
-  { value: "bypassPermissions", label: "Bypass", desc: "Auto-approve all" },
-  { value: "acceptEdits", label: "Accept Edits", desc: "Auto-approve file edits" },
-  { value: "default", label: "Default", desc: "Approve each tool" },
-  { value: "dontAsk", label: "Don't Ask", desc: "Deny unless allowlisted" },
-] as const;
+// Wire values are the single source of truth — used as i18n keys directly,
+// so adding a new mode only requires a single line in messages/{en,zh}/app.json.
+const MODE_VALUES = ["bypassPermissions", "acceptEdits", "default", "dontAsk"] as const;
+type ModeValue = (typeof MODE_VALUES)[number];
 
-interface AcpPermissionModeSelectorProps {
-  podKey: string;
-  currentMode?: string;
-}
-
-export function AcpPermissionModeSelector({ podKey, currentMode = "bypassPermissions" }: AcpPermissionModeSelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState(currentMode);
+export function AcpPermissionModeSelector({ podKey }: { podKey: string }) {
+  const t = useTranslations("acp.modeSelector");
+  const mode = useAcpSessionField(podKey, (s) => s.configuration.permissionMode);
 
   const handleSelect = useCallback((value: string) => {
     if (!relayPool.isConnected(podKey)) return;
     relayPool.sendAcpCommand(podKey, { type: "set_permission_mode", mode: value });
-    setMode(value);
-    setOpen(false);
   }, [podKey]);
 
-  const current = MODES.find((m) => m.value === mode) || MODES[0];
+  const currentKey = (MODE_VALUES as readonly string[]).includes(mode) ? mode : "unknown";
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-muted transition-colors"
-        title={current.desc}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-muted transition-colors outline-none focus:bg-muted"
+        title={t(`${currentKey}.desc`)}
       >
         <Shield className="h-3 w-3 text-muted-foreground" />
-        <span className="text-muted-foreground">{current.label}</span>
+        <span className="text-muted-foreground">{t(`${currentKey}.label`)}</span>
         <ChevronDown className="h-3 w-3 text-muted-foreground" />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-full mb-1 z-50 w-48 rounded-md border bg-popover shadow-md py-1">
-            {MODES.map((m) => (
-              <button
-                key={m.value}
-                onClick={() => handleSelect(m.value)}
-                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors ${
-                  mode === m.value ? "bg-muted font-medium" : ""
-                }`}
-              >
-                <div>{m.label}</div>
-                <div className="text-muted-foreground text-[10px]">{m.desc}</div>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-48">
+        {MODE_VALUES.map((value: ModeValue) => (
+          <DropdownMenuItem
+            key={value}
+            onSelect={() => handleSelect(value)}
+            className={mode === value ? "bg-muted font-medium" : ""}
+          >
+            <div className="flex flex-col gap-0.5">
+              <div className="text-xs">{t(`${value}.label`)}</div>
+              <div className="text-muted-foreground text-[10px]">{t(`${value}.desc`)}</div>
+            </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

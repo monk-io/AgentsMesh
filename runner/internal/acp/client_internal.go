@@ -2,12 +2,14 @@ package acp
 
 import (
 	"bufio"
+	"context"
 	"io"
-	"os/exec"
 	"time"
 )
 
-// Stop gracefully shuts down the client and subprocess.
+// Stop gracefully shuts down the client and subprocess. processmgr.Handle.Stop
+// implements the SIGTERM → wait → SIGKILL escalation that this function used
+// to inline; the reapLoop inside processmgr is the single Wait point.
 func (c *ACPClient) Stop() {
 	c.stopOnce.Do(func() {
 		c.cancel()
@@ -16,15 +18,11 @@ func (c *ACPClient) Stop() {
 			c.transport.Close()
 		}
 
-		if c.cmd != nil && c.cmd.Process != nil {
-			select {
-			case <-c.waitExitDone:
-			case <-time.After(5 * time.Second):
-				_ = c.cmd.Process.Kill()
-				select {
-				case <-c.waitExitDone:
-				case <-time.After(2 * time.Second):
-				}
+		if c.proc != nil {
+			stopCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+			defer cancel()
+			if err := c.proc.Stop(stopCtx); err != nil {
+				c.logger.Warn("ACP subprocess stop reported error", "err", err)
 			}
 		}
 
@@ -38,27 +36,25 @@ func (c *ACPClient) Done() <-chan struct{} {
 	return c.done
 }
 
-// waitExit waits for the subprocess to exit and fires the OnExit callback.
-// This is the sole owner of cmd.Wait() — Stop() must not call cmd.Wait().
-func (c *ACPClient) waitExit() {
-	defer close(c.waitExitDone)
-
-	if c.cmd == nil || c.cmd.Process == nil {
+// watchExit fires the OnExit callback after the subprocess has been reaped by
+// processmgr. cmd.Wait() is no longer called here — processmgr owns it — but
+// the OnExit semantic (only on non-graceful exits) is preserved by checking
+// the client's context.
+func (c *ACPClient) watchExit() {
+	if c.proc == nil {
 		return
 	}
-	err := c.cmd.Wait()
+	<-c.proc.Done()
+
 	select {
 	case <-c.ctx.Done():
-		return // Normal shutdown via Stop(), don't fire OnExit
+		return
 	default:
 	}
+
 	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else {
-			exitCode = -1
-		}
+	if info, ok := c.proc.ExitInfo(); ok {
+		exitCode = info.Code
 	}
 	c.logger.Info("ACP subprocess exited", "exit_code", exitCode)
 	if c.cfg.Callbacks.OnExit != nil {
@@ -143,4 +139,61 @@ func (c *ACPClient) setPlan(steps []PlanStep) {
 	c.planMu.Lock()
 	defer c.planMu.Unlock()
 	c.plan = steps
+}
+
+// addThinking appends a thinking chunk to the snapshot history, trimming
+// oldest entries when the cap is exceeded. The frontend tracks a finer-grained
+// "complete" flag via incremental events; the snapshot only carries raw text.
+func (c *ACPClient) addThinking(update ThinkingUpdate) {
+	c.thinkingsMu.Lock()
+	defer c.thinkingsMu.Unlock()
+	c.thinkings = append(c.thinkings, update)
+	if len(c.thinkings) > c.maxThinkings {
+		c.thinkings = c.thinkings[len(c.thinkings)-c.maxThinkings:]
+	}
+}
+
+// addLog appends a log entry to the snapshot history (warn/error only — info
+// is discarded to avoid log-flood polluting late subscribers).
+func (c *ACPClient) addLog(entry LogEntry) {
+	if entry.Level != "warn" && entry.Level != "error" {
+		return
+	}
+	c.logsMu.Lock()
+	defer c.logsMu.Unlock()
+	c.logs = append(c.logs, entry)
+	if len(c.logs) > c.maxLogs {
+		c.logs = c.logs[len(c.logs)-c.maxLogs:]
+	}
+}
+
+// applyConfiguration merges a ConfigUpdate into the internal Configuration,
+// returning the merged result for broadcast. Empty fields in the update are
+// treated as "no change"; non-empty fields replace the existing value.
+func (c *ACPClient) applyConfiguration(update ConfigUpdate) Configuration {
+	c.configMu.Lock()
+	defer c.configMu.Unlock()
+	if update.PermissionMode != "" {
+		c.configuration.PermissionMode = update.PermissionMode
+	}
+	if update.Model != "" {
+		c.configuration.Model = update.Model
+	}
+	return c.configuration
+}
+
+// Configuration returns a snapshot of the current configuration.
+func (c *ACPClient) Configuration() Configuration {
+	c.configMu.RLock()
+	defer c.configMu.RUnlock()
+	return c.configuration
+}
+
+// SeedConfiguration sets the initial configuration captured at pod creation,
+// before any control_request flows. Callers must invoke OnConfigChange
+// themselves to broadcast the seeded values; this method only writes state.
+func (c *ACPClient) SeedConfiguration(cfg Configuration) {
+	c.configMu.Lock()
+	defer c.configMu.Unlock()
+	c.configuration = cfg
 }

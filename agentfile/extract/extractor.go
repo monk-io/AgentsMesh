@@ -39,8 +39,11 @@ func Extract(prog *parser.Program) *agentfile.AgentSpec {
 			spec.Mode = d.Mode
 		case *parser.ModeArgsDecl:
 			// Mode args are build-time only; not extracted to AgentSpec
-		case *parser.CredentialDecl:
-			spec.CredentialProfile = d.ProfileName
+		case *parser.UseEnvBundleDecl:
+			// USE_ENV_BUNDLE has no AgentSpec projection — the layer source on
+			// the Pod row is the SSOT for bundle references; eval merges values
+			// directly into EnvVars.
+			_ = d
 		case *parser.PromptDecl:
 			spec.Prompt = d.Content
 		}

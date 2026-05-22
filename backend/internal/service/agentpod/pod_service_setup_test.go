@@ -1,10 +1,12 @@
 package agentpod
 
 import (
+	"context"
 	"testing"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/infra"
+	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 	"github.com/anthropics/agentsmesh/backend/internal/testkit"
 	"github.com/anthropics/agentsmesh/backend/pkg/crypto"
 	"gorm.io/gorm"
@@ -62,6 +64,15 @@ func newTestAIProviderService(db *gorm.DB, enc *crypto.Encryptor) *AIProviderSer
 // newTestAutopilotService wraps *gorm.DB into AutopilotRepository for testing.
 func newTestAutopilotService(db *gorm.DB) *AutopilotControllerService {
 	return NewAutopilotControllerService(infra.NewAutopilotRepository(db))
+}
+
+// noopBundleLoader satisfies agent.EnvBundleLoader with zero bundles. Used by
+// tests where bundle wiring isn't the focus — keeps ConfigBuilder construction
+// satisfied without standing up a real EnvBundle service.
+type noopBundleLoader struct{}
+
+func (noopBundleLoader) GetEffectiveForUser(_ context.Context, _, _ int64, _ string) ([]*envbundleservice.EffectiveBundle, error) {
+	return nil, nil
 }
 
 func TestNewPodService(t *testing.T) {

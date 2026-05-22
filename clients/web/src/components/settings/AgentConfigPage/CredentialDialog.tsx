@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,60 +14,73 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CredentialFormFields } from "../CredentialFormFields";
+import { hasInvalidCustomEnvKey } from "../CustomEnvSection";
+import {
+  getCredentialFormSpec,
+  getEnvKeysFromSpec,
+} from "../AgentCredentialsSettings/credentialForms";
+import {
+  initFormStateFromProfile,
+  buildCredentialsPayload,
+  type CredentialFormState,
+} from "../AgentCredentialsSettings/credentialForms/formState";
 import type { CredentialDialogProps, CredentialFormData } from "./types";
 
-/**
- * CredentialDialog - Dialog for adding or editing credential profiles.
- * Renders dynamic form fields from AgentFile ENV SECRET/TEXT declarations.
- */
 export function CredentialDialog({
   open,
   onOpenChange,
-  credentialFields,
+  agentSlug,
   editingProfile,
   onSubmit,
   t,
 }: CredentialDialogProps) {
+  const spec = useMemo(() => getCredentialFormSpec(agentSlug), [agentSlug]);
+  const declaredKeys = useMemo(() => getEnvKeysFromSpec(spec), [spec]);
+
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [formState, setFormState] = useState<CredentialFormState>(() =>
+    initFormStateFromProfile(spec, null)
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    if (editingProfile) {
-      setFormName(editingProfile.name);
-      setFormDescription(editingProfile.description || "");
-      const values: Record<string, string> = {};
-      for (const field of credentialFields) {
-        if (field.type === "text" && editingProfile.configured_values?.[field.name]) {
-          values[field.name] = editingProfile.configured_values[field.name];
-        }
-      }
-      setFieldValues(values);
-    } else {
-      setFormName("");
-      setFormDescription("");
-      setFieldValues({});
-    }
+    setFormName(editingProfile?.name ?? "");
+    setFormDescription(editingProfile?.description ?? "");
+    setFormState(initFormStateFromProfile(spec, editingProfile));
     setError(null);
-  }, [open, editingProfile, credentialFields]);
+  }, [open, editingProfile, spec]);
 
-  const handleFieldChange = useCallback((fieldName: string, value: string) => {
-    setFieldValues((prev) => ({ ...prev, [fieldName]: value }));
+  const onValueChange = useCallback((envKey: string, value: string) => {
+    setFormState((prev) => ({ ...prev, values: { ...prev.values, [envKey]: value } }));
   }, []);
 
+  const onOneOfChange = useCallback((group: string, envKey: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      selectedOneOf: { ...prev.selectedOneOf, [group]: envKey },
+    }));
+  }, []);
+
+  const onCustomEnvChange = useCallback((entries: CredentialFormState["customEnv"]) => {
+    setFormState((prev) => ({ ...prev, customEnv: entries }));
+  }, []);
+
+  const customEnvInvalid = hasInvalidCustomEnvKey(formState.customEnv, declaredKeys);
+
   const handleSubmit = async () => {
-    if (!formName.trim()) return;
+    if (!formName.trim() || customEnvInvalid) return;
     try {
       setSubmitting(true);
       setError(null);
-      const credentials: Record<string, string> = {};
-      for (const [key, value] of Object.entries(fieldValues)) {
-        if (value) credentials[key] = value;
-      }
-      const formData: CredentialFormData = { name: formName, description: formDescription, credentials };
+      const credentials = buildCredentialsPayload(spec, formState);
+      const formData: CredentialFormData = {
+        name: formName,
+        description: formDescription,
+        credentials,
+      };
       await onSubmit(formData, editingProfile);
       onOpenChange(false);
     } catch (err) {
@@ -83,9 +96,13 @@ export function CredentialDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {editingProfile ? t("settings.agentCredentials.editProfile") : t("settings.agentCredentials.addProfile")}
+            {editingProfile
+              ? t("settings.agentCredentials.editProfile")
+              : t("settings.agentCredentials.addProfile")}
           </DialogTitle>
-          <DialogDescription>{t("settings.agentCredentials.customProfileDescription")}</DialogDescription>
+          <DialogDescription>
+            {t("settings.agentCredentials.customProfileDescription")}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 px-6 py-4">
@@ -93,27 +110,51 @@ export function CredentialDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="cred-name">{t("settings.agentCredentials.name")}</Label>
-            <Input id="cred-name" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t("settings.agentCredentials.namePlaceholder")} />
+            <Input
+              id="cred-name"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder={t("settings.agentCredentials.namePlaceholder")}
+            />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="cred-desc">{t("settings.agentCredentials.descriptionLabel")}</Label>
-            <Textarea id="cred-desc" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder={t("settings.agentCredentials.descriptionPlaceholder")} rows={2} />
+            <Textarea
+              id="cred-desc"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder={t("settings.agentCredentials.descriptionPlaceholder")}
+              rows={2}
+            />
           </div>
 
           <CredentialFormFields
-            credentialFields={credentialFields}
-            fieldValues={fieldValues}
-            onFieldChange={handleFieldChange}
+            spec={spec}
+            values={formState.values}
+            onValueChange={onValueChange}
+            selectedOneOf={formState.selectedOneOf}
+            onOneOfChange={onOneOfChange}
+            customEnv={formState.customEnv}
+            onCustomEnvChange={onCustomEnvChange}
             isEditing={!!editingProfile}
             t={t}
           />
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
-          <Button onClick={handleSubmit} disabled={submitting || !formName.trim()}>
-            {submitting ? t("common.saving") : editingProfile ? t("common.save") : t("common.create")}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || !formName.trim() || customEnvInvalid}
+          >
+            {submitting
+              ? t("common.saving")
+              : editingProfile
+                ? t("common.save")
+                : t("common.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

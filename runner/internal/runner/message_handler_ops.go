@@ -3,11 +3,19 @@ package runner
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"github.com/anthropics/agentsmesh/runner/internal/client"
 	"github.com/anthropics/agentsmesh/runner/internal/logger"
 )
+
+// ptySubmitGap separates the prompt-body Write from the Enter keystroke so
+// the TUI's read(2) loop ticks between them. Without this gap both writes
+// land in one read and the TUI treats the whole chunk (incl. trailing \r)
+// as a paste — the Enter never fires. MCP's two-RPC path gets this gap
+// implicitly via network round-trip; the in-process gRPC path does not.
+const ptySubmitGap = 80 * time.Millisecond
 
 // OnListRelayConnections returns current relay connections.
 func (h *RunnerMessageHandler) OnListRelayConnections() []client.RelayConnectionInfo {
@@ -120,7 +128,11 @@ func (h *RunnerMessageHandler) OnObservePod(req client.ObservePodRequest) error 
 }
 
 // OnSendPrompt handles send_prompt command from server (gRPC control plane).
-// Routes through PodIO.SendInput — PTY writes to stdin, ACP sends prompt.
+// Mode-transparent submission: ACP submits via its structured SendPrompt RPC;
+// PTY writes the body then issues a separate Enter keystroke via SendKeys
+// (the "press Enter" semantic — not SendInput which is "raw bytes"). A small
+// gap between the two writes is required so the TUI doesn't fold them into
+// a single paste.
 // For ACP mode, also echoes the user message via Relay so it appears in the
 // chat UI (consistent with the Relay command path in handleAcpRelayCommand).
 func (h *RunnerMessageHandler) OnSendPrompt(cmd *runnerv1.SendPromptCommand) error {
@@ -140,5 +152,12 @@ func (h *RunnerMessageHandler) OnSendPrompt(cmd *runnerv1.SendPromptCommand) err
 			"text": cmd.Prompt, "role": "user",
 		})
 	}
-	return pod.IO.SendInput(cmd.Prompt)
+	if err := pod.IO.SendInput(cmd.Prompt); err != nil {
+		return err
+	}
+	if ta, ok := pod.IO.(TerminalAccess); ok {
+		time.Sleep(ptySubmitGap)
+		return ta.SendKeys([]string{"enter"})
+	}
+	return nil
 }

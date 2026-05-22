@@ -5,16 +5,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuthStore } from "@/stores/auth";
 import { ApiError } from "@/lib/api/api-types";
 import type { SSOConfig } from "@/lib/api/ssoTypes";
-import { getAuthManager } from "@/lib/wasm-getters";
-import { initWasmCore } from "@/lib/wasm-core";
-import { ssoApi } from "@/lib/api/sso";
+import {
+  lightLogin,
+  lightLdapAuth,
+  lightDiscoverSSO,
+  resolvePostLoginUrlLight,
+} from "@/lib/light-auth";
+import { useRedirectIfAuthenticated } from "@/hooks/useRedirectIfAuthenticated";
 import { useTranslations } from "next-intl";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { OAuthButtons } from "./OAuthButtons";
-import { resolvePostLoginUrl } from "@/lib/auth/post-login";
 import { SSOSection } from "./SSOSection";
 import { Divider } from "./Divider";
 
@@ -22,7 +24,8 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
-  const { setAuth, setOrganizations } = useAuthStore();
+  useRedirectIfAuthenticated();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,11 +46,8 @@ export default function LoginPage() {
     }
     const requestId = ++discoverRequestRef.current;
     try {
-      await initWasmCore();
-      const response = await ssoApi.discover(emailValue);
-      if (requestId === discoverRequestRef.current) {
-        setSsoConfigs(response.configs || []);
-      }
+      const configs = await lightDiscoverSSO(emailValue);
+      if (requestId === discoverRequestRef.current) setSsoConfigs(configs);
     } catch {
       // Silent — SSO discovery failures shouldn't disrupt the password flow.
     }
@@ -63,9 +63,8 @@ export default function LoginPage() {
   }, []);
 
   const navigateAfterLogin = async () => {
-    const url = await resolvePostLoginUrl({
+    const url = await resolvePostLoginUrlLight({
       redirectParam: searchParams.get("redirect"),
-      setOrganizations,
     });
     router.push(url);
   };
@@ -79,8 +78,7 @@ export default function LoginPage() {
     setLdapLoading(true);
     setError("");
     try {
-      const response = await ssoApi.ldapAuth(ldapConfig.domain, {username, password: pwd});
-      await setAuth(response.token, response.user, response.refresh_token);
+      await lightLdapAuth({ domain: ldapConfig.domain, username, password: pwd });
       await navigateAfterLogin();
     } catch (err) {
       setError(err instanceof ApiError && err.status >= 500
@@ -94,9 +92,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await initWasmCore();
-      const response = JSON.parse(await getAuthManager().login(email, password));
-      await setAuth(response.token, response.user, response.refresh_token);
+      await lightLogin({ email, password });
       await navigateAfterLogin();
     } catch (err) {
       if (err instanceof ApiError && err.hasCode("SSO_REQUIRED")) {
@@ -108,10 +104,6 @@ export default function LoginPage() {
     } finally { setLoading(false); }
   };
 
-  // Carry `?redirect=` over to the sign-up CTA so users who switch from
-  // login to register don't lose the original deep-link target. The
-  // register flow may still drop it at the verify-email step (out of
-  // scope here), but at minimum the link itself preserves intent.
   const redirectParam = searchParams.get("redirect");
   const registerHref = redirectParam
     ? `/register?redirect=${encodeURIComponent(redirectParam)}`

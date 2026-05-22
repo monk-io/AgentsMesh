@@ -10,7 +10,6 @@ import (
 	userService "github.com/anthropics/agentsmesh/backend/internal/service/user"
 )
 
-// handleResumeMode validates the source pod and inherits configuration.
 func (o *PodOrchestrator) handleResumeMode(ctx context.Context, req *OrchestrateCreatePodRequest) (*podDomain.Pod, string, error) {
 	sourcePod, err := o.podService.GetPod(ctx, req.SourcePodKey)
 	if err != nil {
@@ -38,7 +37,9 @@ func (o *PodOrchestrator) handleResumeMode(ctx context.Context, req *Orchestrate
 		return nil, "", ErrResumeRunnerMismatch
 	}
 
-	// Inherit configuration from source pod
+	if req.AgentSlug != "" && req.AgentSlug != sourcePod.AgentSlug {
+		return nil, "", ErrResumeAgentMismatch
+	}
 	if req.AgentSlug == "" {
 		req.AgentSlug = sourcePod.AgentSlug
 	}
@@ -53,18 +54,12 @@ func (o *PodOrchestrator) handleResumeMode(ctx context.Context, req *Orchestrate
 	}
 	req.Perpetual = sourcePod.Perpetual
 
-	// Reuse session ID from source pod
 	var sessionID string
 	if sourcePod.SessionID != nil && *sourcePod.SessionID != "" {
 		sessionID = *sourcePod.SessionID
 	} else {
 		sessionID = uuid.New().String()
 	}
-
-	resumeAgentSession := req.ResumeAgentSession == nil || *req.ResumeAgentSession
-	// Resume fields (resume_enabled, resume_session) are injected into AgentFile
-	// via systemOverrides in CreatePod, not through ConfigOverrides.
-	_ = resumeAgentSession
 
 	return sourcePod, sessionID, nil
 }

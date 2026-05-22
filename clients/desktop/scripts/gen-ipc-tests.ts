@@ -96,9 +96,16 @@ function sanitizeTestName(n: string): string {
 }
 
 function emitGroupSpec(group: string, methods: IpcMethod[]): string {
+  // IPC smoke specs share a worker-scoped Electron app (see
+  // fixtures/electron-shared.fixture.ts). Launching Electron once per IPC
+  // method saturated fd/memory after ~250 tests and produced flaky
+  // worker-teardown timeouts. The shared fixture keeps per-test reporting,
+  // retries, and timeouts intact — only the Electron process is reused.
   const header = `// AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures";
+import { test, expect } from "../../../fixtures/electron-shared.fixture";
 import { invokeIpc } from "../../../helpers/ipc";
+
+test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · ${group}", () => {
 `;
@@ -106,10 +113,10 @@ test.describe("IPC · ${group}", () => {
   const body = methods
     .map((m) => {
       const args = m.params.map((p) => defaultValue(p.type)).join(", ");
-      return `  test("${sanitizeTestName(m.name)}", async ({ page }) => {
+      return `  test("${sanitizeTestName(m.name)}", async ({ sharedPage }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(page, "${m.name}"${args ? ", " + args : ""}).catch((err: Error) => ({ __ipcError: err.message }));
+    const result = await invokeIpc(sharedPage, "${m.name}"${args ? ", " + args : ""}).catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 `;

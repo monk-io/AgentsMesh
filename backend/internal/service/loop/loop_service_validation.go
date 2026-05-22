@@ -25,7 +25,6 @@ var (
 	ErrInvalidCallbackURL = errors.New("invalid callback URL")
 )
 
-// validateCallbackURL validates a webhook callback URL to prevent SSRF.
 func validateCallbackURL(rawURL string) error {
 	if rawURL == "" {
 		return nil
@@ -96,7 +95,6 @@ func generateSlug(name string) string {
 	return fmt.Sprintf("loop-%d", time.Now().UnixMilli())
 }
 
-// CreateLoopRequest represents a loop creation request.
 type CreateLoopRequest struct {
 	OrganizationID int64
 	CreatedByID    int64
@@ -109,12 +107,13 @@ type CreateLoopRequest struct {
 	PromptTemplate  string
 	PromptVariables []byte
 
-	RepositoryID        *int64
-	RunnerID            *int64
-	BranchName          *string
-	TicketID            *int64
-	CredentialProfileID *int64
-	ConfigOverrides     []byte
+	RepositoryID    *int64
+	RunnerID        *int64
+	BranchName      *string
+	TicketID        *int64
+	// UsedEnvBundles is an ordered list (nil/empty = no bundles).
+	UsedEnvBundles  []string
+	ConfigOverrides []byte
 
 	ExecutionMode   string
 	CronExpression  *string
@@ -130,7 +129,6 @@ type CreateLoopRequest struct {
 	IdleTimeoutSec     int
 }
 
-// UpdateLoopRequest represents a loop update request.
 type UpdateLoopRequest struct {
 	Name            *string
 	Description     *string
@@ -139,12 +137,14 @@ type UpdateLoopRequest struct {
 	PromptTemplate  *string
 	PromptVariables []byte
 
-	RepositoryID        *int64
-	RunnerID            *int64
-	BranchName          *string
-	TicketID            *int64
-	CredentialProfileID *int64
-	ConfigOverrides     []byte
+	RepositoryID    *int64
+	RunnerID        *int64
+	BranchName      *string
+	TicketID        *int64
+	// UsedEnvBundles: nil leaves the binding unchanged; non-nil replaces
+	// the entire list (an empty slice clears it).
+	UsedEnvBundles  *[]string
+	ConfigOverrides []byte
 
 	ExecutionMode   *string
 	CronExpression  *string

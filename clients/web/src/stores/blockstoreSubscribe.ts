@@ -4,20 +4,23 @@ import type { BlockOp } from "@/lib/api/blockstoreTypes";
 import { getBlockstoreService } from "@/lib/wasm-core";
 import { useBlockstoreStore, readLastOpIds } from "./blockstore";
 
-// handleBlockstoreEvent is invoked by RealtimeProvider for every
-// `blockstore:*` event received over the org-wide WebSocket.
-//
-// Scope guard: the backend fans out ops across the whole organization, so
-// users connected to the same org see each other's workspace ops on the wire.
-// We drop ops for workspaces the user has not loaded — otherwise block data
-// from a workspace the user has no UI access to would still land in the cache.
+// Coalesce _tick bumps: per-op bumps during catchup triggered React #185 on Desktop.
+let bumpTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleBump() {
+  if (bumpTimer) return;
+  bumpTimer = setTimeout(() => {
+    bumpTimer = null;
+    useBlockstoreStore.setState((s) => ({ _tick: s._tick + 1 }));
+  }, 100);
+}
+
+// Backend fans out ops org-wide; drop ops for workspaces the user has not loaded.
 export function handleBlockstoreEvent(event: RealtimeEvent) {
   if (event.type !== "blockstore:op") return;
   const op = event.data as BlockOp;
   if (!(op.workspace_id in readLastOpIds())) return;
-  // Backend serialises `applied_at` as Unix ms (i64), but Rust's BlockOp
-  // type expects a string. Normalise to ISO-8601 before applying — same
-  // fix the Electron adapter does in `apply_remote_op`.
+  // Backend serialises `applied_at` as Unix ms; Rust BlockOp expects string.
+  // Same normalisation as Electron adapter's `apply_remote_op`.
   const normalized: BlockOp = {
     ...op,
     applied_at:
@@ -30,12 +33,9 @@ export function handleBlockstoreEvent(event: RealtimeEvent) {
   } catch {
     return;
   }
-  useBlockstoreStore.setState((s) => ({ _tick: s._tick + 1 }));
+  scheduleBump();
 }
 
-// Register on module load so every consumer of the store gets catch-up for free
-// after a WebSocket reconnect. Catch-up is per-workspace; we iterate over
-// whatever lastOpId entries currently exist in Rust state.
 reconnectRegistry.register({
   name: "blockstore:catchup",
   fn: () => {

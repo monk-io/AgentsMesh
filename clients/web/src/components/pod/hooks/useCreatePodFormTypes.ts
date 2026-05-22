@@ -1,5 +1,6 @@
-import { PodData, CredentialProfileData } from "@/lib/api";
+import { PodData } from "@/lib/api";
 import type { PodMode } from "@/lib/pod-modes";
+import type { EnvBundleSummary } from "@/lib/api/envBundleTypes";
 
 /**
  * Validation errors for the form
@@ -12,29 +13,34 @@ export interface FormValidationErrors {
   prompt?: string;
 }
 
-// Special value for RunnerHost (use Runner's local environment)
-export const RUNNER_HOST_PROFILE_ID = 0;
-
 export interface CreatePodFormState {
   // Selection state (order: Runner -> Agent -> Others)
   selectedAgent: string | null;
   selectedRepository: number | null;
   selectedBranch: string;
-  selectedCredentialProfile: number; // 0 = RunnerHost, >0 = custom profile ID
+  // Credential bundle (kind='credential') — single-select. Empty string
+  // means "use the Agent's default authentication" (OAuth / CLI login etc.).
+  selectedCredentialName: string;
+  // Runtime bundle names (kind='runtime') — ordered multi-select. Each name
+  // maps to a `USE_ENV_BUNDLE "..."` directive emitted AFTER the credential
+  // line, so runtime preferences (model, log level, proxy) can override
+  // credential defaults when keys conflict.
+  selectedRuntimeBundleNames: string[];
   interactionMode: PodMode;
   prompt: string;
   alias: string;
   perpetual: boolean;
 
-  // Credential profiles for selected agent
-  credentialProfiles: CredentialProfileData[];
-  loadingCredentials: boolean;
+  // EnvBundles (credential + runtime kinds) available for the selected agent
+  envBundles: EnvBundleSummary[];
+  loadingBundles: boolean;
 
   // Actions
   setSelectedAgent: (slug: string | null) => void;
   setSelectedRepository: (id: number | null) => void;
   setSelectedBranch: (branch: string) => void;
-  setSelectedCredentialProfile: (id: number) => void;
+  setSelectedCredentialName: (name: string) => void;
+  setSelectedRuntimeBundleNames: (names: string[]) => void;
   setInteractionMode: (mode: PodMode) => void;
   setPrompt: (prompt: string) => void;
   setAlias: (alias: string) => void;
@@ -54,6 +60,8 @@ export interface CreatePodFormState {
   // Form state
   loading: boolean;
   error: string | null;
+  // Non-fatal note returned by the server (e.g. "pod created, but X is degraded").
+  // Distinct from `error`, which represents a request failure.
   warning: string | null;
   validationErrors: FormValidationErrors;
   isValid: boolean;

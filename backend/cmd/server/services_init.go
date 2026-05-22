@@ -21,6 +21,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/binding"
 	blockstoreservice "github.com/anthropics/agentsmesh/backend/internal/service/blockstore"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
+	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
 	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
@@ -45,7 +46,6 @@ import (
 
 var _ runner.PodStore = (*agentpod.PodService)(nil)
 
-// serviceContainer holds all initialized services.
 type serviceContainer struct {
 	auth              *auth.Service
 	user              *user.Service
@@ -53,7 +53,7 @@ type serviceContainer struct {
 	admin             *adminservice.Service
 	adminDB           database.DB
 	agentSvc          *agent.AgentService
-	credentialProfile *agent.CredentialProfileService
+	envBundle         *envbundleservice.Service
 	userConfig        *agent.UserConfigService
 	repository        *repository.Service
 	webhook           *repository.WebhookService
@@ -96,9 +96,6 @@ type serviceContainer struct {
 	autopilotRepo agentpodDomain.AutopilotRepository
 }
 
-// Close releases background workers owned by services that spawn them.
-// Called by waitForShutdown so the process exits cleanly without dropping
-// in-flight async work (currently: BlockstoreService's embedding worker).
 func (s *serviceContainer) Close() {
 	if s == nil {
 		return
@@ -108,7 +105,6 @@ func (s *serviceContainer) Close() {
 	}
 }
 
-// initializeServices creates all business services.
 func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Client) *serviceContainer {
 	userRepo := infra.NewUserRepository(db)
 	userSvc := user.NewServiceWithEncryption(userRepo, cfg.JWT.Secret)
@@ -128,8 +124,8 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 
 	agentRepo := infra.NewAgentRepository(db)
 	agentSvc := agent.NewAgentService(agentRepo)
-	credentialProfileRepo := infra.NewCredentialProfileRepository(db)
-	credentialProfileSvc := agent.NewCredentialProfileService(credentialProfileRepo, agentSvc, encryptor)
+	envBundleRepo := infra.NewEnvBundleRepository(db)
+	envBundleSvc := envbundleservice.NewService(envBundleRepo, encryptor)
 	userConfigRepo := infra.NewUserConfigRepository(db)
 	userConfigSvc := agent.NewUserConfigService(userConfigRepo, agentSvc)
 
@@ -206,9 +202,6 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	if embedder := selectEmbedder(); embedder != nil {
 		blockstoreSvc.SetEmbedder(embedder)
 	}
-	// Ticket content now lives in Block Store as a `document` block.
-	// Inject the dependency here, after both services exist, so the ticket
-	// service can dispatch block ops inside its create/update/delete paths.
 	ticketSvc.SetBlockstore(blockstoreSvc)
 
 	// admin.Service backs both the REST admin handlers (mounted by
@@ -225,7 +218,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		admin:              adminSvc,
 		adminDB:            dbWrapper,
 		agentSvc:           agentSvc,
-		credentialProfile:  credentialProfileSvc,
+		envBundle:          envBundleSvc,
 		userConfig:         userConfigSvc,
 		repository:         repoSvc,
 		webhook:            webhookSvc,

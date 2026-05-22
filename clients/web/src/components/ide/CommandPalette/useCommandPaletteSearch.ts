@@ -1,21 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { listPods } from "@/lib/api/podConnect";
-import { listTickets } from "@/lib/api/ticketConnect";
-import { listRepositories } from "@/lib/api/repositoryConnect";
-import { useCurrentOrg } from "@/stores/auth";
+import { getPodService, getTicketService } from "@/lib/wasm-core";
+import { useRepositories, useRepositoryStore } from "@/stores/repository";
 import type { SearchResults, PodSearchResult, TicketSearchResult, RepositorySearchResult } from "./types";
 
-/**
- * Custom hook for managing command palette search
- */
 export function useCommandPaletteSearch(search: string): SearchResults {
-  const currentOrg = useCurrentOrg();
   const [pods, setPods] = useState<PodSearchResult[]>([]);
   const [tickets, setTickets] = useState<TicketSearchResult[]>([]);
   const [repositories, setRepositories] = useState<RepositorySearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const allRepos = useRepositories();
+  const fetchRepositories = useRepositoryStore((s) => s.fetchRepositories);
+  useEffect(() => { fetchRepositories(); }, [fetchRepositories]);
 
   useEffect(() => {
     if (!search || search.length < 2) {
@@ -28,22 +26,11 @@ export function useCommandPaletteSearch(search: string): SearchResults {
     const loadSearchResults = async () => {
       setLoading(true);
       try {
-        const reposPromise = currentOrg
-          ? listRepositories(currentOrg.slug).catch(() => ({ items: [] }))
-          : Promise.resolve({ items: [] });
-        const ticketsPromise = currentOrg
-          ? listTickets(currentOrg.slug, { limit: 500 }).then((r) => ({ tickets: r.items })).catch(() => ({ tickets: [] }))
-          : Promise.resolve({ tickets: [] });
-        const podsPromise = currentOrg
-          ? listPods(currentOrg.slug).then((r) => ({ pods: r.items })).catch(() => ({ pods: [] }))
-          : Promise.resolve({ pods: [] });
-        const [podsRes, ticketsRes, reposRes] = await Promise.all([
-          podsPromise,
-          ticketsPromise,
-          reposPromise,
+        const [podsRes, ticketsRes] = await Promise.all([
+          getPodService().fetch_pods(null, null, null, null, null).then((j: string) => JSON.parse(j)).catch(() => ({ pods: [] })),
+          getTicketService().fetch_tickets(undefined, 500, undefined).then((j: string) => JSON.parse(j)).catch(() => ({ tickets: [] })),
         ]);
 
-        // Filter by search term
         const searchLower = search.toLowerCase();
         setPods(
           (podsRes.pods || [])
@@ -60,8 +47,8 @@ export function useCommandPaletteSearch(search: string): SearchResults {
             .slice(0, 5)
         );
         setRepositories(
-          (reposRes.items || [])
-            .filter((r: { slug: string }) => r.slug.toLowerCase().includes(searchLower))
+          allRepos
+            .filter((r) => r.slug.toLowerCase().includes(searchLower))
             .slice(0, 5)
         );
       } catch (error) {
@@ -73,7 +60,7 @@ export function useCommandPaletteSearch(search: string): SearchResults {
 
     const debounce = setTimeout(loadSearchResults, 300);
     return () => clearTimeout(debounce);
-  }, [search, currentOrg]);
+  }, [search, allRepos]);
 
   return { pods, tickets, repositories, loading };
 }

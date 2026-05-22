@@ -9,11 +9,10 @@ export {
   getGrantService,
   getNotificationService, getPromoCodeService,
   getTokenUsageService, getSSOService, getUserApiService,
-  getUserCredentialService, getOrgApiService, getAgentService,
+  getUserCredentialService, getEnvBundleService, getOrgApiService, getAgentService,
   getTicketRelationsService, getFileService, getSupportTicketService,
   getAuthConnectService, getRunnerState, getMeshState, getTicketState,
-  getChannelState, getLoopState, getAcpManager, getOrgState,
-  getUserState, getGitProviderState, getRepoState,
+  getChannelState, getLoopState, getAcpManager, getRepoState,
   getAutopilotState, getRelayManager, getBlockstoreService,
   getLocalRunnerService,
 } from "./service-getters";

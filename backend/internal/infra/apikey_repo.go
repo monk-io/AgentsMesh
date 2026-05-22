@@ -8,14 +8,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// Compile-time interface check
 var _ apikey.Repository = (*apikeyRepo)(nil)
 
 type apikeyRepo struct {
 	db *gorm.DB
 }
 
-// NewAPIKeyRepository creates a new GORM-based API key repository
 func NewAPIKeyRepository(db *gorm.DB) apikey.Repository {
 	return &apikeyRepo{db: db}
 }
@@ -41,6 +39,20 @@ func (r *apikeyRepo) GetByID(ctx context.Context, id int64, orgID int64) (*apike
 func (r *apikeyRepo) GetByKeyHash(ctx context.Context, keyHash string) (*apikey.APIKey, error) {
 	var key apikey.APIKey
 	err := r.db.WithContext(ctx).Where("key_hash = ?", keyHash).First(&key).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, apikey.ErrNotFound
+		}
+		return nil, err
+	}
+	return &key, nil
+}
+
+func (r *apikeyRepo) GetByOrgAndSlug(ctx context.Context, orgID int64, slug string) (*apikey.APIKey, error) {
+	var key apikey.APIKey
+	err := r.db.WithContext(ctx).
+		Where("organization_id = ? AND slug = ?", orgID, slug).
+		First(&key).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, apikey.ErrNotFound
@@ -105,4 +117,12 @@ func (r *apikeyRepo) CheckDuplicateName(ctx context.Context, orgID int64, name s
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (r *apikeyRepo) SlugExists(ctx context.Context, orgID int64, slug string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&apikey.APIKey{}).
+		Where("organization_id = ? AND slug = ?", orgID, slug).
+		Count(&count).Error
+	return count > 0, err
 }

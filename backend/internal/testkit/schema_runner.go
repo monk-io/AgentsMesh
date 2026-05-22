@@ -1,6 +1,5 @@
 package testkit
 
-// runnerTableDDLs returns DDLs for runners, certificates, registration tokens.
 func runnerTableDDLs() []string {
 	return []string{
 		`CREATE TABLE IF NOT EXISTS runners (
@@ -67,7 +66,6 @@ func runnerTableDDLs() []string {
 	}
 }
 
-// podTableDDLs returns DDLs for pods, autopilot controllers/iterations, AI providers.
 func podTableDDLs() []string {
 	return []string{
 		`CREATE TABLE IF NOT EXISTS pods (
@@ -90,7 +88,6 @@ func podTableDDLs() []string {
 			perpetual BOOLEAN NOT NULL DEFAULT FALSE,
 			restart_count INTEGER NOT NULL DEFAULT 0,
 			last_restart_at DATETIME,
-			credential_profile_id INTEGER,
 			config_overrides TEXT DEFAULT '{}',
 			interaction_mode TEXT NOT NULL DEFAULT 'pty',
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

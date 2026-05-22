@@ -10,8 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// --- Access tracking ---
-
 func (r *channelRepository) UpsertAccess(ctx context.Context, channelID int64, podKey *string, userID *int64) error {
 	query := r.db.WithContext(ctx).Where("channel_id = ?", channelID)
 	if podKey != nil {
@@ -70,8 +68,6 @@ func (r *channelRepository) GetAccessCount(ctx context.Context, channelID int64)
 	return count, err
 }
 
-// --- Channel Pods ---
-
 func (r *channelRepository) AddPodToChannel(ctx context.Context, channelID int64, podKey string) error {
 	return r.db.WithContext(ctx).Create(&channelPod{
 		ChannelID: channelID,
@@ -83,6 +79,14 @@ func (r *channelRepository) RemovePodFromChannel(ctx context.Context, channelID 
 	return r.db.WithContext(ctx).
 		Where("channel_id = ? AND pod_key = ?", channelID, podKey).
 		Delete(&channelPod{}).Error
+}
+
+func (r *channelRepository) GetChannelPodCount(ctx context.Context, channelID int64) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&channelPod{}).
+		Where("channel_id = ?", channelID).
+		Count(&count).Error
+	return count, err
 }
 
 func (r *channelRepository) GetChannelPods(ctx context.Context, channelID int64) ([]*agentpod.Pod, error) {
@@ -105,8 +109,6 @@ func (r *channelRepository) GetChannelPods(ctx context.Context, channelID int64)
 	}
 	return pods, nil
 }
-
-// --- Bindings (channel-level) ---
 
 func (r *channelRepository) CreateBinding(ctx context.Context, binding *channel.PodBinding) error {
 	return r.db.WithContext(ctx).Create(binding).Error

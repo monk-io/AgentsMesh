@@ -78,45 +78,11 @@ func TestCreatePod(t *testing.T) {
 	}
 }
 
-func TestCreatePod_CredentialProfileID(t *testing.T) {
-	db := setupTestDB(t)
-	svc := newTestPodService(db)
-	ctx := context.Background()
-
-	t.Run("stores credential_profile_id when provided", func(t *testing.T) {
-		profileID := int64(42)
-		pod, err := svc.CreatePod(ctx, &CreatePodRequest{
-			OrganizationID:      1,
-			RunnerID:            1,
-			CreatedByID:         1,
-			CredentialProfileID: &profileID,
-		})
-		if err != nil {
-			t.Fatalf("CreatePod failed: %v", err)
-		}
-		if pod.CredentialProfileID == nil {
-			t.Fatal("CredentialProfileID should not be nil")
-		}
-		if *pod.CredentialProfileID != 42 {
-			t.Errorf("CredentialProfileID = %d, want 42", *pod.CredentialProfileID)
-		}
-	})
-
-	t.Run("stores nil credential_profile_id when not provided", func(t *testing.T) {
-		pod, err := svc.CreatePod(ctx, &CreatePodRequest{
-			OrganizationID:      1,
-			RunnerID:            1,
-			CreatedByID:         1,
-			CredentialProfileID: nil,
-		})
-		if err != nil {
-			t.Fatalf("CreatePod failed: %v", err)
-		}
-		if pod.CredentialProfileID != nil {
-			t.Errorf("CredentialProfileID should be nil, got %d", *pod.CredentialProfileID)
-		}
-	})
-}
+// TestCreatePod_CredentialProfileID was retired by the EnvBundle refactor —
+// the pods table no longer carries a credential_profile_id column, and
+// credential routing now lives entirely in AgentFile USE_ENV_BUNDLE
+// declarations. End-to-end coverage moved to
+// TestPodChain_CredentialFlow in pod_chain_integration_test.go.
 
 func TestCreatePod_Alias(t *testing.T) {
 	db := setupTestDB(t)
@@ -172,6 +138,37 @@ func TestCreatePod_DefaultValues(t *testing.T) {
 	svc := newTestPodService(db)
 	ctx := context.Background()
 
+	// PodService is agent-agnostic: it persists what callers give it and does
+	// NOT inject any agent-specific defaults. This test verifies that explicit
+	// caller-supplied Model/PermissionMode round-trip correctly.
+	req := &CreatePodRequest{
+		OrganizationID: 1,
+		RunnerID:       1,
+		CreatedByID:    1,
+		AgentSlug:      "claude-code",
+		Model:          "opus",
+		PermissionMode: agentpod.PermissionModeBypass,
+	}
+
+	sess, err := svc.CreatePod(ctx, req)
+	if err != nil {
+		t.Fatalf("CreatePod failed: %v", err)
+	}
+
+	if sess.Model == nil || *sess.Model != "opus" {
+		t.Error("Caller-supplied model should round-trip")
+	}
+	if sess.PermissionMode == nil || *sess.PermissionMode != agentpod.PermissionModeBypass {
+		t.Error("Caller-supplied permission mode should round-trip")
+	}
+}
+
+func TestCreatePod_NoDefaultingByService(t *testing.T) {
+	db := setupTestDB(t)
+	svc := newTestPodService(db)
+	ctx := context.Background()
+
+	// Empty AgentSlug used to trigger Claude defaulting; after Fix #2 it must not.
 	req := &CreatePodRequest{
 		OrganizationID: 1,
 		RunnerID:       1,
@@ -182,13 +179,34 @@ func TestCreatePod_DefaultValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatePod failed: %v", err)
 	}
-
-	// Check defaults
-	if sess.Model == nil || *sess.Model != "opus" {
-		t.Error("Default model should be opus")
+	if sess.Model != nil {
+		t.Errorf("PodService should not default model for empty agent slug, got %q", *sess.Model)
 	}
-	if sess.PermissionMode == nil || *sess.PermissionMode != agentpod.PermissionModeBypass {
-		t.Error("Default permission mode should be bypassPermissions")
+	if sess.PermissionMode != nil {
+		t.Errorf("PodService should not default permission_mode for empty agent slug, got %q", *sess.PermissionMode)
+	}
+}
+
+func TestCreatePod_NonClaudeDoesNotDefaultLegacyFields(t *testing.T) {
+	db := setupTestDB(t)
+	svc := newTestPodService(db)
+	ctx := context.Background()
+
+	pod, err := svc.CreatePod(ctx, &CreatePodRequest{
+		OrganizationID: 1,
+		RunnerID:       1,
+		AgentSlug:      "codex-cli",
+		CreatedByID:    1,
+	})
+	if err != nil {
+		t.Fatalf("CreatePod failed: %v", err)
+	}
+
+	if pod.Model != nil {
+		t.Errorf("non-Claude pod model should not default, got %q", *pod.Model)
+	}
+	if pod.PermissionMode != nil {
+		t.Errorf("non-Claude pod permission_mode should not default, got %q", *pod.PermissionMode)
 	}
 }
 

@@ -7,15 +7,14 @@ import (
 	channelDomain "github.com/anthropics/agentsmesh/backend/internal/domain/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
+	"github.com/anthropics/agentsmesh/backend/pkg/displaykit"
 )
 
-// mcpChannelResponse wraps channel.Channel to add resolved slug fields for MCP responses.
 type mcpChannelResponse struct {
 	*channelDomain.Channel
 	TicketSlug string `json:"ticket_slug,omitempty"`
 }
 
-// enrichChannelForMCP resolves the channel's ticket ID to its slug.
 func (a *GRPCRunnerAdapter) enrichChannelForMCP(ctx context.Context, orgID int64, ch *channelDomain.Channel) *mcpChannelResponse {
 	resp := &mcpChannelResponse{Channel: ch}
 	if ch.TicketID != nil {
@@ -27,7 +26,6 @@ func (a *GRPCRunnerAdapter) enrichChannelForMCP(ctx context.Context, orgID int64
 	return resp
 }
 
-// validateChannelAccess fetches a channel and checks organization-level access.
 func (a *GRPCRunnerAdapter) validateChannelAccess(ctx context.Context, tc *middleware.TenantContext, channelID int64) (*channelDomain.Channel, *mcpError) {
 	ch, err := a.channelService.GetChannel(ctx, channelID)
 	if err != nil {
@@ -48,7 +46,6 @@ func (a *GRPCRunnerAdapter) validateChannelAccess(ctx context.Context, tc *middl
 	return ch, nil
 }
 
-// mcpSearchChannels handles the "search_channels" MCP method.
 func (a *GRPCRunnerAdapter) mcpSearchChannels(ctx context.Context, tc *middleware.TenantContext, podKey string, payload []byte) (interface{}, *mcpError) {
 	var params struct {
 		Name         string  `json:"name"`
@@ -94,7 +91,6 @@ func (a *GRPCRunnerAdapter) mcpSearchChannels(ctx context.Context, tc *middlewar
 	return map[string]interface{}{"channels": enriched}, nil
 }
 
-// mcpCreateChannel handles the "create_channel" MCP method.
 func (a *GRPCRunnerAdapter) mcpCreateChannel(ctx context.Context, tc *middleware.TenantContext, podKey string, payload []byte) (interface{}, *mcpError) {
 	var params struct {
 		Name         string  `json:"name"`
@@ -108,6 +104,11 @@ func (a *GRPCRunnerAdapter) mcpCreateChannel(ctx context.Context, tc *middleware
 	if params.Name == "" {
 		return nil, newMcpError(400, "name is required")
 	}
+	sanitizedName, err := displaykit.SanitizeAndValidate(params.Name, channelDomain.NameMinLen, channelDomain.NameMaxLen)
+	if err != nil {
+		return nil, newMcpError(400, "channel name: "+err.Error())
+	}
+	params.Name = sanitizedName
 
 	var desc *string
 	if params.Description != "" {
@@ -137,7 +138,6 @@ func (a *GRPCRunnerAdapter) mcpCreateChannel(ctx context.Context, tc *middleware
 	return map[string]interface{}{"channel": a.enrichChannelForMCP(ctx, tc.OrganizationID, ch)}, nil
 }
 
-// mcpGetChannel handles the "get_channel" MCP method.
 func (a *GRPCRunnerAdapter) mcpGetChannel(ctx context.Context, tc *middleware.TenantContext, payload []byte) (interface{}, *mcpError) {
 	var params struct {
 		ChannelID int64 `json:"channel_id"`

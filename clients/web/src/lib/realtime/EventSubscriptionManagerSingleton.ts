@@ -1,35 +1,31 @@
 import { EventSubscriptionManager } from "./EventSubscriptionManager";
+import { logger } from "@/lib/logger";
 
-// Singleton instance
 let instance: EventSubscriptionManager | null = null;
 
-// Listeners that get notified when the manager is reset
 type ManagerResetListener = (newManager: EventSubscriptionManager) => void;
 const managerResetListeners: Set<ManagerResetListener> = new Set();
 
-/**
- * Get the singleton EventSubscriptionManager instance
- */
 export function getEventSubscriptionManager(): EventSubscriptionManager {
   if (!instance) {
     instance = new EventSubscriptionManager({
       onConnectionStateChange: (state) => {
-        console.log(`[EventSubscriptionManager] Connection state: ${state}`);
+        // Route through logger (not console.log) so the realtime connection
+        // timeline lands in the rolling log file alongside Rust events —
+        // this is the cross-cutting signal we need when chasing #185-class
+        // store/reconnect loops.
+        logger.info("EventSubscriptionManager", `Connection state: ${state}`);
       },
     });
   }
   return instance;
 }
 
-/**
- * Reset the singleton instance (for testing or org switching)
- */
 export function resetEventSubscriptionManager(): void {
   if (instance) {
     instance.disconnect();
     instance = null;
   }
-  // Create new instance and notify listeners
   const newManager = getEventSubscriptionManager();
   managerResetListeners.forEach((listener) => {
     try {
@@ -40,12 +36,6 @@ export function resetEventSubscriptionManager(): void {
   });
 }
 
-/**
- * Subscribe to manager reset events
- * This is called when the manager is reset (e.g., on org switch)
- * Subscribers should re-register their event handlers with the new manager
- * @returns Unsubscribe function
- */
 export function onManagerReset(listener: ManagerResetListener): () => void {
   managerResetListeners.add(listener);
   return () => {

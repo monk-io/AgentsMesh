@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -12,36 +12,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
-import { useLoopStore } from "@/stores/loop";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 
 // Reuse Pod creation components
 import { usePodCreationData } from "@/components/pod/hooks";
 import { useConfigOptions } from "@/components/ide/hooks";
 import { AgentSelect } from "@/components/pod/CreatePodForm/AgentSelect";
-import { RunnerSelect } from "@/components/pod/CreatePodForm/RunnerSelect";
-import { CredentialSelect } from "@/components/pod/CreatePodForm/CredentialSelect";
-import { RepositorySelect, BranchInput } from "@/components/pod/CreatePodForm/RepositorySelect";
 import { PromptInput } from "@/components/pod/CreatePodForm/PromptInput";
-import { AdvancedOptions } from "@/components/pod/CreatePodForm/AdvancedOptions";
-import { ConfigForm } from "@/components/ide/ConfigForm";
-import { Spinner } from "@/components/ui/spinner";
-import { listAgentCredentialProfilesForAgent } from "@/lib/api/userAgentCredential";
-import type { CredentialProfileData } from "@/lib/api";
 import type { LoopData } from "@/lib/api/loopTypes";
 
-// Special value for RunnerHost credential
-const RUNNER_HOST_PROFILE_ID = 0;
+import { useLoopForm } from "./useLoopForm";
+import { useLoopEnvBundles } from "./useLoopEnvBundles";
+import { LoopPodConfigSection } from "./LoopPodConfigSection";
+import { LoopScheduleSection } from "./LoopScheduleSection";
 
 interface LoopCreateDialogProps {
   open: boolean;
@@ -50,6 +34,15 @@ interface LoopCreateDialogProps {
   editLoop?: LoopData;
 }
 
+/**
+ * LoopCreateDialog — orchestrates the create/edit form for a Loop.
+ *
+ * State + submission live in `useLoopForm`; bundle loading in
+ * `useLoopEnvBundles`; the runtime/config section in `LoopPodConfigSection`;
+ * the cron/policy/timeout fields in `LoopScheduleSection`. This file does
+ * dialog wrapping + side-effects that bridge Loop state with the shared
+ * Pod-creation data hook.
+ */
 export function LoopCreateDialog({
   open,
   onOpenChange,
@@ -57,65 +50,8 @@ export function LoopCreateDialog({
   editLoop,
 }: LoopCreateDialogProps) {
   const t = useTranslations();
-  const createLoop = useLoopStore((s) => s.createLoop);
-  const updateLoop = useLoopStore((s) => s.updateLoop);
-  const isEdit = !!editLoop;
+  const form = useLoopForm({ open, editLoop, onCreated, t });
 
-  const [loading, setLoading] = useState(false);
-
-  // --- Basic fields ---
-  const [name, setName] = useState(editLoop?.name || "");
-  const [description, setDescription] = useState(editLoop?.description || "");
-  const [promptTemplate, setPromptTemplate] = useState(editLoop?.prompt_template || "");
-
-  // --- Pod configuration fields ---
-  const [selectedAgentSlug, setSelectedAgentSlug] = useState<string | null>(editLoop?.agent_slug || null);
-  const [selectedRunnerId, setSelectedRunnerId] = useState<number | null>(editLoop?.runner_id || null);
-  const [selectedRepositoryId, setSelectedRepositoryId] = useState<number | null>(editLoop?.repository_id || null);
-  const [selectedBranch, setSelectedBranch] = useState(editLoop?.branch_name || "");
-  const [selectedCredentialProfileId, setSelectedCredentialProfileId] = useState<number>(
-    editLoop?.credential_profile_id || RUNNER_HOST_PROFILE_ID
-  );
-  const [credentialProfiles, setCredentialProfiles] = useState<CredentialProfileData[]>([]);
-  const [loadingCredentials, setLoadingCredentials] = useState(false);
-
-  // --- Loop-specific fields ---
-  const [executionMode, setExecutionMode] = useState<string>(editLoop?.execution_mode || "autopilot");
-  const [cronEnabled, setCronEnabled] = useState(!!editLoop?.cron_expression);
-  const [cronExpression, setCronExpression] = useState(editLoop?.cron_expression || "");
-  const [sandboxStrategy, setSandboxStrategy] = useState<string>(editLoop?.sandbox_strategy || "persistent");
-  const [concurrencyPolicy, setConcurrencyPolicy] = useState<string>(editLoop?.concurrency_policy || "skip");
-  const [timeoutMinutes, setTimeoutMinutes] = useState(editLoop?.timeout_minutes || 60);
-  const [callbackUrl, setCallbackUrl] = useState(editLoop?.callback_url || "");
-  const [sessionPersistence, setSessionPersistence] = useState(editLoop?.session_persistence ?? true);
-  const [maxConcurrentRuns, setMaxConcurrentRuns] = useState(editLoop?.max_concurrent_runs || 1);
-  const [maxRetainedRuns, setMaxRetainedRuns] = useState(editLoop?.max_retained_runs || 0);
-
-  // Sync form state when dialog opens or editLoop changes
-  useEffect(() => {
-    if (!open) return;
-    setName(editLoop?.name || "");
-    setDescription(editLoop?.description || "");
-    setPromptTemplate(editLoop?.prompt_template || "");
-    setSelectedAgentSlug(editLoop?.agent_slug || null);
-    setSelectedRunnerId(editLoop?.runner_id || null);
-    setSelectedRepositoryId(editLoop?.repository_id || null);
-    setSelectedBranch(editLoop?.branch_name || "");
-    setSelectedCredentialProfileId(editLoop?.credential_profile_id || RUNNER_HOST_PROFILE_ID);
-    setExecutionMode(editLoop?.execution_mode || "autopilot");
-    setCronEnabled(!!editLoop?.cron_expression);
-    setCronExpression(editLoop?.cron_expression || "");
-    setSandboxStrategy(editLoop?.sandbox_strategy || "persistent");
-    setConcurrencyPolicy(editLoop?.concurrency_policy || "skip");
-    setTimeoutMinutes(editLoop?.timeout_minutes || 60);
-    setCallbackUrl(editLoop?.callback_url || "");
-    setSessionPersistence(editLoop?.session_persistence ?? true);
-    setMaxConcurrentRuns(editLoop?.max_concurrent_runs || 1);
-    setMaxRetainedRuns(editLoop?.max_retained_runs || 0);
-    setLoading(false);
-  }, [open, editLoop]);
-
-  // --- Load Pod creation data (runners, agents, repositories) ---
   const {
     runners,
     repositories,
@@ -124,24 +60,19 @@ export function LoopCreateDialog({
     availableAgents,
   } = usePodCreationData(open);
 
-  // Sync runner selection with Pod creation data hook
+  // Mirror runner selection into the Pod data hook so it can refresh agents.
   useEffect(() => {
-    setPodSelectedRunnerId(selectedRunnerId);
-  }, [selectedRunnerId, setPodSelectedRunnerId]);
+    setPodSelectedRunnerId(form.selectedRunnerId);
+  }, [form.selectedRunnerId, setPodSelectedRunnerId]);
 
-
-  // Load agent config schema
   const {
     fields: configFields,
     loading: loadingConfig,
     config: configValues,
     updateConfig: handleConfigChange,
-  } = useConfigOptions(
-    selectedRunner?.id || null,
-    selectedAgentSlug,
-    );
+  } = useConfigOptions(selectedRunner?.id || null, form.selectedAgentSlug);
 
-  // Restore config_overrides from editLoop in edit mode once config fields have loaded
+  // Restore config_overrides from editLoop once the schema has loaded.
   const [configOverridesRestored, setConfigOverridesRestored] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -156,126 +87,51 @@ export function LoopCreateDialog({
     }
   }, [open, editLoop, configFields, configOverridesRestored, handleConfigChange]);
 
-  // Load credential profiles when agent changes.
-  // In edit mode, preserve the editLoop's credential_profile_id on first load.
-  const [credentialInitialized, setCredentialInitialized] = useState(false);
-
+  // Auto-fill branch when repository changes.
   useEffect(() => {
-    // Reset initialization flag when dialog re-opens
-    if (!open) {
-      setCredentialInitialized(false);
+    if (!form.selectedRepositoryId) {
+      form.setSelectedBranch("");
       return;
     }
-  }, [open]);
-
-  useEffect(() => {
-    if (!selectedAgentSlug) {
-      setCredentialProfiles([]);
-      setSelectedCredentialProfileId(RUNNER_HOST_PROFILE_ID);
-      setCredentialInitialized(false);
-      return;
-    }
-
-    const loadCredentials = async () => {
-      setLoadingCredentials(true);
-      try {
-        const res = await listAgentCredentialProfilesForAgent(selectedAgentSlug);
-        const profiles = res.items;
-        setCredentialProfiles(profiles);
-
-        // In edit mode, preserve editLoop's credential on initial load
-        if (editLoop?.credential_profile_id && !credentialInitialized) {
-          setSelectedCredentialProfileId(editLoop.credential_profile_id);
-          setCredentialInitialized(true);
-        } else {
-          const defaultProfile = profiles.find((p: CredentialProfileData) => p.is_default);
-          if (defaultProfile) {
-            setSelectedCredentialProfileId(defaultProfile.id);
-          } else {
-            setSelectedCredentialProfileId(RUNNER_HOST_PROFILE_ID);
-          }
-        }
-      } catch {
-        setCredentialProfiles([]);
-        setSelectedCredentialProfileId(RUNNER_HOST_PROFILE_ID);
-      } finally {
-        setLoadingCredentials(false);
-      }
-    };
-
-    loadCredentials();
-  }, [selectedAgentSlug, editLoop, credentialInitialized]);
-
-  // Auto-fill branch when repository changes
-  useEffect(() => {
-    if (!selectedRepositoryId) {
-      setSelectedBranch("");
-      return;
-    }
-    const repo = repositories.find((r) => r.id === selectedRepositoryId);
+    const repo = repositories.find((r) => r.id === form.selectedRepositoryId);
     if (repo?.default_branch) {
-      setSelectedBranch(repo.default_branch);
+      form.setSelectedBranch(repo.default_branch);
     }
-  }, [selectedRepositoryId, repositories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.selectedRepositoryId, repositories]);
 
-  // Reset agent if not available in current runner's agents (only after agents loaded)
+  const { envBundles, loadingBundles } = useLoopEnvBundles({
+    open,
+    agentSlug: form.selectedAgentSlug,
+  });
+
+  // Edit mode: reconcile `editLoop.used_env_bundles: string[]` into the
+  // dialog's split state (credential single + runtime multi) once the bundle
+  // list is loaded (we need each name's kind to classify it).
   useEffect(() => {
-    if (availableAgents.length > 0 && selectedAgentSlug && !availableAgents.find((a) => a.slug === selectedAgentSlug)) {
-      setSelectedAgentSlug(null);
+    if (!open || !editLoop || envBundles.length === 0) return;
+    const kindByName = new Map(envBundles.map((b) => [b.name, b.kind]));
+    const saved = editLoop.used_env_bundles ?? [];
+    const credName = saved.find((n) => kindByName.get(n) === "credential") ?? "";
+    const runtimeNames = saved.filter((n) => kindByName.get(n) === "runtime");
+    form.setSelectedCredentialName(credName);
+    form.setSelectedRuntimeBundleNames(runtimeNames);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editLoop, envBundles]);
+
+  // Reset agent if not available in current runner's agents (after agents load).
+  useEffect(() => {
+    if (
+      availableAgents.length > 0 &&
+      form.selectedAgentSlug &&
+      !availableAgents.find((a) => a.slug === form.selectedAgentSlug)
+    ) {
+      form.setSelectedAgentSlug(null);
     }
-  }, [availableAgents, selectedAgentSlug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableAgents, form.selectedAgentSlug]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!name.trim() || !promptTemplate.trim() || !selectedAgentSlug) return;
-
-    setLoading(true);
-    try {
-      const data = {
-        name: name.trim(),
-        description: description || undefined,
-        agent_slug: selectedAgentSlug,
-        prompt_template: promptTemplate,
-        runner_id: selectedRunnerId || undefined,
-        repository_id: selectedRepositoryId || undefined,
-        branch_name: selectedBranch || undefined,
-        credential_profile_id: selectedCredentialProfileId > 0 ? selectedCredentialProfileId : undefined,
-        config_overrides: Object.keys(configValues).length > 0 ? configValues : undefined,
-        execution_mode: executionMode,
-        cron_expression: cronEnabled && cronExpression ? cronExpression : "",
-        sandbox_strategy: sandboxStrategy,
-        concurrency_policy: concurrencyPolicy,
-        timeout_minutes: timeoutMinutes,
-        callback_url: callbackUrl || undefined,
-        session_persistence: sessionPersistence,
-        max_concurrent_runs: maxConcurrentRuns,
-        max_retained_runs: maxRetainedRuns,
-      };
-
-      if (isEdit && editLoop) {
-        await updateLoop(editLoop.slug, data);
-        toast.success(t("loops.updated"));
-        onCreated();
-      } else {
-        const res = await createLoop(data);
-        toast.success(t("loops.created"));
-        onCreated(res.loop);
-      }
-    } catch (err) {
-      toast.error(isEdit ? t("loops.updateFailed") : t("loops.createFailed"), {
-        description: (err as Error).message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    name, description, promptTemplate, selectedAgentSlug, selectedRunnerId,
-    selectedRepositoryId, selectedBranch, selectedCredentialProfileId, configValues,
-    executionMode, cronEnabled, cronExpression, sandboxStrategy,
-    concurrencyPolicy, timeoutMinutes, callbackUrl, sessionPersistence,
-    maxConcurrentRuns, maxRetainedRuns, isEdit, editLoop, createLoop, updateLoop, onCreated, t,
-  ]);
-
-  const dialogTitle = isEdit ? t("loops.editLoop") : t("loops.createLoop");
+  const dialogTitle = form.isEdit ? t("loops.editLoop") : t("loops.createLoop");
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
@@ -285,246 +141,88 @@ export function LoopCreateDialog({
         </ResponsiveDialogHeader>
 
         <ResponsiveDialogBody className="space-y-4">
-          {/* Name */}
           <div className="space-y-1.5">
             <Label>{t("loops.name")}</Label>
             <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={form.name}
+              onChange={(e) => form.setName(e.target.value)}
               placeholder="daily-code-review"
             />
           </div>
 
-          {/* Description */}
           <div className="space-y-1.5">
             <Label>{t("loops.description")}</Label>
             <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              value={form.description}
+              onChange={(e) => form.setDescription(e.target.value)}
               placeholder={t("loops.descriptionPlaceholder")}
             />
           </div>
 
-          {/* Agent Select */}
           <AgentSelect
             agents={availableAgents}
-            selectedAgentSlug={selectedAgentSlug}
-            onSelect={setSelectedAgentSlug}
+            selectedAgentSlug={form.selectedAgentSlug}
+            onSelect={form.setSelectedAgentSlug}
             t={t}
           />
 
-          {/* Prompt Template (shown when agent selected) */}
-          {selectedAgentSlug && (
-            <PromptInput
-              value={promptTemplate}
-              onChange={setPromptTemplate}
-              placeholder={t("loops.promptPlaceholder")}
-              t={t}
-            />
-          )}
+          {form.selectedAgentSlug && (
+            <>
+              <PromptInput
+                value={form.promptTemplate}
+                onChange={form.setPromptTemplate}
+                placeholder={t("loops.promptPlaceholder")}
+                t={t}
+              />
 
-          {/* Pod Configuration (Advanced, collapsed) */}
-          {selectedAgentSlug && (
-            <AdvancedOptions t={t}>
-              <RunnerSelect
+              <LoopPodConfigSection
+                agentSlug={form.selectedAgentSlug}
                 runners={runners}
-                selectedRunnerId={selectedRunnerId}
-                onSelect={setSelectedRunnerId}
-                t={t}
-              />
-
-              <CredentialSelect
-                profiles={credentialProfiles}
-                selectedProfileId={selectedCredentialProfileId}
-                onSelect={setSelectedCredentialProfileId}
-                loading={loadingCredentials}
-                t={t}
-              />
-
-              <RepositorySelect
                 repositories={repositories}
-                selectedRepositoryId={selectedRepositoryId}
-                onSelect={setSelectedRepositoryId}
+                envBundles={envBundles}
+                configFields={configFields}
+                configValues={configValues}
+                loadingConfig={loadingConfig}
+                loadingBundles={loadingBundles}
+                selectedRunnerId={form.selectedRunnerId}
+                onSelectRunner={form.setSelectedRunnerId}
+                selectedCredentialName={form.selectedCredentialName}
+                onSelectCredential={form.setSelectedCredentialName}
+                selectedRuntimeBundleNames={form.selectedRuntimeBundleNames}
+                onSelectRuntimeBundles={form.setSelectedRuntimeBundleNames}
+                selectedRepositoryId={form.selectedRepositoryId}
+                onSelectRepository={form.setSelectedRepositoryId}
+                selectedBranch={form.selectedBranch}
+                onChangeBranch={form.setSelectedBranch}
+                onConfigChange={handleConfigChange}
                 t={t}
               />
-
-              {selectedRepositoryId && (
-                <BranchInput
-                  value={selectedBranch}
-                  onChange={setSelectedBranch}
-                  t={t}
-                />
-              )}
-
-              {loadingConfig ? (
-                <div className="flex items-center justify-center py-4">
-                  <Spinner size="sm" className="mr-2" />
-                  <span className="text-sm text-muted-foreground">
-                    {t("ide.createPod.loadingPlugins")}
-                  </span>
-                </div>
-              ) : (
-                configFields.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      {t("ide.createPod.pluginConfig")}
-                    </label>
-                    <ConfigForm
-                      fields={configFields}
-                      values={configValues}
-                      onChange={handleConfigChange}
-                      agentSlug={selectedAgentSlug}
-                    />
-                  </div>
-                )
-              )}
-            </AdvancedOptions>
+            </>
           )}
 
-          {/* --- Loop settings --- */}
-          <div className="border-t border-border pt-4 space-y-4">
-            {/* Cron scheduling (optional, API trigger is always available) */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>{t("loops.enableCron")}</Label>
-                <p className="text-xs text-muted-foreground">{t("loops.apiAlwaysAvailable")}</p>
-              </div>
-              <Switch checked={cronEnabled} onCheckedChange={setCronEnabled} />
-            </div>
-
-            {cronEnabled && (
-              <div className="space-y-1.5">
-                <Label>{t("loops.cronExpression")}</Label>
-                <Input
-                  value={cronExpression}
-                  onChange={(e) => setCronExpression(e.target.value)}
-                  placeholder="0 9 * * *"
-                  className="font-mono"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("loops.cronHelp")}
-                </p>
-              </div>
-            )}
-
-            {/* Execution Mode */}
-            <div className="space-y-1.5">
-              <Label>{t("loops.executionMode")}</Label>
-              <Select value={executionMode} onValueChange={setExecutionMode}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="autopilot">{t("loops.modeAutopilot")}</SelectItem>
-                  <SelectItem value="direct">{t("loops.modeDirect")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Sandbox & Concurrency */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("loops.sandboxStrategy")}</Label>
-                <Select value={sandboxStrategy} onValueChange={setSandboxStrategy}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="persistent">{t("loops.sandboxPersistent")}</SelectItem>
-                    <SelectItem value="fresh">{t("loops.sandboxFresh")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("loops.concurrency")}</Label>
-                <Select value={concurrencyPolicy} onValueChange={setConcurrencyPolicy}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="skip">{t("loops.policySkip")}</SelectItem>
-                    <SelectItem value="queue" disabled>
-                      {t("loops.policyQueue")} ({t("loops.comingSoon")})
-                    </SelectItem>
-                    <SelectItem value="replace" disabled>
-                      {t("loops.policyReplace")} ({t("loops.comingSoon")})
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Timeout & Max Concurrent */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>{t("loops.timeout")}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={1440}
-                    value={timeoutMinutes}
-                    onChange={(e) => setTimeoutMinutes(Math.max(1, parseInt(e.target.value) || 60))}
-                    className="w-24"
-                  />
-                  <span className="text-sm text-muted-foreground">{t("loops.minutes")}</span>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>{t("loops.maxConcurrentRuns")}</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={maxConcurrentRuns}
-                  onChange={(e) => setMaxConcurrentRuns(parseInt(e.target.value) || 1)}
-                  className="w-24"
-                />
-              </div>
-            </div>
-
-            {/* Run History Limit */}
-            <div className="space-y-1.5">
-              <Label>{t("loops.maxRetainedRuns")}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={10000}
-                  value={maxRetainedRuns}
-                  onChange={(e) => setMaxRetainedRuns(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-24"
-                />
-                <span className="text-sm text-muted-foreground">
-                  {maxRetainedRuns === 0 ? t("loops.unlimited") : ""}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">{t("loops.maxRetainedRunsHelp")}</p>
-            </div>
-
-            {/* Session Persistence */}
-            {sandboxStrategy === "persistent" && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>{t("loops.sessionPersistence")}</Label>
-                  <p className="text-xs text-muted-foreground">{t("loops.sessionPersistenceHelp")}</p>
-                </div>
-                <Switch checked={sessionPersistence} onCheckedChange={setSessionPersistence} />
-              </div>
-            )}
-
-            {/* Webhook URL */}
-            <div className="space-y-1.5">
-              <Label>{t("loops.callbackUrl")}</Label>
-              <Input
-                type="url"
-                value={callbackUrl}
-                onChange={(e) => setCallbackUrl(e.target.value)}
-                placeholder={t("loops.callbackUrlPlaceholder")}
-              />
-              <p className="text-xs text-muted-foreground">{t("loops.callbackUrlHelp")}</p>
-            </div>
-          </div>
+          <LoopScheduleSection
+            cronEnabled={form.cronEnabled}
+            onCronEnabledChange={form.setCronEnabled}
+            cronExpression={form.cronExpression}
+            onCronExpressionChange={form.setCronExpression}
+            executionMode={form.executionMode}
+            onExecutionModeChange={form.setExecutionMode}
+            sandboxStrategy={form.sandboxStrategy}
+            onSandboxStrategyChange={form.setSandboxStrategy}
+            concurrencyPolicy={form.concurrencyPolicy}
+            onConcurrencyPolicyChange={form.setConcurrencyPolicy}
+            timeoutMinutes={form.timeoutMinutes}
+            onTimeoutMinutesChange={form.setTimeoutMinutes}
+            maxConcurrentRuns={form.maxConcurrentRuns}
+            onMaxConcurrentRunsChange={form.setMaxConcurrentRuns}
+            maxRetainedRuns={form.maxRetainedRuns}
+            onMaxRetainedRunsChange={form.setMaxRetainedRuns}
+            sessionPersistence={form.sessionPersistence}
+            onSessionPersistenceChange={form.setSessionPersistence}
+            callbackUrl={form.callbackUrl}
+            onCallbackUrlChange={form.setCallbackUrl}
+            t={t}
+          />
         </ResponsiveDialogBody>
 
         <ResponsiveDialogFooter>
@@ -532,11 +230,16 @@ export function LoopCreateDialog({
             {t("common.cancel")}
           </Button>
           <Button
-            onClick={handleSubmit}
-            disabled={loading || !name.trim() || !promptTemplate.trim() || !selectedAgentSlug}
+            onClick={() => form.submit(configValues)}
+            disabled={
+              form.loading ||
+              !form.name.trim() ||
+              !form.promptTemplate.trim() ||
+              !form.selectedAgentSlug
+            }
           >
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {isEdit ? t("common.save") : t("loops.createLoop")}
+            {form.loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {form.isEdit ? t("common.save") : t("loops.createLoop")}
           </Button>
         </ResponsiveDialogFooter>
       </ResponsiveDialogContent>

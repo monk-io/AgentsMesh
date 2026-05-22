@@ -23,3 +23,4 @@ pub mod ticket;
 pub mod ticket_api;
 pub mod ticket_relations;
 pub mod user;
+pub mod user_env_bundle;

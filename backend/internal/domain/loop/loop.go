@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // Domain errors
@@ -64,11 +66,17 @@ type Loop struct {
 	PromptTemplate string `gorm:"type:text;not null" json:"prompt_template"`
 
 	// Resource bindings
-	RepositoryID        *int64 `json:"repository_id,omitempty"`
-	RunnerID            *int64 `json:"runner_id,omitempty"`
-	BranchName          *string `gorm:"size:255" json:"branch_name,omitempty"`
-	TicketID            *int64 `json:"ticket_id,omitempty"`
-	CredentialProfileID *int64 `json:"credential_profile_id,omitempty"`
+	RepositoryID *int64  `json:"repository_id,omitempty"`
+	RunnerID     *int64  `json:"runner_id,omitempty"`
+	BranchName   *string `gorm:"size:255" json:"branch_name,omitempty"`
+	TicketID     *int64  `json:"ticket_id,omitempty"`
+	// UsedEnvBundles is the ordered list of EnvBundle names to attach to
+	// every run. Each name becomes a `USE_ENV_BUNDLE "<name>"` line in the
+	// generated AgentFile layer, emitted in array order; later entries
+	// override earlier ones on conflicting env keys (mirrors Pod creation).
+	// Empty slice = no bundles injected; the agent uses its built-in auth
+	// flow. Names are stable across bundle rename/recreate, unlike IDs.
+	UsedEnvBundles pq.StringArray `gorm:"type:text[];column:used_env_bundles;not null;default:'{}'" json:"used_env_bundles"`
 
 	// Agent config overrides (dynamic configuration from AgentFile CONFIG declarations)
 	ConfigOverrides json.RawMessage `gorm:"type:jsonb;default:'{}'" json:"config_overrides"`

@@ -9,10 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Compile-time interface compliance check.
 var _ channel.ChannelRepository = (*channelRepository)(nil)
 
-// channelAccess is the GORM model for the channel_access table.
 type channelAccess struct {
 	ID         int64     `gorm:"primaryKey"`
 	ChannelID  int64     `gorm:"not null;index"`
@@ -23,7 +21,6 @@ type channelAccess struct {
 
 func (channelAccess) TableName() string { return "channel_access" }
 
-// channelPod is the GORM model for the channel_pods table.
 type channelPod struct {
 	ID        int64     `gorm:"primaryKey"`
 	ChannelID int64     `gorm:"not null;index"`
@@ -37,12 +34,9 @@ type channelRepository struct {
 	db *gorm.DB
 }
 
-// NewChannelRepository creates a new GORM-backed ChannelRepository.
 func NewChannelRepository(db *gorm.DB) channel.ChannelRepository {
 	return &channelRepository{db: db}
 }
-
-// --- Channel CRUD ---
 
 func (r *channelRepository) GetByID(ctx context.Context, channelID int64) (*channel.Channel, error) {
 	var ch channel.Channel
@@ -59,6 +53,28 @@ func (r *channelRepository) GetByOrgAndName(ctx context.Context, orgID int64, na
 	var ch channel.Channel
 	err := r.db.WithContext(ctx).
 		Where("organization_id = ? AND name = ?", orgID, name).
+		First(&ch).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &ch, nil
+}
+
+func (r *channelRepository) SlugExists(ctx context.Context, orgID int64, slug string) (bool, error) {
+	var n int64
+	err := r.db.WithContext(ctx).Model(&channel.Channel{}).
+		Where("organization_id = ? AND slug = ?", orgID, slug).
+		Count(&n).Error
+	return n > 0, err
+}
+
+func (r *channelRepository) GetByOrgAndSlug(ctx context.Context, orgID int64, slug string) (*channel.Channel, error) {
+	var ch channel.Channel
+	err := r.db.WithContext(ctx).
+		Where("organization_id = ? AND slug = ?", orgID, slug).
 		First(&ch).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -144,7 +160,6 @@ func (r *channelRepository) ListVisibleForUser(ctx context.Context, orgID, userI
 		args = append(args, *filter.Visibility)
 	}
 
-	// Visibility gate: public OR user is member
 	visibilityClause := " AND (c.visibility = 'public' OR EXISTS (SELECT 1 FROM channel_members cm3 WHERE cm3.channel_id = c.id AND cm3.user_id = ?))"
 	args = append(args, userID)
 

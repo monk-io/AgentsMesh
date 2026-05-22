@@ -15,6 +15,7 @@ export { ElectronNotificationService } from './notification';
 export { ElectronOrgService } from './org';
 export { ElectronUserService } from './user';
 export { ElectronUserCredentialService } from './user_credential';
+export { ElectronEnvBundleService } from './env_bundle';
 export { ElectronAgentService } from './agent';
 export { ElectronSSOService } from './sso';
 export { ElectronFileService } from './file';

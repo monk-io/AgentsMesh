@@ -6,10 +6,28 @@ import (
 	"errors"
 )
 
-// ConfigValues represents dynamic configuration values (JSONB)
+const (
+	ConfigKeyModel          = "model"
+	ConfigKeyPermissionMode = "permission_mode"
+)
+
 type ConfigValues map[string]interface{}
 
-// Scan implements sql.Scanner for ConfigValues
+func (cv ConfigValues) GetString(key string) string {
+	if cv == nil {
+		return ""
+	}
+	v, ok := cv[key]
+	if !ok {
+		return ""
+	}
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+	return s
+}
+
 func (cv *ConfigValues) Scan(value interface{}) error {
 	if value == nil {
 		*cv = make(ConfigValues)
@@ -27,7 +45,6 @@ func (cv *ConfigValues) Scan(value interface{}) error {
 	return json.Unmarshal(bytes, cv)
 }
 
-// Value implements driver.Valuer for ConfigValues
 func (cv ConfigValues) Value() (driver.Value, error) {
 	if cv == nil {
 		return json.Marshal(make(map[string]interface{}))
@@ -35,8 +52,6 @@ func (cv ConfigValues) Value() (driver.Value, error) {
 	return json.Marshal(cv)
 }
 
-// MergeConfigs merges multiple config maps with priority (later maps override earlier).
-// Used for: AgentFile CONFIG defaults -> user personal config -> pod overrides
 func MergeConfigs(configs ...map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 

@@ -16,7 +16,6 @@ import {
 vi.mock("../../hooks", () => ({
   usePodCreationData: vi.fn(() => defaultPodCreationData),
   useCreatePodForm: vi.fn(() => defaultFormState),
-  RUNNER_HOST_PROFILE_ID: 0,
 }));
 
 vi.mock("@/components/ide/hooks", () => ({
@@ -46,7 +45,7 @@ vi.mock("@/stores/podCreation", () => ({
   usePodCreationStore: () => ({
     lastAgentSlug: null,
     lastRepositoryId: null,
-    lastCredentialProfileId: null,
+    lastBundleName: null,
     lastBranchName: null,
     setLastChoices: vi.fn(),
     clearLastChoices: vi.fn(),

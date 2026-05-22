@@ -147,7 +147,22 @@ func TestTestConnection_SAML_WithFactory(t *testing.T) {
 func TestTestConnection_LDAP_BuildSuccess_ConnectFails(t *testing.T) {
 	repo := newMockRepository()
 	svc := newTestService(repo)
-	seedLDAPConfig(repo)
+	cfg := seedLDAPConfig(repo)
+	// Override host/port to an endpoint guaranteed to refuse: ISP DNS
+	// hijacking can resolve "ldap.company.com" to a captive-portal IP
+	// that actually accepts TCP on 389, making the original fixture
+	// flaky in some networks. 127.0.0.1:1 reliably fails fast with
+	// "connection refused" — no listener on port 1 in any normal env.
+	*cfg.LDAPHost = "127.0.0.1"
+	*cfg.LDAPPort = 1
+
+	// Inject a deterministic failure for the wire-level probe. The real
+	// LDAPProvider.TestConnection() relies on DNS + TCP behavior, which
+	// some sandboxed test environments handle inconsistently (a closed
+	// host can appear as instantly-succeeding).
+	svc.ldapConnectionTester = func(_ *ssoprovider.LDAPProvider) error {
+		return fmt.Errorf("connection failed: simulated unreachable host")
+	}
 
 	err := svc.TestConnection(context.Background(), 1)
 	require.Error(t, err)

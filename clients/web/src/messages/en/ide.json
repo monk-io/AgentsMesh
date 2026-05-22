@@ -75,8 +75,12 @@
       "selectAgentPlaceholder": "Choose an agent...",
       "noAgentsForRunner": "This runner does not support any agents",
       "selectCredential": "API Credentials",
-      "runnerHostDescription": "use Runner's local config",
-      "runnerHostHint": "Using Runner's local environment configuration. No credentials will be injected.",
+      "selectRuntimeBundles": "Runtime Env Bundles",
+      "useAgentDefaultAuth": "Use Agent default auth",
+      "credentialSelectedHint": "Selected credential bundle's env vars are injected when the Pod starts.",
+      "noCredentialHint": "No custom credentials injected; the agent uses its built-in auth flow (OAuth, signed-in CLI, etc.).",
+      "noRuntimeBundlesAvailableHint": "This agent has no runtime env bundles yet. Add one in Settings → Agent config.",
+      "noRuntimeBundleSelectedHint": "No runtime bundle selected; the Pod runs without any extra runtime preferences.",
       "customCredentialHint": "Using your custom API credentials for this agent.",
       "selectRepository": "Select Repository",
       "selectRepositoryPlaceholder": "Choose a repository...",
@@ -102,7 +106,17 @@
       "perpetualDescription": "Auto-restart when agent exits. Pod stays alive indefinitely.",
       "interactionMode": "Interaction Mode",
       "modePty": "Terminal (PTY)",
-      "modeAcp": "Conversational (ACP)"
+      "modeAcp": "Conversational (ACP)",
+      "noBundleLabel": "Use agent's default auth",
+      "noBundleHint": "No custom credentials injected; the agent uses its built-in auth flow (OAuth, signed-in CLI, etc.).",
+      "multiBundleHint": "Selected bundles are merged into the Pod env in order; later entries override earlier ones on conflicting keys.",
+      "selectedOrderHint": "Selected (merge order)",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "bundleKind": {
+        "credential": "Credential",
+        "runtime": "Runtime"
+      }
     },
     "sidebar": {
       "collapse": "Collapse sidebar",

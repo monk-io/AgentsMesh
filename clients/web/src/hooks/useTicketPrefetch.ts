@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { getTicket, getSubTickets } from "@/lib/api/ticketConnect";
-import { listRelations, listCommits } from "@/lib/api/ticketRelations";
-import { useCurrentOrg } from "@/stores/auth";
+import { getTicketService, getTicketRelationsService } from "@/lib/wasm-core";
 
 const prefetchCache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
@@ -11,7 +9,6 @@ const CACHE_TTL = 5 * 60 * 1000;
 const pendingRequests = new Set<string>();
 
 export function useTicketPrefetch() {
-  const orgSlug = useCurrentOrg()?.slug || "";
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isCached = useCallback((slug: string): boolean => {
@@ -40,7 +37,6 @@ export function useTicketPrefetch() {
       return;
     }
 
-    // 150ms hover delay avoids prefetching on accidental cursor passes.
     hoverTimeoutRef.current = setTimeout(async () => {
       if (isCached(slug) || pendingRequests.has(slug)) {
         return;
@@ -49,18 +45,16 @@ export function useTicketPrefetch() {
       pendingRequests.add(slug);
 
       try {
-        const ticketData = orgSlug ? await getTicket(orgSlug, slug) : null;
-        if (ticketData) {
-          prefetchCache.set(slug, {
-            data: ticketData,
-            timestamp: Date.now(),
-          });
-        }
+        const ticketData = JSON.parse(await getTicketService().fetch_ticket(slug));
+        prefetchCache.set(slug, {
+          data: ticketData,
+          timestamp: Date.now(),
+        });
 
         const [subTickets, relations, commits] = await Promise.allSettled([
-          orgSlug ? getSubTickets(orgSlug, slug) : Promise.resolve([]),
-          orgSlug ? listRelations(orgSlug, slug) : Promise.resolve({ relations: [] }),
-          orgSlug ? listCommits(orgSlug, slug) : Promise.resolve({ commits: [] }),
+          getTicketService().get_sub_tickets(slug).then((j: string) => JSON.parse(j)),
+          getTicketRelationsService().list_relations(slug).then((j: string) => JSON.parse(j)),
+          getTicketRelationsService().list_commits(slug).then((j: string) => JSON.parse(j)),
         ]);
 
         if (subTickets.status === "fulfilled") {
@@ -87,7 +81,7 @@ export function useTicketPrefetch() {
         pendingRequests.delete(slug);
       }
     }, 150);
-  }, [isCached, orgSlug]);
+  }, [isCached]);
 
   const cancelPrefetch = useCallback(() => {
     if (hoverTimeoutRef.current) {

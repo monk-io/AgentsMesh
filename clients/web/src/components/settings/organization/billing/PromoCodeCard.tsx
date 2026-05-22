@@ -7,9 +7,6 @@ interface PromoCodeCardProps {
   t: TranslationFn;
 }
 
-/**
- * PromoCodeCard - Card for entering and redeeming promo codes
- */
 export function PromoCodeCard({
   orgSlug,
   onRedeemSuccess,

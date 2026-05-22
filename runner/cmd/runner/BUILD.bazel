@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("//build_defs/docker:go_oci_image.bzl", "go_oci_image")
 load("//build_defs/release:release_bundle.bzl", "runner_release_bundle")
 
@@ -30,6 +30,7 @@ go_library(
         "//runner/internal/otel",
         "//runner/internal/pidfile",
         "//runner/internal/poddaemon",
+        "//runner/internal/processmgr",
         "//runner/internal/runner",
         "//runner/internal/service",
         "//runner/internal/updater",
@@ -72,4 +73,10 @@ runner_release_bundle(
         "//:README.md",
         "//:LICENSE",
     ],
+)
+
+go_test(
+    name = "runner_test",
+    srcs = ["service_test.go"],
+    embed = [":runner_lib"],
 )

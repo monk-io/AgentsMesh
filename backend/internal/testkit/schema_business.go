@@ -1,11 +1,11 @@
 package testkit
 
-// channelTableDDLs returns DDLs for channels, messages, members, access, bindings.
 func channelTableDDLs() []string {
 	return []string{
 		`CREATE TABLE IF NOT EXISTS channels (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			organization_id INTEGER NOT NULL, name TEXT NOT NULL, description TEXT,
+			organization_id INTEGER NOT NULL, name TEXT NOT NULL, slug TEXT,
+			description TEXT,
 			document TEXT, repository_id INTEGER, ticket_id INTEGER,
 			created_by_pod TEXT, created_by_user_id INTEGER,
 			visibility TEXT NOT NULL DEFAULT 'public',
@@ -65,7 +65,6 @@ func channelTableDDLs() []string {
 		`CREATE TABLE IF NOT EXISTS pod_bindings (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			organization_id INTEGER NOT NULL,
-			channel_id INTEGER,
 			initiator_pod TEXT NOT NULL, target_pod TEXT NOT NULL,
 			granted_scopes TEXT DEFAULT '[]', pending_scopes TEXT DEFAULT '[]',
 			status TEXT NOT NULL DEFAULT 'pending',
@@ -77,7 +76,6 @@ func channelTableDDLs() []string {
 	}
 }
 
-// ticketTableDDLs returns DDLs for tickets, comments, labels, MRs, relations.
 func ticketTableDDLs() []string {
 	return []string{
 		`CREATE TABLE IF NOT EXISTS tickets (

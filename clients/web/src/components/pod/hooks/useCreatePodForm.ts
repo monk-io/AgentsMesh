@@ -5,18 +5,22 @@ import { buildAgentfileLayer } from "@/lib/agentfile-layer";
 import { POD_MODE_PTY } from "@/lib/pod-modes";
 import type { PodMode } from "@/lib/pod-modes";
 import { submitCreatePod } from "./useCreatePodFormSubmit";
-import { usePrefsAutoFill, useCredentialProfiles } from "./useCreatePodFormEffects";
+import { usePrefsAutoFill, useEnvBundles } from "./useCreatePodFormEffects";
 import type { CreatePodFormState, FormValidationErrors } from "./useCreatePodFormTypes";
-import { RUNNER_HOST_PROFILE_ID } from "./useCreatePodFormTypes";
 
 // Re-export types for consumers
-export { RUNNER_HOST_PROFILE_ID } from "./useCreatePodFormTypes";
 export type { CreatePodFormState, FormValidationErrors } from "./useCreatePodFormTypes";
 
 /**
- * Hook to manage Create Pod form state and submission
- * Note: Runner selection is managed by usePodCreationData
- * This hook manages agent selection and other form fields
+ * Hook to manage Create Pod form state and submission.
+ *
+ * EnvBundle attachment is split into two dimensions mirroring the dialog UI:
+ *   - `selectedCredentialName` (single): API credential bundle.
+ *   - `selectedRuntimeBundleNames` (ordered list): runtime preference bundles.
+ *
+ * On submit, the two are merged at the AgentFile layer with credential
+ * first and runtime bundles after — so runtime preferences (model, log
+ * level) can override credential defaults on conflicting keys.
  */
 export function useCreatePodForm(
   availableAgents: AgentData[],
@@ -43,8 +47,8 @@ export function useCreatePodForm(
   const [rawLayerMode, setRawLayerModeState] = useState(false);
   const [rawLayerText, setRawLayerText] = useState("");
 
-  // Credential profiles (extracted hook)
-  const creds = useCredentialProfiles(selectedAgent);
+  // EnvBundles for the selected agent
+  const bundles = useEnvBundles(selectedAgent);
 
   // Auto-fill from saved preferences
   const prefsInitializedRef = usePrefsAutoFill(
@@ -75,11 +79,12 @@ export function useCreatePodForm(
   useEffect(() => {
     if (selectedAgent && !availableAgents.find(a => a.slug === selectedAgent)) {
       setSelectedAgent(null);
-      creds.setCredentialProfiles([]);
-      creds.setSelectedCredentialProfile(RUNNER_HOST_PROFILE_ID);
+      bundles.setEnvBundles([]);
+      bundles.setSelectedCredentialName("");
+      bundles.setSelectedRuntimeBundleNames([]);
       setInteractionMode(POD_MODE_PTY);
     }
-  }, [availableAgents, selectedAgent, creds]);
+  }, [availableAgents, selectedAgent, bundles]);
 
   // Auto-set interaction mode when agent changes based on supported modes
   useEffect(() => {
@@ -121,8 +126,9 @@ export function useCreatePodForm(
     setSelectedAgent(null);
     setSelectedRepository(null);
     setSelectedBranch("");
-    creds.setSelectedCredentialProfile(RUNNER_HOST_PROFILE_ID);
-    creds.setCredentialProfiles([]);
+    bundles.setSelectedCredentialName("");
+    bundles.setSelectedRuntimeBundleNames([]);
+    bundles.setEnvBundles([]);
     setInteractionMode(POD_MODE_PTY);
     setPrompt("");
     setAlias("");
@@ -133,27 +139,29 @@ export function useCreatePodForm(
     setRawLayerModeState(false);
     setRawLayerText("");
     prefsInitializedRef.current = false;
-  }, [creds, prefsInitializedRef]);
+  }, [bundles, prefsInitializedRef]);
 
   // AgentFile Layer: compute from form fields
   const generatedLayer = useMemo(() => {
     const repoSlug = selectedRepository
       ? repositories.find((r) => r.id === selectedRepository)?.slug
       : undefined;
-    const credProfileName = creds.selectedCredentialProfile === RUNNER_HOST_PROFILE_ID
-      ? undefined
-      : creds.credentialProfiles.find(
-          (p) => p.id === creds.selectedCredentialProfile
-        )?.name;
     return buildAgentfileLayer({
       configValues: configValues ?? {},
       repositorySlug: repoSlug,
       branchName: selectedBranch || undefined,
       interactionMode,
-      credentialProfileName: credProfileName,
+      credentialBundleName: bundles.selectedCredentialName || undefined,
+      runtimeBundleNames: bundles.selectedRuntimeBundleNames.length > 0
+        ? bundles.selectedRuntimeBundleNames
+        : undefined,
       prompt: prompt || undefined,
     });
-  }, [configValues, selectedRepository, repositories, selectedBranch, creds.selectedCredentialProfile, creds.credentialProfiles, interactionMode, prompt]);
+  }, [
+    configValues, selectedRepository, repositories, selectedBranch,
+    bundles.selectedCredentialName, bundles.selectedRuntimeBundleNames,
+    interactionMode, prompt,
+  ]);
 
   const agentfileLayer = rawLayerMode ? rawLayerText : generatedLayer;
 
@@ -182,8 +190,10 @@ export function useCreatePodForm(
         });
         if (result) {
           setLastChoices({
-            lastAgentSlug: selectedAgent, lastRepositoryId: selectedRepository,
-            lastCredentialProfileId: creds.selectedCredentialProfile > 0 ? creds.selectedCredentialProfile : null,
+            lastAgentSlug: selectedAgent,
+            lastRepositoryId: selectedRepository,
+            lastCredentialName: bundles.selectedCredentialName,
+            lastRuntimeBundleNames: bundles.selectedRuntimeBundleNames,
             lastBranchName: selectedBranch || null,
           });
           if (result.warning) setWarning(result.warning);
@@ -199,16 +209,22 @@ export function useCreatePodForm(
         setLoading(false);
       }
     },
-    [selectedAgent, selectedRepository, selectedBranch, creds.selectedCredentialProfile, alias, perpetual, agentfileLayer, onSuccess, validate, setLastChoices]
+    [
+      selectedAgent, selectedRepository, selectedBranch,
+      bundles.selectedCredentialName, bundles.selectedRuntimeBundleNames,
+      alias, perpetual, agentfileLayer, onSuccess, validate, setLastChoices,
+    ]
   );
 
   return {
     selectedAgent, selectedRepository, selectedBranch,
-    selectedCredentialProfile: creds.selectedCredentialProfile,
+    selectedCredentialName: bundles.selectedCredentialName,
+    selectedRuntimeBundleNames: bundles.selectedRuntimeBundleNames,
     interactionMode, prompt, alias, perpetual,
-    credentialProfiles: creds.credentialProfiles, loadingCredentials: creds.loadingCredentials,
+    envBundles: bundles.envBundles, loadingBundles: bundles.loadingBundles,
     setSelectedAgent, setSelectedRepository, setSelectedBranch,
-    setSelectedCredentialProfile: creds.setSelectedCredentialProfile,
+    setSelectedCredentialName: bundles.setSelectedCredentialName,
+    setSelectedRuntimeBundleNames: bundles.setSelectedRuntimeBundleNames,
     setInteractionMode, setPrompt, setAlias, setPerpetual, selectedAgentSlug, supportedModes,
     loading, error, warning, validationErrors, isValid, reset, validate, submit,
     // AgentFile Layer

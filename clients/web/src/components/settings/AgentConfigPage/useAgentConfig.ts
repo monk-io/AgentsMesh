@@ -1,283 +1,148 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import {
-  type ConfigField,
-  type CredentialField,
-  type AgentData,
-  type CredentialProfileData,
-} from "@/lib/api";
-import {
-  listAgentCredentialProfiles,
-  createAgentCredentialProfile,
-  updateAgentCredentialProfile,
-  deleteAgentCredentialProfile,
-  setDefaultAgentCredentialProfile,
-} from "@/lib/api/userAgentCredential";
-import {
-  listAgents,
-  getAgentConfigSchema,
-  getUserAgentConfig,
-  setUserAgentConfig,
-} from "@/lib/api/agentConnect";
-import { useCurrentOrg } from "@/stores/auth";
-import { getLocalizedErrorMessage } from "@/lib/api/errors";
-import { toast } from "sonner";
-import type { AgentConfigState, AgentConfigActions, CredentialFormData } from "./types";
+import { useCallback, useEffect, useState } from "react";
+import type { AgentData } from "@/lib/api";
+import { getAgentService } from "@/lib/wasm-core";
+import type {
+  AgentConfigState,
+  AgentConfigActions,
+  CredentialFormData,
+  RuntimeBundleFormData,
+  RuntimeBundleViewModel,
+} from "./types";
+import type { CredentialProfileViewModel } from "../_shared/credentialViewModel";
+import { useAgentConfigMessages } from "./useAgentConfigMessages";
+import { useCredentialBundles } from "./useCredentialBundles";
+import { useRuntimeBundles } from "./useRuntimeBundles";
+import { useAgentRuntimeConfig } from "./useAgentRuntimeConfig";
 
 /**
- * Custom hook for managing agent configuration state and actions
+ * Facade hook for the per-agent settings page. Composes three independent
+ * slice hooks behind a single state/action surface so the rest of the
+ * AgentConfigPage component tree stays unchanged:
+ *
+ *   - useCredentialBundles     — credential-kind EnvBundles (encrypted)
+ *   - useRuntimeBundles        — runtime-kind EnvBundles (plaintext)
+ *   - useAgentRuntimeConfig    — typed agent-schema runtime config values
+ *
+ * Plus `useAgentConfigMessages` for the shared error/success banner.
+ *
+ * The facade owns:
+ *   - Agent identity resolution (`agentSlug` → `AgentData`)
+ *   - Page-level loading flag (true until *every* slice has loaded once)
+ *   - Triggering each slice's load on agent change
  */
 export function useAgentConfig(
   agentSlug: string,
   t: (key: string) => string
 ): AgentConfigState & AgentConfigActions {
-  const currentOrg = useCurrentOrg();
-  // Loading states
   const [loading, setLoading] = useState(true);
-  const [savingConfig, setSavingConfig] = useState(false);
-
-  // Data states
   const [agent, setAgent] = useState<AgentData | null>(null);
-  const [configFields, setConfigFields] = useState<ConfigField[]>([]);
-  const [configValues, setConfigValues] = useState<Record<string, unknown>>({});
-  const [credentialFields, setCredentialFields] = useState<CredentialField[]>([]);
-  const [credentialProfiles, setCredentialProfiles] = useState<CredentialProfileData[]>([]);
-  const [isRunnerHostDefault, setIsRunnerHostDefault] = useState(true);
 
-  // UI states
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const msgs = useAgentConfigMessages();
+  const creds = useCredentialBundles(msgs, t);
+  const runtime = useRuntimeBundles(msgs, t);
+  const cfg = useAgentRuntimeConfig(msgs, t);
 
-  // Load all data
+  // Resolve the agent + fan out to every slice. Sequential agent lookup,
+  // then parallel slice loads (each slice owns its own error fallback so
+  // one failing won't take down the rest).
   const loadData = useCallback(async () => {
+    setLoading(true);
+    msgs.setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-
-      if (!currentOrg) {
-        setLoading(false);
+      const agentsRes = JSON.parse(await getAgentService().list_agents());
+      const allAgents: AgentData[] = [
+        ...(agentsRes.builtin_agents || []),
+        ...(agentsRes.custom_agents || []),
+        ...(agentsRes.agents || []),
+      ];
+      const found = allAgents.find((a) => a.slug === agentSlug);
+      if (!found) {
+        msgs.setError(t("settings.agentConfig.agentNotFound"));
+        setAgent(null);
         return;
       }
-
-      // Load agents to find the one matching the slug
-      const agentsRes = await listAgents(currentOrg.slug);
-      const allAgents = [...agentsRes.builtin_agents, ...agentsRes.custom_agents];
-      const foundAgent = allAgents.find(
-        (a: AgentData) => a.slug === agentSlug
-      );
-
-      if (!foundAgent) {
-        setError(t("settings.agentConfig.agentNotFound"));
-        setLoading(false);
-        return;
-      }
-
-      setAgent(foundAgent);
-
-      // Load data in parallel
-      const [schemaRes, credentialsRes] = await Promise.all([
-        getAgentConfigSchema(currentOrg.slug, foundAgent.slug)
-          .catch(() => ({ fields: [], credential_fields: [] })),
-        listAgentCredentialProfiles().catch(() => ({ items: [], total: 0 })),
+      setAgent(found);
+      await Promise.all([
+        creds.loadCredentialBundles(found),
+        runtime.loadRuntimeBundles(found),
+        cfg.loadRuntimeConfig(found),
       ]);
-
-      // Set config schema fields
-      const fields = schemaRes.fields || [];
-      setConfigFields(fields);
-
-      // Set credential fields from AgentFile ENV SECRET/TEXT declarations
-      setCredentialFields(schemaRes.credential_fields || []);
-
-      // Initialize config values with defaults from schema
-      const defaultValues: Record<string, unknown> = {};
-      for (const field of fields) {
-        if (field.default !== undefined) {
-          defaultValues[field.name] = field.default;
-        }
-      }
-
-      // Try to load user's saved config
-      try {
-        const userConfig = await getUserAgentConfig(foundAgent.slug);
-        if (userConfig.config_values) {
-          // Merge user config over defaults
-          setConfigValues({ ...defaultValues, ...userConfig.config_values });
-        } else {
-          setConfigValues(defaultValues);
-        }
-      } catch {
-        // No saved config, use defaults
-        setConfigValues(defaultValues);
-      }
-
-      // Extract credential profiles for this agent
-      const agentCredentials = credentialsRes.items?.find(
-        (item: { agent_slug: string }) => item.agent_slug === foundAgent.slug
-      );
-      const profiles = agentCredentials?.profiles || [];
-      setCredentialProfiles(profiles);
-
-      // Check if RunnerHost is default (no custom profile is default)
-      const hasCustomDefault = profiles.some((p: CredentialProfileData) => p.is_default);
-      setIsRunnerHostDefault(!hasCustomDefault);
     } catch (err) {
-      console.error("Failed to load agent config:", err);
-      setError(t("settings.agentConfig.loadFailed"));
+      msgs.reportError(err, t, "settings.agentConfig.loadFailed");
     } finally {
       setLoading(false);
     }
-  }, [agentSlug, currentOrg, t]);
+    // creds/runtime/cfg are stable identity-by-reference (useCallback inside);
+    // exhaustive-deps would still flag them so we list them explicitly.
+  }, [agentSlug, t, creds, runtime, cfg, msgs]);
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    // We intentionally re-run only on agentSlug change, not on identity churn
+    // of the helper hooks (their handlers are stable enough that re-loading
+    // would create thrash).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentSlug]);
 
-  // Handle config field change
-  const handleConfigChange = useCallback((fieldName: string, value: unknown) => {
-    setConfigValues((prev) => ({
-      ...prev,
-      [fieldName]: value,
-    }));
-  }, []);
+  // Surface adapters: call-site components still pass the bare profile/
+  // bundle/id; the facade injects the current agent so slice hooks don't
+  // need to store it themselves.
+  const handleSaveProfile = useCallback(
+    (data: CredentialFormData, editingProfile: CredentialProfileViewModel | null) => {
+      if (!agent) return Promise.resolve();
+      return creds.handleSaveProfile(data, editingProfile, agent);
+    },
+    [agent, creds]
+  );
 
-  // Save runtime config
-  const handleSaveConfig = useCallback(async () => {
-    if (!agent) return;
+  const handleSaveRuntimeBundle = useCallback(
+    (data: RuntimeBundleFormData, editingBundle: RuntimeBundleViewModel | null) => {
+      if (!agent) return Promise.resolve();
+      return runtime.handleSaveRuntimeBundle(data, editingBundle, agent);
+    },
+    [agent, runtime]
+  );
 
-    try {
-      setSavingConfig(true);
-      setError(null);
-
-      // Filter out undefined values, but keep empty strings (e.g., "Follow Runner" model option)
-      // and false for booleans
-      const cleanedConfig: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(configValues)) {
-        if (value !== undefined) {
-          cleanedConfig[key] = value;
-        }
-      }
-
-      await setUserAgentConfig(agent.slug, cleanedConfig);
-      setSuccess(t("settings.agentConfig.configSaved"));
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error("Failed to save config:", err);
-      const msg = getLocalizedErrorMessage(err, t, t("settings.agentConfig.configSaveFailed"));
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setSavingConfig(false);
-    }
-  }, [agent, configValues, t]);
-
-  // Set RunnerHost as default
-  const handleSetRunnerHostDefault = useCallback(async () => {
-    try {
-      setError(null);
-      const currentDefault = credentialProfiles.find((p) => p.is_default);
-      if (currentDefault) {
-        await updateAgentCredentialProfile(currentDefault.id, { is_default: false });
-      }
-      setSuccess(t("settings.agentCredentials.defaultSet"));
-      await loadData();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error("Failed to set RunnerHost as default:", err);
-      const msg = getLocalizedErrorMessage(err, t, t("settings.agentCredentials.failedToSetDefault"));
-      setError(msg);
-      toast.error(msg);
-    }
-  }, [credentialProfiles, loadData, t]);
-
-  // Set custom profile as default
-  const handleSetDefault = useCallback(async (profileId: number) => {
-    try {
-      setError(null);
-      await setDefaultAgentCredentialProfile(profileId);
-      setSuccess(t("settings.agentCredentials.defaultSet"));
-      await loadData();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error("Failed to set default:", err);
-      const msg = getLocalizedErrorMessage(err, t, t("settings.agentCredentials.failedToSetDefault"));
-      setError(msg);
-      toast.error(msg);
-    }
-  }, [loadData, t]);
-
-  // Delete credential profile (no confirmation - caller should handle confirmation dialog)
-  const handleDeleteProfile = useCallback(async (profileId: number) => {
-    try {
-      setError(null);
-      await deleteAgentCredentialProfile(profileId);
-      setSuccess(t("settings.agentCredentials.profileDeleted"));
-      await loadData();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error("Failed to delete profile:", err);
-      const msg = getLocalizedErrorMessage(err, t, t("settings.agentCredentials.failedToDelete"));
-      setError(msg);
-      toast.error(msg);
-    }
-  }, [loadData, t]);
-
-  // Save credential profile (create or update)
-  // credentials keys are full ENV names from AgentFile declarations.
-  const handleSaveProfile = useCallback(async (
-    data: CredentialFormData,
-    editingProfile: CredentialProfileData | null
-  ) => {
-    if (!agent) return;
-
-    const credentials = Object.keys(data.credentials).length > 0 ? data.credentials : undefined;
-
-    if (editingProfile) {
-      await updateAgentCredentialProfile(editingProfile.id, {
-        name: data.name,
-        description: data.description || undefined,
-        is_runner_host: false,
-        credentials,
-      });
-      setSuccess(t("settings.agentCredentials.profileUpdated"));
-    } else {
-      await createAgentCredentialProfile({
-        agent_slug: agent.slug,
-        name: data.name,
-        description: data.description || undefined,
-        is_runner_host: false,
-        credentials: data.credentials,
-        is_default: false,
-      });
-      setSuccess(t("settings.agentCredentials.profileCreated"));
-    }
-
-    await loadData();
-    setTimeout(() => setSuccess(null), 3000);
-  }, [agent, loadData, t]);
+  const handleSaveConfig = useCallback(() => {
+    if (!agent) return Promise.resolve();
+    return cfg.handleSaveConfig(agent);
+  }, [agent, cfg]);
 
   return {
     // State
     loading,
-    savingConfig,
+    savingConfig: cfg.savingConfig,
     agent,
-    configFields,
-    configValues,
-    credentialFields,
-    credentialProfiles,
-    isRunnerHostDefault,
-    error,
-    success,
+    configFields: cfg.configFields,
+    configValues: cfg.configValues,
+    credentialProfiles: creds.credentialProfiles,
+    noPrimaryBundle: creds.noPrimaryBundle,
+    runtimeBundles: runtime.runtimeBundles,
+    error: msgs.error,
+    success: msgs.success,
 
-    // Actions
-    handleConfigChange,
-    handleSaveConfig,
-    handleSetRunnerHostDefault,
-    handleSetDefault,
-    handleDeleteProfile,
+    // Actions — credential
+    handleClearPrimaryBundle: creds.handleClearPrimaryBundle,
+    handleSetDefault: creds.handleSetDefault,
+    handleDeleteProfile: creds.handleDeleteProfile,
     handleSaveProfile,
-    setError,
-    setSuccess,
+
+    // Actions — runtime bundles
+    handleSetRuntimePrimary: runtime.handleSetRuntimePrimary,
+    handleClearRuntimePrimary: runtime.handleClearRuntimePrimary,
+    handleDeleteRuntimeBundle: runtime.handleDeleteRuntimeBundle,
+    handleSaveRuntimeBundle,
+
+    // Actions — agent runtime config
+    handleConfigChange: cfg.handleConfigChange,
+    handleSaveConfig,
+
+    // UI
+    setError: msgs.setError,
+    setSuccess: msgs.setSuccess,
     loadData,
   };
 }

@@ -57,8 +57,6 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
     return () => controller.abort();
   }, [loadRegistries]);
 
-  // Split registries into platform vs org
-  // organization_id == null covers both null and undefined (omitempty in Go)
   const platformRegistries = useMemo(
     () => registries.filter((r) => r.organization_id == null),
     [registries]
@@ -68,7 +66,6 @@ export function SkillRegistriesSettings({ t }: SkillRegistriesSettingsProps) {
     [registries]
   );
 
-  // Build a set of disabled registry IDs for quick lookup
   const disabledRegistryIds = useMemo(() => {
     const ids = new Set<number>();
     for (const o of overrides) {

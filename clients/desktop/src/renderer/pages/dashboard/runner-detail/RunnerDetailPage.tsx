@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -22,7 +23,9 @@ function getStatusIcon(status: string) {
 
 export function RunnerDetailPage() {
   const t = useTranslations();
+  const { org } = useParams<{ org: string }>();
   const state = useRunnerDetail(t);
+  const runnersTabHref = `/${org}/infra?tab=runners`;
 
   if (state.loading) return <CenteredSpinner className="h-64" />;
 
@@ -30,7 +33,7 @@ export function RunnerDetailPage() {
     return (
       <div className="p-6">
         <p className="text-muted-foreground">{t("runners.detail.notFound")}</p>
-        <Link href="../runners">
+        <Link href={runnersTabHref}>
           <Button variant="outline" className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />{t("common.back")}
           </Button>
@@ -43,10 +46,9 @@ export function RunnerDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link href="../runners">
+          <Link href={runnersTabHref}>
             <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
           </Link>
           <div className="flex items-center space-x-3">
@@ -76,7 +78,6 @@ export function RunnerDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-border">
         <nav className="flex space-x-8">
           {(["overview", "pods"] as const).map(tab => (

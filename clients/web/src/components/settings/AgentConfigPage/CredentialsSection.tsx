@@ -3,18 +3,20 @@
 import { Button } from "@/components/ui/button";
 import { Server, Key, Star, Check, Edit2, Trash2, Plus } from "lucide-react";
 import type { CredentialsSectionProps } from "./types";
-import { getCredentialFieldLabel } from "../credentialFieldLabel";
+import { getEnvKeyLabel } from "../AgentCredentialsSettings/credentialForms";
 
 /**
- * CredentialsSection - Displays and manages credential profiles
+ * CredentialsSection - Displays and manages credential bundles for an agent
  *
- * Shows RunnerHost as the first option and custom credential profiles below.
- * Allows setting default, editing, and deleting profiles.
+ * Shows a "no bundle" row first (Runner uses its native env) followed by
+ * any custom credential-kind EnvBundles attached to this agent.
+ * Allows setting default, editing, and deleting bundles.
  */
 export function CredentialsSection({
-  isRunnerHostDefault,
+  agentSlug,
+  noPrimaryBundle,
   credentialProfiles,
-  onSetRunnerHostDefault,
+  onClearPrimary,
   onSetDefault,
   onEdit,
   onDelete,
@@ -32,14 +34,16 @@ export function CredentialsSection({
       </p>
 
       <div className="space-y-2">
-        {/* RunnerHost - always shown as first option */}
+        {/* "No bundle" — always shown as first option.
+            Represents using the Runner's native env; selecting it clears the
+            primary credential bundle for this agent. */}
         <div className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50">
           <div className="flex items-center gap-3">
             <Server className="w-4 h-4 text-muted-foreground" />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">RunnerHost</span>
-                {isRunnerHostDefault && (
+                <span className="font-medium">{t("settings.agentCredentials.noBundleLabel")}</span>
+                {noPrimaryBundle && (
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary">
                     <Star className="w-3 h-3 mr-0.5" />
                     {t("settings.agentCredentials.default")}
@@ -47,15 +51,15 @@ export function CredentialsSection({
                 )}
               </div>
               <div className="text-xs text-muted-foreground">
-                {t("settings.agentCredentials.runnerHostHint")}
+                {t("settings.agentCredentials.noBundleHint")}
               </div>
             </div>
           </div>
-          {!isRunnerHostDefault && (
+          {!noPrimaryBundle && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={onSetRunnerHostDefault}
+              onClick={onClearPrimary}
               title={t("settings.agentCredentials.setAsDefault")}
             >
               <Check className="w-4 h-4" />
@@ -83,7 +87,7 @@ export function CredentialsSection({
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {profile.configured_fields?.length
-                    ? `${t("settings.agentCredentials.configured")}: ${profile.configured_fields.map((f) => getCredentialFieldLabel(f, t)).join(", ")}`
+                    ? `${t("settings.agentCredentials.configured")}: ${profile.configured_fields.map((f) => getEnvKeyLabel(agentSlug, f, t)).join(", ")}`
                     : t("settings.agentCredentials.notConfigured")}
                 </div>
               </div>

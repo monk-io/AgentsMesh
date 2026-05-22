@@ -86,6 +86,11 @@ func (m *mockTicketServiceForOrch) GetTicketBySlug(_ context.Context, _ int64, _
 }
 
 // mockAgentConfigProvider implements agent.AgentConfigProvider for ConfigBuilder.
+// After the EnvBundle refactor only GetAgent is required from the provider —
+// credential resolution now lives in ConfigBuilder.envBundleSvc. The legacy
+// `creds`/`isRunner` fields are retained for tests that still want to assert
+// credential injection, but they're consumed via the mockEnvBundleProvider
+// wired into ConfigBuilder, not via this interface.
 type mockAgentConfigProvider struct {
 	agentDef *agentDomain.Agent
 	agentErr error
@@ -97,17 +102,6 @@ type mockAgentConfigProvider struct {
 
 func (m *mockAgentConfigProvider) GetAgent(_ context.Context, _ string) (*agentDomain.Agent, error) {
 	return m.agentDef, m.agentErr
-}
-
-func (m *mockAgentConfigProvider) GetEffectiveCredentialsForPod(_ context.Context, _ int64, _ string, _ *int64) (agentDomain.EncryptedCredentials, bool, error) {
-	return m.creds, m.isRunner, m.credsErr
-}
-
-func (m *mockAgentConfigProvider) ResolveCredentialsByName(_ context.Context, _ int64, _, profileName string) (agentDomain.EncryptedCredentials, bool, error) {
-	if profileName == "runner_host" {
-		return nil, true, nil
-	}
-	return m.creds, m.isRunner, m.credsErr
 }
 
 // mockRunnerSelector implements RunnerSelectorForOrchestrator for testing.
@@ -149,6 +143,7 @@ func setupOrchestratorTestDB(t *testing.T) *gorm.DB {
 		config_schema TEXT DEFAULT '{}',
 		agentfile_source TEXT,
 		supported_modes TEXT NOT NULL DEFAULT 'pty',
+		uses_legacy_columns INTEGER NOT NULL DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`)
@@ -186,11 +181,71 @@ PROMPT_POSITION prepend
 `
 	return &mockAgentConfigProvider{
 		agentDef: &agentDomain.Agent{
-			Slug:           "claude-code",
-			Name:           "Claude Code",
-			LaunchCommand:  "claude",
-			SupportedModes: "pty",
-			AgentfileSource:  &agentfile,
+			Slug:              "claude-code",
+			Name:              "Claude Code",
+			LaunchCommand:     "claude",
+			SupportedModes:    "pty",
+			AgentfileSource:   &agentfile,
+			UsesLegacyColumns: true,
+		},
+		config:   agentDomain.ConfigValues{},
+		creds:    agentDomain.EncryptedCredentials{},
+		isRunner: true,
+	}
+}
+
+func newCodexTestProvider() *mockAgentConfigProvider {
+	agentfile := `
+AGENT codex
+EXECUTABLE codex
+MODE pty
+MODE acp "app-server"
+CONFIG approval_mode SELECT("untrusted", "on-request", "never") = "untrusted"
+ENV OPENAI_API_KEY SECRET OPTIONAL
+ENV CODEX_HOME = sandbox.root + "/codex-home"
+PROMPT_POSITION append
+MCP ON
+arg "resume" "--last" when config.resume_enabled and mode != "acp"
+arg "--ask-for-approval" config.approval_mode when config.approval_mode != "" and mode != "acp"
+`
+	return &mockAgentConfigProvider{
+		agentDef: &agentDomain.Agent{
+			Slug:            "codex-cli",
+			Name:            "Codex CLI",
+			LaunchCommand:   "codex",
+			SupportedModes:  "pty,acp",
+			AgentfileSource: &agentfile,
+		},
+		config:   agentDomain.ConfigValues{},
+		creds:    agentDomain.EncryptedCredentials{},
+		isRunner: true,
+	}
+}
+
+func newClaudePermissionTestProvider() *mockAgentConfigProvider {
+	agentfile := `
+AGENT claude
+EXECUTABLE claude
+MODE pty
+CONFIG permission_mode SELECT("default", "plan", "acceptEdits", "dontAsk", "bypassPermissions") = "bypassPermissions"
+arg "--session-id" config.session_id when config.session_id != "" and not config.resume_enabled
+arg "--resume" config.resume_session when config.resume_enabled
+if config.permission_mode == "plan" and mode != "acp" {
+  arg "--permission-mode" "plan"
+}
+if config.permission_mode != "default" and config.permission_mode != "plan" and config.permission_mode != "" {
+  arg "--permission-mode" config.permission_mode
+}
+PROMPT_POSITION prepend
+`
+	return &mockAgentConfigProvider{
+		agentDef: &agentDomain.Agent{
+			Slug:              "claude-code",
+			Name:              "Claude Code",
+			LaunchCommand:     "claude",
+			SupportedModes:    "pty",
+			AgentfileSource:   &agentfile,
+			UsesLegacyColumns: true,
 		},
 		config:   agentDomain.ConfigValues{},
 		creds:    agentDomain.EncryptedCredentials{},
@@ -204,7 +259,7 @@ func setupOrchestrator(t *testing.T, opts ...func(*PodOrchestratorDeps)) (*PodOr
 	podSvc := newTestPodService(db)
 
 	provider := newTestProvider()
-	configBuilder := agent.NewConfigBuilder(provider)
+	configBuilder := agent.NewConfigBuilder(provider, noopBundleLoader{})
 
 	deps := &PodOrchestratorDeps{
 		PodService:    podSvc,
@@ -245,6 +300,13 @@ func withRunnerSelector(rs RunnerSelectorForOrchestrator) func(*PodOrchestratorD
 
 func withAgentResolver(ar AgentResolverForOrchestrator) func(*PodOrchestratorDeps) {
 	return func(d *PodOrchestratorDeps) { d.AgentResolver = ar }
+}
+
+func withAgentConfigProvider(provider *mockAgentConfigProvider) func(*PodOrchestratorDeps) {
+	return func(d *PodOrchestratorDeps) {
+		d.ConfigBuilder = agent.NewConfigBuilder(provider, noopBundleLoader{})
+		d.AgentResolver = &mockAgentResolver{agentDef: provider.agentDef, err: provider.agentErr}
+	}
 }
 
 func ptrStr(s string) *string { return &s }

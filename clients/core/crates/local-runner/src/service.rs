@@ -3,13 +3,17 @@ use crate::error::{LocalRunnerError, Result};
 use crate::paths::InstallPaths;
 use serde::{Deserialize, Serialize};
 
-/// OS service status as reported by `agentsmesh-runner service status`.
+/// `Stale` means the OS service job is installed but the runner config
+/// (`~/.agentsmesh/config.yaml`) is missing — UI must treat this as
+/// "not registered" so a stale launchd/systemd job from an old
+/// registration doesn't falsely report `Running` or `Stopped`.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ServiceStatus {
     Running,
     Stopped,
     Unknown,
     NotInstalled,
+    Stale,
 }
 
 pub async fn install(paths: &InstallPaths) -> Result<()> {
@@ -28,13 +32,6 @@ pub async fn stop(paths: &InstallPaths) -> Result<()> {
     run_runner_cli(paths, &["service", "stop"]).await?.ok().map(|_| ())
 }
 
-/// Maps the `Service Status: <token>` line emitted by the runner CLI to the
-/// strongly-typed enum. A non-zero exit (service not installed) is mapped to
-/// `NotInstalled` rather than an error so callers can treat the four-state
-/// model uniformly. The same applies when the runner binary itself is
-/// missing — semantically that's still "not installed", not a programming
-/// error, and the renderer wants a clean enum value, not an exception that
-/// surfaces as an unhandled promise rejection in DevTools.
 pub async fn status(paths: &InstallPaths) -> Result<ServiceStatus> {
     if !crate::install::is_installed(paths).await {
         return Ok(ServiceStatus::NotInstalled);
@@ -53,6 +50,7 @@ fn parse_status(stdout: &str) -> Result<ServiceStatus> {
             return Ok(match rest.trim() {
                 "Running" => ServiceStatus::Running,
                 "Stopped" => ServiceStatus::Stopped,
+                "Stale" => ServiceStatus::Stale,
                 "Unknown" => ServiceStatus::Unknown,
                 _ => ServiceStatus::Unknown,
             });
@@ -73,6 +71,11 @@ mod tests {
     #[test]
     fn parses_stopped() {
         assert_eq!(parse_status("Service Status: Stopped\n").unwrap(), ServiceStatus::Stopped);
+    }
+
+    #[test]
+    fn parses_stale() {
+        assert_eq!(parse_status("Service Status: Stale\n").unwrap(), ServiceStatus::Stale);
     }
 
     #[test]

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const storeState = {
   lastAgentSlug: null as string | null,
   lastRepositoryId: null as number | null,
-  lastCredentialProfileId: null as number | null,
+  lastBundleName: null as string | null,
   lastBranchName: null as string | null,
 };
 

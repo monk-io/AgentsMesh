@@ -5,11 +5,9 @@ import { BellOff, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
-import { useCurrentOrg } from "@/stores/auth";
+import { getNotificationService } from "@/lib/wasm-core";
 import type { NotificationPreference } from "@/lib/api";
-import { listPreferencesConnect, setPreferenceConnect } from "@/lib/api/notificationConnect";
 
-// Available notification sources with i18n keys
 const NOTIFICATION_SOURCES = [
   { source: "channel:message", labelKey: "settings.notifications.channelMessage", descKey: "settings.notifications.channelMessageDesc" },
   { source: "channel:mention", labelKey: "settings.notifications.channelMention", descKey: "settings.notifications.channelMentionDesc" },
@@ -17,7 +15,6 @@ const NOTIFICATION_SOURCES = [
   { source: "task:completed", labelKey: "settings.notifications.taskCompleted", descKey: "settings.notifications.taskCompletedDesc" },
 ] as const;
 
-// Channel label mapping for known delivery channels
 const CHANNEL_LABELS: Record<string, string> = {
   toast: "Toast",
   browser: "Browser",
@@ -25,35 +22,20 @@ const CHANNEL_LABELS: Record<string, string> = {
   email: "Email",
 };
 
-/**
- * Server-synced notification preferences: mute / channels per source.
- *
- * Uses the Connect-RPC lane (proto.notification.v1) via the
- * `notificationConnect.ts` adapter. The legacy
- * `getNotificationService().get_preferences()` / `.set_preference()`
- * JSON path stays available during the dual-track window for non-migrated
- * callers (currently none — this is the only consumer).
- */
 export function ServerNotificationPreferences() {
   const t = useTranslations();
-  const currentOrg = useCurrentOrg();
   const [prefs, setPrefs] = useState<NotificationPreference[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchPrefs = useCallback(async () => {
-    if (!currentOrg) {
-      setLoading(false);
-      return;
-    }
     try {
-      const list = await listPreferencesConnect(currentOrg.slug);
-      setPrefs(list);
+      const res = JSON.parse(await getNotificationService().get_preferences());
+      setPrefs(res.preferences || []);
     } catch {
-      // Silently fail - user might not have org context yet
     } finally {
       setLoading(false);
     }
-  }, [currentOrg]);
+  }, []);
 
   useEffect(() => { fetchPrefs(); }, [fetchPrefs]);
 
@@ -71,18 +53,16 @@ export function ServerNotificationPreferences() {
   };
 
   const handleMuteToggle = async (source: string, muted: boolean) => {
-    if (!currentOrg) return;
     const updated = { ...getPref(source), is_muted: muted };
     updatePref(source, updated);
-    try { await setPreferenceConnect(currentOrg.slug, updated); } catch { fetchPrefs(); }
+    try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
   };
 
   const handleChannelToggle = async (source: string, channel: string, value: boolean) => {
-    if (!currentOrg) return;
     const current = getPref(source);
     const updated = { ...current, channels: { ...current.channels, [channel]: value } };
     updatePref(source, updated);
-    try { await setPreferenceConnect(currentOrg.slug, updated); } catch { fetchPrefs(); }
+    try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
   };
 
   if (loading) {

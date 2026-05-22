@@ -278,11 +278,36 @@
       "invalidJson": "无效的 JSON 格式",
       "credentials": {
         "title": "API 凭据",
-        "description": "配置此智能体的 API 凭据。默认使用 RunnerHost 模式（使用 Runner 本地环境配置）。"
+        "description": "配置此智能体的 API 凭据。不配置时使用 Agent 默认认证（OAuth、CLI 已登录的账号等）。"
       },
       "runtime": {
         "title": "运行时配置",
         "description": "设置此智能体的默认运行参数。这些配置将在创建新 Pod 时使用。"
+      },
+      "runtimeBundles": {
+        "title": "运行时环境变量",
+        "description": "管理此智能体的运行时偏好（如模型选择、日志级别、代理地址等）。明文存储，创建 Pod 时按需注入到环境中。",
+        "descriptionLabel": "描述",
+        "empty": "暂无运行时环境变量。添加一组以便 Pod 创建时复用。",
+        "noEnv": "未设置任何变量",
+        "add": "添加",
+        "addTitle": "添加运行时环境变量",
+        "editTitle": "编辑运行时环境变量",
+        "formDescription": "运行时偏好以明文存储。请勿在此放置密钥或令牌，密钥请用 API 凭据。",
+        "name": "名称",
+        "namePlaceholder": "如：production-gpt4 / staging-debug",
+        "descriptionPlaceholder": "可选：这组配置的用途",
+        "envTitle": "环境变量",
+        "envHint": "键名仅允许大写字母、数字和下划线",
+        "clearDefault": "取消默认",
+        "confirmDelete": "确定要删除这组运行时环境变量吗？引用它的 Pod 将不再注入这些变量。",
+        "created": "运行时环境变量已创建",
+        "updated": "运行时环境变量已更新",
+        "deleted": "运行时环境变量已删除",
+        "defaultSet": "默认设置已更新",
+        "saveFailed": "保存失败",
+        "failedToSetDefault": "设置默认失败",
+        "failedToDelete": "删除失败"
       },
       "fields": {
         "model": {
@@ -351,10 +376,9 @@
     },
     "agentCredentials": {
       "title": "智能体凭据",
-      "description": "管理每种智能体的 API 凭据。默认使用 RunnerHost 模式（使用 Runner 本地环境的凭据）。添加自定义配置以使用您自己的 API 密钥。",
+      "description": "管理每种智能体的 API 凭据。未配置的 Agent 走自带的认证方式（OAuth、CLI 已登录的账号等）；添加自定义凭据后，Agent 启动时会注入这些凭据。",
       "failedToLoad": "加载智能体凭据失败",
       "profiles": "个配置档案",
-      "runnerHostHint": "使用 Runner 机器本地的环境配置（不注入凭据）",
       "noAgents": "没有可用的智能体",
       "default": "默认",
       "configured": "已配置",
@@ -362,7 +386,7 @@
       "setAsDefault": "设为默认",
       "addProfile": "添加自定义凭据",
       "editProfile": "编辑凭据",
-      "customProfileDescription": "为此智能体添加您自己的 API 凭据。这将覆盖 Runner 本地环境配置。",
+      "customProfileDescription": "为此智能体添加您自己的 API 凭据。设置后，Agent 启动时将注入此凭据。",
       "name": "配置名称",
       "namePlaceholder": "例如：工作配置、个人配置",
       "descriptionLabel": "描述",
@@ -377,12 +401,47 @@
       "confirmDelete": "确定要删除此配置吗？",
       "secretPlaceholder": "留空保持现有值",
       "secretEditHint": "留空保持现有值不变",
-      "fields": {
-        "ANTHROPIC_API_KEY": "API Key",
-        "ANTHROPIC_AUTH_TOKEN": "Auth Token",
-        "ANTHROPIC_BASE_URL": "Base URL",
-        "OPENAI_API_KEY": "API Key",
-        "GOOGLE_API_KEY": "API Key"
+      "noBundleLabel": "使用 Agent 默认认证",
+      "noBundleHint": "不注入额外凭据；Agent 走自带的登录方式（OAuth、CLI 已登录的账号等）。"
+    },
+    "credentialForm": {
+      "anthropic": {
+        "baseUrl": "Anthropic Base URL",
+        "apiKey": "Anthropic API Key",
+        "authToken": "Anthropic Auth Token",
+        "authMethod": "认证方式",
+        "authMethodHint": "二者填其一即可"
+      },
+      "openai": {
+        "apiKey": "OpenAI API Key"
+      },
+      "google": {
+        "apiKey": "Google API Key"
+      },
+      "customEnv": {
+        "title": "自定义环境变量",
+        "addButton": "添加环境变量",
+        "keyPlaceholder": "环境变量名",
+        "valuePlaceholder": "值",
+        "remove": "删除",
+        "keyInvalid": "环境变量名格式不合法（仅大写字母、数字、下划线）",
+        "keyConflict": "与已声明字段冲突",
+        "keyDuplicate": "环境变量名重复"
+      },
+      "codex": {
+        "customEnvHint": "可添加 OPENAI_BASE_URL、OPENAI_MODEL 等代理或模型覆盖项"
+      },
+      "loopal": {
+        "customEnvHint": "其他厂商凭据，如 XAI_API_KEY、DEEPSEEK_API_KEY"
+      },
+      "gemini": {
+        "customEnvHint": "可添加 GEMINI_API_KEY 等额外凭据"
+      },
+      "aider": {
+        "customEnvHint": "可添加其他厂商的 API Key 或代理配置"
+      },
+      "opencode": {
+        "customEnvHint": "添加 opencode 运行所需的任意环境变量"
       }
     },
     "sshKeys": {
