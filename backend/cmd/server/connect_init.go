@@ -9,6 +9,7 @@ import (
 	agentconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agent"
 	agentpodsettingsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/agentpod_settings"
 	adminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin"
+	adminauthconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/auth"
 	promocodeadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/promocode"
 	skillregistryadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/skill_registry"
 	ssoadminconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/sso"
@@ -25,6 +26,7 @@ import (
 	fileconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/file"
 	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
+	eventsconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/events"
 	invitationconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/invitation"
 	licenseconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/license"
 	loopconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/loop"
@@ -126,6 +128,9 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	if svc.message != nil {
 		meshconnect.MountMessages(mux, meshconnect.NewMessageServer(svc.message, svc.org), opts...)
 	}
+	if rest != nil && rest.Hub != nil {
+		eventsconnect.Mount(mux, eventsconnect.NewServer(rest.Hub, svc.org), opts...)
+	}
 	mountRunnerService(mux, svc, rest, cfg, opts)
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)
@@ -147,7 +152,7 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountNotificationService(mux, svc, opts)
 	mountLoopService(mux, svc, rest, opts)
 	mountLicenseService(mux, svc, opts)
-	mountAdminServices(mux, svc, rest, opts)
+	mountAdminServices(mux, svc, rest, cfg, opts)
 }
 
 // mountAdminServices wires the platform-admin Connect surface. Every
@@ -159,13 +164,16 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 // rest.RelayManager (optional) threads through WithRelayManager so the
 // 4 relay RPCs work in deployments that wire the relay subsystem. Same
 // nil-guard pattern as REST's admin/routes.go:70.
-func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Services, opts []connect.HandlerOption) {
+func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Services, cfg *config.Config, opts []connect.HandlerOption) {
 	if svc.admin == nil {
 		return
 	}
 	adminOpts := []adminconnect.Option{}
 	if rest != nil && rest.RelayManager != nil {
 		adminOpts = append(adminOpts, adminconnect.WithRelayManager(rest.RelayManager))
+	}
+	if rest != nil && rest.Message != nil {
+		adminOpts = append(adminOpts, adminconnect.WithMessageService(rest.Message))
 	}
 	adminconnect.Mount(mux, adminconnect.NewServer(svc.admin, svc.adminDB, adminOpts...), opts...)
 	promocodeadminconnect.Mount(mux, promocodeadminconnect.NewServer(svc.admin, svc.adminDB), opts...)
@@ -192,6 +200,13 @@ func mountAdminServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Serv
 			supportticketadminconnect.NewServer(svc.supportTicket, svc.admin, svc.adminDB),
 			opts...,
 		)
+	}
+
+	// AdminAuthService.Login is PUBLIC (no auth interceptor — caller
+	// doesn't hold a bearer yet); session lookup goes behind opts.
+	if svc.auth != nil {
+		adminauthconnect.MountLogin(mux, adminauthconnect.NewLoginServer(svc.auth, cfg))
+		adminauthconnect.MountSession(mux, adminauthconnect.NewSessionServer(svc.adminDB), opts...)
 	}
 }
 
@@ -278,8 +293,13 @@ func mountRunnerService(mux *http.ServeMux, svc *serviceContainer, rest *v1.Serv
 	if rest.LogUploadService != nil {
 		serverOpts = append(serverOpts, runnerconnect.WithLogUploadService(rest.LogUploadService))
 	}
+	if rest.GRPCRunnerHandler != nil && rest.GRPCRunnerHandler.PKIService() != nil {
+		serverOpts = append(serverOpts, runnerconnect.WithPKIService(rest.GRPCRunnerHandler.PKIService()))
+		serverOpts = append(serverOpts, runnerconnect.WithGRPCEndpoint(cfg.GRPC.Endpoint))
+	}
 	srv := runnerconnect.NewServer(svc.runner, svc.org, serverOpts...)
 	runnerconnect.Mount(mux, srv, opts...)
+	runnerconnect.MountPublic(mux, srv)
 }
 
 // mountPodService wires the pod Connect server with its optional

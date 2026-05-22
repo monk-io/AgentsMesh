@@ -73,15 +73,15 @@ func toProtoBlock(b *blockstore.Block) *blockstorev1.Block {
 		DataJson:    jsonMapToString(b.Data),
 		MetaJson:    jsonMapToString(b.Meta),
 		CreatedBy:   b.CreatedBy,
-		CreatedAt:   b.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:   b.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:   b.CreatedAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:   b.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
 	if b.Text != nil {
 		s := *b.Text
 		out.Text = &s
 	}
 	if b.DeletedAt != nil {
-		s := b.DeletedAt.UTC().Format(time.RFC3339)
+		s := b.DeletedAt.UTC().Format(time.RFC3339Nano)
 		out.DeletedAt = &s
 	}
 	return out
@@ -99,8 +99,8 @@ func toProtoRef(r *blockstore.BlockRef) *blockstorev1.BlockRef {
 		Rel:         r.Rel,
 		MetaJson:    jsonMapToString(r.Meta),
 		CreatedBy:   r.CreatedBy,
-		CreatedAt:   r.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:   r.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:   r.CreatedAt.UTC().Format(time.RFC3339Nano),
+		UpdatedAt:   r.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
 	if r.OrderKey != nil {
 		s := *r.OrderKey
@@ -127,7 +127,7 @@ func toProtoOp(o *blockstore.BlockOp) *blockstorev1.BlockOp {
 		ForwardJson: jsonMapToString(o.Forward),
 		InverseJson: jsonMapToString(o.Inverse),
 		ContextJson: jsonMapToString(o.Context),
-		AppliedAt:   o.AppliedAt.UTC().Format(time.RFC3339),
+		AppliedAt:   o.AppliedAt.UTC().Format(time.RFC3339Nano),
 	}
 	if o.IdempotencyKey != nil {
 		s := *o.IdempotencyKey

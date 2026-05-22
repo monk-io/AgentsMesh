@@ -67,7 +67,7 @@ pub use pod::{
     PodCreatedByInfoDto, PodDto, PodListResponseDto, PodLoopInfoDto, PodRepositoryInfoDto,
     PodRunnerInfoDto, PodStatusDto, PodTicketInfoDto,
 };
-pub(crate) use pod::build_create_pod_proto_request;
+pub(crate) use pod::{build_create_pod_proto_request, parse_pod_status};
 pub use user::{
     AuthSessionDto, AuthTokensDto, BootstrapCleanupReasonDto, BootstrapResultDto,
     OrganizationDto, SSOConfigDto, UserDto, UserIdentityDto,

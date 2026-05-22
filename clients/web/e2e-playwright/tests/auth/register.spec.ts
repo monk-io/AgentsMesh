@@ -1,7 +1,9 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { RegisterPage } from "../../pages/register.page";
 import { CLEANUP } from "../../helpers/test-data";
 import { clearAuthRateLimit } from "../../helpers/redis";
+import { ConnectError } from "../../helpers/connect-client";
 
 test.describe("Registration Flow", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -32,14 +34,16 @@ test.describe("Registration Flow", () => {
     const email = "newuser-e2e@test.local";
     try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* ignore */ }
 
-    const res = await api.postPublic("/api/v1/auth/register", {
-      email, username: "newusere2e", password: "TestPass123!", name: "E2E Test User",
-    });
+    const cc = api.connectWithToken("");
+    const res = await cc.auth.register({
+      email,
+      username: "newusere2e",
+      password: "TestPass123!",
+      name: "E2E Test User",
+    }) as { token: string; user: { email: string } };
 
-    expect(res.status).toBe(201);
-    const data = await res.json();
-    expect(data.token).toBeTruthy();
-    expect(data.user.email).toBe(email);
+    expect(res.token).toBeTruthy();
+    expect(res.user.email).toBe(email);
 
     db.cleanup(CLEANUP.userByEmail(email));
   });
@@ -48,22 +52,30 @@ test.describe("Registration Flow", () => {
    * TC-REG-002: Registration fails with existing email (API)
    */
   test("registration fails with existing email", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/register", {
-      email: "dev@agentsmesh.local", username: "anotheruser",
-      password: "TestPass123!", name: "Another User",
-    });
-    expect(res.status).toBe(409);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.register({
+        email: "dev@agentsmesh.local",
+        username: "anotheruser",
+        password: "TestPass123!",
+        name: "Another User",
+      })
+    ).rejects.toMatchObject({ status: 409 });
   });
 
   /**
    * TC-REG-003: Registration fails with weak password (API)
    */
   test("registration fails with weak password", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/register", {
-      email: "weakpwd@test.local", username: "weakpwduser",
-      password: "123", name: "Weak Password User",
-    });
-    expect(res.status).toBe(400);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.register({
+        email: "weakpwd@test.local",
+        username: "weakpwduser",
+        password: "123",
+        name: "Weak Password User",
+      })
+    ).rejects.toBeInstanceOf(ConnectError);
   });
 
   /**

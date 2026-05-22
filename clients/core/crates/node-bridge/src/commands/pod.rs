@@ -1,5 +1,5 @@
 use napi_derive::napi;
-use crate::{AppState, err};
+use crate::AppState;
 
 #[napi]
 impl AppState {
@@ -55,47 +55,4 @@ impl AppState {
             svc.remove_pod(&pod_key);
             Ok(())
     }
-
-    #[napi]
-    pub async fn pod_fetch_pods(&self, status: Option<String>, runner_id: Option<i64>, created_by_id: Option<i64>, limit: Option<i64>, offset: Option<i64>) -> napi::Result<String> {
-        let svc = self.pod.lock().await;
-            svc.fetch_pods(status, runner_id, created_by_id, limit, offset).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn pod_fetch_sidebar_pods(&self, filter: String, user_id: Option<i64>) -> napi::Result<String> {
-        let svc = self.pod.lock().await;
-            svc.fetch_sidebar_pods(&filter, user_id).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn pod_load_more_pods(&self, filter: String, user_id: Option<i64>, offset: i64) -> napi::Result<String> {
-        let svc = self.pod.lock().await;
-            svc.load_more_pods(&filter, user_id, offset).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn pod_fetch_pod(&self, pod_key: String) -> napi::Result<String> {
-        let svc = self.pod.lock().await;
-            svc.fetch_pod(&pod_key).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn pod_terminate_pod(&self, pod_key: String) -> napi::Result<()> {
-        let svc = self.pod.lock().await;
-            svc.terminate_pod(&pod_key).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn pod_update_pod_alias_api(&self, pod_key: String, alias: Option<String>) -> napi::Result<()> {
-        let svc = self.pod.lock().await;
-            svc.update_pod_alias_api(&pod_key, alias).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn pod_get_pod_connection(&self, pod_key: String) -> napi::Result<String> {
-        let svc = self.pod.lock().await;
-            svc.get_pod_connection(&pod_key).await.map_err(err)
-    }
-
 }

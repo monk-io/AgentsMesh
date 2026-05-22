@@ -8,8 +8,6 @@ import (
 func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 	registerRunnerRoutes(rg, svc)
 	registerBillingRoutes(rg, svc)
-	registerMessageRoutes(rg, svc)
-	registerInvitationRoutes(rg, svc)
 	registerFileRoutes(rg, svc)
 	registerExtensionRoutes(rg, svc)
 }

@@ -1,6 +1,10 @@
+// Migrated R5+: was REST `api.get/post/put/delete('/api/v1/admin/sso/configs')`,
+// now `cc.ssoAdmin.*` (typed Connect, binary wire). Admin gated by
+// is_system_admin; no org_slug field.
 import { test, expect } from "../../../fixtures/index";
-import { ADMIN_USER, TEST_ORG_SLUG } from "../../../helpers/env";
+import { ADMIN_USER } from "../../../helpers/env";
 import { clearAuthRateLimit } from "../../../helpers/redis";
+import { ConnectError } from "../../../helpers/connect-client";
 
 /**
  * SSO Admin UI + API supplements.
@@ -12,99 +16,110 @@ test.describe("SSO Admin Full", () => {
   /** TC-SSO-ADM-001: List SSO configs */
   test("list SSO configs with pagination", async ({ api }) => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    const res = await api.get("/api/v1/admin/sso/configs");
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data).toBeTruthy();
+    const cc = await api.connect();
+    const res = await cc.ssoAdmin.listSSOConfigs({}) as { data: unknown[]; total: bigint };
+    expect(res).toBeTruthy();
+    expect(Array.isArray(res.data)).toBe(true);
   });
 
-  /** TC-SSO-ADM-002: Get single config (non-existent) */
+  /** TC-SSO-ADM-002: Get single config (non-existent) — Connect: NotFound→404. */
   test("get non-existent SSO config returns 404", async ({ api }) => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    const res = await api.get("/api/v1/admin/sso/configs/999999");
-    expect(res.status).toBe(404);
+    const cc = await api.connect();
+    await expect(
+      cc.ssoAdmin.getSSOConfig({ id: BigInt(999999) }),
+    ).rejects.toMatchObject({ status: 404 });
   });
 
-  /** TC-SSO-ADM-003: Full CRUD with LDAP (avoids OIDC discovery) */
+  /** TC-SSO-ADM-003: Full CRUD with LDAP (avoids OIDC discovery). */
   test("SSO config CRUD with LDAP protocol", async ({ api }) => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
+    const cc = await api.connect();
 
     // Create LDAP config (doesn't need external IdP)
-    const createRes = await api.post("/api/v1/admin/sso/configs", {
+    const created = await cc.ssoAdmin.createSSOConfig({
       name: "E2E LDAP CRUD",
       domain: "e2e-ldap-crud.example.com",
       protocol: "ldap",
-      ldap_host: "ldap.example.com",
-      ldap_port: 389,
-      ldap_base_dn: "dc=example,dc=com",
-      ldap_bind_dn: "cn=admin,dc=example,dc=com",
-      ldap_bind_password: "test-password",
-    });
-    expect([200, 201]).toContain(createRes.status);
-    const created = await createRes.json();
-    const id = created.config?.id || created.id;
-    if (!id) return;
+      ldapHost: "ldap.example.com",
+      ldapPort: 389,
+      ldapBaseDn: "dc=example,dc=com",
+      ldapBindDn: "cn=admin,dc=example,dc=com",
+      ldapBindPassword: "test-password",
+    }) as { id: bigint };
+    expect(created.id).toBeTruthy();
+    const id = created.id;
 
     // Read
-    const getRes = await api.get(`/api/v1/admin/sso/configs/${id}`);
-    expect(getRes.status).toBe(200);
+    const got = await cc.ssoAdmin.getSSOConfig({ id }) as { id: bigint };
+    expect(got.id).toBe(id);
 
     // Update
-    const updateRes = await api.put(`/api/v1/admin/sso/configs/${id}`, {
+    const updated = await cc.ssoAdmin.updateSSOConfig({
+      id,
       name: "E2E LDAP CRUD Updated",
-      domain: "e2e-ldap-crud.example.com",
-      protocol: "ldap",
-      ldap_host: "ldap2.example.com",
-      ldap_port: 636,
-      ldap_base_dn: "dc=example,dc=com",
-      ldap_bind_dn: "cn=admin,dc=example,dc=com",
-      ldap_bind_password: "updated-password",
-    });
-    expect(updateRes.status).toBe(200);
+      ldapHost: "ldap2.example.com",
+      ldapPort: 636,
+      ldapBaseDn: "dc=example,dc=com",
+      ldapBindDn: "cn=admin,dc=example,dc=com",
+      ldapBindPassword: "updated-password",
+    }) as { name: string };
+    expect(updated.name).toBe("E2E LDAP CRUD Updated");
 
     // Delete
-    const delRes = await api.delete(`/api/v1/admin/sso/configs/${id}`);
-    expect([200, 204]).toContain(delRes.status);
+    await cc.ssoAdmin.deleteSSOConfig({ id });
 
-    // Confirm deleted
-    const gone = await api.get(`/api/v1/admin/sso/configs/${id}`);
-    expect(gone.status).toBe(404);
+    // Confirm deleted → 404 NotFound
+    await expect(
+      cc.ssoAdmin.getSSOConfig({ id }),
+    ).rejects.toMatchObject({ status: 404 });
   });
 
   /** TC-SSO-ADM-004: Unauthorized access */
   test("non-admin cannot access SSO admin endpoints", async ({ api }) => {
     // Default user is non-admin
-    const res = await api.get("/api/v1/admin/sso/configs");
-    expect(res.status).toBe(403);
+    const cc = await api.connect();
+    await expect(
+      cc.ssoAdmin.listSSOConfigs({}),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   /** TC-SSO-ADM-005: Enable/disable config */
   test("enable and disable SSO config", async ({ api }) => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
+    const cc = await api.connect();
 
-    const createRes = await api.post("/api/v1/admin/sso/configs", {
-      name: "E2E Toggle SSO",
-      domain: `e2e-toggle-${Date.now()}.example.com`,
-      protocol: "ldap",
-      ldap_host: "ldap.example.com",
-      ldap_port: 389,
-      ldap_base_dn: "dc=example,dc=com",
-      ldap_bind_dn: "cn=admin,dc=example,dc=com",
-      ldap_bind_password: "test",
-    });
-    if (createRes.status !== 201) { test.skip(); return; }
-    const created = await createRes.json();
-    const id = created.config?.id || created.id;
+    let id: bigint | null = null;
+    try {
+      const created = await cc.ssoAdmin.createSSOConfig({
+        name: "E2E Toggle SSO",
+        domain: `e2e-toggle-${Date.now()}.example.com`,
+        protocol: "ldap",
+        ldapHost: "ldap.example.com",
+        ldapPort: 389,
+        ldapBaseDn: "dc=example,dc=com",
+        ldapBindDn: "cn=admin,dc=example,dc=com",
+        ldapBindPassword: "test",
+      }) as { id: bigint };
+      id = created.id;
+    } catch (err) {
+      // Create failed for env-dependent reasons — skip the toggle path.
+      expect(err).toBeInstanceOf(ConnectError);
+      test.skip();
+      return;
+    }
+
+    if (id == null) { test.skip(); return; }
 
     // Enable
-    const enableRes = await api.post(`/api/v1/admin/sso/configs/${id}/enable`, {});
-    expect(enableRes.status).toBe(200);
+    const enabled = await cc.ssoAdmin.enableSSOConfig({ id }) as { isEnabled: boolean };
+    expect(enabled.isEnabled).toBe(true);
 
     // Disable
-    const disableRes = await api.post(`/api/v1/admin/sso/configs/${id}/disable`, {});
-    expect([200, 204]).toContain(disableRes.status);
+    const disabled = await cc.ssoAdmin.disableSSOConfig({ id }) as { isEnabled: boolean };
+    expect(disabled.isEnabled).toBe(false);
 
     // Cleanup
-    await api.delete(`/api/v1/admin/sso/configs/${id}`);
+    await cc.ssoAdmin.deleteSSOConfig({ id });
   });
 });

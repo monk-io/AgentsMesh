@@ -1,23 +1,14 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "admin",
-    srcs = [
-        "auth.go",
-        "routes.go",
-    ],
+    srcs = ["routes.go"],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/rest/v1/admin",
     visibility = ["//backend:__subpackages__"],
     deps = [
-        "//backend/internal/config",
-        "//backend/internal/domain/user",
-        "//backend/internal/infra/database",
-        "//backend/internal/middleware",
         "//backend/internal/service/admin",
         "//backend/internal/service/auth",
         "//backend/internal/service/billing",
-        "//backend/pkg/apierr",
-        "@com_github_gin_gonic_gin//:gin",
     ],
 )
 
@@ -25,17 +16,4 @@ alias(
     name = "go_default_library",
     actual = ":admin",
     visibility = ["//backend:__subpackages__"],
-)
-
-go_test(
-    name = "admin_test",
-    srcs = ["handlers_auth_test.go"],
-    embed = [":admin"],
-    deps = [
-        "//backend/internal/domain/user",
-        "//backend/internal/service/auth",
-        "@com_github_gin_gonic_gin//:gin",
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
-    ],
 )

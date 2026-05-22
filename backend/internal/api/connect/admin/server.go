@@ -37,6 +37,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
+	agentservice "github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/relay"
 )
 
@@ -72,19 +73,25 @@ const (
 	GetRelayProcedure             = "/" + ServiceName + "/GetRelay"
 	GetRelayStatsProcedure        = "/" + ServiceName + "/GetRelayStats"
 	ForceUnregisterRelayProcedure = "/" + ServiceName + "/ForceUnregisterRelay"
+
+	ListDeadLettersProcedure  = "/" + ServiceName + "/ListDeadLetters"
+	ReplayDeadLetterProcedure = "/" + ServiceName + "/ReplayDeadLetter"
 )
 
 // Server implements proto.admin.v1.AdminService (dashboard + user +
-// organization + audit + runner + relay slices). Per-resource org-scoped
-// surfaces stay parallel.
+// organization + audit + runner + relay + DLQ slices). Per-resource
+// org-scoped surfaces stay parallel.
 //
 // relayMgr is optional — only deployments that wire the relay subsystem
-// surface the 4 relay RPCs. When nil, the handlers return CodeUnavailable
-// to mirror REST's apierr.ServiceUnavailable behavior in relays.go.
+// surface the 4 relay RPCs. msgSvc is optional — DLQ RPCs return
+// CodeUnavailable when omitted. When nil, the handlers return
+// CodeUnavailable to mirror REST's apierr.ServiceUnavailable behavior in
+// relays.go.
 type Server struct {
 	svc      *adminservice.Service
 	db       database.DB
 	relayMgr *relay.Manager
+	msgSvc   *agentservice.MessageService
 }
 
 // Option configures optional dependencies on Server. Mirrors the option
@@ -98,6 +105,13 @@ type Option func(*Server)
 // CodeUnavailable.
 func WithRelayManager(mgr *relay.Manager) Option {
 	return func(s *Server) { s.relayMgr = mgr }
+}
+
+// WithMessageService wires the agent message service so the DLQ RPCs
+// (ListDeadLetters / ReplayDeadLetter) can serve. Without it those RPCs
+// return CodeUnavailable.
+func WithMessageService(msgSvc *agentservice.MessageService) Option {
+	return func(s *Server) { s.msgSvc = msgSvc }
 }
 
 func NewServer(svc *adminservice.Service, db database.DB, opts ...Option) *Server {
@@ -189,6 +203,13 @@ func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 	))
 	mux.Handle(ForceUnregisterRelayProcedure, connect.NewUnaryHandler(
 		ForceUnregisterRelayProcedure, srv.ForceUnregisterRelay, opts...,
+	))
+
+	mux.Handle(ListDeadLettersProcedure, connect.NewUnaryHandler(
+		ListDeadLettersProcedure, srv.ListDeadLetters, opts...,
+	))
+	mux.Handle(ReplayDeadLetterProcedure, connect.NewUnaryHandler(
+		ReplayDeadLetterProcedure, srv.ReplayDeadLetter, opts...,
 	))
 }
 

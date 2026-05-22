@@ -1,97 +1,87 @@
-import { test, expect, orgSlug, apiBase } from "../../fixtures/blockstore.fixture";
+// Migrated R5+: Connect-RPC only (no REST middle layer).
+import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 // Block Store schema guard — asserts that the backend's enhanced ValidateRecord
-// (EnumValues + NonEmptyArrayKeys) actually rejects bad chart writes at the
-// REST layer, not just at the Go unit-test layer. This is the only path that
-// proves the new check is hooked into the live ApplyOps handler and the
-// middleware chain.
+// (EnumValues + NonEmptyArrayKeys) actually rejects bad chart writes via the
+// Connect layer. This is the only path that proves the new check is hooked
+// into the live ApplyOps handler and the middleware chain.
 //
 // Covers F3 (chart schema), and F12 (translateErr no longer leaks stacks on
 // the validation branch).
 
-interface AuthContext {
-  token: string;
-}
-
-async function postOps(
-  auth: AuthContext,
-  workspaceID: string,
-  ops: unknown[],
-  idempotencyKey?: string,
-): Promise<Response> {
-  return fetch(`${apiBase}/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${auth.token}`,
-      "X-Organization-Slug": orgSlug,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      workspace_id: workspaceID,
-      ops,
-      idempotency_key: idempotencyKey,
-    }),
-  });
-}
-
-test("chart with unknown type is rejected at REST layer", async ({ token, isolatedWorkspace }) => {
+test("chart with unknown type is rejected", async ({ token, isolatedWorkspace }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID } = isolatedWorkspace;
-  const res = await postOps({ token }, workspaceID, [
-    {
-      op: "createBlock",
-      payload: {
-        type: "chart",
-        data: {
-          type: "3d_sphere",
-          series: [{ name: "s", data: [{ x: 1, value: 2 }] }],
-        },
+  const err = await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
+    ops: [
+      {
+        op: "createBlock",
+        payloadJson: JSON.stringify({
+          type: "chart",
+          data: { type: "3d_sphere", series: [{ name: "s", data: [{ x: 1, value: 2 }] }] },
+        }),
       },
-    },
-  ]);
-  expect(res.status).toBe(400);
-  const body = (await res.json()) as { message?: string; error?: string };
-  const msg = body.message ?? body.error ?? "";
-  expect(msg).toMatch(/type/);
+    ],
+  }).catch((e: Error) => e);
+  expect(err).toBeInstanceOf(Error);
+  expect((err as { status?: number }).status).toBe(400);
+  expect((err as Error).message).toMatch(/type/);
 });
 
-test("chart with empty series is rejected at REST layer", async ({ token, isolatedWorkspace }) => {
+test("chart with empty series is rejected", async ({ token, isolatedWorkspace }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID } = isolatedWorkspace;
-  const res = await postOps({ token }, workspaceID, [
-    {
-      op: "createBlock",
-      payload: {
-        type: "chart",
-        data: { type: "bar", series: [] },
+  const err = await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
+    ops: [
+      {
+        op: "createBlock",
+        payloadJson: JSON.stringify({ type: "chart", data: { type: "bar", series: [] } }),
       },
-    },
-  ]);
-  expect(res.status).toBe(400);
-  const raw = await res.text();
-  expect(raw).toMatch(/series/);
+    ],
+  }).catch((e: Error) => e);
+  expect(err).toBeInstanceOf(Error);
+  expect((err as { status?: number }).status).toBe(400);
+  expect((err as Error).message).toMatch(/series/);
 });
 
 test("valid chart is accepted (positive control)", async ({ token, isolatedWorkspace }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID } = isolatedWorkspace;
-  const res = await postOps({ token }, workspaceID, [
-    {
-      op: "createBlock",
-      payload: {
-        type: "chart",
-        data: {
-          type: "bar",
-          series: [{ name: "Revenue", data: [{ month: "Jan", value: 10 }] }],
-        },
+  const resp = await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
+    ops: [
+      {
+        op: "createBlock",
+        payloadJson: JSON.stringify({
+          type: "chart",
+          data: {
+            type: "bar",
+            series: [{ name: "Revenue", data: [{ month: "Jan", value: 10 }] }],
+          },
+        }),
       },
-    },
-  ]);
-  expect(res.status, `expected 2xx for a valid chart; got ${await res.text()}`).toBeLessThan(300);
+    ],
+  }) as { opIds: unknown[] };
+  expect(resp.opIds.length).toBeGreaterThan(0);
 });
 
+// Phase E (wasm Connect ServerStream bridge) is real-impl'd, so the
+// renderer can mount through the normal zustand `_tick` cycle. urlGuard
+// sanitisation has unit coverage in clients/web/src/lib/sanitize.test.ts;
+// this E2E asserts the renderer-side defense lands in the actual DOM
+// when a malicious block is seeded via API.
 test("javascript: URL in block data is sanitized by the renderer", async ({
   authenticatedPage,
-  api,
+  token,
   isolatedWorkspace,
 }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID, rootID } = isolatedWorkspace;
   // Even if a malicious actor bypasses the frontend prompt and writes a
   // block with a javascript: url via API (the backend has no scheme
@@ -100,24 +90,25 @@ test("javascript: URL in block data is sanitized by the renderer", async ({
   // in-depth layer that matters most in practice.
   const markerTitle = `xss-probe-${Date.now()}`;
   const id = crypto.randomUUID();
-  await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    workspace_id: workspaceID,
+  await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
     ops: [
       {
         op: "createBlock",
-        payload: {
+        payloadJson: JSON.stringify({
           id,
           type: "bookmark",
           data: { url: "javascript:alert('xss')", title: markerTitle },
           text: markerTitle,
-        },
+        }),
       },
       {
         op: "addRef",
-        payload: { from: rootID, to: id, rel: "nest", order_key: `zzy${Date.now().toString(36)}` },
+        payloadJson: JSON.stringify({ from: rootID, to: id, rel: "nest", order_key: `zzy${Date.now().toString(36)}` }),
       },
     ],
-    idempotency_key: `e2e-xss-ok-${id}`,
+    idempotencyKey: `e2e-xss-ok-${id}`,
   });
 
   await authenticatedPage.goto(`/${orgSlug}/blocks?ws=${workspaceID}`);

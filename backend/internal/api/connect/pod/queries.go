@@ -49,6 +49,7 @@ func (s *Server) ListPods(
 		Statuses:      statuses,
 		CreatedByID:   createdByID,
 		GrantedUserID: filter.GrantUserID,
+		RunnerID:      req.Msg.GetRunnerId(),
 		Limit:         limit,
 		Offset:        offset,
 	})

@@ -8,7 +8,6 @@ import initWasm, {
 import { markServiceReady, setPlatformInit } from "@agentsmesh/service-runtime";
 import { getApiBaseUrl } from "./env";
 import { activateWasmRelayBackend } from "@/stores/relayBackend";
-import { activateWasmEventsBackend } from "@/lib/realtime/eventsBackend";
 import { registerAll } from "./wasm-getters";
 
 async function doWasmInit(): Promise<void> {
@@ -21,7 +20,6 @@ async function doWasmInit(): Promise<void> {
   const apiClient = new WasmApiClient(baseUrl, authManager);
   registerAll(apiClient, authManager);
   activateWasmRelayBackend(WasmWebSocket);
-  activateWasmEventsBackend(WasmWebSocket);
   markServiceReady();
   console.log("[WASM Core] Initialized, version:", version());
 }
@@ -47,7 +45,7 @@ export {
   getBillingService, getRepositoryService, getExtensionService,
   getInvitationService, getApiKeyService, getBindingService,
   getGrantService,
-  getMessageService, getNotificationService, getPromoCodeService,
+  getNotificationService, getPromoCodeService,
   getTokenUsageService, getSSOService, getUserApiService,
   getUserCredentialService, getOrgApiService, getAgentService,
   getTicketRelationsService, getFileService, getSupportTicketService,

@@ -52,43 +52,6 @@ impl WasmPodService {
 
     pub fn remove_pod(&self, pod_key: &str) { self.0.remove_pod(pod_key); }
 
-    pub async fn fetch_pods(
-        &self, status: Option<String>, runner_id: Option<i64>,
-        created_by_id: Option<i64>, limit: Option<i64>, offset: Option<i64>,
-    ) -> Result<String, String> {
-        self.0.fetch_pods(status, runner_id, created_by_id, limit, offset).await
-    }
-
-    pub async fn fetch_sidebar_pods(
-        &self, filter: &str, user_id: Option<i64>,
-    ) -> Result<String, String> {
-        self.0.fetch_sidebar_pods(filter, user_id).await
-    }
-
-    pub async fn load_more_pods(
-        &self, filter: &str, user_id: Option<i64>, offset: i64,
-    ) -> Result<String, String> {
-        self.0.load_more_pods(filter, user_id, offset).await
-    }
-
-    pub async fn fetch_pod(&self, pod_key: &str) -> Result<String, String> {
-        self.0.fetch_pod(pod_key).await
-    }
-
-    pub async fn terminate_pod(&self, pod_key: &str) -> Result<(), String> {
-        self.0.terminate_pod(pod_key).await
-    }
-
-    pub async fn update_pod_alias_api(
-        &self, pod_key: &str, alias: Option<String>,
-    ) -> Result<(), String> {
-        self.0.update_pod_alias_api(pod_key, alias).await
-    }
-
-    pub async fn get_pod_connection(&self, pod_key: &str) -> Result<String, String> {
-        self.0.get_pod_connection(pod_key).await
-    }
-
     // -------- Connect-RPC (binary wire) --------
     //
     // Each `*_connect` method takes prost-encoded bytes (Uint8Array on the JS

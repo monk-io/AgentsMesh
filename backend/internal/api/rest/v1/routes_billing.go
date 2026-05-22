@@ -6,16 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func registerBillingRoutes(rg *gin.RouterGroup, svc *Services) {
-	RegisterBillingHandlers(rg.Group("/billing"), svc.Billing)
-}
-
-func registerInvitationRoutes(rg *gin.RouterGroup, svc *Services) {
-	if svc.Invitation != nil {
-		invitationHandler := NewInvitationHandler(svc.Invitation, svc.Org, svc.User, svc.Billing)
-		invitationHandler.RegisterOrgRoutes(rg)
-	}
-}
+// Billing org-scoped REST handlers all migrated to Connect — see
+// backend/internal/api/connect/billing. Stub kept so the route group
+// composes cleanly with the rest of the org-scoped routes (routes_org_scoped.go).
+func registerBillingRoutes(_ *gin.RouterGroup, _ *Services) {}
 
 func registerFileRoutes(rg *gin.RouterGroup, svc *Services) {
 	if svc.File == nil {

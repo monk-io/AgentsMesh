@@ -16,10 +16,16 @@
 // identified by JWT (auth interceptor → UserID); tickets are addressed
 // by their owner's UserID, not by any org. There is no `org_slug`.
 //
-// File-upload paths (multipart POST on Create / AddMessage) and the
-// non-RPC GetAttachmentURL stay on REST for the dual-track window —
-// Connect-RPC has no multipart story and presigned-URL response shape
-// is trivial. Only the JSON-bodied RPCs move to Connect here.
+// Attachment uploads now go through a 3-step presigned-URL flow instead of
+// multipart REST:
+//   1. CreateSupportTicket (or AddSupportTicketMessage) → ticket / message id
+//   2. PresignAttachmentUpload(ticket_id, message_id?, filename, ct, size)
+//      → put_url + opaque storage_key (server-generated)
+//   3. Browser PUTs the bytes to put_url, then calls
+//      AssociateAttachments(ticket_id, [{storage_key, filename, mime, size}])
+//      to materialize SupportTicketAttachment DB rows.
+// This eliminates the multipart REST surface entirely; conventions §2.5
+// (all wire is Connect-binary) is now fully enforced for this domain.
 
 syntax = "proto3";
 
@@ -34,6 +40,10 @@ service SupportTicketService {
   rpc ListSupportTickets(ListSupportTicketsRequest) returns (ListSupportTicketsResponse);
   rpc GetSupportTicket(GetSupportTicketRequest) returns (SupportTicketDetail);
   rpc GetAttachmentUrl(GetAttachmentUrlRequest) returns (GetAttachmentUrlResponse);
+  rpc CreateSupportTicket(CreateSupportTicketRequest) returns (SupportTicket);
+  rpc AddSupportTicketMessage(AddSupportTicketMessageRequest) returns (SupportTicketMessage);
+  rpc PresignAttachmentUpload(PresignAttachmentUploadRequest) returns (PresignAttachmentUploadResponse);
+  rpc AssociateAttachments(AssociateAttachmentsRequest) returns (AssociateAttachmentsResponse);
 }
 
 // ----------------------------------------------------------------------------
@@ -138,4 +148,66 @@ message GetAttachmentUrlRequest {
 
 message GetAttachmentUrlResponse {
   string url = 1;
+}
+
+// ----------------------------------------------------------------------------
+// Create / message-reply (no attachments — handled by presign flow below)
+// ----------------------------------------------------------------------------
+
+message CreateSupportTicketRequest {
+  string title = 1;
+  // bug / feature_request / usage_question / account / other — empty
+  // string defaults to `other` server-side (mirrors REST behavior).
+  string category = 2;
+  string content = 3;
+  // low / medium / high — empty string defaults to `medium`.
+  optional string priority = 4;
+}
+
+message AddSupportTicketMessageRequest {
+  int64 ticket_id = 1;
+  string content = 2;
+}
+
+// ----------------------------------------------------------------------------
+// Attachment presign flow — replaces multipart REST upload
+// ----------------------------------------------------------------------------
+
+// PresignAttachmentUploadRequest carries everything the server needs to
+// (a) authorize the upload against the ticket owner and (b) generate an
+// opaque storage_key. message_id is optional — when null/absent the
+// attachment is bound to the ticket itself (matches REST `Create`
+// semantics where files[] arrived alongside the initial message and were
+// stored against the ticket without a message_id).
+message PresignAttachmentUploadRequest {
+  int64 ticket_id = 1;
+  optional int64 message_id = 2;
+  string filename = 3;
+  string content_type = 4;
+  int64 size = 5;
+}
+
+// PresignAttachmentUploadResponse — opaque storage_key flows back to
+// AssociateAttachments unchanged. Clients MUST treat it as opaque (it is
+// validated server-side via storage.Exists before the DB row is created).
+message PresignAttachmentUploadResponse {
+  string put_url = 1;
+  string storage_key = 2;
+}
+
+message AssociateAttachmentRef {
+  string storage_key = 1;
+  string filename = 2;
+  string content_type = 3;
+  int64 size = 4;
+  optional int64 message_id = 5;
+}
+
+message AssociateAttachmentsRequest {
+  int64 ticket_id = 1;
+  repeated AssociateAttachmentRef attachments = 2;
+}
+
+message AssociateAttachmentsResponse {
+  repeated SupportTicketAttachment items = 1;
 }

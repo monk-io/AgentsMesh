@@ -1,4 +1,4 @@
-use agentsmesh_types::{Organization, User};
+use agentsmesh_state::auth_types::{Organization, User};
 use serde::{Deserialize, Serialize};
 
 pub(crate) const LEGACY_STORAGE_KEY: &str = "agentsmesh-auth";
@@ -32,7 +32,7 @@ pub(crate) struct AuthState {
 impl AuthState {
     pub(crate) fn apply_session(
         &mut self,
-        session: &agentsmesh_types::AuthSession,
+        session: &agentsmesh_state::auth_types::AuthSession,
         base_url: &str,
         now_secs: i64,
     ) {
@@ -55,7 +55,7 @@ impl AuthState {
 
     pub(crate) fn apply_tokens(
         &mut self,
-        tokens: &agentsmesh_types::AuthTokens,
+        tokens: &agentsmesh_state::auth_types::AuthTokens,
         base_url: &str,
         now_secs: i64,
     ) {

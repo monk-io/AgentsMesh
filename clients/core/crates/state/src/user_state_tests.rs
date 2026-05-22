@@ -1,5 +1,4 @@
-use agentsmesh_types::{User, UserIdentity};
-
+use crate::auth_types::{User, UserIdentity};
 use crate::user_state::UserState;
 
 fn make_user(id: i64, email: &str) -> User {

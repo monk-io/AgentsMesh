@@ -171,6 +171,9 @@ impl ApiClient {
 //     RunnerService — REST stays until the runner-mgmt RPCs land.
 
 impl ApiClient {
+    /// Lists pods owned by a specific runner. Implemented on top of
+    /// `proto.pod.v1.PodService.ListPods` with the `runner_id` filter —
+    /// the dedicated REST endpoint was removed.
     pub async fn list_runner_pods(
         &self,
         id: i64,
@@ -178,35 +181,56 @@ impl ApiClient {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<agentsmesh_types::proto_pod_v1::ListPodsResponse, ApiError> {
-        let mut path = self.org_path(&format!("/runners/{id}/pods"));
-        let mut params = Vec::new();
-        if let Some(s) = status {
-            params.push(format!("status={s}"));
-        }
-        if let Some(l) = limit {
-            params.push(format!("limit={l}"));
-        }
-        if let Some(o) = offset {
-            params.push(format!("offset={o}"));
-        }
-        if !params.is_empty() {
-            path = format!("{path}?{}", params.join("&"));
-        }
-        self.get(&path).await
+        let req = agentsmesh_types::proto_pod_v1::ListPodsRequest {
+            org_slug: self.current_org_slug(),
+            status: status.map(|s| s.to_string()),
+            created_by_id: None,
+            limit: limit.map(|v| v as i32),
+            offset: offset.map(|v| v as i32),
+            runner_id: Some(id),
+        };
+        self.list_pods_connect(&req).await
     }
 
     pub async fn get_runner_auth_status(
         &self,
         auth_key: &str,
     ) -> Result<RunnerAuthStatus, ApiError> {
-        self.get(&self.org_path(&format!("/runners/auth/{auth_key}")))
-            .await
+        let req = runner_proto::GetRunnerAuthStatusRequest {
+            auth_key: auth_key.to_string(),
+        };
+        let resp: runner_proto::RunnerAuthStatus = connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerPublicService/GetRunnerAuthStatus",
+            &req,
+        )
+        .await?;
+        Ok(RunnerAuthStatus {
+            status: resp.status,
+            runner_id: resp.runner_id,
+            organization_slug: resp.org_slug,
+        })
     }
 
     pub async fn authorize_runner(
         &self,
         data: &AuthorizeRunnerRequest,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.post(&self.org_path("/runners/grpc/authorize"), data).await
+    ) -> Result<serde_json::Value, ApiError> {
+        let req = runner_proto::AuthorizeRunnerRequest {
+            org_slug: self.current_org_slug(),
+            auth_key: data.auth_key.clone(),
+            node_id: data.node_id.clone().unwrap_or_default(),
+        };
+        let resp: runner_proto::AuthorizeRunnerResponse = connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/AuthorizeRunner",
+            &req,
+        )
+        .await?;
+        Ok(serde_json::json!({
+            "runner_id": resp.runner_id,
+            "node_id": resp.node_id,
+            "message": resp.message,
+        }))
     }
 }

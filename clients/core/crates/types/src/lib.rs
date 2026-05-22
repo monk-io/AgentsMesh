@@ -1,42 +1,28 @@
-// Legacy serde DTOs (REST dual-track window — read these via `use
-// agentsmesh_types::*`). All proto/Connect-RPC binary-wire types live in the
-// `proto_<svc>_v1` modules below and come from auto-generated prost crates
-// (rules_rust_prost). Hand-written `*_proto.rs` mirrors retired in R1a.
+// Client-side wire-format types. Three categories:
+//   - `enums::PodStatus` — strongly-typed client mapping for the proto
+//     string-status field; used by realtime event dispatch and pod cache.
+//   - `runner::*` — REST-only request/response shapes for the runner
+//     registration flow (Tailscale-style device authorization), which has
+//     no proto coverage on the backend.
+//   - `service_error::ServiceError` — tagged-enum error type that bridges
+//     Rust errors across the wasm/UniFFI/NAPI boundary.
+//
+// All business-domain wire types come from the `proto_<svc>_v1` modules
+// below — auto-generated prost crates re-exported here for the rest of the
+// workspace to consume.
 
-mod auth;
-mod autopilot;
-mod blockstore;
-mod channel;
-mod common;
 mod enums;
-mod loop_requests;
-mod loop_types;
 mod runner;
 mod service_error;
-mod ticket;
-mod user_credential;
 
-pub use auth::*;
-pub use autopilot::*;
-pub use blockstore::*;
-pub use channel::*;
-pub use common::*;
 pub use enums::*;
-pub use loop_requests::*;
-pub use loop_types::*;
 pub use runner::*;
 pub use service_error::*;
-pub use ticket::*;
-pub use user_credential::*;
 
 // =============================================================================
 // Connect-RPC binary-wire DTOs (prost). Single source of truth: the .proto
 // schema. Each `proto_<svc>_v1` module re-exports an auto-generated crate
 // produced by `rust_prost_library` (see proto/<svc>/v1/BUILD.bazel).
-//
-// Per-module doc comments retired with R1a — the proto file is the SSOT and
-// already carries the canonical descriptions. Behavioural exceptions (e.g.
-// `loop` keyword escape) stay inline.
 // =============================================================================
 
 pub mod proto_agent_v1 {
@@ -71,8 +57,16 @@ pub mod proto_channel_v1 {
     pub use ::channel_proto::proto::channel::v1::*;
 }
 
+pub mod proto_channel_state_v1 {
+    pub use ::channel_state_proto::proto::channel_state::v1::*;
+}
+
 pub mod proto_extension_v1 {
     pub use ::extension_proto::proto::extension::v1::*;
+}
+
+pub mod proto_events_v1 {
+    pub use ::events_proto::proto::events::v1::*;
 }
 
 pub mod proto_file_v1 {

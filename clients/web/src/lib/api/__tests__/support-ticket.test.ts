@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getSupportTicketService } from "@/lib/wasm-core";
 
 if (!File.prototype.arrayBuffer) {
   File.prototype.arrayBuffer = function () {
@@ -11,21 +10,27 @@ if (!File.prototype.arrayBuffer) {
   };
 }
 
-// Hoisted mocks for the Connect adapter — support-ticket.ts now delegates
-// list/getDetail/getAttachmentUrl to supportTicketConnect.ts after the
-// proto migration. The legacy multipart paths (create_ticket /
-// add_message) still hit the wasm bridge directly — see the dual-track
-// note in support-ticket.ts.
-const { listMock, getDetailMock, getAttUrlMock } = vi.hoisted(() => ({
+const {
+  listMock, getDetailMock, getAttUrlMock,
+  createMock, addMsgMock, presignMock, associateMock,
+} = vi.hoisted(() => ({
   listMock: vi.fn(),
   getDetailMock: vi.fn(),
   getAttUrlMock: vi.fn(),
+  createMock: vi.fn(),
+  addMsgMock: vi.fn(),
+  presignMock: vi.fn(),
+  associateMock: vi.fn(),
 }));
 
 vi.mock("../supportTicketConnect", () => ({
   listSupportTickets: listMock,
   getSupportTicketDetail: getDetailMock,
   getSupportTicketAttachmentUrl: getAttUrlMock,
+  createSupportTicketConnect: createMock,
+  addSupportTicketMessageConnect: addMsgMock,
+  presignAttachmentUploadConnect: presignMock,
+  associateAttachmentsConnect: associateMock,
 }));
 
 import {
@@ -33,15 +38,9 @@ import {
   createSupportTicket, getSupportTicketAttachmentUrl,
 } from "../support-ticket";
 
-const mockCreate = vi.fn().mockResolvedValue('{"id":10}');
-const mockAddMsg = vi.fn().mockResolvedValue('{"id":1,"content":"hello"}');
-
-describe("support-ticket API (dual-track)", () => {
+describe("support-ticket API (Connect-only)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getSupportTicketService).mockReturnValue({
-      create_ticket: mockCreate, add_message: mockAddMsg,
-    } as unknown as ReturnType<typeof getSupportTicketService>);
     listMock.mockResolvedValue({
       data: [], total: 0, page: 1, page_size: 20, total_pages: 0,
     });
@@ -53,21 +52,26 @@ describe("support-ticket API (dual-track)", () => {
       },
       messages: [],
     });
-    getAttUrlMock.mockResolvedValue({
-      url: "https://example.com/f.png",
+    getAttUrlMock.mockResolvedValue({ url: "https://example.com/f.png" });
+    createMock.mockResolvedValue({
+      id: 10, user_id: 1, title: "Bug", category: "bug",
+      status: "open", priority: "high", created_at: "", updated_at: "",
     });
+    addMsgMock.mockResolvedValue({
+      id: 100, ticket_id: 5, user_id: 1, content: "hello",
+      is_admin_reply: false, created_at: "", attachments: [],
+    });
+    presignMock.mockResolvedValue({
+      putUrl: "https://example.com/put",
+      storageKey: "support-tickets/1/2026/05/abc.png",
+    });
+    associateMock.mockResolvedValue([]);
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response);
   });
-
-  // ---- Migrated RPCs (Connect-RPC binary wire) ----
 
   it("listSupportTickets delegates to Connect adapter", async () => {
     await listSupportTickets({ status: "open", page: 2, page_size: 10 });
     expect(listMock).toHaveBeenCalledWith({ status: "open", page: 2, page_size: 10 });
-  });
-
-  it("listSupportTickets without params delegates to Connect adapter", async () => {
-    await listSupportTickets();
-    expect(listMock).toHaveBeenCalledWith(undefined);
   });
 
   it("getSupportTicketDetail delegates to Connect adapter", async () => {
@@ -81,27 +85,56 @@ describe("support-ticket API (dual-track)", () => {
     expect(result).toEqual({ url: "https://example.com/f.png" });
   });
 
-  // ---- Legacy REST multipart paths (dual-track) ----
-
-  it("createSupportTicket with files still uses wasm bridge", async () => {
-    const file = new File(["screenshot"], "shot.png", { type: "image/png" });
-    await createSupportTicket({ title: "Bug", category: "bug", content: "Broke", priority: "high", files: [file] });
-    expect(mockCreate).toHaveBeenCalledWith("Bug", "bug", "Broke", "high", [expect.any(Uint8Array)], ["shot.png"]);
-  });
-
-  it("createSupportTicket without optional fields still uses wasm bridge", async () => {
+  it("createSupportTicket without files calls only createSupportTicketConnect", async () => {
     await createSupportTicket({ title: "Q", category: "q", content: "How?" });
-    expect(mockCreate).toHaveBeenCalledWith("Q", "q", "How?", null, [], []);
+    expect(createMock).toHaveBeenCalledWith({
+      title: "Q", category: "q", content: "How?", priority: undefined,
+    });
+    expect(presignMock).not.toHaveBeenCalled();
+    expect(associateMock).not.toHaveBeenCalled();
   });
 
-  it("addSupportTicketMessage with files still uses wasm bridge", async () => {
+  it("createSupportTicket with files runs presign + PUT + associate per file", async () => {
+    const file = new File(["screenshot"], "shot.png", { type: "image/png" });
+    await createSupportTicket({
+      title: "Bug", category: "bug", content: "Broke", priority: "high", files: [file],
+    });
+    expect(createMock).toHaveBeenCalledWith({
+      title: "Bug", category: "bug", content: "Broke", priority: "high",
+    });
+    expect(presignMock).toHaveBeenCalledWith({
+      ticketId: 10, messageId: undefined,
+      filename: "shot.png", contentType: "image/png", size: file.size,
+    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://example.com/put",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(associateMock).toHaveBeenCalledWith(10, [{
+      storageKey: "support-tickets/1/2026/05/abc.png",
+      filename: "shot.png", contentType: "image/png", size: file.size,
+      messageId: undefined,
+    }]);
+  });
+
+  it("addSupportTicketMessage without files calls only addSupportTicketMessageConnect", async () => {
+    await addSupportTicketMessage(5, "hello");
+    expect(addMsgMock).toHaveBeenCalledWith(5, "hello");
+    expect(presignMock).not.toHaveBeenCalled();
+  });
+
+  it("addSupportTicketMessage with files runs presign + PUT + associate per file", async () => {
     const file = new File(["data"], "f.txt", { type: "text/plain" });
     await addSupportTicketMessage(5, "hello", [file]);
-    expect(mockAddMsg).toHaveBeenCalledWith(BigInt(5), "hello", [expect.any(Uint8Array)], ["f.txt"]);
-  });
-
-  it("addSupportTicketMessage without files still uses wasm bridge", async () => {
-    await addSupportTicketMessage(5, "hello");
-    expect(mockAddMsg).toHaveBeenCalledWith(BigInt(5), "hello", [], []);
+    expect(addMsgMock).toHaveBeenCalledWith(5, "hello");
+    expect(presignMock).toHaveBeenCalledWith({
+      ticketId: 5, messageId: 100,
+      filename: "f.txt", contentType: "text/plain", size: file.size,
+    });
+    expect(associateMock).toHaveBeenCalledWith(5, [{
+      storageKey: "support-tickets/1/2026/05/abc.png",
+      filename: "f.txt", contentType: "text/plain", size: file.size,
+      messageId: 100,
+    }]);
   });
 });

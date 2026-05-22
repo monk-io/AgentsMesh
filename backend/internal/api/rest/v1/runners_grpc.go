@@ -29,6 +29,11 @@ func NewGRPCRunnerHandler(runnerService *runner.Service, pkiService *pki.Service
 	}
 }
 
+// PKIService exposes the PKI dep for the Connect runner_api server. The
+// REST handler keeps it private; the Connect runner_api package needs the
+// same dep injected via WithPKIService.
+func (h *GRPCRunnerHandler) PKIService() *pki.Service { return h.pkiService }
+
 // ==================== Certificate Renewal ====================
 
 // RenewCertificate renews a runner's certificate.
@@ -176,12 +181,13 @@ func (h *GRPCRunnerHandler) GetDiscovery(c *gin.Context) {
 // RegisterGRPCRunnerRoutes registers gRPC runner routes.
 func RegisterGRPCRunnerRoutes(r *gin.RouterGroup, handler *GRPCRunnerHandler) {
 	// Public endpoints (no auth required)
-	// These are used by Runner CLI for registration
+	// These are used by Runner CLI for registration. `auth-status` was the
+	// browser-side polling endpoint — that moved to
+	// proto.runner_api.v1.RunnerPublicService.GetRunnerAuthStatus (Connect).
 	grpcPublic := r.Group("/runners/grpc")
 	{
 		// Tailscale-style interactive registration
 		grpcPublic.POST("/auth-url", handler.RequestAuthURL)
-		grpcPublic.GET("/auth-status", handler.GetAuthStatus)
 
 		// Pre-generated token registration
 		grpcPublic.POST("/register", handler.RegisterWithToken)
@@ -198,20 +204,19 @@ func RegisterGRPCRunnerRoutes(r *gin.RouterGroup, handler *GRPCRunnerHandler) {
 }
 
 // RegisterOrgGRPCRunnerRoutes registers organization-scoped gRPC runner routes.
-// These require JWT authentication.
+// These require JWT authentication. AuthorizeRunner moved to Connect (see
+// proto.runner_api.v1.RunnerService.AuthorizeRunner).
 func RegisterOrgGRPCRunnerRoutes(rg *gin.RouterGroup, handler *GRPCRunnerHandler) {
 	// Organization-scoped endpoints (require JWT auth + tenant context)
 	grpc := rg.Group("/grpc")
 	{
-		// Authorize pending auth (Web UI action)
-		grpc.POST("/authorize", handler.AuthorizeRunner)
-
 		// Token management
 		grpc.GET("/tokens", handler.ListGRPCTokens)
 		grpc.POST("/tokens", handler.GenerateGRPCToken)
 		grpc.DELETE("/tokens/:id", handler.DeleteGRPCToken)
 	}
 
-	// Reactivation token generation (per-runner)
+	// Reactivation token generation (per-runner). Kept on REST until the
+	// admin-side reactivation UI lands.
 	rg.POST("/:id/reactivate", handler.GenerateReactivationToken)
 }

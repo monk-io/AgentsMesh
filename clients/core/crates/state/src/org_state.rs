@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use agentsmesh_persistence::StorageBackend;
-use agentsmesh_types::Organization;
 use serde::{Deserialize, Serialize};
 
+use crate::auth_types::Organization;
 use crate::persist_helpers::JsonStore;
 
 /// Flat view of an organization member, projected from `proto.org.v1.OrgMember`

@@ -1,5 +1,5 @@
 use agentsmesh_state::user_state::UserState;
-use agentsmesh_types::{User, UserIdentity};
+use agentsmesh_state::auth_types::{User, UserIdentity};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use agentsmesh_persistence::StorageBackend;
-use agentsmesh_types::{ProviderRepository, RepositoryProvider};
 
+use crate::credential_types::{ProviderRepository, RepositoryProvider};
 use crate::persist_helpers::JsonStore;
 
 pub struct GitProviderState {

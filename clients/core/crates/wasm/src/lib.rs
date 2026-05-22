@@ -98,10 +98,6 @@ pub use state_repo::*;
 pub use state_runner::*;
 pub use state_ticket::*;
 
-pub(crate) fn parse_status<T: serde::de::DeserializeOwned + Default>(s: &str) -> T {
-    serde_json::from_value(serde_json::Value::String(s.to_string())).unwrap_or_default()
-}
-
 pub(crate) fn new_memory_backend() -> Arc<dyn agentsmesh_persistence::StorageBackend> {
     use agentsmesh_persistence::StorageBackend;
     let b = Arc::new(agentsmesh_persistence::InMemoryBackend::new());

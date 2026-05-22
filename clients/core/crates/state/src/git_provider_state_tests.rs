@@ -1,5 +1,4 @@
-use agentsmesh_types::{ProviderRepository, RepositoryProvider};
-
+use crate::credential_types::{ProviderRepository, RepositoryProvider};
 use crate::git_provider_state::GitProviderState;
 
 fn make_provider(id: i64, ptype: &str) -> RepositoryProvider {

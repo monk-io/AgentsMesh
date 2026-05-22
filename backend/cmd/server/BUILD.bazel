@@ -28,6 +28,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//backend/internal/api/connect/admin",
+        "//backend/internal/api/connect/admin/auth",
         "//backend/internal/api/connect/admin/promocode",
         "//backend/internal/api/connect/admin/skill_registry",
         "//backend/internal/api/connect/admin/sso",
@@ -42,6 +43,7 @@ go_library(
         "//backend/internal/api/connect/binding",
         "//backend/internal/api/connect/blockstore",
         "//backend/internal/api/connect/channel",
+        "//backend/internal/api/connect/events",
         "//backend/internal/api/connect/extension",
         "//backend/internal/api/connect/file",
         "//backend/internal/api/connect/grant",

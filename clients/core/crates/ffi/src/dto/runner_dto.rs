@@ -1,8 +1,5 @@
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::{
-    AuthorizeRunnerRequest, CreateRunnerTokenRequest, RunnerAuthStatus,
-    UpdateRunnerRequest, UpgradeRunnerRequest,
-};
+use agentsmesh_types::{AuthorizeRunnerRequest, RunnerAuthStatus};
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum RunnerStatusDto {
@@ -148,17 +145,6 @@ pub struct UpdateRunnerRequestDto {
     pub visibility: Option<String>,
 }
 
-impl From<UpdateRunnerRequestDto> for UpdateRunnerRequest {
-    fn from(d: UpdateRunnerRequestDto) -> Self {
-        Self {
-            description: d.description,
-            max_concurrent_pods: d.max_concurrent_pods,
-            is_enabled: d.is_enabled,
-            visibility: d.visibility,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct CreateRunnerTokenRequestDto {
     pub name: Option<String>,
@@ -167,30 +153,10 @@ pub struct CreateRunnerTokenRequestDto {
     pub expires_in_days: Option<i64>,
 }
 
-impl From<CreateRunnerTokenRequestDto> for CreateRunnerTokenRequest {
-    fn from(d: CreateRunnerTokenRequestDto) -> Self {
-        Self {
-            name: d.name,
-            labels: d.labels,
-            max_uses: d.max_uses,
-            expires_in_days: d.expires_in_days,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct UpgradeRunnerRequestDto {
     pub target_version: Option<String>,
     pub force: Option<bool>,
-}
-
-impl From<UpgradeRunnerRequestDto> for UpgradeRunnerRequest {
-    fn from(d: UpgradeRunnerRequestDto) -> Self {
-        Self {
-            target_version: d.target_version,
-            force: d.force,
-        }
-    }
 }
 
 #[derive(Clone, Debug, uniffi::Record)]

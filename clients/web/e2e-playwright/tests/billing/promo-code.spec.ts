@@ -1,9 +1,8 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-
-const BILLING = `/api/v1/orgs/${TEST_ORG_SLUG}/billing`;
 
 test.describe("Promo Codes", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
@@ -12,31 +11,37 @@ test.describe("Promo Codes", () => {
    * TC-PROMO-002: Validate promo code
    */
   test("validate promo code endpoint exists", async ({ api }) => {
-    const res = await api.post(`${BILLING}/promo-codes/validate`, {
+    const cc = await api.connect();
+    // 200 if valid, 400/404 if invalid code — Connect throws on non-2xx; success is unlikely.
+    await cc.promocode.validate({
+      orgSlug: TEST_ORG_SLUG,
       code: "TESTCODE",
+    }).catch((err: { status?: number }) => {
+      expect([400, 404]).toContain(err.status);
     });
-    // 200 if valid, 400/404 if invalid code
-    expect([200, 400, 404]).toContain(res.status);
   });
 
   /**
    * TC-PROMO-003: Invalid promo code
    */
   test("invalid promo code returns valid=false", async ({ api }) => {
-    const res = await api.post(`${BILLING}/promo-codes/validate`, {
+    const cc = await api.connect();
+    const resp = await cc.promocode.validate({
+      orgSlug: TEST_ORG_SLUG,
       code: "INVALID_CODE_XYZ_999",
-    });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.valid).toBe(false);
+    }) as { valid: boolean };
+    expect(resp.valid).toBe(false);
   });
 
   /**
    * TC-PROMO-004: Redemption history
    */
   test("get promo code redemption history", async ({ api }) => {
-    const res = await api.get(`${BILLING}/promo-codes/history`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const { items } = await cc.promocode.getRedemptionHistory({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 
   /**

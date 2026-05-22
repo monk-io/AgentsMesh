@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod auth_session_tests {
     use agentsmesh_types::proto_auth_v1 as auth_proto;
-    use agentsmesh_types::RegisterRequest;
+    use agentsmesh_state::auth_types::RegisterRequest;
     use prost::Message;
     use wiremock::matchers::{header, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};

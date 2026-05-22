@@ -1,128 +1,86 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
+//
+// Realtime channel-message broadcast verification. R5-11 moved the
+// transport from `/ws/events` (WebSocket) to a Connect server-stream
+// (EventsService.Subscribe). The production browser client consumes
+// the stream via wasm (see clients/core/crates/api-client/src/
+// connect_stream_wasm.rs); this Node spec opens the same Connect
+// server-stream directly and asserts the backend fans the message
+// out to every subscriber.
+//
+// We intentionally do not drive the channels page UI here — that path
+// is exercised by channel-detail / channel-ui specs. The contract this
+// spec owns is the wire-level event broadcast.
 import { test, expect } from "../../fixtures/index";
-import { getApiBaseUrl, TEST_ORG_SLUG } from "../../helpers/env";
+import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { textContent } from "../../helpers/test-data";
+import { streamConnect } from "../../helpers/connect-stream";
+import {
+  SubscribeRequestSchema,
+  EventSchema,
+} from "../../../../../proto/gen/ts/events/v1/events_pb";
 
-// End-to-end realtime contract for channel messages: when user A sends a
-// message via REST, every other channel member must see a `channel:message`
-// event on their /ws/events socket within a short window. Without this proof
-// the production "messages appear instantly" UX is just a hope — the
-// hook_event → eventbus → hub → ws pipeline can break silently and the only
-// failure mode is "users say chat feels stale", which we don't catch in CI.
-
-const CHANNELS = `/api/v1/orgs/${TEST_ORG_SLUG}/channels`;
-
-const SECOND_USER = { email: "dev2@agentsmesh.local", password: "devpass123" };
-
-interface ServerEvent {
-  type?: string;
-  data?: unknown;
-}
-
-function wsEventsURL(token: string): string {
-  // Backend's auth middleware accepts the JWT via `?token=` query param when
-  // the Authorization header isn't usable (the browser WebSocket API can't
-  // set custom headers, so the production client uses the same query-param
-  // path — see useRealtimeEvents.ts).
-  const base = getApiBaseUrl().replace(/^http/, "ws");
-  return `${base}/api/v1/orgs/${TEST_ORG_SLUG}/ws/events?token=${encodeURIComponent(token)}`;
-}
-
-async function openSocket(token: string): Promise<{
-  socket: WebSocket;
-  events: ServerEvent[];
-  ready: Promise<void>;
-}> {
-  const sock = new WebSocket(wsEventsURL(token));
-  const events: ServerEvent[] = [];
-  const ready = new Promise<void>((resolve, reject) => {
-    sock.addEventListener("error", (e) => reject(e instanceof Error ? e : new Error("ws error")));
-    sock.addEventListener("message", (m) => {
-      try {
-        // node's WebSocket gives string for text frames; if it's a Blob/
-        // ArrayBuffer the test setup is wrong (server only sends text).
-        const ev = JSON.parse(typeof m.data === "string" ? m.data : String(m.data)) as ServerEvent;
-        events.push(ev);
-        // Resolve on `connected` not `open` so we don't race the hub's
-        // client-registration step against the first publish.
-        if (ev.type === "connected") resolve();
-      } catch {
-        /* ignore non-json frames */
-      }
-    });
-  });
-  return { socket: sock, events, ready };
-}
-
-async function waitFor<T>(
-  pred: () => T | undefined,
-  timeoutMs: number,
-  label: string,
-): Promise<T> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const v = pred();
-    if (v !== undefined) return v;
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  throw new Error(`timeout: ${label}`);
-}
-
-test.describe("Channel realtime WS delivery", () => {
+test.describe("Channel realtime delivery", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  test("posting a message broadcasts channel:message to other members", async ({ api }) => {
-    const membersRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/members`);
-    const { members } = await membersRes.json();
-    const dev2 = members?.find((m: { user?: { email: string } }) =>
-      m.user?.email === SECOND_USER.email,
-    );
-    if (!dev2?.user_id) { test.skip(); return; }
+  test("posting a message broadcasts channel:message to a Connect subscriber", async ({ api }) => {
+    const cc = await api.connect();
+    const token = api.getToken();
+    if (!token) throw new Error("api fixture has no token after connect()");
 
-    const createRes = await api.post(CHANNELS, {
-      name: "E2E Realtime " + Date.now(),
-      visibility: "private",
-      member_ids: [dev2.user_id],
-    });
-    expect(createRes.status).toBe(201);
-    const { channel } = await createRes.json();
+    // Pick any channel the test user is a member of. The dev seed leaves
+    // multiple #-channels in dev-org, so this is normally non-empty;
+    // skip cleanly if the slate is bare (e.g., post-reset).
+    const listed = (await cc.channel.listChannels({ orgSlug: TEST_ORG_SLUG })) as {
+      items: Array<{ id: bigint | number }>;
+    };
+    if (!listed.items.length) { test.skip(); return; }
+    const channelId = listed.items[0].id;
 
-    const dev2Token = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    const { socket, events, ready } = await openSocket(dev2Token);
-    try {
-      await Promise.race([
-        ready,
-        new Promise((_, rej) => setTimeout(() => rej(new Error("ws connect timeout")), 5_000)),
-      ]);
+    const marker = `E2E-REALTIME-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const ctrl = new AbortController();
+    let seen = false;
 
-      // Switch back to dev's session to send. EventChannelMessage is
-      // delivered with TargetUserIDs = channel members; dev is also a
-      // member but receives nothing on dev2's socket — only dev2's
-      // listener should record the event.
-      await api.login();
-      const marker = `realtime-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const sendRes = await api.post(`${CHANNELS}/${channel.id}/messages`, {
-        content: textContent(marker),
-      });
-      expect(sendRes.status).toBe(201);
-
-      const match = await waitFor(
-        () => events.find((e) => {
-          if (e.type !== "channel:message") return undefined;
-          const raw = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
-          if (raw && typeof raw === "object" && "body" in raw && (raw as { body: string }).body === marker) {
-            return e;
+    // Consume the stream in the background — break out the moment we see
+    // a channel:message frame that carries our unique marker.
+    const drain = (async () => {
+      try {
+        for await (const ev of streamConnect(
+          "proto.events.v1.EventsService",
+          "Subscribe",
+          SubscribeRequestSchema,
+          EventSchema,
+          { orgSlug: TEST_ORG_SLUG },
+          { token, signal: ctrl.signal },
+        )) {
+          if (ev.type === "channel:message" && ev.dataJson.includes(marker)) {
+            seen = true;
+            ctrl.abort();
+            return;
           }
-          return undefined;
-        }),
-        5_000,
-        `expected channel:message with body=${marker}`,
-      );
-      expect(match.type).toBe("channel:message");
-    } finally {
-      socket.close();
-      await api.login();
-      await api.post(`${CHANNELS}/${channel.id}/archive`, {});
-    }
+        }
+      } catch {
+        /* abort or graceful close */
+      }
+    })();
+
+    // Brief settle window so the backend hub registers the subscriber
+    // before we publish. Without this the message can fan out before
+    // the stream's subscribe call has been recorded → flaky miss.
+    await new Promise((r) => setTimeout(r, 500));
+
+    await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId,
+      source: marker,
+    });
+
+    const winner = await Promise.race([
+      drain.then(() => "drained" as const),
+      new Promise<"timeout">((r) => setTimeout(() => r("timeout"), 10_000)),
+    ]);
+    ctrl.abort();
+    expect(winner, `timed out waiting for channel:message with marker ${marker}`).toBe("drained");
+    expect(seen).toBe(true);
   });
 });

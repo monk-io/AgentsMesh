@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -10,8 +11,12 @@ test.describe("Runner Diagnostics API", () => {
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     if (!id) return;
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}/pods`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.pod.listPods({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: Number(id),
+    }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
   test("list runner logs", async ({ api, db }) => {
@@ -19,25 +24,32 @@ test.describe("Runner Diagnostics API", () => {
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     if (!id) return;
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}/logs`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.runner.listRunnerLogs({
+      orgSlug: TEST_ORG_SLUG,
+      id: Number(id),
+    }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
   test("list runner tokens", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/grpc/tokens`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.runner.listRunnerTokens({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
   test("create and delete runner token", async ({ api }) => {
-    const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/grpc/tokens`, {
-      description: "E2E test token",
-    });
-    expect([200, 201]).toContain(createRes.status);
-    const data = await createRes.json();
-    const tokenId = data.token?.id || data.id;
-    if (tokenId) {
-      const delRes = await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/grpc/tokens/${tokenId}`);
-      expect([200, 204]).toContain(delRes.status);
+    const cc = await api.connect();
+    const created = await cc.runner.createRunnerToken({
+      orgSlug: TEST_ORG_SLUG,
+      name: "E2E test token",
+    }) as { id?: number; token?: string };
+    expect(created.token).toBeTruthy();
+    if (created.id != null) {
+      await cc.runner.deleteRunnerToken({
+        orgSlug: TEST_ORG_SLUG,
+        id: Number(created.id),
+      });
     }
   });
 });

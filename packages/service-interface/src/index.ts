@@ -38,7 +38,6 @@ export interface IApiClient {
   create_invitation_service(): IInvitationService;
   create_loop_service(): ILoopService;
   create_mesh_service(): IMeshService;
-  create_message_service(): IMessageService;
   create_notification_service(): INotificationService;
   create_org_api_service(): IOrgApiService;
   create_pod_service(): IPodService;
@@ -440,19 +439,6 @@ export interface IMeshState {
   selected_node(): any;
   set_topology(json: string): void;
   topology_json(): any;
-}
-
-export interface IMessageService {
-  get_conversation(correlation_id: string, limit?: number | null): Promise<string>;
-  get_dead_letters(limit?: number | null, offset?: number | null): Promise<string>;
-  get_message(id: bigint): Promise<string>;
-  get_messages(unread_only?: boolean | null, limit?: number | null, offset?: number | null): Promise<string>;
-  get_sent_messages(limit?: number | null, offset?: number | null): Promise<string>;
-  get_unread_count(): Promise<string>;
-  mark_all_read(): Promise<string>;
-  mark_read(json: string): Promise<string>;
-  replay_dead_letter(entry_id: bigint): Promise<string>;
-  send_message(json: string, pod_key?: string | null): Promise<string>;
 }
 
 export interface INotificationService {

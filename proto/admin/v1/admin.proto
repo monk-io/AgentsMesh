@@ -91,6 +91,12 @@ service AdminService {
   rpc UpdateSupportTicketStatus(UpdateSupportTicketStatusRequest) returns (UpdateSupportTicketStatusResponse);
   rpc AssignSupportTicket(AssignSupportTicketRequest) returns (AssignSupportTicketResponse);
   rpc GetSupportTicketAttachmentUrl(GetSupportTicketAttachmentUrlRequest) returns (GetSupportTicketAttachmentUrlResponse);
+
+  // Dead-letter queue. Mirrors REST /api/v1/orgs/:slug/messages/dlq (the
+  // org_slug in the REST path was vestigial — the DLQ is platform-scoped
+  // ops surface, no tenant filtering). Connect drops the slug entirely.
+  rpc ListDeadLetters(ListDeadLettersRequest) returns (ListDeadLettersResponse);
+  rpc ReplayDeadLetter(ReplayDeadLetterRequest) returns (ReplayDeadLetterResponse);
 }
 
 // AdminAuthService — admin-console login flow. Public (no auth interceptor)
@@ -552,3 +558,69 @@ message AdminLoginResponse {
 }
 
 message GetMeRequest {}
+
+// ----------------------------------------------------------------------------
+// Dead-letter queue (ops surface)
+// ----------------------------------------------------------------------------
+
+// AgentMessage mirrors the GORM AgentMessage subset that the DLQ exposes
+// (REST serializes the whole struct via gin.H{"entries": entries}; here we
+// pick the renderer-relevant fields). Internal-only — admin tooling.
+message AgentMessage {
+  int64 id = 1;
+  string sender_pod = 2;
+  string receiver_pod = 3;
+  string message_type = 4;
+  string status = 5;
+  int32 delivery_attempts = 6;
+  int32 max_retries = 7;
+  optional string last_delivery_attempt = 8;
+  optional string next_retry_at = 9;
+  optional string delivery_error = 10;
+  optional string delivered_at = 11;
+  optional string read_at = 12;
+  optional int64 parent_message_id = 13;
+  optional string correlation_id = 14;
+  string created_at = 15;
+  string updated_at = 16;
+}
+
+// DeadLetterEntry mirrors GORM agent.DeadLetterEntry.
+message DeadLetterEntry {
+  int64 id = 1;
+  int64 original_message_id = 2;
+  string reason = 3;
+  int32 final_attempt = 4;
+  string moved_at = 5;
+  optional string replayed_at = 6;
+  optional string replay_result = 7;
+  string created_at = 8;
+  // Eager-loaded original message (best-effort — may be absent if the
+  // foreign key cascade already removed the source row).
+  optional AgentMessage original_message = 9;
+}
+
+message ListDeadLettersRequest {
+  // Standard {offset, limit} envelope (conventions §8). REST translated
+  // {limit, offset} 1:1 — same here.
+  optional int32 limit = 1;
+  optional int32 offset = 2;
+}
+
+message ListDeadLettersResponse {
+  repeated DeadLetterEntry items = 1;
+  // total counts the returned slice length (REST behavior). A future
+  // schema bump can swap this for a real count(*) when needed.
+  int64 total = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ReplayDeadLetterRequest {
+  int64 entry_id = 1;
+}
+
+message ReplayDeadLetterResponse {
+  string message = 1;
+  AgentMessage replayed_message = 2;
+}

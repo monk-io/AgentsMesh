@@ -1,18 +1,18 @@
+use agentsmesh_state::auth_types::{AuthSession, AuthTokens, RegisterRequest, User};
 use agentsmesh_types::proto_auth_v1 as auth_proto;
 use agentsmesh_types::proto_user_v1 as user_proto;
-use agentsmesh_types::{AuthSession, AuthTokens, RegisterRequest};
 
 use crate::connect::connect_call;
 use crate::error::AuthError;
 use crate::manager::{now_unix_secs, AuthManager};
 
 // Maps the prost `auth_proto::User` shape (returned by AuthService) to
-// the serde `agentsmesh_types::User` AuthState already persists. Done
+// the serde `User` AuthState already persists. Done
 // once here so callers downstream stay shape-agnostic — anything that
 // reads the user out of AuthState (web UI, FFI, bootstrap) sees the
 // same serde DTO the legacy REST path produced.
-fn user_from_auth_proto(u: auth_proto::User) -> agentsmesh_types::User {
-    agentsmesh_types::User {
+fn user_from_auth_proto(u: auth_proto::User) -> User {
+    User {
         id: u.id,
         email: u.email,
         username: u.username,
@@ -27,8 +27,8 @@ fn user_from_auth_proto(u: auth_proto::User) -> agentsmesh_types::User {
 // surface stable. The auth-proto User and user-proto User overlap on
 // the fields AuthManager actually needs (id / email / username / name
 // / avatar_url / is_email_verified) so this mapping is loss-tolerant.
-fn user_from_user_proto(u: user_proto::User) -> agentsmesh_types::User {
-    agentsmesh_types::User {
+fn user_from_user_proto(u: user_proto::User) -> User {
+    User {
         id: u.id,
         email: u.email,
         username: u.username,
@@ -234,7 +234,7 @@ impl AuthManager {
         Ok(())
     }
 
-    pub async fn fetch_me(&self) -> Result<agentsmesh_types::User, AuthError> {
+    pub async fn fetch_me(&self) -> Result<User, AuthError> {
         let auth = self.bearer_header()?;
         let resp: user_proto::User = connect_call(
             self,

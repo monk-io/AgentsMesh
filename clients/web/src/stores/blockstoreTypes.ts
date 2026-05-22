@@ -32,7 +32,7 @@ export interface BlockstoreActions {
   setActiveWorkspaceId(id: string | null): void;
   setActiveCommentBlockID(id: string | null): void;
 
-  setLastOpId(workspaceID: string, id: number): void;
+  setLastOpId(workspaceID: string, id: number | bigint): void;
   /** Mark a block as "should grab focus on next render". */
   requestFocus(blockID: string): void;
   /** Consumed by the renderer that took the focus; clears the signal. */

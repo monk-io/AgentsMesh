@@ -125,95 +125,11 @@ impl WasmChannelService {
         self.0.set_last_message(channel_id, json);
     }
 
-    pub async fn fetch_channels(&self, include_archived: Option<bool>) -> Result<String, String> {
-        self.0.fetch_channels(include_archived).await
-    }
-
-    pub async fn fetch_channel(&self, id: i64) -> Result<String, String> {
-        self.0.fetch_channel(id).await
-    }
-
-    pub async fn create_channel(&self, request_json: &str) -> Result<String, String> {
-        self.0.create_channel(request_json).await
-    }
-
-    pub async fn update_channel(&self, id: i64, request_json: &str) -> Result<String, String> {
-        self.0.update_channel(id, request_json).await
-    }
-
-    pub async fn archive_channel(&self, id: i64) -> Result<(), String> {
-        self.0.archive_channel(id).await
-    }
-
-    pub async fn unarchive_channel(&self, id: i64) -> Result<(), String> {
-        self.0.unarchive_channel(id).await
-    }
-
-    pub async fn join_channel(&self, channel_id: i64, pod_key: &str) -> Result<String, String> {
-        self.0.join_channel(channel_id, pod_key).await
-    }
-
-    pub async fn leave_channel(&self, channel_id: i64, pod_key: &str) -> Result<String, String> {
-        self.0.leave_channel(channel_id, pod_key).await
-    }
-
-    pub async fn fetch_messages(
-        &self, channel_id: i64, limit: Option<u32>, before_id: Option<i64>,
-    ) -> Result<String, String> {
-        self.0.fetch_messages(channel_id, limit, before_id).await
-    }
-
-    pub async fn send_message(&self, channel_id: i64, request_json: &str) -> Result<String, String> {
-        self.0.send_message(channel_id, request_json).await
-    }
-
-    pub async fn edit_message(
-        &self, channel_id: i64, message_id: i64, content: &str,
-    ) -> Result<String, String> {
-        self.0.edit_message(channel_id, message_id, content).await
-    }
-
-    pub async fn delete_message(&self, channel_id: i64, message_id: i64) -> Result<(), String> {
-        self.0.delete_message(channel_id, message_id).await
-    }
-
-    pub async fn fetch_unread_counts(&self) -> Result<String, String> {
-        self.0.fetch_unread_counts().await
-    }
-
-    pub async fn mark_read(&self, channel_id: i64, message_id: i64) -> Result<(), String> {
-        self.0.mark_read(channel_id, message_id).await
-    }
-
-    pub async fn mute_channel(&self, channel_id: i64, muted: bool) -> Result<(), String> {
-        self.0.mute_channel(channel_id, muted).await
-    }
-
-    pub async fn get_channel_pods(&self, id: i64) -> Result<String, String> {
-        self.0.get_channel_pods(id).await
-    }
-
     pub fn channel_pods_json(&self, id: i64) -> String {
         self.0.channel_pods_json(id)
     }
 
-    pub async fn fetch_channel_members(&self, id: i64) -> Result<String, String> {
-        self.0.fetch_channel_members(id).await
-    }
-
-    pub async fn invite_channel_members(&self, id: i64, user_ids_json: String) -> Result<(), String> {
-        self.0.invite_channel_members(id, &user_ids_json).await
-    }
-
-    pub async fn remove_channel_member(&self, id: i64, user_id: i64) -> Result<(), String> {
-        self.0.remove_channel_member(id, user_id).await
-    }
-
     pub fn channel_members_json(&self, id: i64) -> String {
         self.0.channel_members_json(id)
-    }
-
-    pub async fn search_channel_messages(&self, id: i64, q: &str, limit: Option<u32>) -> Result<String, String> {
-        self.0.search_channel_messages(id, q, limit).await
     }
 }

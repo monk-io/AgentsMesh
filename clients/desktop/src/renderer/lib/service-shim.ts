@@ -8,7 +8,7 @@ export {
   getBillingService, getRepositoryService, getExtensionService,
   getInvitationService, getApiKeyService, getBindingService,
   getGrantService,
-  getMessageService, getNotificationService, getPromoCodeService,
+  getNotificationService, getPromoCodeService,
   getTokenUsageService, getSSOService, getUserApiService,
   getUserCredentialService, getOrgApiService, getAgentService,
   getTicketRelationsService, getFileService, getSupportTicketService,

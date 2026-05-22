@@ -1,4 +1,14 @@
-import { getEventsBackend, type IEventsTransport } from "./eventsBackend";
+// EventSubscriptionManager — thin TS facade over the wasm-side
+// `WasmEventsManager`, which now owns the Connect server-streaming
+// connection, reconnect state machine, and idle detection (see
+// clients/core/crates/events). The TS layer's only job is to bridge
+// subscribe / unsubscribe and event payload conversion.
+//
+// Previously this class held its own WebSocket transport + reconnect
+// timer + ping/pong loop. All of that moved to Rust core in R5-11.
+
+import { getApiClient } from "@/lib/wasm-core";
+import type { WasmEventsManager } from "@/lib/wasm-core";
 import type {
   EventType,
   EventHandler,
@@ -7,54 +17,36 @@ import type {
 } from "./types";
 
 export interface EventSubscriptionManagerOptions {
-  maxReconnectAttempts?: number;
-  initialReconnectDelay?: number;
-  maxReconnectDelay?: number;
-  pingInterval?: number;
-  pongTimeout?: number;
   onConnectionStateChange?: (state: ConnectionState) => void;
 }
 
-/**
- * EventSubscriptionManager manages realtime event subscriptions.
- *
- * Transport is abstracted via IEventsBackend (see eventsBackend.ts).
- * The caller supplies a `urlProvider` function so the manager can reconnect
- * with a fresh URL (e.g. after token refresh) without the manager knowing
- * about auth or org stores directly.
- *
- * TODO(wasm): Swap TsEventsBackend -> WasmEventsBackend when events crate is WASM-ready.
- */
 export class EventSubscriptionManager {
-  private transport: IEventsTransport | null = null;
-  private urlProvider: (() => string) | null = null;
+  private wasm: WasmEventsManager | null = null;
   private connectionState: ConnectionState = "disconnected";
-  private reconnectAttempts = 0;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private pingTimer: ReturnType<typeof setInterval> | null = null;
-  private pongTimer: ReturnType<typeof setTimeout> | null = null;
-
-  private handlers: Map<EventType, Set<EventHandler>> = new Map();
-  private globalHandlers: Set<EventHandler> = new Set();
-
-  private readonly maxReconnectAttempts: number;
-  private readonly initialReconnectDelay: number;
-  private readonly maxReconnectDelay: number;
-  private readonly pingInterval: number;
-  private readonly pongTimeout: number;
-
   private connectionStateListeners: Set<(state: ConnectionState) => void> = new Set();
 
-  constructor(options: EventSubscriptionManagerOptions = {}) {
-    this.maxReconnectAttempts = options.maxReconnectAttempts ?? 10;
-    this.initialReconnectDelay = options.initialReconnectDelay ?? 1000;
-    this.maxReconnectDelay = options.maxReconnectDelay ?? 30000;
-    this.pingInterval = options.pingInterval ?? 30000;
-    this.pongTimeout = options.pongTimeout ?? 10000;
+  // wasm subscription ids → TS unsubscribe handles for cleanup tracking.
+  // Per-event-type fan-out is server-side; the wasm callback hands us the
+  // event JSON, we dispatch to the registered handler set.
+  private handlers: Map<EventType, Set<EventHandler>> = new Map();
+  private globalHandlers: Set<EventHandler> = new Set();
+  // ID of the single underlying "subscribe-all" subscription we register
+  // with wasm. We dispatch from TS to per-type handlers ourselves; this
+  // keeps the wasm boundary small (one callback, one event-type filter).
+  private wasmAllSubId: number | null = null;
+  private wasmStateSubId: number | null = null;
 
+  constructor(options: EventSubscriptionManagerOptions = {}) {
     if (options.onConnectionStateChange) {
       this.connectionStateListeners.add(options.onConnectionStateChange);
     }
+  }
+
+  private ensureWasm(): WasmEventsManager {
+    if (!this.wasm) {
+      this.wasm = getApiClient().create_events_manager();
+    }
+    return this.wasm;
   }
 
   private setConnectionState(state: ConnectionState): void {
@@ -62,31 +54,48 @@ export class EventSubscriptionManager {
     this.connectionState = state;
     this.connectionStateListeners.forEach((listener) => {
       try { listener(state); }
-      catch (error) { console.error("[EventSubscriptionManager] Connection state listener error:", error); }
+      catch (error) {
+        console.error("[EventSubscriptionManager] state listener error:", error);
+      }
     });
   }
 
-  connect(urlProvider?: (() => string) | string): void {
-    if (typeof urlProvider === "function") this.urlProvider = urlProvider;
-    else if (urlProvider) this.urlProvider = () => urlProvider;
-    if (this.transport && (this.connectionState === "connected" || this.connectionState === "connecting")) return;
-    const url = this.urlProvider?.();
-    if (!url) { console.warn("[EventSubscriptionManager] Cannot connect: no URL"); return; }
+  async connect(): Promise<void> {
+    const w = this.ensureWasm();
 
-    this.setConnectionState("connecting");
-    this.transport = getEventsBackend().connect(url, {
-      onOpen: () => { this.setConnectionState("connected"); this.reconnectAttempts = 0; this.startPingInterval(); },
-      onMessage: (data) => { try { this.handleMessage(JSON.parse(data) as RealtimeEvent); } catch (error) { console.error("[EventSubscriptionManager] Failed to parse message:", error); } },
-      onClose: (code) => { this.cleanup(); if (code === 1000) { this.setConnectionState("disconnected"); return; } this.scheduleReconnect(); },
-      onError: () => { console.warn("[EventSubscriptionManager] WebSocket error"); },
-    });
+    if (this.wasmAllSubId === null) {
+      this.wasmAllSubId = await w.subscribe_all((eventJson: string) => {
+        try {
+          const event = JSON.parse(eventJson) as RealtimeEvent;
+          this.dispatch(event);
+        } catch (error) {
+          console.error("[EventSubscriptionManager] parse event:", error);
+        }
+      });
+    }
+
+    if (this.wasmStateSubId === null) {
+      this.wasmStateSubId = await w.on_connection_state_change((stateStr: string) => {
+        this.setConnectionState(stateStr as ConnectionState);
+      });
+    }
+
+    await w.connect();
   }
 
-  disconnect(): void {
-    this.cleanup();
-    if (this.transport) { this.transport.close(1000, "Client disconnect"); this.transport = null; }
+  async disconnect(): Promise<void> {
+    const w = this.wasm;
+    if (!w) return;
+    if (this.wasmAllSubId !== null) {
+      await w.unsubscribe(this.wasmAllSubId);
+      this.wasmAllSubId = null;
+    }
+    if (this.wasmStateSubId !== null) {
+      await w.unsubscribe(this.wasmStateSubId);
+      this.wasmStateSubId = null;
+    }
+    await w.disconnect();
     this.setConnectionState("disconnected");
-    this.reconnectAttempts = 0;
   }
 
   subscribe<T = unknown>(eventType: EventType, handler: EventHandler<T>): () => void {
@@ -108,62 +117,18 @@ export class EventSubscriptionManager {
     return () => { this.connectionStateListeners.delete(listener); };
   }
 
-  private handleMessage(event: RealtimeEvent): void {
-    if (event.type === "pong") { this.clearPongTimeout(); return; }
+  private dispatch(event: RealtimeEvent): void {
     this.handlers.get(event.type)?.forEach((handler) => {
-      try { handler(event); } catch (error) { console.error(`[EventSubscriptionManager] Handler error for ${event.type}:`, error); }
+      try { handler(event); }
+      catch (error) {
+        console.error(`[EventSubscriptionManager] handler error for ${event.type}:`, error);
+      }
     });
     this.globalHandlers.forEach((handler) => {
-      try { handler(event); } catch (error) { console.error("[EventSubscriptionManager] Global handler error:", error); }
+      try { handler(event); }
+      catch (error) {
+        console.error("[EventSubscriptionManager] global handler error:", error);
+      }
     });
-  }
-
-  private startPingInterval(): void {
-    this.stopPingInterval();
-    this.pingTimer = setInterval(() => this.sendPing(), this.pingInterval);
-  }
-
-  private stopPingInterval(): void {
-    if (this.pingTimer) { clearInterval(this.pingTimer); this.pingTimer = null; }
-  }
-
-  private sendPing(): void {
-    if (this.transport?.isOpen) {
-      this.transport.send(JSON.stringify({ type: "ping", timestamp: Date.now() }));
-      this.startPongTimeout();
-    }
-  }
-
-  private startPongTimeout(): void {
-    this.clearPongTimeout();
-    this.pongTimer = setTimeout(() => {
-      console.warn("[EventSubscriptionManager] Pong timeout, reconnecting...");
-      this.transport?.close(4000, "Pong timeout");
-    }, this.pongTimeout);
-  }
-
-  private clearPongTimeout(): void {
-    if (this.pongTimer) { clearTimeout(this.pongTimer); this.pongTimer = null; }
-  }
-
-  private scheduleReconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error("[EventSubscriptionManager] Max reconnect attempts reached");
-      this.setConnectionState("disconnected");
-      return;
-    }
-    this.setConnectionState("reconnecting");
-    this.reconnectAttempts++;
-    const delay = Math.min(
-      this.initialReconnectDelay * Math.pow(2, this.reconnectAttempts - 1) + Math.random() * 1000,
-      this.maxReconnectDelay
-    );
-    this.reconnectTimer = setTimeout(() => this.connect(), delay);
-  }
-
-  private cleanup(): void {
-    this.stopPingInterval();
-    this.clearPongTimeout();
-    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
   }
 }

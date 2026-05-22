@@ -1,6 +1,6 @@
 use agentsmesh_auth::{BootstrapCleanupReason, BootstrapResult};
+use agentsmesh_state::auth_types::{AuthSession, AuthTokens, Organization, SSOConfig, User, UserIdentity};
 use agentsmesh_types::proto_user_v1 as user_proto;
-use agentsmesh_types::{AuthSession, AuthTokens, Organization, SSOConfig, User, UserIdentity};
 
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct UserDto {

@@ -2,10 +2,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_state::loop_state::LoopState;
-use agentsmesh_types::{LoopData, LoopRunData, LoopRunStatus};
-
-use crate::parse_status;
+use agentsmesh_state::loop_state::{LoopData, LoopRunData, LoopState};
 
 pub struct LoopService {
     client: Arc<ApiClient>,
@@ -71,8 +68,7 @@ impl LoopService {
     }
 
     pub fn update_run_status(&self, run_id: i64, status: &str) {
-        let parsed = parse_status::<LoopRunStatus>(status);
-        self.state.write().unwrap().update_run_status(run_id, parsed);
+        self.state.write().unwrap().update_run_status(run_id, status);
     }
 
     pub fn clear_runs(&self) {

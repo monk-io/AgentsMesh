@@ -42,4 +42,3 @@ toolchain(
     toolchain_type = "@rules_rust_prost//:toolchain_type",
     visibility = ["//visibility:public"],
 )
-

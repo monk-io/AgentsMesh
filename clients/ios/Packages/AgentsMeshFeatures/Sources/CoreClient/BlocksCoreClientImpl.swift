@@ -8,10 +8,19 @@ import AgentsMeshCore
 func liveBlocksCoreClient() -> BlocksCoreClient {
     let core = { CoreBridge.shared.core }
     return BlocksCoreClient(
-        applyOps: { json in try await core().blocksApplyOps(reqJson: json) },
-        loadSubtree: { ws, root in try await core().blocksLoadSubtree(workspaceId: ws, rootId: root) },
-        loadTypeDefs: { ws in try await core().blocksLoadTypeDefs(workspaceId: ws) },
-        catchup: { ws in try await core().blocksCatchup(workspaceId: ws) },
+        applyOpsConnect: { try await core().blocksApplyOpsConnect(request: $0) },
+        listWorkspacesConnect: { try await core().blocksListWorkspacesConnect(request: $0) },
+        ensureDefaultWorkspaceConnect: { try await core().blocksEnsureDefaultWorkspaceConnect(request: $0) },
+        createWorkspaceConnect: { try await core().blocksCreateWorkspaceConnect(request: $0) },
+        deleteWorkspaceConnect: { try await core().blocksDeleteWorkspaceConnect(request: $0) },
+        getBlockConnect: { try await core().blocksGetBlockConnect(request: $0) },
+        listChildrenConnect: { try await core().blocksListChildrenConnect(request: $0) },
+        listBacklinksConnect: { try await core().blocksListBacklinksConnect(request: $0) },
+        getSubtreeConnect: { try await core().blocksGetSubtreeConnect(request: $0) },
+        streamOpsConnect: { try await core().blocksStreamOpsConnect(request: $0) },
+        listTypeDefsConnect: { try await core().blocksListTypeDefsConnect(request: $0) },
+        semanticSearchConnect: { try await core().blocksSemanticSearchConnect(request: $0) },
+
         applyRemoteOp: { json in try core().blocksApplyRemoteOp(opJson: json) },
         setLastOpId: { ws, id in core().blocksSetLastOpId(workspaceId: ws, id: id) },
 
@@ -25,12 +34,6 @@ func liveBlocksCoreClient() -> BlocksCoreClient {
             try await core().blocksSemanticSearch(workspaceId: ws, req: req)
         },
 
-        ensureDefaultWorkspaceJson: { try await core().blocksEnsureDefaultWorkspaceJson() },
-        listWorkspacesJson: { try await core().blocksListWorkspacesJson() },
-        semanticSearchJson: { ws, json in
-            try await core().blocksSemanticSearchJson(workspaceId: ws, reqJson: json)
-        },
-
         workspacesJson: { core().blocksWorkspacesJson() },
         blocksJson: { core().blocksBlocksJson() },
         refsJson: { core().blocksRefsJson() },
@@ -42,16 +45,30 @@ func liveBlocksCoreClient() -> BlocksCoreClient {
         getBlockJson: { id in core().blocksGetBlockJson(id: id) },
         listChildrenJson: { id in core().blocksListChildrenJson(parentId: id) },
         listBacklinksJson: { id in core().blocksListBacklinksJson(targetId: id) },
-        typeDefsJson: { ws in core().blocksTypeDefsJson(workspaceId: ws) }
+        typeDefsJson: { ws in core().blocksTypeDefsJson(workspaceId: ws) },
+
+        replaceWorkspacesJson: { json in try core().blocksReplaceWorkspacesJson(listJson: json) },
+        upsertWorkspaceJson: { json in try core().blocksUpsertWorkspaceJson(wsJson: json) },
+        upsertBlocksJson: { json in try core().blocksUpsertBlocksJson(blocksJson: json) },
+        upsertRefsJson: { json in try core().blocksUpsertRefsJson(refsJson: json) }
     )
 }
 
 func unimplementedBlocksCoreClient() -> BlocksCoreClient {
     BlocksCoreClient(
-        applyOps: { _ in fatalError("unimplemented: blocks.applyOps") },
-        loadSubtree: { _, _ in fatalError("unimplemented: blocks.loadSubtree") },
-        loadTypeDefs: { _ in fatalError("unimplemented: blocks.loadTypeDefs") },
-        catchup: { _ in fatalError("unimplemented: blocks.catchup") },
+        applyOpsConnect: { _ in fatalError("unimplemented: blocks.applyOpsConnect") },
+        listWorkspacesConnect: { _ in fatalError("unimplemented: blocks.listWorkspacesConnect") },
+        ensureDefaultWorkspaceConnect: { _ in fatalError("unimplemented: blocks.ensureDefaultWorkspaceConnect") },
+        createWorkspaceConnect: { _ in fatalError("unimplemented: blocks.createWorkspaceConnect") },
+        deleteWorkspaceConnect: { _ in fatalError("unimplemented: blocks.deleteWorkspaceConnect") },
+        getBlockConnect: { _ in fatalError("unimplemented: blocks.getBlockConnect") },
+        listChildrenConnect: { _ in fatalError("unimplemented: blocks.listChildrenConnect") },
+        listBacklinksConnect: { _ in fatalError("unimplemented: blocks.listBacklinksConnect") },
+        getSubtreeConnect: { _ in fatalError("unimplemented: blocks.getSubtreeConnect") },
+        streamOpsConnect: { _ in fatalError("unimplemented: blocks.streamOpsConnect") },
+        listTypeDefsConnect: { _ in fatalError("unimplemented: blocks.listTypeDefsConnect") },
+        semanticSearchConnect: { _ in fatalError("unimplemented: blocks.semanticSearchConnect") },
+
         applyRemoteOp: { _ in fatalError("unimplemented: blocks.applyRemoteOp") },
         setLastOpId: { _, _ in fatalError("unimplemented: blocks.setLastOpId") },
 
@@ -60,10 +77,6 @@ func unimplementedBlocksCoreClient() -> BlocksCoreClient {
         getSubtree: { _, _, _ in fatalError("unimplemented: blocks.getSubtree") },
         getBlock: { _ in fatalError("unimplemented: blocks.getBlock") },
         semanticSearch: { _, _ in fatalError("unimplemented: blocks.semanticSearch") },
-
-        ensureDefaultWorkspaceJson: { fatalError("unimplemented: blocks.ensureDefaultWorkspaceJson") },
-        listWorkspacesJson: { fatalError("unimplemented: blocks.listWorkspacesJson") },
-        semanticSearchJson: { _, _ in fatalError("unimplemented: blocks.semanticSearchJson") },
 
         workspacesJson: { "{}" },
         blocksJson: { "{}" },
@@ -76,6 +89,11 @@ func unimplementedBlocksCoreClient() -> BlocksCoreClient {
         getBlockJson: { _ in nil },
         listChildrenJson: { _ in "{\"blocks\":[],\"refs\":[]}" },
         listBacklinksJson: { _ in "{\"refs\":[]}" },
-        typeDefsJson: { _ in "{\"blocks\":[]}" }
+        typeDefsJson: { _ in "{\"blocks\":[]}" },
+
+        replaceWorkspacesJson: { _ in fatalError("unimplemented: blocks.replaceWorkspacesJson") },
+        upsertWorkspaceJson: { _ in fatalError("unimplemented: blocks.upsertWorkspaceJson") },
+        upsertBlocksJson: { _ in fatalError("unimplemented: blocks.upsertBlocksJson") },
+        upsertRefsJson: { _ in fatalError("unimplemented: blocks.upsertRefsJson") }
     )
 }

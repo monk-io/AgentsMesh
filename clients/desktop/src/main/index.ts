@@ -207,6 +207,111 @@ function registerStaticHandlers() {
     // mutable IPC channel.
     mainWindow?.reload();
   });
+
+  registerLegacyApiAliases();
+}
+
+// Legacy IPC aliases for method names that predate the R6 Connect-RPC
+// refactor. Desktop e2e specs still invoke `userGetMe` /
+// `autopilotFetchControllers` / `runnerFetchRunners` /
+// `channelCreateChannel` by name. The Rust napi handlers were renamed
+// (and switched to proto binary payloads) without an alias hop, so the
+// invokes hit `No handler registered`. We forward through the Connect
+// JSON wire here — it preserves the failure-surface details the
+// orbstack-port-conflict spec depends on (status + URL in the error
+// message) and avoids dragging proto-js into the main bundle.
+function registerLegacyApiAliases() {
+  const callConnectJson = async (
+    service: string,
+    method: string,
+    payload: unknown = {},
+  ): Promise<string> => {
+    const url = `${currentApiUrl}/${service}/${method}`;
+    const token = (appState as { authGetToken?: () => string | null }).authGetToken?.();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      // Surface the standard `auth_expired` token the desktop renderer +
+      // e2e specs key off when the backend returned an Unauthorized.
+      // The Connect-JSON error envelope is `{"code":"unauthenticated", ...}`
+      // — rewrite the code so callers don't need to know two vocabularies.
+      const message = body.includes("unauthenticated")
+        ? `auth_expired ${res.status} ${url} ${body}`
+        : `${res.status} ${res.statusText} ${url} ${body}`;
+      throw new Error(message.trim());
+    }
+    return await res.text();
+  };
+
+  const orgSlug = () => {
+    const raw = (appState as { authGetCurrentOrgJson?: () => string | null })
+      .authGetCurrentOrgJson?.();
+    if (!raw) return "";
+    try { return (JSON.parse(raw) as { slug?: string }).slug ?? ""; }
+    catch { return ""; }
+  };
+
+  ipcMain.handle("userGetMe", () =>
+    callConnectJson("proto.user.v1.UserService", "GetMe"),
+  );
+  ipcMain.handle("autopilotFetchControllers", () =>
+    callConnectJson(
+      "proto.autopilot.v1.AutopilotControllerService",
+      "ListAutopilotControllers",
+      { orgSlug: orgSlug() },
+    ),
+  );
+  ipcMain.handle("runnerFetchRunners", () =>
+    callConnectJson("proto.runner_api.v1.RunnerService", "ListRunners", {
+      orgSlug: orgSlug(),
+    }),
+  );
+  ipcMain.handle("channelCreateChannel", (_e, requestJson: string) => {
+    const req = JSON.parse(requestJson) as Record<string, unknown>;
+    return callConnectJson(
+      "proto.channel.v1.ChannelService",
+      "CreateChannel",
+      { orgSlug: orgSlug(), ...req },
+    );
+  });
+
+  // Generic binary Connect-RPC proxy. Web's wasm-side services expose
+  // `<method>Connect(Uint8Array) -> Uint8Array`; ElectronXxxService
+  // adapters that don't yet have hand-written `_connect` IPC handlers
+  // route through this instead. The protobuf encode/decode stays on the
+  // renderer; main only ferries bytes (as number[]) over IPC and forwards
+  // to the backend Connect endpoint.
+  ipcMain.handle("connectCall", async (
+    _e, service: string, method: string, bodyArr: number[],
+  ) => {
+    const url = `${currentApiUrl}/${service}/${method}`;
+    const token = (appState as { authGetToken?: () => string | null }).authGetToken?.();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/proto",
+      "Connect-Protocol-Version": "1",
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: Uint8Array.from(bodyArr),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText} ${url} ${text}`.trim());
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    return Array.from(bytes);
+  });
 }
 
 app.whenReady().then(() => {

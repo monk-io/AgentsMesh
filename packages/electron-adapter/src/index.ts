@@ -11,7 +11,6 @@ export { ElectronRepositoryService } from './repository';
 export { ElectronInvitationConnectService } from './invitation';
 export { ElectronApiKeyService } from './apikey';
 export { ElectronBindingService } from './binding';
-export { ElectronMessageService } from './message';
 export { ElectronNotificationService } from './notification';
 export { ElectronOrgService } from './org';
 export { ElectronUserService } from './user';

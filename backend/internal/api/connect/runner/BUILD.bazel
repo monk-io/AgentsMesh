@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "convert.go",
         "handlers.go",
+        "handlers_auth.go",
         "server.go",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/runner",
@@ -12,6 +13,7 @@ go_library(
     deps = [
         "//backend/internal/api/connect/interceptors",
         "//backend/internal/domain/runner",
+        "//backend/internal/interfaces",
         "//backend/internal/middleware",
         "//backend/internal/service/runner",
         "//backend/internal/service/runnerlog",

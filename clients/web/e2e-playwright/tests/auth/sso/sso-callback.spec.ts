@@ -15,7 +15,7 @@ test.describe("SSO Callback", () => {
    */
   test("callback with error=access_denied shows error", async ({ page }) => {
     await page.goto("/auth/sso/callback?error=access_denied");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/denied|拒绝|error|错误|failed|失败/i);
   });
@@ -25,7 +25,7 @@ test.describe("SSO Callback", () => {
    */
   test("callback with unknown error shows message", async ({ page }) => {
     await page.goto("/auth/sso/callback?error=unknown_error");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/error|错误|failed|失败/i);
   });
@@ -35,7 +35,7 @@ test.describe("SSO Callback", () => {
    */
   test("callback without token or error shows error", async ({ page }) => {
     await page.goto("/auth/sso/callback");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/error|错误|invalid|无效|login|登录/i);
   });

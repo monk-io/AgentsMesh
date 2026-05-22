@@ -1,6 +1,6 @@
 use agentsmesh_types::proto_mesh_v1 as mesh_proto;
 use agentsmesh_types::proto_notification_v1 as notification_proto;
-use agentsmesh_types::{
+use agentsmesh_state::blockstore_types::{
     ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, ChildrenResult,
     OpEnvelope, OpKind, SearchHit, SemanticSearchRequest, Workspace,
 };

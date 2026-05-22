@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
@@ -78,16 +79,17 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
 
   test("UI lists pre-existing org registry on page load", async ({ page, api }) => {
     // Symptom 2 from the bug report: even if the DB has rows, the page renders
-    // empty. Pre-seed via the backend API (which bypasses wasm), then load the
-    // settings page and assert the row appears — this exercises the wasm
-    // list_skill_registries() path without going through the create dialog.
+    // empty. Pre-seed via the backend Connect RPC (which bypasses wasm), then
+    // load the settings page and assert the row appears — this exercises the
+    // wasm list_skill_registries() path without going through the create dialog.
     const testUrl = `${TEST_URL_PREFIX}preexisting-${Date.now()}`;
-    const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/skill-registries`, {
-      repository_url: testUrl,
+    const cc = await api.connect();
+    await cc.skillRegistry.createSkillRegistry({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryUrl: testUrl,
       branch: "main",
-      auth_type: "none",
+      authType: "none",
     });
-    expect([200, 201]).toContain(createRes.status);
 
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "extensions");
@@ -103,18 +105,14 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
   // fromBinary path on the renderer side doesn't lose fields.
   //
   // Marked as Connect-path explicitly so a future regression in the
-  // protobuf wire (vs the still-mounted REST wire) surfaces as a
-  // distinct failure rather than masquerading as a generic empty-list bug.
+  // protobuf wire surfaces as a distinct failure rather than masquerading
+  // as a generic empty-list bug.
   test("UI shows newly added org registry after submit (Connect path)", async ({ page, db }) => {
     const testUrl = `${TEST_URL_PREFIX}connect-${Date.now()}`;
 
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "extensions");
 
-    // The dialog still posts via the REST POST (creation lane will flip in
-    // a follow-up commit). The Connect path is exercised by the
-    // refresh-after-submit list call, which already goes through the new
-    // `listSkillRegistries(orgSlug)` adapter as of this PR.
     const openButton = page.getByRole("button", { name: /add source|添加注册表/i });
     await expect(openButton).toBeVisible();
     await openButton.click();

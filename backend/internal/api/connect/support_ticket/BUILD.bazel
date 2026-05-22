@@ -4,6 +4,7 @@ go_library(
     name = "support_ticket",
     srcs = [
         "support_ticket.go",
+        "support_ticket_attachments.go",
         "support_ticket_convert.go",
         "support_ticket_errors.go",
         "support_ticket_handlers.go",

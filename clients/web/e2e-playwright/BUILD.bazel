@@ -35,7 +35,22 @@ playwright_test(
         # package.json), so node resolves up the tree to
         # `<runfiles>/_main/node_modules/`.
         "//:node_modules/@playwright/test",
+        # Generated TS proto messages — helpers/connect-client.ts imports
+        # them through a relative path (`../../../../proto/gen/ts/...`),
+        # so the .ts files must be staged in runfiles. copy_to_bin gives
+        # us bazel-out copies which aspect_rules_js requires.
+        "//proto:proto_gen_ts",
     ],
+    # NOTE: helpers/env.ts walks up from cwd looking for
+    # `deploy/dev/.env` to learn worktree-specific port offsets. Inside
+    # the Bazel sandbox the walk never finds it, so the suite falls
+    # back to the default 10000/3000 ports. Callers MUST forward worktree
+    # ports explicitly:
+    #   bazel test //clients/web/e2e-playwright:e2e \
+    #       --test_env=HTTP_PORT=$(grep ^HTTP_PORT deploy/dev/.env | cut -d= -f2) \
+    #       --test_env=WEB_PORT=$(grep ^WEB_PORT  deploy/dev/.env | cut -d= -f2)
+    # The dev_up convenience script in deploy/dev exports both already,
+    # so a child bazel test sees them via inherit.
 )
 
 # Shared helpers/fixtures consumed by clients/desktop e2e via relative

@@ -2,12 +2,12 @@ use agentsmesh_events::event_types::EventType;
 use agentsmesh_events::types::RealtimeEvent;
 use agentsmesh_types::proto_pod_v1::Pod;
 use agentsmesh_types::proto_runner_api_v1::Runner;
-use agentsmesh_types::{
-    AutopilotController, AutopilotIteration,
-    ChannelMessage, LoopRunData, LoopRunStatus, Ticket,
-};
+use agentsmesh_types::proto_ticket_v1::Ticket;
 
 use crate::app_state::AppState;
+use crate::autopilot_state::{AutopilotController, AutopilotIteration};
+use crate::channel_types::ChannelMessage;
+use crate::loop_state::{LoopRunData, loop_run_status};
 
 pub fn dispatch(state: &mut AppState, event: &RealtimeEvent) {
     match event.event_type {
@@ -114,12 +114,12 @@ pub fn dispatch(state: &mut AppState, event: &RealtimeEvent) {
         }
         EventType::LoopRunCompleted => {
             if let Some(id) = event.data.get("id").and_then(|v| v.as_i64()) {
-                state.loops.update_run_status(id, LoopRunStatus::Completed);
+                state.loops.update_run_status(id, loop_run_status::COMPLETED);
             }
         }
         EventType::LoopRunFailed | EventType::LoopRunWarning => {
             if let Some(id) = event.data.get("id").and_then(|v| v.as_i64()) {
-                state.loops.update_run_status(id, LoopRunStatus::Failed);
+                state.loops.update_run_status(id, loop_run_status::FAILED);
             }
         }
         EventType::AutopilotStatusChanged => {
@@ -169,12 +169,6 @@ pub fn dispatch(state: &mut AppState, event: &RealtimeEvent) {
         }
         _ => {}
     }
-}
-
-fn parse_field<T: serde::de::DeserializeOwned + Default>(data: &serde_json::Value, field: &str) -> T {
-    data.get(field)
-        .and_then(|v| serde_json::from_value(v.clone()).ok())
-        .unwrap_or_default()
 }
 
 #[cfg(test)]

@@ -1,10 +1,9 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
-const REPO_ID = "1"; // demo-webapp from seed
-const MCP_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/repositories/${REPO_ID}/mcp-servers`;
-const MCP_MARKET = `/api/v1/orgs/${TEST_ORG_SLUG}/market/mcp-servers`;
+const REPO_ID = 1; // demo-webapp from seed
 
 /**
  * MCP Server comprehensive tests.
@@ -13,129 +12,133 @@ const MCP_MARKET = `/api/v1/orgs/${TEST_ORG_SLUG}/market/mcp-servers`;
 test.describe("MCP Server Management", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /** TC-MCP-EXT-009: List user MCP servers */
   test("list user MCP servers for repository", async ({ api }) => {
-    const res = await api.get(`${MCP_BASE}?scope=user`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.mcp_servers).toBeDefined();
+    const cc = await api.connect();
+    const res = await cc.repoMcp.listRepoMcpServers({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      scope: "user",
+    }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  /** TC-MCP-EXT-009: List marketplace templates */
   test("marketplace MCP templates", async ({ api }) => {
-    const res = await api.get(MCP_MARKET);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.mcp_servers?.length).toBeGreaterThan(0);
+    const cc = await api.connect();
+    const res = await cc.market.listMarketMcpServers({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(res.items?.length ?? 0).toBeGreaterThan(0);
   });
 
-  /** TC-MCP-EXT-009: Search marketplace */
   test("search marketplace MCP templates", async ({ api }) => {
-    const res = await api.get(`${MCP_MARKET}?q=postgres`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.market.listMarketMcpServers({
+      orgSlug: TEST_ORG_SLUG,
+      query: "postgres",
+    }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  /** TC-MCP-EXT-003: Install MCP from marketplace */
-  test("install MCP from marketplace (filesystem)", async ({ api, db }) => {
-    // Find filesystem template
-    const marketRes = await api.get(MCP_MARKET);
-    const templates = (await marketRes.json()).mcp_servers || [];
-    const filesystem = templates.find(
-      (t: { slug?: string }) => t.slug === "filesystem"
-    );
+  test("install MCP from marketplace (filesystem)", async ({ api }) => {
+    const cc = await api.connect();
+    const market = await cc.market.listMarketMcpServers({ orgSlug: TEST_ORG_SLUG }) as { items: Array<{ id: number; slug?: string }> };
+    const filesystem = market.items.find((t) => t.slug === "filesystem");
     if (!filesystem) { test.skip(); return; }
 
-    const installRes = await api.post(`${MCP_BASE}/install-from-market`, {
-      market_item_id: filesystem.id,
+    const installed = await cc.repoMcp.installMcpFromMarket({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      marketItemId: Number(filesystem.id),
       scope: "user",
-    });
-    expect([200, 201]).toContain(installRes.status);
+    }) as { id?: number };
+    expect(installed.id).toBeTruthy();
 
-    // Verify installed
-    const listRes = await api.get(`${MCP_BASE}?scope=user`);
-    const installed = (await listRes.json()).mcp_servers || [];
-    const found = installed.find(
-      (s: { slug?: string }) => s.slug === "filesystem"
-    );
+    // Verify in list
+    const list = await cc.repoMcp.listRepoMcpServers({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      scope: "user",
+    }) as { items: Array<{ id: number; slug?: string }> };
+    const found = list.items.find((s) => s.slug === "filesystem");
     expect(found).toBeTruthy();
 
-    // Cleanup: uninstall
+    // Cleanup
     if (found?.id) {
-      await api.delete(`${MCP_BASE}/${found.id}`);
+      await cc.repoMcp.uninstallMcpServer({
+        orgSlug: TEST_ORG_SLUG,
+        repositoryId: REPO_ID,
+        installId: Number(found.id),
+      });
     }
   });
 
-  /** TC-MCP-EXT-005: Install custom MCP server */
   test("install custom MCP server", async ({ api }) => {
-    const installRes = await api.post(`${MCP_BASE}/install-custom`, {
+    const cc = await api.connect();
+    const installed = await cc.repoMcp.installCustomMcpServer({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
       name: "E2E Custom MCP",
       slug: "e2e-custom-mcp",
-      transport_type: "stdio",
+      transportType: "stdio",
       command: "node",
-      args: ["server.js"],
-      env_vars: { API_KEY: "test-key" },
+      args: JSON.stringify(["server.js"]),
+      envVars: JSON.stringify({ API_KEY: "test-key" }),
       scope: "user",
-    });
-    expect([200, 201]).toContain(installRes.status);
+    }) as { id?: number };
+    expect(installed.id).toBeTruthy();
 
-    // Verify and cleanup
-    const listRes = await api.get(`${MCP_BASE}?scope=user`);
-    const installed = (await listRes.json()).mcp_servers || [];
-    const found = installed.find(
-      (s: { slug?: string }) => s.slug === "e2e-custom-mcp"
-    );
+    const list = await cc.repoMcp.listRepoMcpServers({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      scope: "user",
+    }) as { items: Array<{ id: number; slug?: string }> };
+    const found = list.items.find((s) => s.slug === "e2e-custom-mcp");
     if (found?.id) {
-      await api.delete(`${MCP_BASE}/${found.id}`);
+      await cc.repoMcp.uninstallMcpServer({
+        orgSlug: TEST_ORG_SLUG,
+        repositoryId: REPO_ID,
+        installId: Number(found.id),
+      });
     }
   });
 
-  /** TC-MCP-EXT-007: Toggle and uninstall MCP */
   test("toggle MCP server enabled state", async ({ api }) => {
-    // Install first
-    const installRes = await api.post(`${MCP_BASE}/install-custom`, {
+    const cc = await api.connect();
+    const installed = await cc.repoMcp.installCustomMcpServer({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
       name: "E2E Toggle MCP",
       slug: "e2e-toggle-mcp",
-      transport_type: "stdio",
+      transportType: "stdio",
       command: "echo",
-      args: ["test"],
+      args: JSON.stringify(["test"]),
       scope: "user",
+    }).catch(() => null) as { id?: number } | null;
+    if (!installed?.id) { test.skip(); return; }
+
+    await cc.repoMcp.updateMcpServer({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      installId: Number(installed.id),
+      isEnabled: false,
     });
-    if (![200, 201].includes(installRes.status)) { test.skip(); return; }
 
-    const listRes = await api.get(`${MCP_BASE}?scope=user`);
-    const installed = (await listRes.json()).mcp_servers || [];
-    const found = installed.find(
-      (s: { slug?: string }) => s.slug === "e2e-toggle-mcp"
-    );
-    if (!found?.id) { test.skip(); return; }
-
-    // Toggle off
-    const toggleRes = await api.put(`${MCP_BASE}/${found.id}`, {
-      is_enabled: false,
+    await cc.repoMcp.uninstallMcpServer({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      installId: Number(installed.id),
     });
-    expect(toggleRes.status).toBe(200);
-
-    // Uninstall
-    const delRes = await api.delete(`${MCP_BASE}/${found.id}`);
-    expect([200, 204]).toContain(delRes.status);
   });
 
-  /** TC-MCP-EXT-001: MCP tab UI display */
   test("extensions page shows MCP section", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=organization&tab=extensions`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/MCP|server|扩展/i);
   });
 
-  /** TC-EXTSET-003: MCP templates browsing UI */
   test("MCP templates include known servers", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=organization&tab=extensions`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
-    // Should mention at least one known MCP template
-    const hasTemplate = /filesystem|postgres|jira|slack|github/i.test(body ?? "");
-    // Templates may or may not be visible depending on tab state
     expect(body).toBeTruthy();
   });
 });

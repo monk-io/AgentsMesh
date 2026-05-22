@@ -154,6 +154,9 @@ message ListPodsRequest {
   optional int64 created_by_id = 3;
   optional int32 limit = 4;
   optional int32 offset = 5;
+  // Filter by runner ID — replaces the REST GET /runners/:id/pods endpoint.
+  // When unset, no runner-side filter is applied.
+  optional int64 runner_id = 6;
 }
 
 message ListPodsResponse {

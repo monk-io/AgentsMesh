@@ -46,7 +46,7 @@ test.describe("Workspace Layout", () => {
     // /runners → /infra?tab=runners → /infra?tab=runners&id=<n> can exceed
     // playwright's goto timeout.
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     await sidebar.dismissDevOverlay();
     await sidebar.navigateTo("workspace");

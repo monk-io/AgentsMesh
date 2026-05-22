@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-// JSON-bridge request payloads consumed by services::RunnerService when it
-// receives JSON strings from the web / desktop UI. The wire shape on the
-// JS/NAPI boundary stays stable while the internal call routes through
-// Connect-RPC (proto_runner_api_v1 owns the wire-level request types).
+// REST-only request payloads not covered by proto.runner_api.v1. The wasm
+// bridge accepts a JSON string from JS/NAPI, deserializes into these, then
+// re-encodes onto the matching proto type before calling Connect-RPC. Once
+// these REST surfaces grow proto coverage these can move into the proto-
+// driven path and disappear from this file.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateRunnerRequest {
@@ -13,27 +14,9 @@ pub struct UpdateRunnerRequest {
     pub visibility: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateRunnerTokenRequest {
-    pub name: Option<String>,
-    pub labels: Option<Vec<String>>,
-    pub max_uses: Option<i32>,
-    pub expires_in_days: Option<i64>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SandboxQueryRequest {
-    pub pod_keys: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpgradeRunnerRequest {
-    pub target_version: Option<String>,
-    pub force: Option<bool>,
-}
-
-// REST carve-outs without proto coverage (Tailscale-style runner registration).
-// Stays serde so the kept ApiClient REST methods can drive them.
+// Interactive registration (Tailscale-style device authorization). The
+// browser polls /runners/grpc/auth-status while the runner waits for
+// authorization. No proto coverage — backend keeps these on REST.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthorizeRunnerRequest {

@@ -370,6 +370,19 @@ crate.spec(
         "Storage",
         "WebSocket",
         "Window",
+        # Fetch ReadableStream bridge — used by Phase E wasm Connect
+        # server-stream client in clients/core/crates/api-client/src/
+        # connect_stream_wasm.rs. Without these, the wasm bridge falls
+        # back to a forever-pending stub that prevents realtime events
+        # from reaching the page.
+        "AbortController",
+        "AbortSignal",
+        "Headers",
+        "ReadableStream",
+        "ReadableStreamDefaultReader",
+        "Request",
+        "RequestInit",
+        "Response",
     ],
     package = "web-sys",
     version = "0.3",

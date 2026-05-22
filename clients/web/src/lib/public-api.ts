@@ -1,35 +1,56 @@
-// Public (auth-free) API fetcher for marketing pages.
+// Public (no-auth) API for marketing pages. Goes through Connect-RPC
+// over plain fetch (NOT wasm) — see public-connect.ts for rationale.
 //
-// Marketing pages (/, /docs, ...) MUST NOT load wasm — they use this module
-// instead of @/lib/wasm-core to read public endpoints over plain fetch. The
-// pricing endpoint is the canonical example; add new public endpoints here.
-//
-// Backend route: backend/internal/api/rest/v1/billing_routes.go
-//   RegisterPublicConfigRoutes mounts GET /api/v1/config/pricing (no auth).
+// Underlying RPCs:
+//   - proto.billing.v1.BillingPublicService.GetPublicPricing
+//   - proto.billing.v1.BillingPublicService.GetPublicDeploymentInfo
 
-import { getApiBaseUrl } from "./env";
-import type { PublicPricingResponse, DeploymentInfo } from "@/lib/api/billing-types";
+import {
+  GetPublicDeploymentInfoRequestSchema,
+  GetPublicPricingRequestSchema,
+  PublicPricingResponseSchema,
+  DeploymentInfoSchema,
+} from "@proto/billing/v1/billing_pb";
 
-function resolveBase(): string {
-  const cfg = getApiBaseUrl();
-  if (cfg) return cfg;
-  if (typeof window !== "undefined") return window.location.origin;
-  return "";
-}
+import type { PublicPricingResponse, DeploymentInfo, Currency } from "@/lib/api/billing-types";
+import { callPublicConnect } from "./public-connect";
 
-async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${resolveBase()}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`public api ${path} http ${res.status}`);
-  return (await res.json()) as T;
-}
+const SERVICE = "proto.billing.v1.BillingPublicService";
 
-export async function fetchPublicPricing(): Promise<PublicPricingResponse> {
-  return getJson<PublicPricingResponse>("/api/v1/config/pricing");
+export async function fetchPublicPricing(currency?: string): Promise<PublicPricingResponse> {
+  const resp = await callPublicConnect(
+    SERVICE,
+    "GetPublicPricing",
+    GetPublicPricingRequestSchema,
+    PublicPricingResponseSchema,
+    { currency },
+  );
+  return {
+    deployment_type: resp.deploymentType,
+    currency: resp.currency as Currency,
+    plans: resp.plans.map((p) => ({
+      name: p.name,
+      display_name: p.displayName,
+      price_monthly: p.priceMonthly,
+      price_yearly: p.priceYearly,
+      max_users: p.maxUsers,
+      max_runners: p.maxRunners,
+      max_repositories: p.maxRepositories,
+      max_concurrent_pods: p.maxConcurrentPods,
+    })),
+  };
 }
 
 export async function fetchPublicDeploymentInfo(): Promise<DeploymentInfo> {
-  return getJson<DeploymentInfo>("/api/v1/config/deployment");
+  const resp = await callPublicConnect(
+    SERVICE,
+    "GetPublicDeploymentInfo",
+    GetPublicDeploymentInfoRequestSchema,
+    DeploymentInfoSchema,
+    {},
+  );
+  return {
+    deployment_type: resp.deploymentType as DeploymentInfo["deployment_type"],
+    available_providers: resp.availableProviders,
+  };
 }

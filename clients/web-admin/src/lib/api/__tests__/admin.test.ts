@@ -118,19 +118,25 @@ describe("Admin API - REST surface", () => {
   });
 
   describe("Auth", () => {
-    it("login calls POST /auth/login", async () => {
-      mockPost.mockResolvedValue({ token: "t", user: {} });
-      await login({ email: "admin@test.com", password: "pass" });
-      expect(mockPost).toHaveBeenCalledWith("/auth/login", {
-        email: "admin@test.com",
-        password: "pass",
+    it("login calls AdminAuthService.Login via Connect-RPC", async () => {
+      mockCallConnect.mockResolvedValue({
+        token: "t",
+        refreshToken: "rt",
+        user: { id: 1n, email: "admin@test.com", username: "admin", isSystemAdmin: true },
       });
+      await login({ email: "admin@test.com", password: "pass" });
+      expect(mockCallConnect.mock.calls[0][0]).toBe("proto.admin.v1.AdminAuthService");
+      expect(mockCallConnect.mock.calls[0][1]).toBe("Login");
+      expect(mockCallConnect.mock.calls[0][4]).toEqual(
+        expect.objectContaining({ email: "admin@test.com", password: "pass" }),
+      );
     });
 
-    it("getCurrentAdmin calls GET /me", async () => {
-      mockGet.mockResolvedValue({ id: 1 });
+    it("getCurrentAdmin calls AdminSessionService.GetMe via Connect-RPC", async () => {
+      mockCallConnect.mockResolvedValue({ id: 1n, isSystemAdmin: true });
       await getCurrentAdmin();
-      expect(mockGet).toHaveBeenCalledWith("/me");
+      expect(mockCallConnect.mock.calls[0][0]).toBe("proto.admin.v1.AdminAuthSessionService");
+      expect(mockCallConnect.mock.calls[0][1]).toBe("GetMe");
     });
   });
 });

@@ -9,7 +9,6 @@ mod blockstore;
 mod blockstore_connect;
 mod channel;
 mod channel_connect;
-mod channel_proto_convert;
 mod error;
 mod extension;
 mod file;
@@ -61,7 +60,3 @@ pub use ticket::TicketService;
 pub use ticket_relations::TicketRelationsService;
 pub use user::UserApiService;
 pub use user_credential::UserCredentialService;
-
-pub fn parse_status<T: serde::de::DeserializeOwned + Default>(s: &str) -> T {
-    serde_json::from_value(serde_json::Value::String(s.to_string())).unwrap_or_default()
-}

@@ -21,7 +21,7 @@ export class SettingsNavPage {
     await this.page.goto(
       `/${this.orgSlug}/settings?scope=${scope}&tab=${tab}`
     );
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("load");
   }
 
   /** Get the scope toggle button. */

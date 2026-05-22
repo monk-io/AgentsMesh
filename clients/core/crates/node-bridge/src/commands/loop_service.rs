@@ -1,5 +1,5 @@
 use napi_derive::napi;
-use crate::{AppState, err};
+use crate::AppState;
 
 #[napi]
 impl AppState {

@@ -826,18 +826,6 @@ vi.mock('@/lib/wasm-core', () => {
       getBoundPodsConnect: fn().mockResolvedValue(new Uint8Array()),
       checkBindingConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
-    getMessageService: fn(() => ({
-      send_message: fn().mockResolvedValue('{}'),
-      get_messages: fn().mockResolvedValue('{"messages":[]}'),
-      get_unread_count: fn().mockResolvedValue('{}'),
-      get_message: fn().mockResolvedValue('{}'),
-      mark_read: fn().mockResolvedValue('{"marked_count":0}'),
-      mark_all_read: fn().mockResolvedValue('{"marked_count":0}'),
-      get_conversation: fn().mockResolvedValue('{"messages":[]}'),
-      get_sent_messages: fn().mockResolvedValue('{"messages":[]}'),
-      get_dead_letters: fn().mockResolvedValue('{"entries":[]}'),
-      replay_dead_letter: fn().mockResolvedValue('{}'),
-    })),
     getNotificationService: fn(() => ({
       get_preferences: fn().mockResolvedValue('{"preferences":[]}'),
       set_preference: fn().mockResolvedValue('{}'),

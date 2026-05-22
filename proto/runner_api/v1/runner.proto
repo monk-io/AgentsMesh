@@ -54,6 +54,22 @@ service RunnerService {
   rpc CreateRunnerToken(CreateRunnerTokenRequest) returns (RunnerToken);
   rpc ListRunnerTokens(ListRunnerTokensRequest) returns (ListRunnerTokensResponse);
   rpc DeleteRunnerToken(DeleteRunnerTokenRequest) returns (DeleteRunnerTokenResponse);
+
+  // Web-side registration handshake. The runner CLI hits the public REST
+  // bootstrap endpoints (`/runners/grpc/auth-url`, `/runners/grpc/register`,
+  // …) because it cannot embed wasm; the browser-side approval flow that
+  // gates a pending registration on the user's "Authorize" click goes
+  // through these two RPCs.
+  rpc AuthorizeRunner(AuthorizeRunnerRequest) returns (AuthorizeRunnerResponse);
+}
+
+// RunnerPublicService is the public (no-auth) handshake surface for the
+// browser-side registration approval flow. The runner CLI polls auth_key
+// to know when the user has approved the request — same auth_key the
+// CLI received from REST `/runners/grpc/auth-url`. No org_slug — the
+// auth_key is the credential.
+service RunnerPublicService {
+  rpc GetRunnerAuthStatus(GetRunnerAuthStatusRequest) returns (RunnerAuthStatus);
 }
 
 // Runner mirrors the Go domain model (backend/internal/domain/runner/runner.go).
@@ -307,3 +323,40 @@ message DeleteRunnerTokenRequest {
 }
 
 message DeleteRunnerTokenResponse {}
+
+// ----------------------------------------------------------------------------
+// Web-side registration approval (browser flow)
+// ----------------------------------------------------------------------------
+
+// RunnerAuthStatus mirrors backend/internal/service/runner.AuthStatusResponse.
+// `certificate`/`private_key`/`ca_certificate` are non-empty only when the
+// runner CLI polls the status AFTER the user authorized the request — they
+// surface so the CLI can finish the mTLS handshake without a second hop.
+message RunnerAuthStatus {
+  // "pending" | "authorized" | "expired"
+  string status = 1;
+  optional string node_id = 2;
+  optional string expires_at = 3;
+  optional int64 runner_id = 4;
+  optional string certificate = 5;
+  optional string private_key = 6;
+  optional string ca_certificate = 7;
+  optional string org_slug = 8;
+  optional string grpc_endpoint = 9;
+}
+
+message GetRunnerAuthStatusRequest {
+  string auth_key = 1;
+}
+
+message AuthorizeRunnerRequest {
+  string org_slug = 1;
+  string auth_key = 2;
+  string node_id = 3;
+}
+
+message AuthorizeRunnerResponse {
+  int64 runner_id = 1;
+  string node_id = 2;
+  string message = 3;
+}

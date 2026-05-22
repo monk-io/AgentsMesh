@@ -1,38 +1,59 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
-use agentsmesh_types::Channel;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use crate::backend::StorageBackend;
 use crate::error::Result;
 
-pub struct ChannelRepo {
-    backend: Arc<dyn StorageBackend>,
+pub trait ChannelRow: Serialize + DeserializeOwned {
+    fn id(&self) -> i64;
 }
 
-impl ChannelRepo {
+pub struct ChannelRepo<C: ChannelRow = ()> {
+    backend: Arc<dyn StorageBackend>,
+    _phantom: PhantomData<fn(C)>,
+}
+
+impl<C: ChannelRow> ChannelRepo<C> {
     pub fn new(backend: Arc<dyn StorageBackend>) -> Self {
-        Self { backend }
+        Self { backend, _phantom: PhantomData }
     }
 
-    pub fn get(&self, id: i64) -> Result<Option<Channel>> {
+    pub fn get(&self, id: i64) -> Result<Option<C>> {
         match self.backend.get_raw("channels", &id.to_string())? {
             Some(data) => Ok(Some(serde_json::from_slice(&data)?)),
             None => Ok(None),
         }
     }
 
-    pub fn save(&self, channel: &Channel) -> Result<()> {
+    pub fn save(&self, channel: &C) -> Result<()> {
         let data = serde_json::to_vec(channel)?;
         self.backend
-            .put_raw("channels", &channel.id.to_string(), &[], &data)
+            .put_raw("channels", &channel.id().to_string(), &[], &data)
     }
 
     pub fn delete(&self, id: i64) -> Result<()> {
         self.backend.delete_raw("channels", &id.to_string())
     }
 
-    pub fn list_all(&self) -> Result<Vec<Channel>> {
+    pub fn list_all(&self) -> Result<Vec<C>> {
         super::deserialize_rows(self.backend.list_raw("channels")?)
+    }
+}
+
+// () marker default lets callers use type inference if they're only constructing.
+impl ChannelRow for () {
+    fn id(&self) -> i64 { 0 }
+}
+
+// Blanket impl for the proto-generated state schema so callers can plug
+// `ChannelRepo<Channel>` directly without re-declaring the trait at every
+// crate boundary (the orphan rule blocks downstream impls).
+impl ChannelRow for agentsmesh_types::proto_channel_state_v1::Channel {
+    fn id(&self) -> i64 {
+        self.id
     }
 }
 
@@ -40,36 +61,25 @@ impl ChannelRepo {
 mod tests {
     use super::*;
     use crate::backend::InMemoryBackend;
+    use serde::{Deserialize, Serialize};
 
-    fn make_repo() -> ChannelRepo {
-        ChannelRepo::new(Arc::new(InMemoryBackend::new()))
+    #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+    struct TestChannel {
+        id: i64,
+        name: String,
+    }
+    impl ChannelRow for TestChannel {
+        fn id(&self) -> i64 { self.id }
     }
 
-    fn make_channel(id: i64, name: &str) -> Channel {
-        Channel {
-            id,
-            name: name.into(),
-            description: None,
-            is_archived: false,
-            visibility: None,
-            is_member: false,
-            member_count: None,
-            organization_id: None,
-            document: None,
-            repository_id: None,
-            ticket_id: None,
-            ticket_slug: None,
-            created_by_pod: None,
-            created_by_user_id: None,
-            created_at: None,
-            updated_at: None,
-        }
+    fn make_repo() -> ChannelRepo<TestChannel> {
+        ChannelRepo::new(Arc::new(InMemoryBackend::new()))
     }
 
     #[test]
     fn crud_roundtrip() {
         let repo = make_repo();
-        repo.save(&make_channel(1, "general")).unwrap();
+        repo.save(&TestChannel { id: 1, name: "general".into() }).unwrap();
         let loaded = repo.get(1).unwrap().unwrap();
         assert_eq!(loaded.name, "general");
         repo.delete(1).unwrap();
@@ -79,8 +89,8 @@ mod tests {
     #[test]
     fn list_all() {
         let repo = make_repo();
-        repo.save(&make_channel(1, "a")).unwrap();
-        repo.save(&make_channel(2, "b")).unwrap();
+        repo.save(&TestChannel { id: 1, name: "a".into() }).unwrap();
+        repo.save(&TestChannel { id: 2, name: "b".into() }).unwrap();
         assert_eq!(repo.list_all().unwrap().len(), 2);
     }
 
@@ -99,8 +109,8 @@ mod tests {
     #[test]
     fn save_overwrites_existing() {
         let repo = make_repo();
-        repo.save(&make_channel(1, "old")).unwrap();
-        repo.save(&make_channel(1, "new")).unwrap();
+        repo.save(&TestChannel { id: 1, name: "old".into() }).unwrap();
+        repo.save(&TestChannel { id: 1, name: "new".into() }).unwrap();
         let loaded = repo.get(1).unwrap().unwrap();
         assert_eq!(loaded.name, "new");
         assert_eq!(repo.list_all().unwrap().len(), 1);

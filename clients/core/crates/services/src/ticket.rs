@@ -4,10 +4,8 @@ use std::sync::RwLock;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::ticket_state::TicketState;
 use agentsmesh_types::proto_ticket_v1 as ticket_proto;
-use agentsmesh_types::{Ticket, TicketStatus, Label, BoardColumn};
+use agentsmesh_types::proto_ticket_v1::{BoardColumn, Label, Ticket};
 use prost::Message;
-
-use crate::parse_status;
 
 pub struct TicketService {
     client: Arc<ApiClient>,
@@ -45,8 +43,8 @@ impl TicketService {
         &self, search: &str, statuses_json: &str,
         priorities_json: &str, repository_ids_json: &str,
     ) -> String {
-        let statuses: Vec<TicketStatus> = serde_json::from_str(statuses_json).unwrap_or_default();
-        let priorities: Vec<agentsmesh_types::TicketPriority> = serde_json::from_str(priorities_json).unwrap_or_default();
+        let statuses: Vec<String> = serde_json::from_str(statuses_json).unwrap_or_default();
+        let priorities: Vec<String> = serde_json::from_str(priorities_json).unwrap_or_default();
         let repo_ids: Vec<i64> = serde_json::from_str(repository_ids_json).unwrap_or_default();
         let s = if search.is_empty() { None } else { Some(search) };
         let binding = self.state.read().unwrap();
@@ -73,8 +71,7 @@ impl TicketService {
     }
 
     pub fn update_ticket_status_local(&self, slug: &str, status: &str) {
-        let parsed = parse_status::<TicketStatus>(status);
-        self.state.write().unwrap().update_ticket_status(slug, parsed);
+        self.state.write().unwrap().update_ticket_status(slug, status);
     }
 
     pub fn remove_ticket(&self, slug: &str) {
@@ -93,9 +90,8 @@ impl TicketService {
     }
 
     pub fn append_column_tickets(&self, status: &str, json: &str) {
-        let parsed = parse_status::<TicketStatus>(status);
         if let Ok(tickets) = serde_json::from_str::<Vec<Ticket>>(json) {
-            self.state.write().unwrap().append_column_tickets(parsed, tickets);
+            self.state.write().unwrap().append_column_tickets(status, tickets);
         }
     }
 

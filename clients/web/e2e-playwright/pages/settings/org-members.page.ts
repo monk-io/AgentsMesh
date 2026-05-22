@@ -24,7 +24,7 @@ export class OrgMembersPage {
     await this.page.goto(
       `/${this.orgSlug}/settings?scope=organization&tab=members`
     );
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("load");
   }
 
   async openInviteDialog(): Promise<void> {

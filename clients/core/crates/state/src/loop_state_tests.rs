@@ -1,5 +1,4 @@
-use crate::loop_state::LoopState;
-use agentsmesh_types::{LoopData, LoopRunData, LoopRunStatus};
+use crate::loop_state::{LoopData, LoopRunData, LoopState, loop_run_status};
 
 fn make_loop(slug: &str, name: &str, enabled: bool) -> LoopData {
     LoopData {
@@ -15,11 +14,11 @@ fn make_loop(slug: &str, name: &str, enabled: bool) -> LoopData {
     }
 }
 
-fn make_run(id: i64, loop_slug: &str, status: LoopRunStatus) -> LoopRunData {
+fn make_run(id: i64, loop_slug: &str, status: &str) -> LoopRunData {
     LoopRunData {
         id,
         loop_slug: loop_slug.into(),
-        status,
+        status: status.into(),
         started_at: Some("2026-01-01T00:00:00Z".into()),
         completed_at: None,
         error_message: None,
@@ -66,34 +65,34 @@ fn set_and_get_current_loop() {
 #[test]
 fn add_run() {
     let mut state = LoopState::new();
-    state.add_run(make_run(1, "l-1", LoopRunStatus::Running));
-    state.add_run(make_run(2, "l-1", LoopRunStatus::Completed));
+    state.add_run(make_run(1, "l-1", loop_run_status::RUNNING));
+    state.add_run(make_run(2, "l-1", loop_run_status::COMPLETED));
     assert_eq!(state.get_runs().len(), 2);
-    assert_eq!(state.get_runs()[0].status, LoopRunStatus::Running);
-    assert_eq!(state.get_runs()[1].status, LoopRunStatus::Completed);
+    assert_eq!(state.get_runs()[0].status, loop_run_status::RUNNING);
+    assert_eq!(state.get_runs()[1].status, loop_run_status::COMPLETED);
 }
 
 #[test]
 fn update_run_status() {
     let mut state = LoopState::new();
-    state.add_run(make_run(1, "l-1", LoopRunStatus::Running));
-    state.update_run_status(1, LoopRunStatus::Completed);
-    assert_eq!(state.get_runs()[0].status, LoopRunStatus::Completed);
+    state.add_run(make_run(1, "l-1", loop_run_status::RUNNING));
+    state.update_run_status(1, loop_run_status::COMPLETED);
+    assert_eq!(state.get_runs()[0].status, loop_run_status::COMPLETED);
 }
 
 #[test]
 fn update_run_status_nonexistent_is_noop() {
     let mut state = LoopState::new();
-    state.add_run(make_run(1, "l-1", LoopRunStatus::Running));
-    state.update_run_status(999, LoopRunStatus::Failed);
-    assert_eq!(state.get_runs()[0].status, LoopRunStatus::Running);
+    state.add_run(make_run(1, "l-1", loop_run_status::RUNNING));
+    state.update_run_status(999, loop_run_status::FAILED);
+    assert_eq!(state.get_runs()[0].status, loop_run_status::RUNNING);
 }
 
 #[test]
 fn clear_runs() {
     let mut state = LoopState::new();
-    state.add_run(make_run(1, "l-1", LoopRunStatus::Completed));
-    state.add_run(make_run(2, "l-1", LoopRunStatus::Failed));
+    state.add_run(make_run(1, "l-1", loop_run_status::COMPLETED));
+    state.add_run(make_run(2, "l-1", loop_run_status::FAILED));
     assert_eq!(state.get_runs().len(), 2);
     state.clear_runs();
     assert!(state.get_runs().is_empty());
@@ -119,8 +118,8 @@ fn default_impl() {
 #[test]
 fn multiple_runs_different_loops() {
     let mut state = LoopState::new();
-    state.add_run(make_run(1, "l-1", LoopRunStatus::Running));
-    state.add_run(make_run(2, "l-2", LoopRunStatus::Completed));
+    state.add_run(make_run(1, "l-1", loop_run_status::RUNNING));
+    state.add_run(make_run(2, "l-2", loop_run_status::COMPLETED));
     assert_eq!(state.get_runs().len(), 2);
     assert_eq!(state.get_runs()[0].loop_slug, "l-1");
     assert_eq!(state.get_runs()[1].loop_slug, "l-2");

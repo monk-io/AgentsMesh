@@ -9,7 +9,7 @@ test.describe("Sidebar Navigation", () => {
     sidebar = new SidebarPage(page, TEST_ORG_SLUG);
     // Start from workspace (default authenticated landing)
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
   });
 
   test("navigate between main sections via activity bar", async ({ page }) => {

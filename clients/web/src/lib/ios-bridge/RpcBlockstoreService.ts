@@ -1,16 +1,17 @@
 /**
- * iOS embed-mode `BlockstoreService`. Mirrors `ElectronBlockstoreService`
- * (`packages/electron-adapter/src/blockstore.ts`):
+ * iOS embed-mode `BlockstoreService`. Mirrors `WasmBlockstoreService`'s
+ * Connect-RPC binary surface (`applyOpsConnect(bytes): Promise<Uint8Array>`
+ * etc.) so web's `blockstoreConnect` adapter is unaware of the swap —
+ * `registerServiceProvider` is the only difference.
  *
- *   1. Async writes/fetches go through the bridge to the native Rust
- *      `BlockstoreService` SSOT.
- *   2. Sync flat-map getters serve from a renderer-side mirror; after
- *      every mutation we eagerly call `refreshFlatCaches()` so the
- *      next zustand selector tick reads the freshest state.
- *
- * Contract is JSON-string in / JSON-string out — same as the WASM
- * `WasmBlockstoreService`. That's why swapping providers is a one-line
- * change in `registerServiceProvider`.
+ *   1. Binary `_connect` methods → base64-encode request bytes, post
+ *      through `webkit.messageHandlers.amBridge`, base64-decode the
+ *      response bytes returned by Swift's `BlockstoreRpcRoute`.
+ *   2. State-cache mutators / readers still go through JSON because the
+ *      in-process Rust SSOT (view-types) lives behind `apply_remote_op`,
+ *      `replace_workspaces_json`, etc.
+ *   3. Sync flat-map getters mirror what `refreshFlatCaches` pulled in
+ *      so the next zustand selector tick reads the freshest state.
  */
 
 let nextId = 1;
@@ -49,11 +50,28 @@ export function rpc<T>(method: string, args: Record<string, unknown> = {}): Prom
   });
 }
 
+function toBase64(bytes: Uint8Array): string {
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+  return btoa(out);
+}
+
+function fromBase64(s: string): Uint8Array {
+  const raw = atob(s);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+async function rpcConnect(method: string, bytes: Uint8Array): Promise<Uint8Array> {
+  const respB64 = await rpc<string>(method, { bytes: toBase64(bytes) });
+  return fromBase64(respB64);
+}
+
 /**
  * Sync getters need a value the millisecond a zustand selector fires.
- * Native is async, so we mirror the flat maps here — same trick the
- * Electron adapter uses. `refreshFlatCaches` runs after every mutation
- * to keep the mirror tight.
+ * Native is async, so we mirror the flat maps here. `refreshFlatCaches`
+ * runs after every mutation to keep the mirror tight.
  */
 export class RpcBlockstoreService {
   private _workspacesJson = "{}";
@@ -80,44 +98,62 @@ export class RpcBlockstoreService {
     this._lastOpIdsJson = lo || "{}";
   }
 
-  // ── Async mutations / fetches
+  // ── Connect-RPC binary wire (matches WasmBlockstoreService)
 
-  async apply_ops(reqJson: string): Promise<string> {
-    const r = await rpc<unknown>("apply_ops", { req: JSON.parse(reqJson) });
+  async applyOpsConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("apply_ops_connect", bytes);
     await this.refreshFlatCaches();
-    return JSON.stringify(r);
+    return resp;
   }
-
-  async list_workspaces(): Promise<string> {
-    const r = await rpc<unknown>("list_workspaces");
+  async listWorkspacesConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("list_workspaces_connect", bytes);
     await this.refreshFlatCaches();
-    return JSON.stringify(r);
+    return resp;
   }
-
-  async ensure_default_workspace(): Promise<string> {
-    const r = await rpc<unknown>("ensure_default_workspace");
+  async ensureDefaultWorkspaceConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("ensure_default_workspace_connect", bytes);
     await this.refreshFlatCaches();
-    return JSON.stringify(r);
+    return resp;
   }
-
-  async load_subtree(wsId: string, rootId: string): Promise<void> {
-    await rpc("load_subtree", { wsId, rootId });
+  async createWorkspaceConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("create_workspace_connect", bytes);
     await this.refreshFlatCaches();
+    return resp;
   }
-
-  async load_type_defs(wsId: string): Promise<void> {
-    await rpc("load_type_defs", { wsId });
-  }
-
-  async catchup(wsId: string): Promise<void> {
-    await rpc("catchup", { wsId });
+  async deleteWorkspaceConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("delete_workspace_connect", bytes);
     await this.refreshFlatCaches();
+    return resp;
+  }
+  async getBlockConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    return rpcConnect("get_block_connect", bytes);
+  }
+  async listChildrenConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    return rpcConnect("list_children_connect", bytes);
+  }
+  async listBacklinksConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    return rpcConnect("list_backlinks_connect", bytes);
+  }
+  async getSubtreeConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("get_subtree_connect", bytes);
+    await this.refreshFlatCaches();
+    return resp;
+  }
+  async streamOpsConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("stream_ops_connect", bytes);
+    await this.refreshFlatCaches();
+    return resp;
+  }
+  async listTypeDefsConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    const resp = await rpcConnect("list_type_defs_connect", bytes);
+    await this.refreshFlatCaches();
+    return resp;
+  }
+  async semanticSearchConnect(bytes: Uint8Array): Promise<Uint8Array> {
+    return rpcConnect("semantic_search_connect", bytes);
   }
 
-  async semantic_search(wsId: string, queryJson: string): Promise<string> {
-    const r = await rpc<unknown>("semantic_search", { wsId, query: JSON.parse(queryJson) });
-    return JSON.stringify(r);
-  }
+  // ── State-cache mutators (web pushes server bytes into Rust cache via JSON)
 
   apply_remote_op(opJson: string): void {
     void rpc("apply_remote_op", { op: JSON.parse(opJson) }).then(() => this.refreshFlatCaches());
@@ -125,6 +161,19 @@ export class RpcBlockstoreService {
 
   set_last_op_id(wsId: string, id: number): void {
     void rpc("set_last_op_id", { wsId, id });
+  }
+
+  replace_workspaces_json(json: string): void {
+    void rpc("replace_workspaces_json", { json }).then(() => this.refreshFlatCaches());
+  }
+  upsert_workspace_json(json: string): void {
+    void rpc("upsert_workspace_json", { json }).then(() => this.refreshFlatCaches());
+  }
+  upsert_blocks_json(json: string): void {
+    void rpc("upsert_blocks_json", { json }).then(() => this.refreshFlatCaches());
+  }
+  upsert_refs_json(json: string): void {
+    void rpc("upsert_refs_json", { json }).then(() => this.refreshFlatCaches());
   }
 
   // ── Sync flat-map readers (used by zustand selectors)
@@ -136,11 +185,7 @@ export class RpcBlockstoreService {
   backlinks_json(): string { return this._backlinksJson; }
   last_op_ids_json(): string { return this._lastOpIdsJson; }
 
-  // ── Sync per-id readers — must round-trip into native to read SSOT.
-  // Only safe to call after `load_subtree` has populated the cache and
-  // a tick has fired; we serve the last value the bridge handed us.
-  // Web's `readBlock` / `listChildren` paths are sync, so we can't await
-  // here — primeSubtreeCache + flat caches keep these warm.
+  // ── Sync per-id readers — served from the cached flat maps
 
   get_block_json(id: string): string | null {
     const map = safeParse<Record<string, unknown>>(this._blocksJson);
@@ -178,8 +223,6 @@ export class RpcBlockstoreService {
   }
 
   type_defs_json(_wsId: string): string {
-    // Reads come right after load_type_defs; flat blocks_json carries
-    // type defs (workspace_id == wsId, type == 'type-def').
     const blocks = safeParse<Record<string, { workspace_id?: string; type?: string }>>(this._blocksJson) ?? {};
     const out: unknown[] = [];
     for (const b of Object.values(blocks)) {
@@ -187,12 +230,17 @@ export class RpcBlockstoreService {
     }
     return JSON.stringify({ blocks: out });
   }
+
+  last_op_id(wsId: string): number {
+    const map = safeParse<Record<string, number>>(this._lastOpIdsJson);
+    return map?.[wsId] ?? 0;
+  }
 }
 
 function safeParse<T>(s: string): T | undefined {
   try { return JSON.parse(s) as T; } catch { return undefined; }
 }
 
-export async function primeSubtreeCache(wsId: string, rootId: string): Promise<void> {
-  await rpc("load_subtree", { wsId, rootId });
+export async function primeSubtreeCache(_wsId: string, _rootId: string): Promise<void> {
+  // No-op stub — primed lazily when the binary getSubtreeConnect lands.
 }

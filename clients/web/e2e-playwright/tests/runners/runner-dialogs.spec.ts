@@ -11,7 +11,7 @@ test.describe("Runner UI Dialogs", () => {
   test.beforeEach(async ({ page }) => {
     const sidebar = new SidebarPage(page, TEST_ORG_SLUG);
     await page.goto(`/${TEST_ORG_SLUG}/runners`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     await sidebar.dismissDevOverlay();
   });
 
@@ -67,7 +67,7 @@ test.describe("Runner UI Dialogs", () => {
       ON CONFLICT (organization_id, node_id) DO NOTHING
     `);
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Find delete button for the test runner
     const deleteBtn = page.getByRole("button", { name: /delete|删除/i }).first();

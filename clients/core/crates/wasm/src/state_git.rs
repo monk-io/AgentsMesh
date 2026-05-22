@@ -1,5 +1,5 @@
 use agentsmesh_state::git_provider_state::GitProviderState;
-use agentsmesh_types::{ProviderRepository, RepositoryProvider};
+use agentsmesh_state::credential_types::{ProviderRepository, RepositoryProvider};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

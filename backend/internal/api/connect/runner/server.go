@@ -24,6 +24,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/anthropics/agentsmesh/backend/internal/interfaces"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	runner "github.com/anthropics/agentsmesh/backend/internal/service/runner"
 	runnerlog "github.com/anthropics/agentsmesh/backend/internal/service/runnerlog"
@@ -47,6 +48,14 @@ const (
 	CreateRunnerTokenProcedure    = "/" + ServiceName + "/CreateRunnerToken"
 	ListRunnerTokensProcedure     = "/" + ServiceName + "/ListRunnerTokens"
 	DeleteRunnerTokenProcedure    = "/" + ServiceName + "/DeleteRunnerToken"
+	AuthorizeRunnerProcedure      = "/" + ServiceName + "/AuthorizeRunner"
+)
+
+// PublicServiceName mirrors proto.runner_api.v1.RunnerPublicService.
+const PublicServiceName = "proto.runner_api.v1.RunnerPublicService"
+
+const (
+	GetRunnerAuthStatusProcedure = "/" + PublicServiceName + "/GetRunnerAuthStatus"
 )
 
 // VersionChecker exposes the latest-runner-version hint. Optional dependency
@@ -90,6 +99,8 @@ type Server struct {
 	upgradeSender   UpgradeCommandSender
 	logUploadSender LogUploadCommandSender
 	logUploadSvc    *runnerlog.Service
+	pkiSvc          interfaces.PKICertificateIssuer
+	grpcEndpoint    string
 	baseURL         string
 }
 
@@ -124,6 +135,10 @@ func WithLogUploadSender(l LogUploadCommandSender) Option {
 }
 func WithLogUploadService(l *runnerlog.Service) Option { return func(s *Server) { s.logUploadSvc = l } }
 func WithBaseURL(u string) Option                      { return func(s *Server) { s.baseURL = u } }
+func WithPKIService(p interfaces.PKICertificateIssuer) Option {
+	return func(s *Server) { s.pkiSvc = p }
+}
+func WithGRPCEndpoint(e string) Option { return func(s *Server) { s.grpcEndpoint = e } }
 
 // listFilter wraps the policy filter inline so handlers stay short.
 func listFilter(tenant *middleware.TenantContext) policy.ListFilter {
@@ -169,6 +184,19 @@ func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 	))
 	mux.Handle(DeleteRunnerTokenProcedure, connect.NewUnaryHandler(
 		DeleteRunnerTokenProcedure, srv.DeleteRunnerToken, opts...,
+	))
+	mux.Handle(AuthorizeRunnerProcedure, connect.NewUnaryHandler(
+		AuthorizeRunnerProcedure, srv.AuthorizeRunner, opts...,
+	))
+}
+
+// MountPublic registers RunnerPublicService.GetRunnerAuthStatus. The runner
+// CLI polls this with the opaque auth_key it received from the public REST
+// `/runners/grpc/auth-url` bootstrap — no auth interceptor (the key is the
+// credential).
+func MountPublic(mux *http.ServeMux, srv *Server) {
+	mux.Handle(GetRunnerAuthStatusProcedure, connect.NewUnaryHandler(
+		GetRunnerAuthStatusProcedure, srv.GetRunnerAuthStatus,
 	))
 }
 

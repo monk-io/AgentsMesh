@@ -105,6 +105,13 @@ impl WasmApiClient {
         crate::service_pod::WasmPodService::new(self.client.clone(), state)
     }
 
+    /// Create a WasmEventsManager backed by this client's ApiClient.
+    /// Replaces the legacy `new WasmEventsManager(ws_url)` — token, base
+    /// URL, and org slug now flow through the shared ApiClient instead.
+    pub fn create_events_manager(&self) -> crate::events_manager::WasmEventsManager {
+        crate::events_manager::WasmEventsManager::new_internal(self.client.clone())
+    }
+
     pub fn create_ticket_service(&self) -> crate::service_ticket::WasmTicketService {
         let state = agentsmesh_state::ticket_state::TicketState::with_storage(crate::new_memory_backend());
         crate::service_ticket::WasmTicketService::new(self.client.clone(), state)

@@ -4,16 +4,15 @@ import CoreClient
 
 /// JSON-RPC router for the embedded block-detail WebView.
 ///
-/// Mirrors the `BlockstoreService` interface that web's
-/// `clients/web/src/lib/api/blockstoreApi.ts` + `stores/blockstore.ts`
-/// expect. Method names are the snake_case keys web sends; JSON wire
-/// shape matches `clients/web/src/lib/api/blockstoreTypes.ts` 1:1, so
-/// swapping the WASM provider for this RPC bridge is a one-line change
-/// in `registerServiceProvider` on the web side.
+/// Bridges web's `RpcBlockstoreService` (clients/web/src/lib/ios-bridge)
+/// over `webkit.messageHandlers.amBridge`. Every wire call carries
+/// prost-encoded request bytes (base64) and returns prost-encoded
+/// response bytes — the same binary shape `blockstoreConnect.ts` uses
+/// when running outside embed mode against the WASM Connect surface.
 ///
-/// Sync flat-map readers (`blocks_json` etc.) hit the in-process Rust
-/// SSOT (`AgentsMeshCore.blockstore`) — same backing store mutations
-/// land in, so reads always reflect the latest writes.
+/// State-cache mutators / readers stay on JSON strings since the
+/// in-process Rust SSOT (`AgentsMeshCore.blockstore`) keeps the
+/// view-type cache.
 public protocol IosRpcRoute {
     func dispatch(method: String, args: [String: Any]) async throws -> Any?
 }
@@ -23,45 +22,16 @@ public struct BlockstoreRpcRoute: IosRpcRoute {
     public init(core: CoreClient) { self.core = core }
 
     public func dispatch(method: String, args: [String: Any]) async throws -> Any? {
+        // ── Binary wire (Connect-RPC). Web encodes via @bufbuild/protobuf
+        // .toBinary(), base64s the Uint8Array, sends as args["bytes"].
+        if method.hasSuffix("_connect") {
+            let bytes = try decodeBytes(args["bytes"])
+            let resp = try await dispatchConnect(method: method, bytes: bytes)
+            return encodeBytes(resp)
+        }
+
+        // ── State-cache mutators / readers (still JSON, not wire)
         switch method {
-        // ── Async mutations / fetches
-        case "apply_ops":
-            guard let req = args["req"] else { throw RpcError.badArgs("req") }
-            let json = try jsonString(from: req)
-            let result = try await core.blocks.applyOps(json)
-            return parsedJSON(result) ?? [:]
-
-        case "load_subtree":
-            guard let wsId = args["wsId"] as? String,
-                  let rootId = args["rootId"] as? String else {
-                throw RpcError.badArgs("wsId+rootId")
-            }
-            try await core.blocks.loadSubtree(wsId, rootId)
-            return NSNull()
-
-        case "load_type_defs":
-            guard let wsId = args["wsId"] as? String else { throw RpcError.badArgs("wsId") }
-            try await core.blocks.loadTypeDefs(wsId)
-            return NSNull()
-
-        case "catchup":
-            guard let wsId = args["wsId"] as? String else { throw RpcError.badArgs("wsId") }
-            try await core.blocks.catchup(wsId)
-            return NSNull()
-
-        case "ensure_default_workspace":
-            return parsedJSON(try await core.blocks.ensureDefaultWorkspaceJson()) ?? [:]
-
-        case "list_workspaces":
-            return parsedJSON(try await core.blocks.listWorkspacesJson()) ?? ["workspaces": []]
-
-        case "semantic_search":
-            guard let wsId = args["wsId"] as? String, let q = args["query"] else {
-                throw RpcError.badArgs("wsId+query")
-            }
-            let qJson = try jsonString(from: q)
-            return parsedJSON(try await core.blocks.semanticSearchJson(wsId, qJson)) ?? ["hits": []]
-
         case "apply_remote_op":
             guard let op = args["op"] else { throw RpcError.badArgs("op") }
             let json = try jsonString(from: op)
@@ -74,7 +44,26 @@ public struct BlockstoreRpcRoute: IosRpcRoute {
             core.blocks.setLastOpId(wsId, Int64(id))
             return NSNull()
 
-        // ── Sync flat-map readers (return strings; web parses)
+        case "replace_workspaces_json":
+            guard let json = args["json"] as? String else { throw RpcError.badArgs("json") }
+            try core.blocks.replaceWorkspacesJson(json)
+            return NSNull()
+
+        case "upsert_workspace_json":
+            guard let json = args["json"] as? String else { throw RpcError.badArgs("json") }
+            try core.blocks.upsertWorkspaceJson(json)
+            return NSNull()
+
+        case "upsert_blocks_json":
+            guard let json = args["json"] as? String else { throw RpcError.badArgs("json") }
+            try core.blocks.upsertBlocksJson(json)
+            return NSNull()
+
+        case "upsert_refs_json":
+            guard let json = args["json"] as? String else { throw RpcError.badArgs("json") }
+            try core.blocks.upsertRefsJson(json)
+            return NSNull()
+
         case "workspaces_json":     return core.blocks.workspacesJson()
         case "blocks_json":         return core.blocks.blocksJson()
         case "refs_json":           return core.blocks.refsJson()
@@ -82,7 +71,6 @@ public struct BlockstoreRpcRoute: IosRpcRoute {
         case "backlinks_json":      return core.blocks.backlinksJson()
         case "last_op_ids_json":    return core.blocks.lastOpIdsJson()
 
-        // ── Sync per-id readers
         case "get_block_json":
             guard let id = args["id"] as? String else { throw RpcError.badArgs("id") }
             return core.blocks.getBlockJson(id) ?? NSNull()
@@ -107,6 +95,37 @@ public struct BlockstoreRpcRoute: IosRpcRoute {
             throw RpcError.unknown(method)
         }
     }
+
+    private func dispatchConnect(method: String, bytes: Data) async throws -> Data {
+        switch method {
+        case "apply_ops_connect":
+            return try await core.blocks.applyOpsConnect(bytes)
+        case "list_workspaces_connect":
+            return try await core.blocks.listWorkspacesConnect(bytes)
+        case "ensure_default_workspace_connect":
+            return try await core.blocks.ensureDefaultWorkspaceConnect(bytes)
+        case "create_workspace_connect":
+            return try await core.blocks.createWorkspaceConnect(bytes)
+        case "delete_workspace_connect":
+            return try await core.blocks.deleteWorkspaceConnect(bytes)
+        case "get_block_connect":
+            return try await core.blocks.getBlockConnect(bytes)
+        case "list_children_connect":
+            return try await core.blocks.listChildrenConnect(bytes)
+        case "list_backlinks_connect":
+            return try await core.blocks.listBacklinksConnect(bytes)
+        case "get_subtree_connect":
+            return try await core.blocks.getSubtreeConnect(bytes)
+        case "stream_ops_connect":
+            return try await core.blocks.streamOpsConnect(bytes)
+        case "list_type_defs_connect":
+            return try await core.blocks.listTypeDefsConnect(bytes)
+        case "semantic_search_connect":
+            return try await core.blocks.semanticSearchConnect(bytes)
+        default:
+            throw RpcError.unknown(method)
+        }
+    }
 }
 
 public enum RpcError: Error, LocalizedError {
@@ -126,7 +145,13 @@ private func jsonString(from value: Any) throws -> String {
     return String(data: data, encoding: .utf8) ?? "{}"
 }
 
-private func parsedJSON(_ s: String) -> Any? {
-    guard let data = s.data(using: .utf8) else { return nil }
-    return try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+private func decodeBytes(_ value: Any?) throws -> Data {
+    guard let s = value as? String, let data = Data(base64Encoded: s) else {
+        throw RpcError.badArgs("bytes")
+    }
+    return data
+}
+
+private func encodeBytes(_ data: Data) -> String {
+    data.base64EncodedString()
 }

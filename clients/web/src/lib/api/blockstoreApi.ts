@@ -67,10 +67,12 @@ export const blockstoreApi = {
     const { blocks, refs } = await getSubtreeConnect(orgSlug(), wsID, rootID, maxDepth);
     svc().upsert_blocks_json(JSON.stringify(blocks));
     svc().upsert_refs_json(JSON.stringify(refs));
-    if (svc().last_op_id(wsID) === 0) {
+    if (svc().last_op_id(wsID) === 0n) {
       // Seed watermark so the WS filter recognises this workspace, mirroring
-      // the legacy Rust load_subtree path.
-      svc().set_last_op_id(wsID, 0);
+      // the legacy Rust load_subtree path. `set_last_op_id` is wasm-bindgen
+      // i64 → JS BigInt — passing a Number throws "Cannot convert 0 to a
+      // BigInt" and wedges DocumentView in the Loading state.
+      svc().set_last_op_id(wsID, 0n);
     }
     const result: ChildrenResult = (() => {
       try {

@@ -55,6 +55,28 @@ func NewEventsClient(hub *Hub, conn *websocket.Conn, userID, orgID int64) *Clien
 	}
 }
 
+// NewConnectEventsClient creates an events Client without a WebSocket
+// connection — for the Connect-RPC server-stream handler in
+// backend/internal/api/connect/events. The hub treats it identically to
+// a WebSocket-backed events client; the caller drains `Outbound()` and
+// forwards the bytes to the Connect stream.
+func NewConnectEventsClient(hub *Hub, userID, orgID int64) *Client {
+	return &Client{
+		hub:      hub,
+		send:     make(chan []byte, 256),
+		userID:   userID,
+		orgID:    orgID,
+		isEvents: true,
+	}
+}
+
+// Outbound exposes the hub→client byte channel so a non-WebSocket
+// transport (Connect server stream) can drain it. Returns a receive-only
+// channel — the hub remains the sole writer.
+func (c *Client) Outbound() <-chan []byte {
+	return c.send
+}
+
 // SetPod sets the pod for this client.
 // Holds shard.mu while writing c.podKey to prevent data race with handleUnregister.
 func (c *Client) SetPod(podKey string) {

@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -9,9 +10,8 @@ test.describe("Autopilot API", () => {
    * TC-AUTOPILOT-001: List autopilot controllers
    */
   test("list autopilot controllers", async ({ api }) => {
-    const res = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/autopilot-controllers`
-    );
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const { items } = await cc.autopilot.listAutopilotControllers({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 });

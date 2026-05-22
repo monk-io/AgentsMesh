@@ -2,11 +2,11 @@ use std::sync::{Arc, RwLock};
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::blockstore_state::BlockstoreState;
-use agentsmesh_types::proto_blockstore_v1 as blockstore_proto;
-use agentsmesh_types::{
+use agentsmesh_state::blockstore_types::{
     ActorType, ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, OpEnvelope, OpKind,
     SearchHit, SemanticSearchRequest, Workspace,
 };
+use agentsmesh_types::proto_blockstore_v1 as blockstore_proto;
 use serde_json::Value;
 
 pub struct BlockstoreService {
@@ -278,7 +278,7 @@ fn synthesize_op(workspace_id: &str, id: i64, env: &OpEnvelope, applied_at: &str
         id,
         workspace_id: workspace_id.to_string(),
         idempotency_key: None,
-        actor_type: agentsmesh_types::ActorType::User,
+        actor_type: ActorType::User,
         actor_id: 0,
         op: env.op.clone(),
         target_block: None,

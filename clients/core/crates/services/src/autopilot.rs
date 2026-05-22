@@ -3,8 +3,8 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::autopilot_state::AutopilotState;
-use agentsmesh_types::AutopilotController;
-use agentsmesh_types::AutopilotIteration;
+use agentsmesh_state::autopilot_state::AutopilotController;
+use agentsmesh_state::autopilot_state::AutopilotIteration;
 
 pub struct AutopilotService {
     client: Arc<ApiClient>,

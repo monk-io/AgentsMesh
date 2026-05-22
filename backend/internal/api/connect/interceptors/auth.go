@@ -9,6 +9,7 @@ package interceptors
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -17,9 +18,9 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 )
 
-// NewAuthInterceptor returns a Connect unary interceptor that validates
-// the JWT in the `Authorization: Bearer <token>` request header and
-// injects a `*middleware.TenantContext` (populated with UserID) into the
+// NewAuthInterceptor returns a Connect interceptor that validates the
+// JWT in the `Authorization: Bearer <token>` request header and injects
+// a `*middleware.TenantContext` (populated with UserID) into the
 // downstream context using `middleware.SetTenant`.
 //
 // The interceptor only fills `TenantContext.UserID`; per-RPC tenant
@@ -29,23 +30,54 @@ import (
 // Tokens are parsed with the same HS256 logic as
 // `middleware.AuthMiddleware`; behavioural drift between the two paths
 // would be a security bug.
-func NewAuthInterceptor(jwtSecret string) connect.UnaryInterceptorFunc {
-	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			if req.Spec().IsClient {
-				return next(ctx, req)
-			}
+//
+// Streaming RPCs (server-stream, client-stream, bidi-stream) go through
+// the same auth check via WrapStreamingHandler — UnaryInterceptorFunc
+// would skip them, which is how EventsService.Subscribe initially
+// shipped without auth enforcement (R5-11 Phase B oversight).
+func NewAuthInterceptor(jwtSecret string) connect.Interceptor {
+	return &authInterceptor{jwtSecret: jwtSecret}
+}
 
-			claims, err := parseBearerToken(req.Header().Get("Authorization"), jwtSecret)
-			if err != nil {
-				return nil, err
-			}
+type authInterceptor struct {
+	jwtSecret string
+}
 
-			ctx = middleware.SetTenant(ctx, &middleware.TenantContext{UserID: claims.UserID})
-			ctx = withClaims(ctx, claims)
+func (a *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		if req.Spec().IsClient {
 			return next(ctx, req)
 		}
+		ctx, err := a.injectTenant(ctx, req.Header())
+		if err != nil {
+			return nil, err
+		}
+		return next(ctx, req)
 	}
+}
+
+func (a *authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+	return next
+}
+
+func (a *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
+		ctx, err := a.injectTenant(ctx, conn.RequestHeader())
+		if err != nil {
+			return err
+		}
+		return next(ctx, conn)
+	}
+}
+
+func (a *authInterceptor) injectTenant(ctx context.Context, header http.Header) (context.Context, error) {
+	claims, err := parseBearerToken(header.Get("Authorization"), a.jwtSecret)
+	if err != nil {
+		return ctx, err
+	}
+	ctx = middleware.SetTenant(ctx, &middleware.TenantContext{UserID: claims.UserID})
+	ctx = withClaims(ctx, claims)
+	return ctx, nil
 }
 
 func parseBearerToken(header, secret string) (*middleware.JWTClaims, error) {

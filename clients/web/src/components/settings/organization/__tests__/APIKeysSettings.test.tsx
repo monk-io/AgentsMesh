@@ -8,21 +8,36 @@ import {
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
 import type { APIKeyData } from "@/lib/api/apikeyTypes";
-import { getApiKeyService } from "@/lib/wasm-core";
 
-const mockList = vi.fn();
-const mockCreate = vi.fn();
-const mockUpdate = vi.fn();
-const mockRevoke = vi.fn();
+// Mock the wrapper layer instead of the wasm bridge — the wrapper does the
+// proto binary encoding internally, so the test stays decoupled from wire
+// format details (Uint8Array, BigInt, etc).
+//
+// vi.hoisted lifts the mock fns above vi.mock's hoisting so the factory can
+// reference them (without it the factory captures `undefined`).
+const { mockListApiKeys, mockCreateApiKey, mockUpdateApiKey, mockRevokeApiKey } = vi.hoisted(() => ({
+  mockListApiKeys: vi.fn(),
+  mockCreateApiKey: vi.fn(),
+  mockUpdateApiKey: vi.fn(),
+  mockRevokeApiKey: vi.fn(),
+}));
+vi.mock("@/lib/api/apikey", () => ({
+  listApiKeys: mockListApiKeys,
+  createApiKey: mockCreateApiKey,
+  updateApiKey: mockUpdateApiKey,
+  revokeApiKey: mockRevokeApiKey,
+}));
 
-vi.mocked(getApiKeyService).mockReturnValue({
-  list: mockList,
-  get: vi.fn().mockResolvedValue('{}'),
-  create: mockCreate,
-  update: mockUpdate,
-  delete: vi.fn().mockResolvedValue(undefined),
-  revoke: mockRevoke,
-} as unknown as ReturnType<typeof getApiKeyService>);
+// Component bails out via `if (!currentOrg) return` when there's no org —
+// give every test a stable org so fetch actually fires. The object must
+// be stable across calls — otherwise `useEffect([currentOrg])` reruns
+// every render and loops forever.
+const { stableOrg } = vi.hoisted(() => ({
+  stableOrg: { id: 10, slug: "test-org", name: "Test Org", role: "owner" },
+}));
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stableOrg,
+}));
 
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
@@ -193,15 +208,7 @@ describe("APIKeysSettings", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    vi.mocked(getApiKeyService).mockReturnValue({
-      list: mockList,
-      get: vi.fn().mockResolvedValue('{}'),
-      create: mockCreate,
-      update: mockUpdate,
-      delete: vi.fn().mockResolvedValue(undefined),
-      revoke: mockRevoke,
-    } as unknown as ReturnType<typeof getApiKeyService>);
-    mockList.mockResolvedValue(JSON.stringify({ api_keys: sampleKeys, total: 2 }));
+    mockListApiKeys.mockResolvedValue({ items: sampleKeys, total: 2, limit: 50, offset: 0 });
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -211,7 +218,7 @@ describe("APIKeysSettings", () => {
 
   describe("loading state", () => {
     it("should show loading state initially", () => {
-      mockList.mockReturnValue(new Promise(() => {}));
+      mockListApiKeys.mockReturnValue(new Promise(() => {}));
       render(<APIKeysSettings t={mockT} />);
       expect(
         screen.getByText("settings.apiKeys.loading")
@@ -221,7 +228,7 @@ describe("APIKeysSettings", () => {
 
   describe("empty state", () => {
     it("should show empty state when no keys exist", async () => {
-      mockList.mockResolvedValue(JSON.stringify({ api_keys: [], total: 0 }));
+      mockListApiKeys.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 });
       await renderAndWaitForLoad();
       expect(
         screen.getByText("settings.apiKeys.noKeys")
@@ -229,7 +236,7 @@ describe("APIKeysSettings", () => {
     });
 
     it("should show empty state when api_keys is null/undefined", async () => {
-      mockList.mockResolvedValue(JSON.stringify({ api_keys: null, total: 0 }));
+      mockListApiKeys.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 });
       await renderAndWaitForLoad();
       expect(
         screen.getByText("settings.apiKeys.noKeys")
@@ -242,7 +249,7 @@ describe("APIKeysSettings", () => {
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
-      mockList.mockRejectedValue(new Error("Network error"));
+      mockListApiKeys.mockRejectedValue(new Error("Network error"));
       await renderAndWaitForLoad();
       expect(
         screen.getByText("settings.apiKeys.loadError")
@@ -254,7 +261,7 @@ describe("APIKeysSettings", () => {
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
-      mockList.mockRejectedValue(new Error("Network error"));
+      mockListApiKeys.mockRejectedValue(new Error("Network error"));
       await renderAndWaitForLoad();
       expect(
         screen.getByText("settings.apiKeys.loadError")
@@ -315,13 +322,13 @@ describe("APIKeysSettings", () => {
     });
 
     it("should call t with correct key for loading state", () => {
-      mockList.mockReturnValue(new Promise(() => {}));
+      mockListApiKeys.mockReturnValue(new Promise(() => {}));
       render(<APIKeysSettings t={mockT} />);
       expect(mockT).toHaveBeenCalledWith("settings.apiKeys.loading");
     });
 
     it("should call t with correct key for empty state", async () => {
-      mockList.mockResolvedValue(JSON.stringify({ api_keys: [], total: 0 }));
+      mockListApiKeys.mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 });
       await renderAndWaitForLoad();
       expect(mockT).toHaveBeenCalledWith("settings.apiKeys.noKeys");
     });
@@ -330,7 +337,7 @@ describe("APIKeysSettings", () => {
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
-      mockList.mockRejectedValue(new Error("fail"));
+      mockListApiKeys.mockRejectedValue(new Error("fail"));
       await renderAndWaitForLoad();
       expect(mockT).toHaveBeenCalledWith("settings.apiKeys.loadError");
       consoleSpy.mockRestore();

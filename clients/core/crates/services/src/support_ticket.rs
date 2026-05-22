@@ -13,51 +13,12 @@ impl SupportTicketService {
         Self { client }
     }
 
-    // Multipart endpoints stay on REST: Connect-RPC has no multipart wire,
-    // and ticket creation / message replies carry optional file uploads.
-
-    pub async fn create_ticket(
-        &self, title: &str, category: &str, content: &str,
-        priority: Option<String>, file_data: Vec<Vec<u8>>, file_names: Vec<String>,
-    ) -> Result<String, String> {
-        let mut form = reqwest::multipart::Form::new()
-            .text("title", title.to_string())
-            .text("category", category.to_string())
-            .text("content", content.to_string());
-        if let Some(p) = priority { form = form.text("priority", p); }
-        for (i, (data, name)) in file_data.into_iter().zip(file_names.iter()).enumerate() {
-            let part = reqwest::multipart::Part::bytes(data).file_name(name.clone());
-            form = form.part(format!("files[{i}]"), part);
-        }
-        let resp = self.client
-            .post_multipart::<serde_json::Value>("/api/v1/support-tickets", form)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn add_message(
-        &self, ticket_id: i64, content: &str,
-        file_data: Vec<Vec<u8>>, file_names: Vec<String>,
-    ) -> Result<String, String> {
-        let mut form = reqwest::multipart::Form::new()
-            .text("content", content.to_string());
-        for (i, (data, name)) in file_data.into_iter().zip(file_names.iter()).enumerate() {
-            let part = reqwest::multipart::Part::bytes(data).file_name(name.clone());
-            form = form.part(format!("files[{i}]"), part);
-        }
-        let resp = self.client
-            .post_multipart::<serde_json::Value>(
-                &format!("/api/v1/support-tickets/{ticket_id}/messages"), form,
-            )
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
     // -------- Connect-RPC (binary wire) --------
     //
-    // TS encodes via @bufbuild/protobuf .toBinary() → wasm bridge → here →
-    // ApiClient.*_connect (binary in / binary out, conventions §2.5). No
-    // JSON path on the client.
+    // All operations including create / message-reply / attachment flow
+    // go through Connect-binary wire (conventions §2.5). Multipart REST is
+    // gone — attachments use a 3-step presigned-URL handshake driven by
+    // the TS / Swift caller (presign → S3 PUT → associate).
 
     pub async fn list_support_tickets_connect(
         &self, request_bytes: &[u8],
@@ -83,6 +44,42 @@ impl SupportTicketService {
         let req = st_proto::GetAttachmentUrlRequest::decode(request_bytes)
             .map_err(|e| format!("decode get_attachment_url request: {e}"))?;
         let resp = self.client.get_support_ticket_attachment_url_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn create_support_ticket_connect(
+        &self, request_bytes: &[u8],
+    ) -> Result<Vec<u8>, String> {
+        let req = st_proto::CreateSupportTicketRequest::decode(request_bytes)
+            .map_err(|e| format!("decode create_support_ticket request: {e}"))?;
+        let resp = self.client.create_support_ticket_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn add_support_ticket_message_connect(
+        &self, request_bytes: &[u8],
+    ) -> Result<Vec<u8>, String> {
+        let req = st_proto::AddSupportTicketMessageRequest::decode(request_bytes)
+            .map_err(|e| format!("decode add_support_ticket_message request: {e}"))?;
+        let resp = self.client.add_support_ticket_message_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn presign_attachment_upload_connect(
+        &self, request_bytes: &[u8],
+    ) -> Result<Vec<u8>, String> {
+        let req = st_proto::PresignAttachmentUploadRequest::decode(request_bytes)
+            .map_err(|e| format!("decode presign_attachment_upload request: {e}"))?;
+        let resp = self.client.presign_support_ticket_attachment_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn associate_attachments_connect(
+        &self, request_bytes: &[u8],
+    ) -> Result<Vec<u8>, String> {
+        let req = st_proto::AssociateAttachmentsRequest::decode(request_bytes)
+            .map_err(|e| format!("decode associate_attachments request: {e}"))?;
+        let resp = self.client.associate_support_ticket_attachments_connect(&req).await.map_err(crate::wire)?;
         Ok(resp.encode_to_vec())
     }
 }

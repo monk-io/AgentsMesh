@@ -1,9 +1,8 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
-import { getApiBaseUrl, TEST_ORG_SLUG } from "../../helpers/env";
+import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { textContent } from "../../helpers/test-data";
-
-const CHANNELS = `/api/v1/orgs/${TEST_ORG_SLUG}/channels`;
 
 // Second user in the same org (from seed data)
 const SECOND_USER = { email: "dev2@agentsmesh.local", password: "devpass123" };
@@ -14,340 +13,363 @@ test.describe("Channel IM Group Model", () => {
   // ── Visibility & Membership ──
 
   test("create public channel — creator is auto-member", async ({ api }) => {
-    const res = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Public " + Date.now(),
       visibility: "public",
-    });
-    expect(res.status).toBe(201);
-    const { channel } = await res.json();
+    }) as { id: bigint; visibility: string; isMember: boolean; memberCount: bigint };
     expect(channel.visibility).toBe("public");
-    expect(channel.is_member).toBe(true);
-    expect(channel.member_count).toBeGreaterThanOrEqual(1);
+    expect(channel.isMember).toBe(true);
+    expect(Number(channel.memberCount)).toBeGreaterThanOrEqual(1);
 
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("create private channel with initial members", async ({ api }) => {
-    // Get org members to find a second user ID
-    const membersRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/members`);
-    const { members } = await membersRes.json();
-    const otherUser = members?.find((m: { user?: { email: string } }) =>
-      m.user?.email !== "dev@agentsmesh.local"
-    );
+    const cc = await api.connect();
+    const { items: members } = await cc.org.listMembers({ orgSlug: TEST_ORG_SLUG }) as {
+      items: { userId: bigint; user?: { email: string } }[];
+    };
+    const otherUser = members?.find((m) => m.user?.email !== "dev@agentsmesh.local");
 
-    const body: Record<string, unknown> = {
+    const memberIds: bigint[] = otherUser?.userId ? [otherUser.userId] : [];
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Private " + Date.now(),
       visibility: "private",
-    };
-    if (otherUser?.user_id) {
-      body.member_ids = [otherUser.user_id];
-    }
-
-    const res = await api.post(CHANNELS, body);
-    expect(res.status).toBe(201);
-    const { channel } = await res.json();
+      memberIds,
+    }) as { id: bigint; visibility: string; isMember: boolean };
     expect(channel.visibility).toBe("private");
-    expect(channel.is_member).toBe(true);
+    expect(channel.isMember).toBe(true);
 
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("private channel invisible to non-member", async ({ api }) => {
-    // Create private channel as dev user
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Invisible " + Date.now(),
       visibility: "private",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Login as admin user (different user)
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
+    const adminCc = api.connectWithToken(adminToken);
 
-    // Admin should NOT see this private channel in list
-    const listRes = await api.getWithToken(CHANNELS, adminToken);
-    const { channels } = await listRes.json();
-    const found = channels?.find((c: { id: number }) => c.id === channel.id);
+    const { items: visible } = await adminCc.channel.listChannels({ orgSlug: TEST_ORG_SLUG }) as {
+      items: { id: bigint }[];
+    };
+    const found = visible?.find((c) => c.id === channel.id);
     expect(found).toBeUndefined();
 
-    // Admin should get 403 on direct access
-    const getRes = await api.getWithToken(`${CHANNELS}/${channel.id}`, adminToken);
-    expect(getRes.status).toBe(403);
+    // Direct access — Connect maps PermissionDenied → 403.
+    await expect(
+      adminCc.channel.getChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id })
+    ).rejects.toMatchObject({ status: 403 });
 
-    // Cleanup — re-login as dev
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   // ── Join / Leave ──
 
   test("join public channel", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Join " + Date.now(),
       visibility: "public",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Login as admin
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
+    const adminCc = api.connectWithToken(adminToken);
 
-    // Admin joins
-    const joinRes = await api.postWithToken(`${CHANNELS}/${channel.id}/join`, {}, adminToken);
-    expect(joinRes.status).toBe(200);
+    await adminCc.channel.joinChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
 
-    // Verify membership
-    const getRes = await api.getWithToken(`${CHANNELS}/${channel.id}`, adminToken);
-    const data = await getRes.json();
-    expect(data.channel.is_member).toBe(true);
+    const detail = await adminCc.channel.getChannel({
+      orgSlug: TEST_ORG_SLUG,
+      id: channel.id,
+    }) as { isMember: boolean };
+    expect(detail.isMember).toBe(true);
 
-    // Cleanup
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("cannot join private channel", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E NoJoin " + Date.now(),
       visibility: "private",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    const joinRes = await api.postWithToken(`${CHANNELS}/${channel.id}/join`, {}, adminToken);
-    expect(joinRes.status).toBe(403);
+    const adminCc = api.connectWithToken(adminToken);
+    await expect(
+      adminCc.channel.joinChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id })
+    ).rejects.toMatchObject({ status: 403 });
 
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("leave channel", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Leave " + Date.now(),
       visibility: "public",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Admin joins then leaves
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    await api.postWithToken(`${CHANNELS}/${channel.id}/join`, {}, adminToken);
-    const leaveRes = await api.postWithToken(`${CHANNELS}/${channel.id}/leave`, {}, adminToken);
-    expect(leaveRes.status).toBe(200);
+    const adminCc = api.connectWithToken(adminToken);
+    await adminCc.channel.joinChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
+    await adminCc.channel.leaveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
 
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("creator cannot leave channel", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E CreatorLeave " + Date.now(),
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    const leaveRes = await api.post(`${CHANNELS}/${channel.id}/leave`, {});
-    expect(leaveRes.status).toBe(403);
+    await expect(
+      cc.channel.leaveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id })
+    ).rejects.toMatchObject({ status: 403 });
 
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   // ── Invite / Remove Members ──
 
   test("invite and remove member", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Invite " + Date.now(),
       visibility: "private",
+    }) as { id: bigint };
+
+    const { items: members } = await cc.org.listMembers({ orgSlug: TEST_ORG_SLUG }) as {
+      items: { userId: bigint; user?: { email: string } }[];
+    };
+    const admin = members?.find((m) => m.user?.email === SECOND_USER.email);
+    if (!admin?.userId) { test.skip(); return; }
+
+    await cc.channel.inviteChannelMembers({
+      orgSlug: TEST_ORG_SLUG,
+      id: channel.id,
+      userIds: [admin.userId],
     });
-    const { channel } = await createRes.json();
 
-    // Get admin user ID
-    const membersRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/members`);
-    const { members } = await membersRes.json();
-    const admin = members?.find((m: { user?: { email: string } }) =>
-      m.user?.email === SECOND_USER.email
-    );
-    if (!admin?.user_id) { test.skip(); return; }
-
-    // Invite
-    const inviteRes = await api.post(`${CHANNELS}/${channel.id}/members`, {
-      user_ids: [admin.user_id],
-    });
-    expect(inviteRes.status).toBe(200);
-
-    // Verify admin can now access
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    const getRes = await api.getWithToken(`${CHANNELS}/${channel.id}`, adminToken);
-    expect(getRes.status).toBe(200);
-
-    // Remove (as creator)
-    await api.login();
-    const removeRes = await api.delete(`${CHANNELS}/${channel.id}/members/${admin.user_id}`);
-    expect(removeRes.status).toBe(200);
-
-    // Verify admin can no longer access
-    const getRes2 = await api.getWithToken(`${CHANNELS}/${channel.id}`, adminToken);
-    expect(getRes2.status).toBe(403);
+    const adminCc = api.connectWithToken(adminToken);
+    const detail = await adminCc.channel.getChannel({
+      orgSlug: TEST_ORG_SLUG,
+      id: channel.id,
+    });
+    expect(detail).toBeTruthy();
 
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.removeChannelMember({
+      orgSlug: TEST_ORG_SLUG,
+      id: channel.id,
+      userId: admin.userId,
+    });
+
+    await expect(
+      adminCc.channel.getChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id })
+    ).rejects.toMatchObject({ status: 403 });
+
+    await api.login();
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("non-creator cannot remove members", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E NoRemove " + Date.now(),
       visibility: "public",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Get creator user ID from members list
-    const chMembersRes = await api.get(`${CHANNELS}/${channel.id}/members`);
-    const { members } = await chMembersRes.json();
-    const creatorId = members?.[0]?.user_id;
+    const { items: chMembers } = await cc.channel.listChannelMembers({
+      orgSlug: TEST_ORG_SLUG,
+      id: channel.id,
+    }) as { items: { userId: bigint }[] };
+    const creatorId = chMembers?.[0]?.userId;
+    if (!creatorId) { test.skip(); return; }
 
-    // Admin joins
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    await api.postWithToken(`${CHANNELS}/${channel.id}/join`, {}, adminToken);
+    const adminCc = api.connectWithToken(adminToken);
+    await adminCc.channel.joinChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
 
-    // Admin tries to remove creator — should fail
-    const rmRes = await fetch(
-      `${getApiBaseUrl()}${CHANNELS}/${channel.id}/members/${creatorId}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${adminToken}` } }
-    );
-    expect(rmRes.status).toBe(403);
+    // Admin (joined but not creator) tries to remove creator — should fail.
+    await expect(
+      adminCc.channel.removeChannelMember({
+        orgSlug: TEST_ORG_SLUG,
+        id: channel.id,
+        userId: creatorId,
+      })
+    ).rejects.toMatchObject({ status: 403 });
 
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   // ── Messages in Private Channel ──
 
   test("non-member cannot send message to private channel", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E PrivMsg " + Date.now(),
       visibility: "private",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Admin is not a member
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    const msgRes = await api.postWithToken(
-      `${CHANNELS}/${channel.id}/messages`,
-      { content: textContent("should fail") },
-      adminToken,
-    );
-    expect(msgRes.status).toBe(403);
+    const adminCc = api.connectWithToken(adminToken);
+    await expect(
+      adminCc.channel.sendChannelMessage({
+        orgSlug: TEST_ORG_SLUG,
+        channelId: channel.id,
+        contentJson: JSON.stringify(textContent("should fail")),
+      })
+    ).rejects.toMatchObject({ status: 403 });
 
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   test("member can send and read messages", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E MemberMsg " + Date.now(),
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Send
-    const sendRes = await api.post(`${CHANNELS}/${channel.id}/messages`, {
-      content: textContent("Hello from E2E"),
-    });
-    expect(sendRes.status).toBe(201);
-    const { message } = await sendRes.json();
-    expect(message.body).toBe("Hello from E2E");
+    const sent = await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      contentJson: JSON.stringify(textContent("Hello from E2E")),
+    }) as { id: bigint; body: string };
+    expect(sent.body).toBe("Hello from E2E");
 
-    // Read
-    const listRes = await api.get(`${CHANNELS}/${channel.id}/messages`);
-    expect(listRes.status).toBe(200);
-    const { messages } = await listRes.json();
-    expect(messages.length).toBeGreaterThanOrEqual(1);
+    const list = await cc.channel.listChannelMessages({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+    }) as { items: unknown[] };
+    expect(list.items.length).toBeGreaterThanOrEqual(1);
 
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   // ── Edit / Delete Messages ──
 
   test("edit and delete own message", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E EditDel " + Date.now(),
+    }) as { id: bigint };
+
+    const message = await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      contentJson: JSON.stringify(textContent("original")),
+    }) as { id: bigint };
+
+    const edited = await cc.channel.editChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      messageId: message.id,
+      contentJson: JSON.stringify(textContent("edited")),
+    }) as { body: string };
+    expect(edited.body).toBe("edited");
+
+    await cc.channel.deleteChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      messageId: message.id,
     });
-    const { channel } = await createRes.json();
 
-    const sendRes = await api.post(`${CHANNELS}/${channel.id}/messages`, {
-      content: textContent("original"),
-    });
-    const { message } = await sendRes.json();
-
-    // Edit
-    const editRes = await api.put(
-      `${CHANNELS}/${channel.id}/messages/${message.id}`,
-      { content: textContent("edited") },
-    );
-    expect(editRes.status).toBe(200);
-    const edited = await editRes.json();
-    expect(edited.message.body).toBe("edited");
-
-    // Delete
-    const delRes = await api.delete(`${CHANNELS}/${channel.id}/messages/${message.id}`);
-    expect(delRes.status).toBe(200);
-
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   // ── Unread Counts & Mark Read ──
 
   test("unread counts and mark read", async ({ api }) => {
-    const createRes = await api.post(CHANNELS, {
+    const cc = await api.connect();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Unread " + Date.now(),
       visibility: "public",
-    });
-    const { channel } = await createRes.json();
+    }) as { id: bigint };
 
-    // Admin joins
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
-    await api.postWithToken(`${CHANNELS}/${channel.id}/join`, {}, adminToken);
+    const adminCc = api.connectWithToken(adminToken);
+    await adminCc.channel.joinChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
 
-    // Creator sends messages
     await api.login();
-    const m1 = await api.post(`${CHANNELS}/${channel.id}/messages`, { content: textContent("msg1") });
-    const msg1 = await m1.json();
-    await api.post(`${CHANNELS}/${channel.id}/messages`, { content: textContent("msg2") });
+    const m1 = await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      contentJson: JSON.stringify(textContent("msg1")),
+    }) as { id: bigint };
+    await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      contentJson: JSON.stringify(textContent("msg2")),
+    });
 
-    // Admin checks unread
-    const unreadRes = await api.getWithToken(`${CHANNELS}/unread`, adminToken);
-    expect(unreadRes.status).toBe(200);
-    const { unread } = await unreadRes.json();
-    const count = unread?.[String(channel.id)] || 0;
+    const counts = await adminCc.channel.getChannelUnreadCounts({ orgSlug: TEST_ORG_SLUG }) as {
+      unread: Record<string, bigint>;
+    };
+    const count = Number(counts.unread?.[String(channel.id)] ?? 0n);
     expect(count).toBeGreaterThanOrEqual(2);
 
-    // Admin marks read up to msg1
-    await api.postWithToken(
-      `${CHANNELS}/${channel.id}/read`,
-      { message_id: msg1.message.id },
-      adminToken,
-    );
+    await adminCc.channel.markChannelRead({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: channel.id,
+      messageId: m1.id,
+    });
 
-    // Unread should decrease
-    const unread2Res = await api.getWithToken(`${CHANNELS}/unread`, adminToken);
-    const { unread: unread2 } = await unread2Res.json();
-    const count2 = unread2?.[String(channel.id)] || 0;
+    const counts2 = await adminCc.channel.getChannelUnreadCounts({ orgSlug: TEST_ORG_SLUG }) as {
+      unread: Record<string, bigint>;
+    };
+    const count2 = Number(counts2.unread?.[String(channel.id)] ?? 0n);
     expect(count2).toBeLessThan(count);
 
     await api.login();
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 
   // ── ListChannels returns visibility + membership ──
 
   test("list channels includes visibility and is_member", async ({ api }) => {
+    const cc = await api.connect();
     const name = "E2E ListVis " + Date.now();
-    const createRes = await api.post(CHANNELS, { name, visibility: "public" });
-    const { channel } = await createRes.json();
+    const channel = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
+      name,
+      visibility: "public",
+    }) as { id: bigint };
 
-    const listRes = await api.get(CHANNELS);
-    const { channels } = await listRes.json();
-    const found = channels?.find((c: { id: number }) => c.id === channel.id);
+    const { items } = await cc.channel.listChannels({ orgSlug: TEST_ORG_SLUG }) as {
+      items: { id: bigint; visibility: string; isMember: boolean; memberCount: bigint }[];
+    };
+    const found = items?.find((c) => c.id === channel.id);
     expect(found).toBeTruthy();
-    expect(found.visibility).toBe("public");
-    expect(found.is_member).toBe(true);
-    expect(typeof found.member_count).toBe("number");
+    expect(found?.visibility).toBe("public");
+    expect(found?.isMember).toBe(true);
+    expect(typeof Number(found?.memberCount ?? 0n)).toBe("number");
 
-    await api.post(`${CHANNELS}/${channel.id}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });
 });

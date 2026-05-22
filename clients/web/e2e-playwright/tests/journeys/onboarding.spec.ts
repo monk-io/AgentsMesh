@@ -1,7 +1,9 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { CLEANUP } from "../../helpers/test-data";
 import { DbFixture } from "../../fixtures/db.fixture";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 /**
  * Journey: New User Onboarding
@@ -15,7 +17,7 @@ test.describe("Journey: New User Onboarding", () => {
   const EMAIL = "onboarding-journey@test.local";
   const PASSWORD = "JourneyPass123!";
 
-  test.beforeAll(async ({}, testInfo) => {
+  test.beforeAll(async ({}, _testInfo) => {
     // Pre-clean any leftover data
     const db = new DbFixture();
     try { db.cleanup(CLEANUP.userAndOrgsByEmail(EMAIL)); } catch { /* */ }
@@ -23,7 +25,7 @@ test.describe("Journey: New User Onboarding", () => {
 
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  test("full onboarding: register → verify → org → workspace", async ({ page, api, db }) => {
+  test("full onboarding: register → verify → org → workspace", async ({ page, db }) => {
     // ── Step 1: Register via UI ──
     await page.goto("/register");
     await page.locator("#name").fill("Journey Test User");
@@ -44,9 +46,11 @@ test.describe("Journey: New User Onboarding", () => {
       `SELECT email_verification_token FROM users WHERE email = '${EMAIL}'`
     );
     if (verifyToken) {
-      await api.postPublic("/api/v1/auth/verify-email", {
-        token: verifyToken,
-      });
+      // VerifyEmail is an unauthenticated AuthService RPC — build a client
+      // without a token rather than reusing the authenticated fixture.
+      const publicCc = makeConnectClient(null);
+      await publicCc.auth.verifyEmail({ token: verifyToken });
+
       const verified = db.queryValue(
         `SELECT is_email_verified::text FROM users WHERE email = '${EMAIL}'`
       );

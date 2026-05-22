@@ -1,44 +1,53 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
+//
+// REST sent the calling pod in the X-Pod-Key header; Connect names it
+// explicitly in `initiator_pod` on every BindingService request.
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { pollUntil } from "../../helpers/retry";
-
-const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
+import type { ConnectClient } from "../../helpers/connect-client";
 
 /**
- * Binding API tests — require running pods with X-Pod-Key header.
+ * Binding API tests — require running pods. The calling pod identity travels
+ * inside the proto request (was X-Pod-Key on REST).
  * Maps to: TC-BIND-001~004
  */
 test.describe("Pod Binding API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /** Create a running pod and return its key */
+  /** Create a running pod and return its key. */
   async function createRunningPod(
-    api: InstanceType<typeof import("../../fixtures/api.fixture").ApiFixture>,
-    prompt: string
+    cc: ConnectClient,
+    prompt: string,
   ): Promise<string | null> {
-    const rRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
-    const runners = (await rRes.json()).runners;
-    if (!runners?.length) return null;
+    const runnersRes = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as {
+      items: { id: bigint }[];
+    };
+    if (!runnersRes.items?.length) return null;
 
-    const aRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await aRes.json()).builtin_agents;
-    if (!agents?.length) return null;
+    const agentsRes = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as {
+      builtinAgents: { slug: string }[];
+    };
+    if (!agentsRes.builtinAgents?.length) return null;
 
-    const res = await api.post(PODS_BASE, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt,
-    });
-    const data = await res.json();
-    const podKey = data.pod_key || data.pod?.pod_key;
+    const created = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      agentSlug: agentsRes.builtinAgents[0].slug,
+      runnerId: runnersRes.items[0].id,
+      agentfileLayer: `PROMPT ${JSON.stringify(prompt)}\n`,
+      cols: 80,
+      rows: 24,
+    }) as { pod?: { podKey: string } };
+    const podKey = created.pod?.podKey;
     if (!podKey) return null;
 
     await pollUntil(
       async () => {
-        const r = await api.get(`${PODS_BASE}/${podKey}`);
-        const d = await r.json();
-        return (d.pod?.status || d.status) === "running";
+        const res = await cc.pod.getPod({ orgSlug: TEST_ORG_SLUG, podKey }) as {
+          status: string;
+        };
+        return res.status === "running";
       },
       { maxAttempts: 10, intervalMs: 3000, label: "pod-running" }
     ).catch(() => {});
@@ -47,33 +56,31 @@ test.describe("Pod Binding API", () => {
   }
 
   /**
-   * TC-BIND-001: Request binding between two pods
+   * TC-BIND-001: Request binding between two pods.
    */
   test("request binding between pods", async ({ api }) => {
-    const podA = await createRunningPod(api, "E2E Bind Pod A");
-    const podB = await createRunningPod(api, "E2E Bind Pod B");
+    const cc = await api.connect();
+    const podA = await createRunningPod(cc, "E2E Bind Pod A");
+    const podB = await createRunningPod(cc, "E2E Bind Pod B");
     if (!podA || !podB) { test.skip(); return; }
 
-    // Request binding from Pod A → Pod B using X-Pod-Key
-    const bindRes = await fetch(
-      `${(await api.get("/api/v1/config/deployment")).url.replace("/api/v1/config/deployment", "")}/api/v1/orgs/${TEST_ORG_SLUG}/bindings`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Pod-Key": podA,
-        },
-        body: JSON.stringify({
-          target_pod: podB,
-          scopes: ["pod:read"],
-        }),
-      }
-    );
-    // 201 if created, 400/401 if pod-key auth not supported via Traefik
-    expect([201, 400, 401]).toContain(bindRes.status);
-
-    // Cleanup
-    await api.post(`${PODS_BASE}/${podA}/terminate`, {});
-    await api.post(`${PODS_BASE}/${podB}/terminate`, {});
+    try {
+      const binding = await cc.binding.requestBinding({
+        orgSlug: TEST_ORG_SLUG,
+        initiatorPod: podA,
+        targetPod: podB,
+        scopes: ["pod:read"],
+      }) as { id: bigint; initiatorPod: string; targetPod: string };
+      expect(binding.initiatorPod).toBe(podA);
+      expect(binding.targetPod).toBe(podB);
+    } catch (err: unknown) {
+      // 4xx is acceptable — the pods may not satisfy the binding policy.
+      const status = (err as { status: number }).status;
+      expect(status).toBeGreaterThanOrEqual(400);
+      expect(status).toBeLessThan(500);
+    } finally {
+      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey: podA }).catch(() => {});
+      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey: podB }).catch(() => {});
+    }
   });
 });

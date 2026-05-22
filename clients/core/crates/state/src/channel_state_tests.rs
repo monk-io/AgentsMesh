@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 use crate::channel_state::{ChannelSortMode, ChannelState};
-use agentsmesh_types::*;
+use crate::channel_types::{Channel, ChannelMessage, SenderAgentInfo, SenderPodInfo, User};
 
-fn ch(id: i64, name: &str) -> Channel { Channel { id, name: name.into(), description: None, is_archived: false, visibility: None, is_member: false, member_count: None, organization_id: None, document: None, repository_id: None, ticket_id: None, ticket_slug: None, created_by_pod: None, created_by_user_id: None, created_at: None, updated_at: None } }
-fn msg(id: i64, ch: i64, content: &str) -> ChannelMessage { ChannelMessage { id, channel_id: ch, body: content.into(), content: None, mentions: None, reply_to: None, sender_user: None, sender_user_id: None, sender_pod: None, sender_pod_info: None, message_type: None, pod_key: None, metadata: None, edited_at: None, is_deleted: None, created_at: None } }
+fn ch(id: i64, name: &str) -> Channel {
+    Channel { id, name: name.into(), ..Default::default() }
+}
+fn msg(id: i64, channel: i64, content: &str) -> ChannelMessage {
+    ChannelMessage { id, channel_id: channel, body: content.into(), ..Default::default() }
+}
 fn msg_with_sender(id: i64, ch: i64, content: &str, user_id: i64, username: &str) -> ChannelMessage {
     let mut m = msg(id, ch, content);
     m.sender_user_id = Some(user_id);
-    m.sender_user = Some(User { id: user_id, email: format!("{username}@test.com"), username: username.into(), name: Some(username.into()), avatar_url: None, is_email_verified: None });
+    m.sender_user = Some(user(user_id, username));
     m.created_at = Some(format!("2026-01-01T00:00:{:02}Z", id));
     m
 }
@@ -29,8 +33,8 @@ fn msg_with_time(id: i64, ch: i64, content: &str, time: &str) -> ChannelMessage 
 #[test] fn update_message_no_cache() { let mut s = ChannelState::new(); s.update_message(1, msg(100,1,"x")); assert!(s.get_messages(1).is_none()); }
 #[test] fn remove_message() { let mut s = ChannelState::new(); s.add_message(1, msg(100,1,"a")); s.add_message(1, msg(101,1,"b")); s.remove_message(1, 100); assert_eq!(s.get_messages(1).unwrap().messages.len(), 1); }
 #[test] fn set_messages() { let mut s = ChannelState::new(); s.set_messages(1, vec![msg(1,1,"a"), msg(2,1,"b")], true); let c = s.get_messages(1).unwrap(); assert_eq!(c.messages.len(), 2); assert!(c.has_more); }
-#[test] fn unread_counts() { let mut s = ChannelState::new(); assert_eq!(s.get_unread_count(1), 0); s.increment_unread(1); s.increment_unread(1); assert_eq!(s.get_unread_count(1), 2); s.clear_channel_unread(1); assert_eq!(s.get_unread_count(1), 0); }
-#[test] fn set_unread_counts() { let mut s = ChannelState::new(); let mut c = HashMap::new(); c.insert(1,5); c.insert(2,3); s.set_unread_counts(c); assert_eq!(s.get_unread_count(1), 5); assert_eq!(s.get_unread_count(2), 3); }
+#[test] fn unread_counts() { let mut s = ChannelState::new(); s.set_channels(vec![ch(1,"a")]); assert_eq!(s.get_unread_count(1), 0); s.increment_unread(1); s.increment_unread(1); assert_eq!(s.get_unread_count(1), 2); s.clear_channel_unread(1); assert_eq!(s.get_unread_count(1), 0); }
+#[test] fn set_unread_counts() { let mut s = ChannelState::new(); s.set_channels(vec![ch(1,"a"), ch(2,"b")]); let mut c = HashMap::new(); c.insert(1,5); c.insert(2,3); s.set_unread_counts(c); assert_eq!(s.get_unread_count(1), 5); assert_eq!(s.get_unread_count(2), 3); }
 #[test] fn get_messages_no_cache() { let s = ChannelState::new(); assert!(s.get_messages(99).is_none()); }
 #[test] fn default_impl() { let s = ChannelState::default(); assert!(s.get_channels().is_empty()); }
 
@@ -165,6 +169,7 @@ fn sorted_channels_without_messages_come_last() {
 #[test]
 fn set_messages_updates_preview() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
     s.set_messages(1, vec![
         msg_with_time(1, 1, "first", "2026-01-01T00:00:00Z"),
         msg_with_time(2, 1, "last", "2026-01-01T00:00:01Z"),
@@ -204,7 +209,7 @@ fn preview_sender_from_pod_info() {
     m.sender_pod_info = Some(SenderPodInfo {
         pod_key: "pod-abc".into(),
         alias: Some("my-agent".into()),
-        agent: Some(SenderAgentInfo { name: "claude".into() }),
+        agent: Some(SenderAgentInfo { name: "claude".into(), ..Default::default() }),
     });
     let preview = ChannelState::make_preview(&m);
     assert_eq!(preview.sender_name, "claude");
@@ -273,6 +278,7 @@ fn prepend_messages_to_empty_cache() {
 #[test]
 fn mention_count_tracking() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1,"a"), ch(2,"b")]);
     assert_eq!(s.get_mention_count(1), 0);
     s.increment_mention(1);
     s.increment_mention(1);
@@ -339,7 +345,14 @@ fn current_user_id() {
 // ── Single channel CRUD ──
 
 fn user(id: i64, username: &str) -> User {
-    User { id, email: format!("{username}@test.com"), username: username.into(), name: Some(username.into()), avatar_url: None, is_email_verified: None }
+    User {
+        id,
+        email: format!("{username}@test.com"),
+        username: username.into(),
+        name: Some(username.into()),
+        avatar_url: None,
+        is_email_verified: None,
+    }
 }
 
 #[test]
@@ -503,6 +516,7 @@ fn select_channel_nonexistent() {
 #[test]
 fn get_all_unread_counts() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1,"a"), ch(2,"b")]);
     s.increment_unread(1);
     s.increment_unread(1);
     s.increment_unread(2);
@@ -515,6 +529,7 @@ fn get_all_unread_counts() {
 #[test]
 fn get_all_mention_counts() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1,"a"), ch(3,"c")]);
     s.increment_mention(1);
     s.increment_mention(3);
     let counts = s.get_all_mention_counts();
@@ -577,6 +592,7 @@ fn enrich_sender_skips_no_current_user() {
 #[test]
 fn on_new_message_enriches_sender() {
     let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
     s.set_current_user(Some(user(10, "alice")));
     let mut m = msg(1, 1, "hi");
     m.sender_user_id = Some(10);

@@ -51,4 +51,52 @@ impl ApiClient {
         )
         .await
     }
+
+    pub async fn create_support_ticket_connect(
+        &self,
+        req: &st_proto::CreateSupportTicketRequest,
+    ) -> Result<st_proto::SupportTicket, ApiError> {
+        connect_call(
+            self,
+            "/proto.support_ticket.v1.SupportTicketService/CreateSupportTicket",
+            req,
+        )
+        .await
+    }
+
+    pub async fn add_support_ticket_message_connect(
+        &self,
+        req: &st_proto::AddSupportTicketMessageRequest,
+    ) -> Result<st_proto::SupportTicketMessage, ApiError> {
+        connect_call(
+            self,
+            "/proto.support_ticket.v1.SupportTicketService/AddSupportTicketMessage",
+            req,
+        )
+        .await
+    }
+
+    pub async fn presign_support_ticket_attachment_connect(
+        &self,
+        req: &st_proto::PresignAttachmentUploadRequest,
+    ) -> Result<st_proto::PresignAttachmentUploadResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.support_ticket.v1.SupportTicketService/PresignAttachmentUpload",
+            req,
+        )
+        .await
+    }
+
+    pub async fn associate_support_ticket_attachments_connect(
+        &self,
+        req: &st_proto::AssociateAttachmentsRequest,
+    ) -> Result<st_proto::AssociateAttachmentsResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.support_ticket.v1.SupportTicketService/AssociateAttachments",
+            req,
+        )
+        .await
+    }
 }

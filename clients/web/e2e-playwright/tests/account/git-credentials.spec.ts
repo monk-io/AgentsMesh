@@ -1,6 +1,6 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { CLEANUP } from "../../helpers/test-data";
 
 test.describe("Git Credentials API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
@@ -9,13 +9,16 @@ test.describe("Git Credentials API", () => {
    * TC-GITCRED-001: List git credentials
    */
   test("list git credentials", async ({ api }) => {
-    const res = await api.get("/api/v1/users/git-credentials");
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.userGitCredential.listGitCredentials({}) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  test("list git credentials without auth returns 401", async ({ api }) => {
-    const res = await api.getWithToken("/api/v1/users/git-credentials", "bad");
-    expect(res.status).toBe(401);
+  test("list git credentials without auth returns unauthenticated", async ({ api }) => {
+    const cc = api.connectWithToken("bad");
+    await expect(
+      cc.userGitCredential.listGitCredentials({})
+    ).rejects.toMatchObject({ status: 401 });
   });
 
   /**
@@ -23,13 +26,14 @@ test.describe("Git Credentials API", () => {
    */
   test("create PAT credential", async ({ api, db }) => {
     db.cleanup(`DELETE FROM user_git_credentials WHERE name = 'E2E Test PAT'`);
-    const res = await api.post("/api/v1/users/git-credentials", {
+    const cc = await api.connect();
+    const created = await cc.userGitCredential.createGitCredential({
       name: "E2E Test PAT",
-      credential_type: "pat",
+      credentialType: "pat",
       pat: "ghp_test_token_12345",
-      host_pattern: "github.com",
-    });
-    expect([200, 201]).toContain(res.status);
+      hostPattern: "github.com",
+    }) as { id: number };
+    expect(created.id).toBeTruthy();
 
     db.cleanup(`DELETE FROM user_git_credentials WHERE name = 'E2E Test PAT'`);
   });
@@ -44,20 +48,20 @@ test.describe("Git Credentials API", () => {
     db.cleanup(
       `DELETE FROM user_git_credentials WHERE name IN ('E2E Update Target', 'E2E Updated Name')`
     );
-    const createRes = await api.post("/api/v1/users/git-credentials", {
+    const cc = await api.connect();
+    const created = await cc.userGitCredential.createGitCredential({
       name: "E2E Update Target",
-      credential_type: "pat",
+      credentialType: "pat",
       pat: "ghp_update_test",
-      host_pattern: "github.com",
-    });
-    const created = await createRes.json();
-    const id = created.credential?.id || created.id;
-    if (!id) { test.skip(); return; }
+      hostPattern: "github.com",
+    }) as { id: number };
+    if (!created.id) { test.skip(); return; }
 
-    const updateRes = await api.put(`/api/v1/users/git-credentials/${id}`, {
+    const updated = await cc.userGitCredential.updateGitCredential({
+      id: created.id,
       name: "E2E Updated Name",
-    });
-    expect(updateRes.status).toBe(200);
+    }) as { name: string };
+    expect(updated.name).toBe("E2E Updated Name");
 
     db.cleanup(`DELETE FROM user_git_credentials WHERE name = 'E2E Updated Name'`);
   });
@@ -66,18 +70,16 @@ test.describe("Git Credentials API", () => {
    * TC-GITCRED-004: Delete git credential
    */
   test("delete git credential", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/git-credentials", {
-      name: "E2E Delete Target",
-      credential_type: "pat",
+    const cc = await api.connect();
+    const created = await cc.userGitCredential.createGitCredential({
+      name: "E2E Delete Target " + Date.now(),
+      credentialType: "pat",
       pat: "ghp_delete_test",
-      host_pattern: "github.com",
-    });
-    const created = await createRes.json();
-    const id = created.credential?.id || created.id;
-    if (!id) { test.skip(); return; }
+      hostPattern: "github.com",
+    }) as { id: number };
+    if (!created.id) { test.skip(); return; }
 
-    const delRes = await api.delete(`/api/v1/users/git-credentials/${id}`);
-    expect(delRes.status).toBe(200);
+    await cc.userGitCredential.deleteGitCredential({ id: created.id });
   });
 
   /**
@@ -87,28 +89,24 @@ test.describe("Git Credentials API", () => {
     db.cleanup(
       `DELETE FROM user_git_credentials WHERE name = 'E2E Default Target'`
     );
-    const createRes = await api.post("/api/v1/users/git-credentials", {
+    const cc = await api.connect();
+    const created = await cc.userGitCredential.createGitCredential({
       name: "E2E Default Target",
-      credential_type: "pat",
+      credentialType: "pat",
       pat: "ghp_default_test",
-      host_pattern: "github.com",
-    });
-    const created = await createRes.json();
-    const id = created.credential?.id || created.id;
-    if (!id) { test.skip(); return; }
+      hostPattern: "github.com",
+    }) as { id: number };
+    if (!created.id) { test.skip(); return; }
 
     // Set default
-    const setRes = await api.post("/api/v1/users/git-credentials/default", {
-      credential_id: id,
-    });
-    expect(setRes.status).toBe(200);
+    await cc.userGitCredential.setDefaultGitCredential({ credentialId: created.id });
 
     // Get default
-    const getRes = await api.get("/api/v1/users/git-credentials/default");
-    expect(getRes.status).toBe(200);
+    const dflt = await cc.userGitCredential.getDefaultGitCredential({}) as Record<string, unknown>;
+    expect(dflt).toBeTruthy();
 
     // Clear and cleanup
-    await api.delete("/api/v1/users/git-credentials/default");
+    await cc.userGitCredential.clearDefaultGitCredential({});
     db.cleanup(`DELETE FROM user_git_credentials WHERE name = 'E2E Default Target'`);
   });
 });

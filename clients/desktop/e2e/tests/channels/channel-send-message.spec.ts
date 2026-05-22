@@ -18,10 +18,14 @@ test("Channels · send message appears in list", async ({ page }) => {
     }).electronAPI;
     const reqJson = JSON.stringify({ name: chName, visibility: "public" });
     const json = await api.invoke("channelCreateChannel", reqJson) as string;
-    return JSON.parse(json) as { id: number };
+    return JSON.parse(json) as { id: number | string };
   }, name);
 
-  const channelId = createResult.id;
+  // Connect-JSON wire serialises int64 as string (`"1187"`); the
+  // legacy `channelCreateChannel` IPC shim doesn't unwrap this for us.
+  // Normalise on the consumer side so the > 0 guard + the URL we build
+  // below stay numeric-safe.
+  const channelId = Number(createResult.id);
   expect(channelId).toBeGreaterThan(0);
 
   await gotoHash(page, `/${TEST_ORG_SLUG}/channels/${channelId}`);

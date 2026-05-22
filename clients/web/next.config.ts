@@ -107,11 +107,21 @@ const nextConfig: NextConfig = {
 
     // 仅在本地开发且配置了代理目标时启用
     if (process.env.NODE_ENV === "development" && proxyTarget) {
-      console.log(`[Next.js] API proxy enabled: /api/* → ${proxyTarget}/api/*`);
+      console.log(`[Next.js] API proxy enabled: /api/* + /proto.* + /health → ${proxyTarget}`);
       return [
         {
           source: "/api/:path*",
           destination: `${proxyTarget}/api/:path*`,
+        },
+        // Connect-RPC procedures use the path `/proto.<svc>.v1.Service/Method`.
+        // Next.js path-to-regexp doesn't tolerate escaped dots in `source`,
+        // so match by the `connect-protocol-version` header that every
+        // Connect client sends. Browsers without this header (regular page
+        // requests) don't match — keeps the marketing routes intact.
+        {
+          source: "/:svc/:method",
+          has: [{ type: "header", key: "connect-protocol-version" }],
+          destination: `${proxyTarget}/:svc/:method`,
         },
         {
           source: "/health",

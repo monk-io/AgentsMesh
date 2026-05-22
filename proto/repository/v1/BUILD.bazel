@@ -1,8 +1,6 @@
 load("@rules_go//proto:def.bzl", "go_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library", "rust_prost_transform")
-
 
 # R2: opt into serde derive on every generated message/enum so the same
 # Rust struct doubles as wire DTO + JSON-friendly cache/state type.
@@ -10,17 +8,18 @@ load("@rules_rust_prost//:defs.bzl", "rust_prost_library", "rust_prost_transform
 # doesn't treat it as a flag separator.
 rust_prost_transform(
     name = "repository_serde_transform",
-    deps = ["@crates//:serde"],
     prost_opts = [
         "type_attribute=.=#[derive(serde::Serialize\\, serde::Deserialize)]",
         "type_attribute=.=#[serde(default)]",
     ],
+    deps = ["@crates//:serde"],
 )
+
 proto_library(
     name = "repository_proto",
     srcs = ["repository.proto"],
-    visibility = ["//visibility:public"],
     data = [":repository_serde_transform"],
+    visibility = ["//visibility:public"],
 )
 
 go_proto_library(

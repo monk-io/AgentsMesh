@@ -1,6 +1,8 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { randomUUID } from "crypto";
 
-import { test, expect, orgSlug, apiBase } from "../../fixtures/blockstore.fixture";
+import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 // Image upload path (F-end media): file input → /files/presign → PUT to S3
 // → block.data.url set → <img src> shows the uploaded asset. Verifies the
@@ -12,31 +14,36 @@ import { test, expect, orgSlug, apiBase } from "../../fixtures/blockstore.fixtur
 // the presign contract is the only thing the backend owns; the PUT and the
 // subsequent block update are the pieces that can silently regress.
 
+// Phase E (wasm Connect ServerStream bridge) is now real, so the page
+// hydrates through the normal zustand `_tick` cycle. The presign contract
+// has API-level coverage; this spec asserts the upload UI's end-to-end
+// integration with block.data.url.
 test("image block stores uploaded asset URL end-to-end", async ({
   authenticatedPage,
-  api,
   token,
   isolatedWorkspace,
 }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID, rootID } = isolatedWorkspace;
   // 1. Seed an empty image block via API so we don't have to click through
   // the slash menu. The renderer's upload UI is the real surface under test.
   const imageID = randomUUID();
-  await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    workspace_id: workspaceID,
+  await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
     ops: [
       {
         op: "createBlock",
         // RequiredDataKey["url"] enforces presence, not non-empty, so an
         // empty string seeds the block in its "upload" render state.
-        payload: { id: imageID, type: "image", data: { url: "" }, text: "" },
+        payloadJson: JSON.stringify({ id: imageID, type: "image", data: { url: "" }, text: "" }),
       },
       {
         op: "addRef",
-        payload: { from: rootID, to: imageID, rel: "nest", order_key: `zzi${Date.now().toString(36)}` },
+        payloadJson: JSON.stringify({ from: rootID, to: imageID, rel: "nest", order_key: `zzi${Date.now().toString(36)}` }),
       },
     ],
-    idempotency_key: `e2e-image-seed-${imageID}`,
+    idempotencyKey: `e2e-image-seed-${imageID}`,
   });
 
   // 2. Open the page and locate the block's upload button. Empty state
@@ -70,9 +77,8 @@ test("image block stores uploaded asset URL end-to-end", async ({
   // the new data.url. Without this the test races the S3 PUT + store sync.
   const updatePromise = authenticatedPage.waitForResponse(
     (r) =>
-      r.url().includes("/blocks/ops") &&
+      r.url().includes("BlockstoreService/ApplyOps") &&
       r.request().method() === "POST" &&
-      (r.request().postData() ?? "").includes("updateBlock") &&
       (r.request().postData() ?? "").includes(imageID),
     { timeout: 20_000 },
   );
@@ -82,35 +88,26 @@ test("image block stores uploaded asset URL end-to-end", async ({
 
   // 4. Assert the stored url is a non-empty http(s) URL and that the
   // renderer reflects it in an <img src>.
-  const subtree = await api.get<{ blocks: Array<{ id: string; data: Record<string, unknown> }> }>(
-    `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/subtree?root=${rootID}`,
-  );
+  const subtree = await cc.blockstore.getSubtree({
+    orgSlug,
+    workspaceId: workspaceID,
+    rootId: rootID,
+  }) as { blocks: Array<{ id: string; dataJson: string }> };
   const stored = subtree.blocks.find((b) => b.id === imageID);
   expect(stored, "image block must still exist").toBeDefined();
-  const url = stored!.data.url;
+  const storedData = JSON.parse(stored!.dataJson) as { url?: unknown };
+  const url = storedData.url;
   expect(typeof url).toBe("string");
-  expect(url).toMatch(/^https?:\/\//);
+  expect(url as string).toMatch(/^https?:\/\//);
 
   // Defensive: verify the backend presign path is reachable with this token,
   // guarding against silent regressions in the files service.
-  const presignRes = await fetch(`${apiBase}/api/v1/orgs/${orgSlug}/files/presign`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "X-Organization-Slug": orgSlug,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ filename: "probe.png", content_type: "image/png", size: 1024 }),
-  });
-  expect(presignRes.status).toBe(200);
+  const presigned = await cc.file.presignUpload({
+    orgSlug,
+    filename: "probe.png",
+    contentType: "image/png",
+    size: 1024n,
+  }) as { putUrl: string; getUrl: string };
+  expect(presigned.putUrl).toBeTruthy();
+  expect(presigned.getUrl).toBeTruthy();
 });
-
-async function rootBlockID(
-  api: { get<T>(path: string): Promise<T> },
-  workspaceID: string,
-): Promise<string> {
-  const res = await api.get<{ workspaces: Array<{ id: string; root_block_id: string }> }>(
-    `/api/v1/orgs/${orgSlug}/blocks/workspaces`,
-  );
-  return res.workspaces.find((w) => w.id === workspaceID)!.root_block_id;
-}

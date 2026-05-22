@@ -1,5 +1,5 @@
 use agentsmesh_state::org_state::{OrgMemberView, OrgState};
-use agentsmesh_types::Organization;
+use agentsmesh_state::auth_types::Organization;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

@@ -31,7 +31,7 @@ test.describe("Repository Connect-RPC round-trip", () => {
     });
 
     await page.goto(`/${TEST_ORG_SLUG}/repositories`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // RepositoriesSettings renders the list via listRepositories() in
     // repositoryConnect.ts. If the proto decoding drops fields silently
@@ -68,7 +68,10 @@ test.describe("Repository Connect-RPC round-trip", () => {
     });
 
     await page.goto(`/${TEST_ORG_SLUG}/repositories/${id}`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
+    // GetRepository fires after wasm hydration + the page's data hook runs
+    // — `load` returns before that. Poll the captured status to bridge.
+    await expect.poll(() => getRepoStatus, { timeout: 8_000 }).toBeGreaterThan(0);
 
     expect(getRepoStatus, "GetRepository Connect call should succeed").toBeGreaterThan(0);
     expect(getRepoStatus).toBeLessThan(400);

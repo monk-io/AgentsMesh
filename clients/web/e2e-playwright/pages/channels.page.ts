@@ -77,7 +77,7 @@ export class ChannelsPage {
 
   async goto(): Promise<void> {
     await this.page.goto(`/${this.orgSlug}/channels`);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("load");
   }
 
   async createChannel(name: string, options?: {

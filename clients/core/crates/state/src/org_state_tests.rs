@@ -1,5 +1,4 @@
-use agentsmesh_types::Organization;
-
+use crate::auth_types::Organization;
 use crate::org_state::{OrgMemberView, OrgState};
 
 fn make_org(id: i64, name: &str) -> Organization {

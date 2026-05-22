@@ -31,7 +31,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file billing/v1/billing.proto.
  */
 export const file_billing_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("ChhiaWxsaW5nL3YxL2JpbGxpbmcucHJvdG8SEHByb3RvLmJpbGxpbmcudjEixQIKEFN1YnNjcmlwdGlvblBsYW4SCgoCaWQYASABKAMSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSHgoWcHJpY2VfcGVyX3NlYXRfbW9udGhseRgEIAEoARIdChVwcmljZV9wZXJfc2VhdF95ZWFybHkYBSABKAESHAoUaW5jbHVkZWRfcG9kX21pbnV0ZXMYBiABKAUSHgoWcHJpY2VfcGVyX2V4dHJhX21pbnV0ZRgHIAEoARIRCgltYXhfdXNlcnMYCCABKAUSEwoLbWF4X3J1bm5lcnMYCSABKAUSGwoTbWF4X2NvbmN1cnJlbnRfcG9kcxgKIAEoBRIYChBtYXhfcmVwb3NpdG9yaWVzGAsgASgFEhEKCWlzX2FjdGl2ZRgMIAEoCBISCgpjcmVhdGVkX2F0GA0gASgJIv0GCgxTdWJzY3JpcHRpb24SCgoCaWQYASABKAMSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgDEg8KB3BsYW5faWQYAyABKAMSDgoGc3RhdHVzGAQgASgJEhUKDWJpbGxpbmdfY3ljbGUYBSABKAkSHAoUY3VycmVudF9wZXJpb2Rfc3RhcnQYBiABKAkSGgoSY3VycmVudF9wZXJpb2RfZW5kGAcgASgJEjUKBHBsYW4YCCABKAsyIi5wcm90by5iaWxsaW5nLnYxLlN1YnNjcmlwdGlvblBsYW5IAIgBARIdChBwYXltZW50X3Byb3ZpZGVyGAkgASgJSAGIAQESGwoOcGF5bWVudF9tZXRob2QYCiABKAlIAogBARISCgphdXRvX3JlbmV3GAsgASgIEhIKCnNlYXRfY291bnQYDCABKAUSHwoSc3RyaXBlX2N1c3RvbWVyX2lkGA0gASgJSAOIAQESIwoWc3RyaXBlX3N1YnNjcmlwdGlvbl9pZBgOIAEoCUgEiAEBEiUKGGxlbW9uc3F1ZWV6eV9jdXN0b21lcl9pZBgPIAEoCUgFiAEBEikKHGxlbW9uc3F1ZWV6eV9zdWJzY3JpcHRpb25faWQYECABKAlIBogBARIYCgtjYW5jZWxlZF9hdBgRIAEoCUgHiAEBEhwKFGNhbmNlbF9hdF9wZXJpb2RfZW5kGBIgASgIEhYKCWZyb3plbl9hdBgTIAEoCUgIiAEBEh4KEWRvd25ncmFkZV90b19wbGFuGBQgASgJSAmIAQESHwoSbmV4dF9iaWxsaW5nX2N5Y2xlGBUgASgJSAqIAQESEgoKY3JlYXRlZF9hdBgWIAEoCRISCgp1cGRhdGVkX2F0GBcgASgJQgcKBV9wbGFuQhMKEV9wYXltZW50X3Byb3ZpZGVyQhEKD19wYXltZW50X21ldGhvZEIVChNfc3RyaXBlX2N1c3RvbWVyX2lkQhkKF19zdHJpcGVfc3Vic2NyaXB0aW9uX2lkQhsKGV9sZW1vbnNxdWVlenlfY3VzdG9tZXJfaWRCHwodX2xlbW9uc3F1ZWV6eV9zdWJzY3JpcHRpb25faWRCDgoMX2NhbmNlbGVkX2F0QgwKCl9mcm96ZW5fYXRCFAoSX2Rvd25ncmFkZV90b19wbGFuQhUKE19uZXh0X2JpbGxpbmdfY3ljbGUi8AEKDVVzYWdlT3ZlcnZpZXcSEwoLcG9kX21pbnV0ZXMYASABKAESHAoUaW5jbHVkZWRfcG9kX21pbnV0ZXMYAiABKAESDQoFdXNlcnMYAyABKAUSEQoJbWF4X3VzZXJzGAQgASgFEg8KB3J1bm5lcnMYBSABKAUSEwoLbWF4X3J1bm5lcnMYBiABKAUSFwoPY29uY3VycmVudF9wb2RzGAcgASgFEhsKE21heF9jb25jdXJyZW50X3BvZHMYCCABKAUSFAoMcmVwb3NpdG9yaWVzGAkgASgFEhgKEG1heF9yZXBvc2l0b3JpZXMYCiABKAUigAIKD0JpbGxpbmdPdmVydmlldxI1CgRwbGFuGAEgASgLMiIucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb25QbGFuSACIAQESDgoGc3RhdHVzGAIgASgJEhUKDWJpbGxpbmdfY3ljbGUYAyABKAkSHAoUY3VycmVudF9wZXJpb2Rfc3RhcnQYBCABKAkSGgoSY3VycmVudF9wZXJpb2RfZW5kGAUgASgJEhwKFGNhbmNlbF9hdF9wZXJpb2RfZW5kGAYgASgIEi4KBXVzYWdlGAcgASgLMh8ucHJvdG8uYmlsbGluZy52MS5Vc2FnZU92ZXJ2aWV3QgcKBV9wbGFuIqkDCgdJbnZvaWNlEgoKAmlkGAEgASgDEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoAxIdChBwYXltZW50X29yZGVyX2lkGAMgASgDSACIAQESEgoKaW52b2ljZV9ubxgEIAEoCRIOCgZzdGF0dXMYBSABKAkSEAoIY3VycmVuY3kYBiABKAkSEAoIc3VidG90YWwYByABKAESEgoKdGF4X2Ftb3VudBgIIAEoARINCgV0b3RhbBgJIAEoARIUCgxwZXJpb2Rfc3RhcnQYCiABKAkSEgoKcGVyaW9kX2VuZBgLIAEoCRIUCgdwZGZfdXJsGAwgASgJSAGIAQESFgoJaXNzdWVkX2F0GA0gASgJSAKIAQESEwoGZHVlX2F0GA4gASgJSAOIAQESFAoHcGFpZF9hdBgPIAEoCUgEiAEBEhIKCmNyZWF0ZWRfYXQYECABKAkSEgoKdXBkYXRlZF9hdBgRIAEoCUITChFfcGF5bWVudF9vcmRlcl9pZEIKCghfcGRmX3VybEIMCgpfaXNzdWVkX2F0QgkKB19kdWVfYXRCCgoIX3BhaWRfYXQidwoJU2VhdFVzYWdlEhMKC3RvdGFsX3NlYXRzGAEgASgFEhIKCnVzZWRfc2VhdHMYAiABKAUSFwoPYXZhaWxhYmxlX3NlYXRzGAMgASgFEhEKCW1heF9zZWF0cxgEIAEoBRIVCg1jYW5fYWRkX3NlYXRzGAUgASgIIkYKDkRlcGxveW1lbnRJbmZvEhcKD2RlcGxveW1lbnRfdHlwZRgBIAEoCRIbChNhdmFpbGFibGVfcHJvdmlkZXJzGAIgAygJIp4BCg5DaGVja291dFN0YXR1cxIQCghvcmRlcl9ubxgBIAEoCRIOCgZzdGF0dXMYAiABKAkSEgoKb3JkZXJfdHlwZRgDIAEoCRIOCgZhbW91bnQYBCABKAESEAoIY3VycmVuY3kYBSABKAkSEgoKY3JlYXRlZF9hdBgGIAEoCRIUCgdwYWlkX2F0GAcgASgJSACIAQFCCgoIX3BhaWRfYXQiwwEKEVB1YmxpY1BsYW5QcmljaW5nEgwKBG5hbWUYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJEhUKDXByaWNlX21vbnRobHkYAyABKAESFAoMcHJpY2VfeWVhcmx5GAQgASgBEhEKCW1heF91c2VycxgFIAEoBRITCgttYXhfcnVubmVycxgGIAEoBRIYChBtYXhfcmVwb3NpdG9yaWVzGAcgASgFEhsKE21heF9jb25jdXJyZW50X3BvZHMYCCABKAUidgoVUHVibGljUHJpY2luZ1Jlc3BvbnNlEhcKD2RlcGxveW1lbnRfdHlwZRgBIAEoCRIQCghjdXJyZW5jeRgCIAEoCRIyCgVwbGFucxgDIAMoCzIjLnByb3RvLmJpbGxpbmcudjEuUHVibGljUGxhblByaWNpbmciJgoSR2V0T3ZlcnZpZXdSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJIiQKEExpc3RQbGFuc1JlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkidAoRTGlzdFBsYW5zUmVzcG9uc2USMQoFaXRlbXMYASADKAsyIi5wcm90by5iaWxsaW5nLnYxLlN1YnNjcmlwdGlvblBsYW4SDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIioKFkdldFN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkibgoZQ3JlYXRlU3Vic2NyaXB0aW9uUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIRCglwbGFuX25hbWUYAiABKAkSGgoNYmlsbGluZ19jeWNsZRgDIAEoCUgAiAEBQhAKDl9iaWxsaW5nX2N5Y2xlIkAKGVVwZGF0ZVN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEQoJcGxhbl9uYW1lGAIgASgJIi0KGUNhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkiHAoaQ2FuY2VsU3Vic2NyaXB0aW9uUmVzcG9uc2UiRwogUmVxdWVzdENhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEQoJaW1tZWRpYXRlGAIgASgIIm4KIVJlcXVlc3RDYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZRIfChJjdXJyZW50X3BlcmlvZF9lbmQYASABKAlIAIgBARIRCglpbW1lZGlhdGUYAiABKAhCFQoTX2N1cnJlbnRfcGVyaW9kX2VuZCIxCh1SZWFjdGl2YXRlU3Vic2NyaXB0aW9uUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCSJBChpVcGdyYWRlU3Vic2NyaXB0aW9uUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIRCglwbGFuX25hbWUYAiABKAkiRAoZQ2hhbmdlQmlsbGluZ0N5Y2xlUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIVCg1iaWxsaW5nX2N5Y2xlGAIgASgJIl8KGkNoYW5nZUJpbGxpbmdDeWNsZVJlc3BvbnNlEhUKDWN1cnJlbnRfY3ljbGUYASABKAkSEgoKbmV4dF9jeWNsZRgCIAEoCRIWCg5lZmZlY3RpdmVfZGF0ZRgDIAEoCSI+ChZVcGRhdGVBdXRvUmVuZXdSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhIKCmF1dG9fcmVuZXcYAiABKAgiJwoTR2V0U2VhdFVzYWdlUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCSI3ChRQdXJjaGFzZVNlYXRzUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRINCgVzZWF0cxgCIAEoBSJSChVQdXJjaGFzZVNlYXRzUmVzcG9uc2USLwoFc2VhdHMYASABKAsyGy5wcm90by5iaWxsaW5nLnYxLlNlYXRVc2FnZUgAiAEBQggKBl9zZWF0cyJlChNMaXN0SW52b2ljZXNSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKBm9mZnNldBgCIAEoBUgAiAEBEhIKBWxpbWl0GAMgASgFSAGIAQFCCQoHX29mZnNldEIICgZfbGltaXQibgoUTGlzdEludm9pY2VzUmVzcG9uc2USKAoFaXRlbXMYASADKAsyGS5wcm90by5iaWxsaW5nLnYxLkludm9pY2USDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIvwBChVDcmVhdGVDaGVja291dFJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEgoKb3JkZXJfdHlwZRgCIAEoCRIWCglwbGFuX25hbWUYAyABKAlIAIgBARIaCg1iaWxsaW5nX2N5Y2xlGAQgASgJSAGIAQESEgoFc2VhdHMYBSABKAVIAogBARIVCghwcm92aWRlchgGIAEoCUgDiAEBEhMKC3N1Y2Nlc3NfdXJsGAcgASgJEhIKCmNhbmNlbF91cmwYCCABKAlCDAoKX3BsYW5fbmFtZUIQCg5fYmlsbGluZ19jeWNsZUIICgZfc2VhdHNCCwoJX3Byb3ZpZGVyIqMBChZDcmVhdGVDaGVja291dFJlc3BvbnNlEhAKCG9yZGVyX25vGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSEwoLc2Vzc2lvbl91cmwYAyABKAkSGAoLcXJfY29kZV91cmwYBCABKAlIAIgBARISCgpleHBpcmVzX2F0GAUgASgJEhAKCHByb3ZpZGVyGAYgASgJQg4KDF9xcl9jb2RlX3VybCI+ChhHZXRDaGVja291dFN0YXR1c1JlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEAoIb3JkZXJfbm8YAiABKAkiLAoYR2V0RGVwbG95bWVudEluZm9SZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJIj0KF0dldFB1YmxpY1ByaWNpbmdSZXF1ZXN0EhUKCGN1cnJlbmN5GAEgASgJSACIAQFCCwoJX2N1cnJlbmN5IiAKHkdldFB1YmxpY0RlcGxveW1lbnRJbmZvUmVxdWVzdDK3DQoOQmlsbGluZ1NlcnZpY2USVgoLR2V0T3ZlcnZpZXcSJC5wcm90by5iaWxsaW5nLnYxLkdldE92ZXJ2aWV3UmVxdWVzdBohLnByb3RvLmJpbGxpbmcudjEuQmlsbGluZ092ZXJ2aWV3ElQKCUxpc3RQbGFucxIiLnByb3RvLmJpbGxpbmcudjEuTGlzdFBsYW5zUmVxdWVzdBojLnByb3RvLmJpbGxpbmcudjEuTGlzdFBsYW5zUmVzcG9uc2USWwoPR2V0U3Vic2NyaXB0aW9uEigucHJvdG8uYmlsbGluZy52MS5HZXRTdWJzY3JpcHRpb25SZXF1ZXN0Gh4ucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb24SYQoSQ3JlYXRlU3Vic2NyaXB0aW9uEisucHJvdG8uYmlsbGluZy52MS5DcmVhdGVTdWJzY3JpcHRpb25SZXF1ZXN0Gh4ucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb24SYQoSVXBkYXRlU3Vic2NyaXB0aW9uEisucHJvdG8uYmlsbGluZy52MS5VcGRhdGVTdWJzY3JpcHRpb25SZXF1ZXN0Gh4ucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb24SbwoSQ2FuY2VsU3Vic2NyaXB0aW9uEisucHJvdG8uYmlsbGluZy52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GiwucHJvdG8uYmlsbGluZy52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZRKEAQoZUmVxdWVzdENhbmNlbFN1YnNjcmlwdGlvbhIyLnByb3RvLmJpbGxpbmcudjEuUmVxdWVzdENhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QaMy5wcm90by5iaWxsaW5nLnYxLlJlcXVlc3RDYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZRJpChZSZWFjdGl2YXRlU3Vic2NyaXB0aW9uEi8ucHJvdG8uYmlsbGluZy52MS5SZWFjdGl2YXRlU3Vic2NyaXB0aW9uUmVxdWVzdBoeLnByb3RvLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uEmMKE1VwZ3JhZGVTdWJzY3JpcHRpb24SLC5wcm90by5iaWxsaW5nLnYxLlVwZ3JhZGVTdWJzY3JpcHRpb25SZXF1ZXN0Gh4ucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb24SbwoSQ2hhbmdlQmlsbGluZ0N5Y2xlEisucHJvdG8uYmlsbGluZy52MS5DaGFuZ2VCaWxsaW5nQ3ljbGVSZXF1ZXN0GiwucHJvdG8uYmlsbGluZy52MS5DaGFuZ2VCaWxsaW5nQ3ljbGVSZXNwb25zZRJbCg9VcGRhdGVBdXRvUmVuZXcSKC5wcm90by5iaWxsaW5nLnYxLlVwZGF0ZUF1dG9SZW5ld1JlcXVlc3QaHi5wcm90by5iaWxsaW5nLnYxLlN1YnNjcmlwdGlvbhJSCgxHZXRTZWF0VXNhZ2USJS5wcm90by5iaWxsaW5nLnYxLkdldFNlYXRVc2FnZVJlcXVlc3QaGy5wcm90by5iaWxsaW5nLnYxLlNlYXRVc2FnZRJgCg1QdXJjaGFzZVNlYXRzEiYucHJvdG8uYmlsbGluZy52MS5QdXJjaGFzZVNlYXRzUmVxdWVzdBonLnByb3RvLmJpbGxpbmcudjEuUHVyY2hhc2VTZWF0c1Jlc3BvbnNlEl0KDExpc3RJbnZvaWNlcxIlLnByb3RvLmJpbGxpbmcudjEuTGlzdEludm9pY2VzUmVxdWVzdBomLnByb3RvLmJpbGxpbmcudjEuTGlzdEludm9pY2VzUmVzcG9uc2USYwoOQ3JlYXRlQ2hlY2tvdXQSJy5wcm90by5iaWxsaW5nLnYxLkNyZWF0ZUNoZWNrb3V0UmVxdWVzdBooLnByb3RvLmJpbGxpbmcudjEuQ3JlYXRlQ2hlY2tvdXRSZXNwb25zZRJhChFHZXRDaGVja291dFN0YXR1cxIqLnByb3RvLmJpbGxpbmcudjEuR2V0Q2hlY2tvdXRTdGF0dXNSZXF1ZXN0GiAucHJvdG8uYmlsbGluZy52MS5DaGVja291dFN0YXR1cxJhChFHZXREZXBsb3ltZW50SW5mbxIqLnByb3RvLmJpbGxpbmcudjEuR2V0RGVwbG95bWVudEluZm9SZXF1ZXN0GiAucHJvdG8uYmlsbGluZy52MS5EZXBsb3ltZW50SW5mbzLtAQoUQmlsbGluZ1B1YmxpY1NlcnZpY2USZgoQR2V0UHVibGljUHJpY2luZxIpLnByb3RvLmJpbGxpbmcudjEuR2V0UHVibGljUHJpY2luZ1JlcXVlc3QaJy5wcm90by5iaWxsaW5nLnYxLlB1YmxpY1ByaWNpbmdSZXNwb25zZRJtChdHZXRQdWJsaWNEZXBsb3ltZW50SW5mbxIwLnByb3RvLmJpbGxpbmcudjEuR2V0UHVibGljRGVwbG95bWVudEluZm9SZXF1ZXN0GiAucHJvdG8uYmlsbGluZy52MS5EZXBsb3ltZW50SW5mb0JEWkJnaXRodWIuY29tL2FudGhyb3BpY3MvYWdlbnRzbWVzaC9wcm90by9nZW4vZ28vYmlsbGluZy92MTtiaWxsaW5ndjFiBnByb3RvMw");
+  fileDesc("ChhiaWxsaW5nL3YxL2JpbGxpbmcucHJvdG8SEHByb3RvLmJpbGxpbmcudjEixQIKEFN1YnNjcmlwdGlvblBsYW4SCgoCaWQYASABKAMSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSHgoWcHJpY2VfcGVyX3NlYXRfbW9udGhseRgEIAEoARIdChVwcmljZV9wZXJfc2VhdF95ZWFybHkYBSABKAESHAoUaW5jbHVkZWRfcG9kX21pbnV0ZXMYBiABKAUSHgoWcHJpY2VfcGVyX2V4dHJhX21pbnV0ZRgHIAEoARIRCgltYXhfdXNlcnMYCCABKAUSEwoLbWF4X3J1bm5lcnMYCSABKAUSGwoTbWF4X2NvbmN1cnJlbnRfcG9kcxgKIAEoBRIYChBtYXhfcmVwb3NpdG9yaWVzGAsgASgFEhEKCWlzX2FjdGl2ZRgMIAEoCBISCgpjcmVhdGVkX2F0GA0gASgJIv0GCgxTdWJzY3JpcHRpb24SCgoCaWQYASABKAMSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgDEg8KB3BsYW5faWQYAyABKAMSDgoGc3RhdHVzGAQgASgJEhUKDWJpbGxpbmdfY3ljbGUYBSABKAkSHAoUY3VycmVudF9wZXJpb2Rfc3RhcnQYBiABKAkSGgoSY3VycmVudF9wZXJpb2RfZW5kGAcgASgJEjUKBHBsYW4YCCABKAsyIi5wcm90by5iaWxsaW5nLnYxLlN1YnNjcmlwdGlvblBsYW5IAIgBARIdChBwYXltZW50X3Byb3ZpZGVyGAkgASgJSAGIAQESGwoOcGF5bWVudF9tZXRob2QYCiABKAlIAogBARISCgphdXRvX3JlbmV3GAsgASgIEhIKCnNlYXRfY291bnQYDCABKAUSHwoSc3RyaXBlX2N1c3RvbWVyX2lkGA0gASgJSAOIAQESIwoWc3RyaXBlX3N1YnNjcmlwdGlvbl9pZBgOIAEoCUgEiAEBEiUKGGxlbW9uc3F1ZWV6eV9jdXN0b21lcl9pZBgPIAEoCUgFiAEBEikKHGxlbW9uc3F1ZWV6eV9zdWJzY3JpcHRpb25faWQYECABKAlIBogBARIYCgtjYW5jZWxlZF9hdBgRIAEoCUgHiAEBEhwKFGNhbmNlbF9hdF9wZXJpb2RfZW5kGBIgASgIEhYKCWZyb3plbl9hdBgTIAEoCUgIiAEBEh4KEWRvd25ncmFkZV90b19wbGFuGBQgASgJSAmIAQESHwoSbmV4dF9iaWxsaW5nX2N5Y2xlGBUgASgJSAqIAQESEgoKY3JlYXRlZF9hdBgWIAEoCRISCgp1cGRhdGVkX2F0GBcgASgJQgcKBV9wbGFuQhMKEV9wYXltZW50X3Byb3ZpZGVyQhEKD19wYXltZW50X21ldGhvZEIVChNfc3RyaXBlX2N1c3RvbWVyX2lkQhkKF19zdHJpcGVfc3Vic2NyaXB0aW9uX2lkQhsKGV9sZW1vbnNxdWVlenlfY3VzdG9tZXJfaWRCHwodX2xlbW9uc3F1ZWV6eV9zdWJzY3JpcHRpb25faWRCDgoMX2NhbmNlbGVkX2F0QgwKCl9mcm96ZW5fYXRCFAoSX2Rvd25ncmFkZV90b19wbGFuQhUKE19uZXh0X2JpbGxpbmdfY3ljbGUi8AEKDVVzYWdlT3ZlcnZpZXcSEwoLcG9kX21pbnV0ZXMYASABKAESHAoUaW5jbHVkZWRfcG9kX21pbnV0ZXMYAiABKAESDQoFdXNlcnMYAyABKAUSEQoJbWF4X3VzZXJzGAQgASgFEg8KB3J1bm5lcnMYBSABKAUSEwoLbWF4X3J1bm5lcnMYBiABKAUSFwoPY29uY3VycmVudF9wb2RzGAcgASgFEhsKE21heF9jb25jdXJyZW50X3BvZHMYCCABKAUSFAoMcmVwb3NpdG9yaWVzGAkgASgFEhgKEG1heF9yZXBvc2l0b3JpZXMYCiABKAUigAIKD0JpbGxpbmdPdmVydmlldxI1CgRwbGFuGAEgASgLMiIucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb25QbGFuSACIAQESDgoGc3RhdHVzGAIgASgJEhUKDWJpbGxpbmdfY3ljbGUYAyABKAkSHAoUY3VycmVudF9wZXJpb2Rfc3RhcnQYBCABKAkSGgoSY3VycmVudF9wZXJpb2RfZW5kGAUgASgJEhwKFGNhbmNlbF9hdF9wZXJpb2RfZW5kGAYgASgIEi4KBXVzYWdlGAcgASgLMh8ucHJvdG8uYmlsbGluZy52MS5Vc2FnZU92ZXJ2aWV3QgcKBV9wbGFuIqkDCgdJbnZvaWNlEgoKAmlkGAEgASgDEhcKD29yZ2FuaXphdGlvbl9pZBgCIAEoAxIdChBwYXltZW50X29yZGVyX2lkGAMgASgDSACIAQESEgoKaW52b2ljZV9ubxgEIAEoCRIOCgZzdGF0dXMYBSABKAkSEAoIY3VycmVuY3kYBiABKAkSEAoIc3VidG90YWwYByABKAESEgoKdGF4X2Ftb3VudBgIIAEoARINCgV0b3RhbBgJIAEoARIUCgxwZXJpb2Rfc3RhcnQYCiABKAkSEgoKcGVyaW9kX2VuZBgLIAEoCRIUCgdwZGZfdXJsGAwgASgJSAGIAQESFgoJaXNzdWVkX2F0GA0gASgJSAKIAQESEwoGZHVlX2F0GA4gASgJSAOIAQESFAoHcGFpZF9hdBgPIAEoCUgEiAEBEhIKCmNyZWF0ZWRfYXQYECABKAkSEgoKdXBkYXRlZF9hdBgRIAEoCUITChFfcGF5bWVudF9vcmRlcl9pZEIKCghfcGRmX3VybEIMCgpfaXNzdWVkX2F0QgkKB19kdWVfYXRCCgoIX3BhaWRfYXQidwoJU2VhdFVzYWdlEhMKC3RvdGFsX3NlYXRzGAEgASgFEhIKCnVzZWRfc2VhdHMYAiABKAUSFwoPYXZhaWxhYmxlX3NlYXRzGAMgASgFEhEKCW1heF9zZWF0cxgEIAEoBRIVCg1jYW5fYWRkX3NlYXRzGAUgASgIIkYKDkRlcGxveW1lbnRJbmZvEhcKD2RlcGxveW1lbnRfdHlwZRgBIAEoCRIbChNhdmFpbGFibGVfcHJvdmlkZXJzGAIgAygJIp4BCg5DaGVja291dFN0YXR1cxIQCghvcmRlcl9ubxgBIAEoCRIOCgZzdGF0dXMYAiABKAkSEgoKb3JkZXJfdHlwZRgDIAEoCRIOCgZhbW91bnQYBCABKAESEAoIY3VycmVuY3kYBSABKAkSEgoKY3JlYXRlZF9hdBgGIAEoCRIUCgdwYWlkX2F0GAcgASgJSACIAQFCCgoIX3BhaWRfYXQiwwEKEVB1YmxpY1BsYW5QcmljaW5nEgwKBG5hbWUYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJEhUKDXByaWNlX21vbnRobHkYAyABKAESFAoMcHJpY2VfeWVhcmx5GAQgASgBEhEKCW1heF91c2VycxgFIAEoBRITCgttYXhfcnVubmVycxgGIAEoBRIYChBtYXhfcmVwb3NpdG9yaWVzGAcgASgFEhsKE21heF9jb25jdXJyZW50X3BvZHMYCCABKAUidgoVUHVibGljUHJpY2luZ1Jlc3BvbnNlEhcKD2RlcGxveW1lbnRfdHlwZRgBIAEoCRIQCghjdXJyZW5jeRgCIAEoCRIyCgVwbGFucxgDIAMoCzIjLnByb3RvLmJpbGxpbmcudjEuUHVibGljUGxhblByaWNpbmciJgoSR2V0T3ZlcnZpZXdSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJIiQKEExpc3RQbGFuc1JlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkidAoRTGlzdFBsYW5zUmVzcG9uc2USMQoFaXRlbXMYASADKAsyIi5wcm90by5iaWxsaW5nLnYxLlN1YnNjcmlwdGlvblBsYW4SDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIioKFkdldFN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkibgoZQ3JlYXRlU3Vic2NyaXB0aW9uUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIRCglwbGFuX25hbWUYAiABKAkSGgoNYmlsbGluZ19jeWNsZRgDIAEoCUgAiAEBQhAKDl9iaWxsaW5nX2N5Y2xlIkAKGVVwZGF0ZVN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEQoJcGxhbl9uYW1lGAIgASgJIi0KGUNhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkiHAoaQ2FuY2VsU3Vic2NyaXB0aW9uUmVzcG9uc2UiRwogUmVxdWVzdENhbmNlbFN1YnNjcmlwdGlvblJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEQoJaW1tZWRpYXRlGAIgASgIIm4KIVJlcXVlc3RDYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZRIfChJjdXJyZW50X3BlcmlvZF9lbmQYASABKAlIAIgBARIRCglpbW1lZGlhdGUYAiABKAhCFQoTX2N1cnJlbnRfcGVyaW9kX2VuZCIxCh1SZWFjdGl2YXRlU3Vic2NyaXB0aW9uUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCSJBChpVcGdyYWRlU3Vic2NyaXB0aW9uUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIRCglwbGFuX25hbWUYAiABKAkiRAoZQ2hhbmdlQmlsbGluZ0N5Y2xlUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIVCg1iaWxsaW5nX2N5Y2xlGAIgASgJIl8KGkNoYW5nZUJpbGxpbmdDeWNsZVJlc3BvbnNlEhUKDWN1cnJlbnRfY3ljbGUYASABKAkSEgoKbmV4dF9jeWNsZRgCIAEoCRIWCg5lZmZlY3RpdmVfZGF0ZRgDIAEoCSI+ChZVcGRhdGVBdXRvUmVuZXdSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhIKCmF1dG9fcmVuZXcYAiABKAgiJwoTR2V0U2VhdFVzYWdlUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCSI3ChRQdXJjaGFzZVNlYXRzUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRINCgVzZWF0cxgCIAEoBSJSChVQdXJjaGFzZVNlYXRzUmVzcG9uc2USLwoFc2VhdHMYASABKAsyGy5wcm90by5iaWxsaW5nLnYxLlNlYXRVc2FnZUgAiAEBQggKBl9zZWF0cyJlChNMaXN0SW52b2ljZXNSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhMKBm9mZnNldBgCIAEoBUgAiAEBEhIKBWxpbWl0GAMgASgFSAGIAQFCCQoHX29mZnNldEIICgZfbGltaXQibgoUTGlzdEludm9pY2VzUmVzcG9uc2USKAoFaXRlbXMYASADKAsyGS5wcm90by5iaWxsaW5nLnYxLkludm9pY2USDQoFdG90YWwYAiABKAMSDQoFbGltaXQYAyABKAUSDgoGb2Zmc2V0GAQgASgFIvwBChVDcmVhdGVDaGVja291dFJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEgoKb3JkZXJfdHlwZRgCIAEoCRIWCglwbGFuX25hbWUYAyABKAlIAIgBARIaCg1iaWxsaW5nX2N5Y2xlGAQgASgJSAGIAQESEgoFc2VhdHMYBSABKAVIAogBARIVCghwcm92aWRlchgGIAEoCUgDiAEBEhMKC3N1Y2Nlc3NfdXJsGAcgASgJEhIKCmNhbmNlbF91cmwYCCABKAlCDAoKX3BsYW5fbmFtZUIQCg5fYmlsbGluZ19jeWNsZUIICgZfc2VhdHNCCwoJX3Byb3ZpZGVyIqMBChZDcmVhdGVDaGVja291dFJlc3BvbnNlEhAKCG9yZGVyX25vGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSEwoLc2Vzc2lvbl91cmwYAyABKAkSGAoLcXJfY29kZV91cmwYBCABKAlIAIgBARISCgpleHBpcmVzX2F0GAUgASgJEhAKCHByb3ZpZGVyGAYgASgJQg4KDF9xcl9jb2RlX3VybCI+ChhHZXRDaGVja291dFN0YXR1c1JlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSEAoIb3JkZXJfbm8YAiABKAkiLAoYR2V0RGVwbG95bWVudEluZm9SZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJIj0KF0dldFB1YmxpY1ByaWNpbmdSZXF1ZXN0EhUKCGN1cnJlbmN5GAEgASgJSACIAQFCCwoJX2N1cnJlbmN5IiAKHkdldFB1YmxpY0RlcGxveW1lbnRJbmZvUmVxdWVzdCKWAQoLVXNhZ2VSZWNvcmQSCgoCaWQYASABKAMSFwoPb3JnYW5pemF0aW9uX2lkGAIgASgDEhIKCnVzYWdlX3R5cGUYAyABKAkSEAoIcXVhbnRpdHkYBCABKAESFAoMcGVyaW9kX3N0YXJ0GAUgASgJEhIKCnBlcmlvZF9lbmQYBiABKAkSEgoKY3JlYXRlZF9hdBgHIAEoCSJLCg9HZXRVc2FnZVJlcXVlc3QSEAoIb3JnX3NsdWcYASABKAkSFwoKdXNhZ2VfdHlwZRgCIAEoCUgAiAEBQg0KC191c2FnZV90eXBlIq0BChBHZXRVc2FnZVJlc3BvbnNlEhkKDG1ldHJpY192YWx1ZRgBIAEoAUgAiAEBEhgKC21ldHJpY190eXBlGAIgASgJSAGIAQESNgoIb3ZlcnZpZXcYAyABKAsyHy5wcm90by5iaWxsaW5nLnYxLlVzYWdlT3ZlcnZpZXdIAogBAUIPCg1fbWV0cmljX3ZhbHVlQg4KDF9tZXRyaWNfdHlwZUILCglfb3ZlcnZpZXciYgoWR2V0VXNhZ2VIaXN0b3J5UmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIXCgp1c2FnZV90eXBlGAIgASgJSACIAQESDgoGbW9udGhzGAMgASgFQg0KC191c2FnZV90eXBlIkkKF0dldFVzYWdlSGlzdG9yeVJlc3BvbnNlEi4KB3JlY29yZHMYASADKAsyHS5wcm90by5iaWxsaW5nLnYxLlVzYWdlUmVjb3JkIkcKEUNoZWNrUXVvdGFSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhAKCHJlc291cmNlGAIgASgJEg4KBmFtb3VudBgDIAEoBSInChJDaGVja1F1b3RhUmVzcG9uc2USEQoJYXZhaWxhYmxlGAEgASgIIkoKFVNldEN1c3RvbVF1b3RhUmVxdWVzdBIQCghvcmdfc2x1ZxgBIAEoCRIQCghyZXNvdXJjZRgCIAEoCRINCgVsaW1pdBgDIAEoBSIpChZTZXRDdXN0b21RdW90YVJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkiQwobQ3JlYXRlQ3VzdG9tZXJQb3J0YWxSZXF1ZXN0EhAKCG9yZ19zbHVnGAEgASgJEhIKCnJldHVybl91cmwYAiABKAkiKwocQ3JlYXRlQ3VzdG9tZXJQb3J0YWxSZXNwb25zZRILCgN1cmwYASABKAkypxEKDkJpbGxpbmdTZXJ2aWNlElYKC0dldE92ZXJ2aWV3EiQucHJvdG8uYmlsbGluZy52MS5HZXRPdmVydmlld1JlcXVlc3QaIS5wcm90by5iaWxsaW5nLnYxLkJpbGxpbmdPdmVydmlldxJUCglMaXN0UGxhbnMSIi5wcm90by5iaWxsaW5nLnYxLkxpc3RQbGFuc1JlcXVlc3QaIy5wcm90by5iaWxsaW5nLnYxLkxpc3RQbGFuc1Jlc3BvbnNlElsKD0dldFN1YnNjcmlwdGlvbhIoLnByb3RvLmJpbGxpbmcudjEuR2V0U3Vic2NyaXB0aW9uUmVxdWVzdBoeLnByb3RvLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uEmEKEkNyZWF0ZVN1YnNjcmlwdGlvbhIrLnByb3RvLmJpbGxpbmcudjEuQ3JlYXRlU3Vic2NyaXB0aW9uUmVxdWVzdBoeLnByb3RvLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uEmEKElVwZGF0ZVN1YnNjcmlwdGlvbhIrLnByb3RvLmJpbGxpbmcudjEuVXBkYXRlU3Vic2NyaXB0aW9uUmVxdWVzdBoeLnByb3RvLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uEm8KEkNhbmNlbFN1YnNjcmlwdGlvbhIrLnByb3RvLmJpbGxpbmcudjEuQ2FuY2VsU3Vic2NyaXB0aW9uUmVxdWVzdBosLnByb3RvLmJpbGxpbmcudjEuQ2FuY2VsU3Vic2NyaXB0aW9uUmVzcG9uc2UShAEKGVJlcXVlc3RDYW5jZWxTdWJzY3JpcHRpb24SMi5wcm90by5iaWxsaW5nLnYxLlJlcXVlc3RDYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GjMucHJvdG8uYmlsbGluZy52MS5SZXF1ZXN0Q2FuY2VsU3Vic2NyaXB0aW9uUmVzcG9uc2USaQoWUmVhY3RpdmF0ZVN1YnNjcmlwdGlvbhIvLnByb3RvLmJpbGxpbmcudjEuUmVhY3RpdmF0ZVN1YnNjcmlwdGlvblJlcXVlc3QaHi5wcm90by5iaWxsaW5nLnYxLlN1YnNjcmlwdGlvbhJjChNVcGdyYWRlU3Vic2NyaXB0aW9uEiwucHJvdG8uYmlsbGluZy52MS5VcGdyYWRlU3Vic2NyaXB0aW9uUmVxdWVzdBoeLnByb3RvLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uEm8KEkNoYW5nZUJpbGxpbmdDeWNsZRIrLnByb3RvLmJpbGxpbmcudjEuQ2hhbmdlQmlsbGluZ0N5Y2xlUmVxdWVzdBosLnByb3RvLmJpbGxpbmcudjEuQ2hhbmdlQmlsbGluZ0N5Y2xlUmVzcG9uc2USWwoPVXBkYXRlQXV0b1JlbmV3EigucHJvdG8uYmlsbGluZy52MS5VcGRhdGVBdXRvUmVuZXdSZXF1ZXN0Gh4ucHJvdG8uYmlsbGluZy52MS5TdWJzY3JpcHRpb24SUgoMR2V0U2VhdFVzYWdlEiUucHJvdG8uYmlsbGluZy52MS5HZXRTZWF0VXNhZ2VSZXF1ZXN0GhsucHJvdG8uYmlsbGluZy52MS5TZWF0VXNhZ2USYAoNUHVyY2hhc2VTZWF0cxImLnByb3RvLmJpbGxpbmcudjEuUHVyY2hhc2VTZWF0c1JlcXVlc3QaJy5wcm90by5iaWxsaW5nLnYxLlB1cmNoYXNlU2VhdHNSZXNwb25zZRJdCgxMaXN0SW52b2ljZXMSJS5wcm90by5iaWxsaW5nLnYxLkxpc3RJbnZvaWNlc1JlcXVlc3QaJi5wcm90by5iaWxsaW5nLnYxLkxpc3RJbnZvaWNlc1Jlc3BvbnNlEmMKDkNyZWF0ZUNoZWNrb3V0EicucHJvdG8uYmlsbGluZy52MS5DcmVhdGVDaGVja291dFJlcXVlc3QaKC5wcm90by5iaWxsaW5nLnYxLkNyZWF0ZUNoZWNrb3V0UmVzcG9uc2USYQoRR2V0Q2hlY2tvdXRTdGF0dXMSKi5wcm90by5iaWxsaW5nLnYxLkdldENoZWNrb3V0U3RhdHVzUmVxdWVzdBogLnByb3RvLmJpbGxpbmcudjEuQ2hlY2tvdXRTdGF0dXMSYQoRR2V0RGVwbG95bWVudEluZm8SKi5wcm90by5iaWxsaW5nLnYxLkdldERlcGxveW1lbnRJbmZvUmVxdWVzdBogLnByb3RvLmJpbGxpbmcudjEuRGVwbG95bWVudEluZm8SUQoIR2V0VXNhZ2USIS5wcm90by5iaWxsaW5nLnYxLkdldFVzYWdlUmVxdWVzdBoiLnByb3RvLmJpbGxpbmcudjEuR2V0VXNhZ2VSZXNwb25zZRJmCg9HZXRVc2FnZUhpc3RvcnkSKC5wcm90by5iaWxsaW5nLnYxLkdldFVzYWdlSGlzdG9yeVJlcXVlc3QaKS5wcm90by5iaWxsaW5nLnYxLkdldFVzYWdlSGlzdG9yeVJlc3BvbnNlElcKCkNoZWNrUXVvdGESIy5wcm90by5iaWxsaW5nLnYxLkNoZWNrUXVvdGFSZXF1ZXN0GiQucHJvdG8uYmlsbGluZy52MS5DaGVja1F1b3RhUmVzcG9uc2USYwoOU2V0Q3VzdG9tUXVvdGESJy5wcm90by5iaWxsaW5nLnYxLlNldEN1c3RvbVF1b3RhUmVxdWVzdBooLnByb3RvLmJpbGxpbmcudjEuU2V0Q3VzdG9tUXVvdGFSZXNwb25zZRJ1ChRDcmVhdGVDdXN0b21lclBvcnRhbBItLnByb3RvLmJpbGxpbmcudjEuQ3JlYXRlQ3VzdG9tZXJQb3J0YWxSZXF1ZXN0Gi4ucHJvdG8uYmlsbGluZy52MS5DcmVhdGVDdXN0b21lclBvcnRhbFJlc3BvbnNlMu0BChRCaWxsaW5nUHVibGljU2VydmljZRJmChBHZXRQdWJsaWNQcmljaW5nEikucHJvdG8uYmlsbGluZy52MS5HZXRQdWJsaWNQcmljaW5nUmVxdWVzdBonLnByb3RvLmJpbGxpbmcudjEuUHVibGljUHJpY2luZ1Jlc3BvbnNlEm0KF0dldFB1YmxpY0RlcGxveW1lbnRJbmZvEjAucHJvdG8uYmlsbGluZy52MS5HZXRQdWJsaWNEZXBsb3ltZW50SW5mb1JlcXVlc3QaIC5wcm90by5iaWxsaW5nLnYxLkRlcGxveW1lbnRJbmZvQkRaQmdpdGh1Yi5jb20vYW50aHJvcGljcy9hZ2VudHNtZXNoL3Byb3RvL2dlbi9nby9iaWxsaW5nL3YxO2JpbGxpbmd2MWIGcHJvdG8z");
 
 /**
  * SubscriptionPlan mirrors backend/internal/domain/billing/plan.go.
@@ -1248,6 +1248,292 @@ export const GetPublicDeploymentInfoRequestSchema: GenMessage<GetPublicDeploymen
   messageDesc(file_billing_v1_billing, 35);
 
 /**
+ * UsageRecord — mirrors backend/internal/domain/billing/usage.go. Time fields
+ * are RFC3339 strings on the wire (consistent with the rest of this proto).
+ * The `metadata` map is intentionally omitted: callers that need rich rows
+ * hit the dashboard, not this RPC.
+ *
+ * @generated from message proto.billing.v1.UsageRecord
+ */
+export type UsageRecord = Message<"proto.billing.v1.UsageRecord"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: int64 organization_id = 2;
+   */
+  organizationId: bigint;
+
+  /**
+   * @generated from field: string usage_type = 3;
+   */
+  usageType: string;
+
+  /**
+   * @generated from field: double quantity = 4;
+   */
+  quantity: number;
+
+  /**
+   * @generated from field: string period_start = 5;
+   */
+  periodStart: string;
+
+  /**
+   * @generated from field: string period_end = 6;
+   */
+  periodEnd: string;
+
+  /**
+   * @generated from field: string created_at = 7;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message proto.billing.v1.UsageRecord.
+ * Use `create(UsageRecordSchema)` to create a new message.
+ */
+export const UsageRecordSchema: GenMessage<UsageRecord> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 36);
+
+/**
+ * GetUsageRequest — when `usage_type` is set, the response carries only the
+ * single metric for that type (REST returned `{usage: float, type: string}`);
+ * otherwise it carries the full UsageOverview (REST returned `{usage: ...}`).
+ *
+ * @generated from message proto.billing.v1.GetUsageRequest
+ */
+export type GetUsageRequest = Message<"proto.billing.v1.GetUsageRequest"> & {
+  /**
+   * @generated from field: string org_slug = 1;
+   */
+  orgSlug: string;
+
+  /**
+   * @generated from field: optional string usage_type = 2;
+   */
+  usageType?: string | undefined;
+};
+
+/**
+ * Describes the message proto.billing.v1.GetUsageRequest.
+ * Use `create(GetUsageRequestSchema)` to create a new message.
+ */
+export const GetUsageRequestSchema: GenMessage<GetUsageRequest> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 37);
+
+/**
+ * @generated from message proto.billing.v1.GetUsageResponse
+ */
+export type GetUsageResponse = Message<"proto.billing.v1.GetUsageResponse"> & {
+  /**
+   * Populated when GetUsageRequest.usage_type is set.
+   *
+   * @generated from field: optional double metric_value = 1;
+   */
+  metricValue?: number | undefined;
+
+  /**
+   * @generated from field: optional string metric_type = 2;
+   */
+  metricType?: string | undefined;
+
+  /**
+   * Populated when GetUsageRequest.usage_type is empty.
+   *
+   * @generated from field: optional proto.billing.v1.UsageOverview overview = 3;
+   */
+  overview?: UsageOverview | undefined;
+};
+
+/**
+ * Describes the message proto.billing.v1.GetUsageResponse.
+ * Use `create(GetUsageResponseSchema)` to create a new message.
+ */
+export const GetUsageResponseSchema: GenMessage<GetUsageResponse> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 38);
+
+/**
+ * @generated from message proto.billing.v1.GetUsageHistoryRequest
+ */
+export type GetUsageHistoryRequest = Message<"proto.billing.v1.GetUsageHistoryRequest"> & {
+  /**
+   * @generated from field: string org_slug = 1;
+   */
+  orgSlug: string;
+
+  /**
+   * @generated from field: optional string usage_type = 2;
+   */
+  usageType?: string | undefined;
+
+  /**
+   * 1..12. Server clamps out-of-range values to the REST default of 3.
+   *
+   * @generated from field: int32 months = 3;
+   */
+  months: number;
+};
+
+/**
+ * Describes the message proto.billing.v1.GetUsageHistoryRequest.
+ * Use `create(GetUsageHistoryRequestSchema)` to create a new message.
+ */
+export const GetUsageHistoryRequestSchema: GenMessage<GetUsageHistoryRequest> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 39);
+
+/**
+ * @generated from message proto.billing.v1.GetUsageHistoryResponse
+ */
+export type GetUsageHistoryResponse = Message<"proto.billing.v1.GetUsageHistoryResponse"> & {
+  /**
+   * @generated from field: repeated proto.billing.v1.UsageRecord records = 1;
+   */
+  records: UsageRecord[];
+};
+
+/**
+ * Describes the message proto.billing.v1.GetUsageHistoryResponse.
+ * Use `create(GetUsageHistoryResponseSchema)` to create a new message.
+ */
+export const GetUsageHistoryResponseSchema: GenMessage<GetUsageHistoryResponse> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 40);
+
+/**
+ * @generated from message proto.billing.v1.CheckQuotaRequest
+ */
+export type CheckQuotaRequest = Message<"proto.billing.v1.CheckQuotaRequest"> & {
+  /**
+   * @generated from field: string org_slug = 1;
+   */
+  orgSlug: string;
+
+  /**
+   * @generated from field: string resource = 2;
+   */
+  resource: string;
+
+  /**
+   * Server clamps amounts < 1 to 1 (matches REST).
+   *
+   * @generated from field: int32 amount = 3;
+   */
+  amount: number;
+};
+
+/**
+ * Describes the message proto.billing.v1.CheckQuotaRequest.
+ * Use `create(CheckQuotaRequestSchema)` to create a new message.
+ */
+export const CheckQuotaRequestSchema: GenMessage<CheckQuotaRequest> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 41);
+
+/**
+ * @generated from message proto.billing.v1.CheckQuotaResponse
+ */
+export type CheckQuotaResponse = Message<"proto.billing.v1.CheckQuotaResponse"> & {
+  /**
+   * @generated from field: bool available = 1;
+   */
+  available: boolean;
+};
+
+/**
+ * Describes the message proto.billing.v1.CheckQuotaResponse.
+ * Use `create(CheckQuotaResponseSchema)` to create a new message.
+ */
+export const CheckQuotaResponseSchema: GenMessage<CheckQuotaResponse> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 42);
+
+/**
+ * @generated from message proto.billing.v1.SetCustomQuotaRequest
+ */
+export type SetCustomQuotaRequest = Message<"proto.billing.v1.SetCustomQuotaRequest"> & {
+  /**
+   * @generated from field: string org_slug = 1;
+   */
+  orgSlug: string;
+
+  /**
+   * @generated from field: string resource = 2;
+   */
+  resource: string;
+
+  /**
+   * @generated from field: int32 limit = 3;
+   */
+  limit: number;
+};
+
+/**
+ * Describes the message proto.billing.v1.SetCustomQuotaRequest.
+ * Use `create(SetCustomQuotaRequestSchema)` to create a new message.
+ */
+export const SetCustomQuotaRequestSchema: GenMessage<SetCustomQuotaRequest> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 43);
+
+/**
+ * @generated from message proto.billing.v1.SetCustomQuotaResponse
+ */
+export type SetCustomQuotaResponse = Message<"proto.billing.v1.SetCustomQuotaResponse"> & {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message proto.billing.v1.SetCustomQuotaResponse.
+ * Use `create(SetCustomQuotaResponseSchema)` to create a new message.
+ */
+export const SetCustomQuotaResponseSchema: GenMessage<SetCustomQuotaResponse> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 44);
+
+/**
+ * @generated from message proto.billing.v1.CreateCustomerPortalRequest
+ */
+export type CreateCustomerPortalRequest = Message<"proto.billing.v1.CreateCustomerPortalRequest"> & {
+  /**
+   * @generated from field: string org_slug = 1;
+   */
+  orgSlug: string;
+
+  /**
+   * @generated from field: string return_url = 2;
+   */
+  returnUrl: string;
+};
+
+/**
+ * Describes the message proto.billing.v1.CreateCustomerPortalRequest.
+ * Use `create(CreateCustomerPortalRequestSchema)` to create a new message.
+ */
+export const CreateCustomerPortalRequestSchema: GenMessage<CreateCustomerPortalRequest> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 45);
+
+/**
+ * @generated from message proto.billing.v1.CreateCustomerPortalResponse
+ */
+export type CreateCustomerPortalResponse = Message<"proto.billing.v1.CreateCustomerPortalResponse"> & {
+  /**
+   * Stripe / LemonSqueezy redirect URL the frontend hands to window.location.
+   *
+   * @generated from field: string url = 1;
+   */
+  url: string;
+};
+
+/**
+ * Describes the message proto.billing.v1.CreateCustomerPortalResponse.
+ * Use `create(CreateCustomerPortalResponseSchema)` to create a new message.
+ */
+export const CreateCustomerPortalResponseSchema: GenMessage<CreateCustomerPortalResponse> = /*@__PURE__*/
+  messageDesc(file_billing_v1_billing, 46);
+
+/**
  * @generated from service proto.billing.v1.BillingService
  */
 export const BillingService: GenService<{
@@ -1386,6 +1672,50 @@ export const BillingService: GenService<{
     methodKind: "unary";
     input: typeof GetDeploymentInfoRequestSchema;
     output: typeof DeploymentInfoSchema;
+  },
+  /**
+   * Migrated from REST `/api/v1/orgs/{slug}/billing/{usage,quota,customer-portal}`.
+   * Mirrors the historical HTTP behavior — see the corresponding handlers in
+   * backend/internal/api/rest/v1/billing_handler.go for response shape.
+   *
+   * @generated from rpc proto.billing.v1.BillingService.GetUsage
+   */
+  getUsage: {
+    methodKind: "unary";
+    input: typeof GetUsageRequestSchema;
+    output: typeof GetUsageResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.billing.v1.BillingService.GetUsageHistory
+   */
+  getUsageHistory: {
+    methodKind: "unary";
+    input: typeof GetUsageHistoryRequestSchema;
+    output: typeof GetUsageHistoryResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.billing.v1.BillingService.CheckQuota
+   */
+  checkQuota: {
+    methodKind: "unary";
+    input: typeof CheckQuotaRequestSchema;
+    output: typeof CheckQuotaResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.billing.v1.BillingService.SetCustomQuota
+   */
+  setCustomQuota: {
+    methodKind: "unary";
+    input: typeof SetCustomQuotaRequestSchema;
+    output: typeof SetCustomQuotaResponseSchema;
+  },
+  /**
+   * @generated from rpc proto.billing.v1.BillingService.CreateCustomerPortal
+   */
+  createCustomerPortal: {
+    methodKind: "unary";
+    input: typeof CreateCustomerPortalRequestSchema;
+    output: typeof CreateCustomerPortalResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_billing_v1_billing, 0);

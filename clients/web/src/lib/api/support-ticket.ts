@@ -1,22 +1,19 @@
-// Legacy support-ticket adapter. After the proto migration the four
-// JSON-bodied operations (list, getDetail, getAttachmentUrl) delegate to
-// supportTicketConnect.ts (binary-wire Connect-RPC) — see migration ADR.
-//
-// Two operations remain on REST during dual-track:
-//   * createSupportTicket — multipart/form-data with optional files[]
-//   * addSupportTicketMessage — multipart/form-data with optional files[]
-// Connect-RPC has no multipart story; these stay until a follow-up
-// chunked-upload Connect path lands or the file upload surface gets
-// extracted to its own RPC + presigned URL flow.
-//
-// New call sites should import from `./supportTicketConnect` for the
-// migrated RPCs; this module stays as the dual-track shim.
+// support-ticket facade — all RPCs go through supportTicketConnect (binary
+// Connect wire). Attachment uploads use the 3-step presigned-URL flow:
+//   1. createSupportTicket / addSupportTicketMessage (Connect) — content only
+//   2. for each file: presignAttachmentUploadConnect (Connect) → put_url +
+//      opaque storage_key → browser PUTs bytes to put_url
+//   3. associateAttachmentsConnect (Connect) — materializes DB rows
+// Multipart REST is gone; all wire is binary protobuf per conventions §2.5.
 
-import { initWasmCore, getSupportTicketService } from "@/lib/wasm-core";
 import {
+  addSupportTicketMessageConnect,
+  associateAttachmentsConnect,
+  createSupportTicketConnect,
   getSupportTicketAttachmentUrl as getAttachmentUrlConnect,
   getSupportTicketDetail as getDetailConnect,
   listSupportTickets as listConnect,
+  presignAttachmentUploadConnect,
 } from "./supportTicketConnect";
 
 export type {
@@ -29,50 +26,87 @@ import type {
   SupportTicketListResponse, SupportTicketListParams,
 } from "./supportTicketTypes";
 
-async function fileToUint8Array(file: File): Promise<Uint8Array> {
-  return new Uint8Array(await file.arrayBuffer());
+interface AttachmentTarget {
+  ticketId: number;
+  messageId?: number;
+}
+
+async function uploadAttachments(target: AttachmentTarget, files: File[]): Promise<void> {
+  if (!files.length) return;
+  const refs: Array<{
+    storageKey: string;
+    filename: string;
+    contentType: string;
+    size: number;
+    messageId?: number;
+  }> = [];
+  for (const file of files) {
+    const contentType = file.type || "application/octet-stream";
+    const presign = await presignAttachmentUploadConnect({
+      ticketId: target.ticketId,
+      messageId: target.messageId,
+      filename: file.name,
+      contentType,
+      size: file.size,
+    });
+    const putRes = await fetch(presign.putUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+    if (!putRes.ok) {
+      throw new Error(`attachment upload failed for ${file.name}: ${putRes.status}`);
+    }
+    refs.push({
+      storageKey: presign.storageKey,
+      filename: file.name,
+      contentType,
+      size: file.size,
+      messageId: target.messageId,
+    });
+  }
+  if (refs.length) {
+    await associateAttachmentsConnect(target.ticketId, refs);
+  }
 }
 
 export async function createSupportTicket(data: {
   title: string; category: string; content: string; priority?: string; files?: File[];
 }): Promise<SupportTicket> {
-  await initWasmCore();
-  const fileData = await Promise.all((data.files || []).map(fileToUint8Array));
-  const fileNames = (data.files || []).map((f) => f.name);
-  const json = await getSupportTicketService().create_ticket(
-    data.title, data.category, data.content,
-    data.priority ?? null, fileData, fileNames,
-  );
-  return JSON.parse(json);
+  const ticket = await createSupportTicketConnect({
+    title: data.title,
+    category: data.category,
+    content: data.content,
+    priority: data.priority,
+  });
+  if (data.files?.length) {
+    await uploadAttachments({ ticketId: ticket.id }, data.files);
+  }
+  return ticket;
 }
 
 export async function listSupportTickets(
   params?: SupportTicketListParams,
 ): Promise<SupportTicketListResponse> {
-  await initWasmCore();
   return listConnect(params);
 }
 
 export async function getSupportTicketDetail(id: number): Promise<SupportTicketDetail> {
-  await initWasmCore();
   return getDetailConnect(id);
 }
 
 export async function addSupportTicketMessage(
   ticketId: number, content: string, files?: File[],
 ): Promise<SupportTicketMessage> {
-  await initWasmCore();
-  const fileData = await Promise.all((files || []).map(fileToUint8Array));
-  const fileNames = (files || []).map((f) => f.name);
-  const json = await getSupportTicketService().add_message(
-    BigInt(ticketId), content, fileData, fileNames,
-  );
-  return JSON.parse(json);
+  const msg = await addSupportTicketMessageConnect(ticketId, content);
+  if (files?.length) {
+    await uploadAttachments({ ticketId, messageId: msg.id }, files);
+  }
+  return msg;
 }
 
 export async function getSupportTicketAttachmentUrl(
   attachmentId: number,
 ): Promise<{ url: string }> {
-  await initWasmCore();
   return getAttachmentUrlConnect(attachmentId);
 }

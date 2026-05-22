@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
@@ -38,12 +39,14 @@ test.describe("Personal Agent Configuration", () => {
     db.cleanup(
       `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Test Credential'`
     );
-    const res = await api.post("/api/v1/users/agent-credentials/agents/claude-code", {
+    const cc = await api.connect();
+    const created = await cc.userAgentCredential.createAgentCredentialProfile({
+      agentSlug: "claude-code",
       name: "E2E Test Credential",
       description: "Test credential for E2E",
       credentials: { ANTHROPIC_API_KEY: "sk-ant-test-key-12345" },
-    });
-    expect([200, 201]).toContain(res.status);
+    }) as { id: number };
+    expect(created.id).toBeTruthy();
 
     db.cleanup(
       `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Test Credential'`

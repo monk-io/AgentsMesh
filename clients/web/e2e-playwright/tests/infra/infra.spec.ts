@@ -14,7 +14,7 @@ uiTest.describe("Infra page — UI", () => {
   uiTest("root /infra defaults to ?tab=runners", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     await uiExpect(page).toHaveURL(/tab=runners/);
     assertNoWasmErrors(errors);
   });
@@ -22,34 +22,40 @@ uiTest.describe("Infra page — UI", () => {
   uiTest("switching to runners tab updates URL", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     await uiExpect(page).toHaveURL(/tab=runners/);
     assertNoWasmErrors(errors);
   });
 
   uiTest("repositories tab auto-selects first repo when no id given", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=repositories`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     // After auto-select, the URL should gain an ?id=<n> — if there are repos
-    // in the seed data. If not, the empty state is visible instead.
-    await page.waitForTimeout(800);
-    const hasId = page.url().includes("id=");
-    const hasEmpty = await page.getByText(/no repositor|还没有仓库|empty/i).isVisible({ timeout: 500 }).catch(() => false);
-    uiExpect(hasId || hasEmpty).toBe(true);
+    // in the seed data. If not, the empty state is visible instead. The
+    // auto-select runs after wasm hydration + ListRepositories Connect
+    // call resolves, so a static 800 ms is not enough; poll instead.
+    await uiExpect
+      .poll(async () => {
+        if (page.url().includes("id=")) return true;
+        return await page.getByText(/no repositor|还没有仓库|empty/i).isVisible({ timeout: 100 }).catch(() => false);
+      }, { timeout: 8_000 })
+      .toBe(true);
   });
 
   uiTest("runners tab auto-selects first runner when no id given", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(800);
-    const hasId = page.url().includes("id=");
-    const hasEmpty = await page.getByText(/no runners|还没有|empty/i).isVisible({ timeout: 500 }).catch(() => false);
-    uiExpect(hasId || hasEmpty).toBe(true);
+    await page.waitForLoadState("load");
+    await uiExpect
+      .poll(async () => {
+        if (page.url().includes("id=")) return true;
+        return await page.getByText(/no runners|还没有|empty/i).isVisible({ timeout: 100 }).catch(() => false);
+      }, { timeout: 8_000 })
+      .toBe(true);
   });
 
   uiTest("detail pane renders in main area (not list redirect)", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=repositories`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     // Even after auto-select we must still be on /infra, never redirected
     // back to /repositories (that's the pre-refactor regression path).
     uiExpect(page.url()).toContain("/infra");

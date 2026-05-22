@@ -177,6 +177,11 @@ playwright_test(
         "//:node_modules/@agentsmesh/node-bridge",
         # Shared helpers/fixtures from web/e2e-playwright.
         "//clients/web/e2e-playwright:shared_fixtures",
+        # Generated TS proto messages — connect-client.ts (re-exported
+        # through shared_fixtures) reaches for them through a relative
+        # `../../../../proto/gen/ts/...` import, so the .ts files must
+        # be staged in runfiles.
+        "//proto:proto_gen_ts",
         # Bazel-built electron-vite bundle (out/main, out/preload, out/renderer).
         ":out",
     ] + glob(

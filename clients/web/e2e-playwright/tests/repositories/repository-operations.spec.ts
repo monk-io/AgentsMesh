@@ -14,7 +14,7 @@ test.describe("Repository Operations", () => {
 
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/repositories/${id}`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const body = await page.textContent("body");
     expect(body).toMatch(/demo|repository|仓库|branch|分支/i);
@@ -29,14 +29,14 @@ test.describe("Repository Operations", () => {
 
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/repositories`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const link = page.locator(`a[href*="repositories/${id}"]`).first();
     if (await link.isVisible({ timeout: 3000 }).catch(() => false)) {
       await link.click();
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("load");
       await page.goBack();
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("load");
     }
     assertNoWasmErrors(errors);
   });

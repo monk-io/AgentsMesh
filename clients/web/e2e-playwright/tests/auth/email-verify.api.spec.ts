@@ -1,11 +1,14 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { CLEANUP, HASH_PASSWORD123 } from "../../helpers/test-data";
 import { clearAuthRateLimit } from "../../helpers/redis";
+import { ConnectError } from "../../helpers/connect-client";
 
 test.describe("Email Verification", () => {
   test.beforeEach(async () => {
     clearAuthRateLimit();
   });
+
   /**
    * TC-VERIFY-001: Verify email with valid token
    */
@@ -23,10 +26,9 @@ test.describe("Email Verification", () => {
         email_verification_expires_at = NOW() + INTERVAL '1 hour'
     `);
 
-    const res = await api.postPublic("/api/v1/auth/verify-email", {
-      token: "test-verify-token-12345",
-    });
-    expect(res.status).toBe(200);
+    const cc = api.connectWithToken("");
+    const res = await cc.auth.verifyEmail({ token: "test-verify-token-12345" }) as { message?: string };
+    expect(res).toBeTruthy();
 
     // DB verification
     const verified = db.queryValue(
@@ -41,17 +43,17 @@ test.describe("Email Verification", () => {
    * TC-VERIFY-002: Verify email with invalid token
    */
   test("verify email with invalid token fails", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/verify-email", {
-      token: "invalid-verification-token-xyz",
-    });
-    expect(res.status).toBe(400);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.verifyEmail({ token: "invalid-verification-token-xyz" })
+    ).rejects.toBeInstanceOf(ConnectError);
   });
 
   test("verify email with empty token fails", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/verify-email", {
-      token: "",
-    });
-    expect(res.status).toBe(400);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.verifyEmail({ token: "" })
+    ).rejects.toBeInstanceOf(ConnectError);
   });
 
   /**
@@ -66,18 +68,16 @@ test.describe("Email Verification", () => {
       ON CONFLICT (email) DO UPDATE SET is_email_verified = false
     `);
 
-    const res = await api.postPublic("/api/v1/auth/resend-verification", {
-      email,
-    });
-    expect(res.status).toBe(200);
+    const cc = api.connectWithToken("");
+    const res = await cc.auth.resendVerification({ email }) as { message?: string };
+    expect(res).toBeTruthy();
 
     db.cleanup(CLEANUP.userByEmail(email));
   });
 
-  test("resend verification for non-existent email returns 200 (no enumeration)", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/resend-verification", {
-      email: "nonexistent@test.local",
-    });
-    expect(res.status).toBe(200);
+  test("resend verification for non-existent email returns success (no enumeration)", async ({ api }) => {
+    const cc = api.connectWithToken("");
+    const res = await cc.auth.resendVerification({ email: "nonexistent@test.local" }) as { message?: string };
+    expect(res).toBeTruthy();
   });
 });

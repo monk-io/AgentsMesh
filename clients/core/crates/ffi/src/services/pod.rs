@@ -24,13 +24,13 @@ impl AgentsMeshCore {
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> Result<PodListResponseDto, CoreError> {
-        let _ = runner_id; // Proto ListPods does not filter by runner_id; surface preserved for FFI ABI.
         let req = pod_proto::ListPodsRequest {
             org_slug: self.org_slug()?,
             status,
             created_by_id,
             limit: limit.map(|v| v as i32),
             offset: offset.map(|v| v as i32),
+            runner_id,
         };
         let resp = self.api.list_pods_connect(&req).await?;
         Ok(resp.into())

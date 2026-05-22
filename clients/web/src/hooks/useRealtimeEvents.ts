@@ -10,17 +10,17 @@ import {
   type RealtimeEvent,
   type ConnectionState,
 } from "@/lib/realtime";
-import { useCurrentUser, useCurrentOrg, readCurrentOrg } from "@/stores/auth";
-import { getAuthManager } from "@/lib/wasm-core";
-import { getWsBaseUrl } from "@/lib/env";
-
-function buildEventsWsUrl(orgSlug: string, token: string): string {
-  return `${getWsBaseUrl()}/api/v1/orgs/${orgSlug}/ws/events?token=${token}`;
-}
+import { useCurrentUser, useCurrentOrg } from "@/stores/auth";
 
 /**
- * Manages the realtime events WebSocket connection.
- * Should be used once at the app root level (in RealtimeProvider).
+ * Manages the realtime events connection.
+ *
+ * After R5-11 the underlying transport is Connect-RPC server streaming
+ * driven by the wasm-side `WasmEventsManager`. The hook only triggers
+ * connect/disconnect lifecycle around (currentOrg, user) identity —
+ * reconnect, auth refresh, and heartbeat live inside Rust core.
+ *
+ * Used once at the app root level (RealtimeProvider).
  */
 export function useRealtimeConnection() {
   const [connectionState, setConnectionState] =
@@ -29,43 +29,32 @@ export function useRealtimeConnection() {
   const user = useCurrentUser();
   const managerRef = useRef(getEventSubscriptionManager());
 
-  // Connect and subscribe to state changes when org/user are available.
-  //
   // deps use `user?.id` (not `user`) on purpose: useCurrentUser() returns a
-  // fresh object reference on every store tick (useMemo([_tick])), so the
-  // login flow ticks several times in quick succession (token set → user
-  // populated → org list fetched → user-me roundtrip), each tick re-running
-  // this effect. Without an id-based dep, every tick triggers a
-  // disconnect/reconnect; the first WS lands in CONNECTING and gets close()'d
-  // before the handshake completes — Chrome logs "WebSocket is closed before
-  // the connection is established". Comparing primitives keeps the effect
-  // pinned to actual identity changes (user switch, org switch).
+  // fresh object reference on every store tick, so the login flow ticks
+  // several times in quick succession (token set → user populated → org
+  // list fetched → user-me roundtrip). Comparing primitives keeps the
+  // effect pinned to actual identity changes (user switch, org switch).
   useEffect(() => {
     if (!currentOrg || !user) {
-      // disconnect() will trigger onConnectionStateChange callback
-      managerRef.current.disconnect();
+      void managerRef.current.disconnect();
       return;
     }
 
-    // Reset and reconnect when org or user changes
     resetEventSubscriptionManager();
     const manager = getEventSubscriptionManager();
     managerRef.current = manager;
-    manager.connect(() => {
-      const o = readCurrentOrg();
-      const t = getAuthManager().get_token?.();
-      return o && t ? buildEventsWsUrl(o.slug, t) : "";
-    });
+    void manager.connect();
 
     const unsubscribe = manager.onConnectionStateChange(setConnectionState);
 
     return () => {
       unsubscribe();
-      // Delay disconnect to avoid killing connection during React Strict Mode re-mount.
+      // Delay disconnect to avoid killing connection during React Strict
+      // Mode re-mount.
       const currentManager = manager;
       setTimeout(() => {
         if (managerRef.current === currentManager) {
-          currentManager.disconnect();
+          void currentManager.disconnect();
         }
       }, 100);
     };
@@ -73,16 +62,9 @@ export function useRealtimeConnection() {
   }, [currentOrg?.id, user?.id]);
 
   const reconnect = useCallback(() => {
-    const org = readCurrentOrg();
-    const t = getAuthManager().get_token?.();
-    if (!org || !t) return;
     resetEventSubscriptionManager();
     managerRef.current = getEventSubscriptionManager();
-    managerRef.current.connect(() => {
-      const o = readCurrentOrg();
-      const tk = getAuthManager().get_token?.();
-      return o && tk ? buildEventsWsUrl(o.slug, tk) : "";
-    });
+    void managerRef.current.connect();
   }, []);
 
   return {

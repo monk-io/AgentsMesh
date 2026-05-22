@@ -215,14 +215,14 @@ impl AppState {
 
     #[napi]
     pub fn auth_apply_session(&self, session_json: String) -> napi::Result<()> {
-        let session: agentsmesh_types::AuthSession = serde_json::from_str(&session_json).map_err(err)?;
+        let session: agentsmesh_state::auth_types::AuthSession = serde_json::from_str(&session_json).map_err(err)?;
         self.auth.apply_session(&session);
         Ok(())
     }
 
     #[napi]
     pub fn auth_set_organizations(&self, orgs_json: String) -> napi::Result<()> {
-        let orgs: Vec<agentsmesh_types::Organization> = serde_json::from_str(&orgs_json).map_err(err)?;
+        let orgs: Vec<agentsmesh_state::auth_types::Organization> = serde_json::from_str(&orgs_json).map_err(err)?;
         self.auth.replace_organizations(orgs);
         Ok(())
     }
@@ -232,7 +232,7 @@ impl AppState {
         if org_json.is_empty() {
             self.auth.set_current_org(None);
         } else {
-            let org: agentsmesh_types::Organization = serde_json::from_str(&org_json).map_err(err)?;
+            let org: agentsmesh_state::auth_types::Organization = serde_json::from_str(&org_json).map_err(err)?;
             self.auth.set_current_org(Some(org));
         }
         Ok(())

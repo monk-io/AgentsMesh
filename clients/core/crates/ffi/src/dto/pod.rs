@@ -45,7 +45,7 @@ pub enum PodStatusDto {
 // R2: PodStatus enum is gone — wire is `string status` in proto. Parse the
 // wire-string into the UniFFI enum here so Swift consumers still get the
 // strongly-typed enum surface.
-fn parse_pod_status(s: &str) -> PodStatusDto {
+pub fn parse_pod_status(s: &str) -> PodStatusDto {
     match s {
         "pending" => PodStatusDto::Pending,
         "creating" => PodStatusDto::Creating,

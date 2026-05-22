@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -8,7 +9,9 @@ import {
   assertNoWasmRecursiveBorrow,
 } from "../../helpers/console-errors";
 
-const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
+type Runner = { id: bigint };
+type Agent = { slug: string };
+type Pod = { podKey: string };
 
 /**
  * Regression: opening a pod terminal triggered
@@ -29,7 +32,7 @@ test.describe("ACP terminal: no wasm recursive borrow", () => {
     const pageErrors = collectPageErrors(page);
 
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     // Let any deferred ACP/relay subscriptions settle.
     await page.waitForTimeout(1500);
 
@@ -38,28 +41,26 @@ test.describe("ACP terminal: no wasm recursive borrow", () => {
   });
 
   test("creating a pod and rendering its terminal does not trigger wasm recursive borrow", async ({ page, api }) => {
-    const runnersRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
-    const runners = (await runnersRes.json()).runners;
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
     if (!runners?.length) { test.skip(); return; }
 
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentsRes.json()).builtin_agents;
+    const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
     if (!agents?.length) { test.skip(); return; }
 
     const consoleErrors = collectConsoleErrors(page);
     const pageErrors = collectPageErrors(page);
 
-    const createRes = await api.post(PODS_BASE, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E ACP recursive-borrow regression",
-    });
-    const data = await createRes.json();
-    const podKey = data.pod_key || data.pod?.pod_key;
+    const created = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+    }) as { pod: Pod };
+    const podKey = created.pod?.podKey;
     expect(podKey, "pod creation must return a pod_key").toBeTruthy();
 
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Give the relay time to push an ACP snapshot + at least one event so
     // the multi-hook AgentPanel render path actually exercises the cache.

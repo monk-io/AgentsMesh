@@ -178,9 +178,12 @@ export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
 
     async loadSubtree(workspaceID, rootID) {
       await blockstoreApi.getSubtree(workspaceID, rootID);
-      // Seed watermark if not yet present so the WS filter recognises the workspace.
+      // Seed watermark if not yet present so the WS filter recognises the
+      // workspace. wasm-bindgen exposes set_last_op_id as i64, so we MUST
+      // pass a BigInt — Number would throw "Cannot convert 0 to a BigInt"
+      // and wedge DocumentView at "Loading workspace…".
       if (!(workspaceID in readLastOpIds())) {
-        svc().set_last_op_id(workspaceID, 0);
+        svc().set_last_op_id(workspaceID, 0n);
       }
       bump();
     },
@@ -197,7 +200,9 @@ export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
     },
 
     setLastOpId(workspaceID, id) {
-      svc().set_last_op_id(workspaceID, id);
+      // wasm-bindgen i64 setter needs BigInt; tolerate Number callers by
+      // coercing here so non-bigint inputs don't blow up at the boundary.
+      svc().set_last_op_id(workspaceID, typeof id === "bigint" ? id : BigInt(id));
       bump();
     },
 

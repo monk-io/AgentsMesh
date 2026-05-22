@@ -67,7 +67,7 @@ export async function listRepositories(
     limit: opts.limit,
   });
   const bytes = toBinary(ListRepositoriesRequestSchema, req);
-  const respBytes = await getRepositoryService().list_repositories_connect(bytes);
+  const respBytes = await getRepositoryService().listRepositoriesConnect(bytes);
   const resp = fromBinary(ListRepositoriesResponseSchema, new Uint8Array(respBytes));
   return {
     items: resp.items.map(fromProtoRepository),
@@ -80,7 +80,7 @@ export async function listRepositories(
 export async function getRepository(orgSlug: string, id: number): Promise<RepositoryData> {
   const req = create(GetRepositoryRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(GetRepositoryRequestSchema, req);
-  const respBytes = await getRepositoryService().get_repository_connect(bytes);
+  const respBytes = await getRepositoryService().getRepositoryConnect(bytes);
   return fromProtoRepository(fromBinary(RepositorySchema, new Uint8Array(respBytes)));
 }
 
@@ -115,7 +115,7 @@ export async function createRepository(
     visibility: input.visibility,
   });
   const bytes = toBinary(CreateRepositoryRequestSchema, req);
-  const respBytes = await getRepositoryService().create_repository_connect(bytes);
+  const respBytes = await getRepositoryService().createRepositoryConnect(bytes);
   return fromProtoRepository(fromBinary(RepositorySchema, new Uint8Array(respBytes)));
 }
 
@@ -144,14 +144,14 @@ export async function updateRepository(
     sshCloneUrl: input.ssh_clone_url,
   });
   const bytes = toBinary(UpdateRepositoryRequestSchema, req);
-  const respBytes = await getRepositoryService().update_repository_connect(bytes);
+  const respBytes = await getRepositoryService().updateRepositoryConnect(bytes);
   return fromProtoRepository(fromBinary(RepositorySchema, new Uint8Array(respBytes)));
 }
 
 export async function deleteRepository(orgSlug: string, id: number): Promise<void> {
   const req = create(DeleteRepositoryRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(DeleteRepositoryRequestSchema, req);
-  const respBytes = await getRepositoryService().delete_repository_connect(bytes);
+  const respBytes = await getRepositoryService().deleteRepositoryConnect(bytes);
   fromBinary(DeleteRepositoryResponseSchema, new Uint8Array(respBytes));
 }
 
@@ -168,7 +168,7 @@ export async function listRepositoryBranches(
     accessToken,
   });
   const bytes = toBinary(ListRepositoryBranchesRequestSchema, req);
-  const respBytes = await getRepositoryService().list_repository_branches_connect(bytes);
+  const respBytes = await getRepositoryService().listRepositoryBranchesConnect(bytes);
   const resp = fromBinary(ListRepositoryBranchesResponseSchema, new Uint8Array(respBytes));
   return {
     items: resp.items.map((b) => b.name),
@@ -189,7 +189,7 @@ export async function syncRepositoryBranches(
     accessToken,
   });
   const bytes = toBinary(SyncRepositoryBranchesRequestSchema, req);
-  const respBytes = await getRepositoryService().sync_repository_branches_connect(bytes);
+  const respBytes = await getRepositoryService().syncRepositoryBranchesConnect(bytes);
   const resp = fromBinary(ListRepositoryBranchesResponseSchema, new Uint8Array(respBytes));
   return {
     items: resp.items.map((b) => b.name),
@@ -211,7 +211,7 @@ export async function listRepositoryMergeRequests(
     state: opts.state,
   });
   const bytes = toBinary(ListRepositoryMergeRequestsRequestSchema, req);
-  const respBytes = await getRepositoryService().list_repository_merge_requests_connect(bytes);
+  const respBytes = await getRepositoryService().listRepositoryMergeRequestsConnect(bytes);
   const resp = fromBinary(ListRepositoryMergeRequestsResponseSchema, new Uint8Array(respBytes));
   return {
     items: resp.items.map(fromProtoMergeRequest),
@@ -229,7 +229,7 @@ export async function registerRepositoryWebhook(
 ): Promise<WebhookResult | undefined> {
   const req = create(RegisterRepositoryWebhookRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(RegisterRepositoryWebhookRequestSchema, req);
-  const respBytes = await getRepositoryService().register_repository_webhook_connect(bytes);
+  const respBytes = await getRepositoryService().registerRepositoryWebhookConnect(bytes);
   const resp = fromBinary(RegisterRepositoryWebhookResponseSchema, new Uint8Array(respBytes));
   return resp.result ? fromProtoWebhookResult(resp.result) : undefined;
 }
@@ -237,7 +237,7 @@ export async function registerRepositoryWebhook(
 export async function deleteRepositoryWebhook(orgSlug: string, id: number): Promise<void> {
   const req = create(DeleteRepositoryWebhookRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(DeleteRepositoryWebhookRequestSchema, req);
-  const respBytes = await getRepositoryService().delete_repository_webhook_connect(bytes);
+  const respBytes = await getRepositoryService().deleteRepositoryWebhookConnect(bytes);
   fromBinary(DeleteRepositoryWebhookResponseSchema, new Uint8Array(respBytes));
 }
 
@@ -247,7 +247,7 @@ export async function getRepositoryWebhookStatus(
 ): Promise<WebhookStatus> {
   const req = create(GetRepositoryWebhookStatusRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(GetRepositoryWebhookStatusRequestSchema, req);
-  const respBytes = await getRepositoryService().get_repository_webhook_status_connect(bytes);
+  const respBytes = await getRepositoryService().getRepositoryWebhookStatusConnect(bytes);
   return fromProtoWebhookStatus(fromBinary(WebhookStatusSchema, new Uint8Array(respBytes)));
 }
 
@@ -257,7 +257,7 @@ export async function getRepositoryWebhookSecret(
 ): Promise<WebhookSecretResponse> {
   const req = create(GetRepositoryWebhookSecretRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(GetRepositoryWebhookSecretRequestSchema, req);
-  const respBytes = await getRepositoryService().get_repository_webhook_secret_connect(bytes);
+  const respBytes = await getRepositoryService().getRepositoryWebhookSecretConnect(bytes);
   return fromProtoWebhookSecret(fromBinary(WebhookSecretSchema, new Uint8Array(respBytes)));
 }
 
@@ -267,6 +267,6 @@ export async function markRepositoryWebhookConfigured(
 ): Promise<void> {
   const req = create(MarkRepositoryWebhookConfiguredRequestSchema, { orgSlug, id: BigInt(id) });
   const bytes = toBinary(MarkRepositoryWebhookConfiguredRequestSchema, req);
-  const respBytes = await getRepositoryService().mark_repository_webhook_configured_connect(bytes);
+  const respBytes = await getRepositoryService().markRepositoryWebhookConfiguredConnect(bytes);
   fromBinary(MarkRepositoryWebhookConfiguredResponseSchema, new Uint8Array(respBytes));
 }

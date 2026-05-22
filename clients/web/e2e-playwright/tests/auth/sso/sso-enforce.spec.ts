@@ -1,6 +1,11 @@
+// Migrated R5+: was REST `api.post('/api/v1/admin/sso/configs')` +
+// `api.postPublic('/api/v1/auth/login')`, now `cc.ssoAdmin.*` for admin
+// config and `cc.auth.login(...)` for public password login (typed
+// Connect, binary wire).
 import { test, expect } from "../../../fixtures/index";
-import { TEST_USER, ADMIN_USER, TEST_ORG_SLUG } from "../../../helpers/env";
+import { ADMIN_USER } from "../../../helpers/env";
 import { clearAuthRateLimit } from "../../../helpers/redis";
+import { ConnectError } from "../../../helpers/connect-client";
 
 /**
  * SSO Enforcement tests.
@@ -12,63 +17,75 @@ test.describe("SSO Enforcement", () => {
   const SSO_DOMAIN = `e2e-enforce-${Date.now()}.example.com`;
 
   /**
-   * TC-SSO-ENF-001: Password login blocked when SSO enforced
+   * TC-SSO-ENF-001: Password login blocked when SSO enforced.
+   * Connect: PermissionDenied (SSO_REQUIRED) → 403, Unauthenticated → 401.
    */
-  test("password login blocked when SSO enforced", async ({ api, db }) => {
-    // Setup SSO config via admin API (DB insert is complex due to encrypted fields)
+  test("password login blocked when SSO enforced", async ({ api }) => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    const createRes = await api.post("/api/v1/admin/sso/configs", {
-      name: "E2E Enforce SSO",
-      domain: SSO_DOMAIN,
-      protocol: "ldap", // LDAP doesn't need OIDC discovery
-      enforce_sso: true,
-      ldap_host: "ldap.example.com",
-      ldap_port: 389,
-      ldap_base_dn: "dc=example,dc=com",
-      ldap_bind_dn: "cn=admin,dc=example,dc=com",
-      ldap_bind_password: "test",
-    });
+    const adminCc = await api.connect();
 
-    if (createRes.status !== 201) {
-      // SSO config creation may fail — skip gracefully
+    let configId: bigint | null = null;
+    try {
+      const created = await adminCc.ssoAdmin.createSSOConfig({
+        name: "E2E Enforce SSO",
+        domain: SSO_DOMAIN,
+        protocol: "ldap", // LDAP doesn't need OIDC discovery
+        enforceSso: true,
+        ldapHost: "ldap.example.com",
+        ldapPort: 389,
+        ldapBaseDn: "dc=example,dc=com",
+        ldapBindDn: "cn=admin,dc=example,dc=com",
+        ldapBindPassword: "test",
+      }) as { id: bigint };
+      configId = created.id;
+    } catch {
+      // SSO config creation may fail — skip gracefully.
       test.skip();
       return;
     }
 
-    const created = await createRes.json();
-    const configId = created.config?.id || created.id;
-
     // Enable the config
-    await api.post(`/api/v1/admin/sso/configs/${configId}/enable`, {});
+    await adminCc.ssoAdmin.enableSSOConfig({ id: configId });
 
-    // Attempt password login for a user at that domain
-    await api.login(); // reset to dev user token
-    const loginRes = await api.postPublic("/api/v1/auth/login", {
-      email: `user@${SSO_DOMAIN}`,
-      password: "TestPass123!",
-    });
-    // 403 SSO_REQUIRED or 401 user not found — either is valid
-    expect([200, 401, 403]).toContain(loginRes.status);
+    // Attempt password login for a user at that domain (public path).
+    const publicCc = api.connectWithToken("");
+    let loginStatus: number | "ok" = "ok";
+    try {
+      await publicCc.auth.login({
+        email: `user@${SSO_DOMAIN}`,
+        password: "TestPass123!",
+      });
+    } catch (err) {
+      expect(err).toBeInstanceOf(ConnectError);
+      loginStatus = (err as ConnectError).status;
+    }
+    // 403 SSO_REQUIRED, 401 user not found, or "ok" — all valid outcomes.
+    expect([401, 403, "ok"]).toContain(loginStatus);
 
     // Cleanup
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    if (configId) await api.delete(`/api/v1/admin/sso/configs/${configId}`);
+    const adminCc2 = await api.connect();
+    if (configId != null) {
+      await adminCc2.ssoAdmin.deleteSSOConfig({ id: configId });
+    }
   });
 
   /**
-   * TC-SSO-ENF-002: System admin bypasses SSO enforcement
+   * TC-SSO-ENF-002: System admin bypasses SSO enforcement.
    */
   test("system admin bypasses SSO enforcement", async ({ api }) => {
-    // Admin should always be able to login with password
-    const loginRes = await api.postPublic("/api/v1/auth/login", {
+    const publicCc = api.connectWithToken("");
+    // Admin should always be able to login with password.
+    const res = await publicCc.auth.login({
       email: ADMIN_USER.email,
       password: ADMIN_USER.password,
-    });
-    expect(loginRes.status).toBe(200);
+    }) as { token: string };
+    expect(res.token).toBeTruthy();
   });
 
   /**
-   * TC-SSO-ENF-003: UI hides password when SSO enforced
+   * TC-SSO-ENF-003: UI hides password when SSO enforced.
+   * (Browser-side discovery check — no REST/Connect call.)
    */
   test("login page discovers SSO for email domain", async ({ page }) => {
     await page.goto("/login");

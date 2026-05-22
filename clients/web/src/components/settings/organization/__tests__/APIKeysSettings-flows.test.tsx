@@ -9,7 +9,27 @@ import {
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
 import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
-import { getApiKeyService } from "@/lib/wasm-core";
+
+// See APIKeysSettings.test.tsx for why we mock the wrapper layer. vi.hoisted
+// lifts the mock fns past vi.mock's hoisting (without it the factory would
+// capture `undefined`).
+const { mockListApiKeys, mockCreateApiKey } = vi.hoisted(() => ({
+  mockListApiKeys: vi.fn(),
+  mockCreateApiKey: vi.fn(),
+}));
+vi.mock("@/lib/api/apikey", () => ({
+  listApiKeys: mockListApiKeys,
+  createApiKey: mockCreateApiKey,
+  updateApiKey: vi.fn(),
+  revokeApiKey: vi.fn(),
+}));
+
+const { stableOrg } = vi.hoisted(() => ({
+  stableOrg: { id: 10, slug: "test-org", name: "Test Org", role: "owner" },
+}));
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stableOrg,
+}));
 
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
@@ -141,20 +161,6 @@ vi.mock("../apikeys", () => ({
 
 const mockT = vi.fn((key: string) => key);
 
-const mockList = vi.fn();
-const mockCreate = vi.fn();
-
-function setupServiceMock() {
-  vi.mocked(getApiKeyService).mockReturnValue({
-    list: mockList,
-    get: vi.fn(),
-    create: mockCreate,
-    update: vi.fn(),
-    delete: vi.fn(),
-    revoke: vi.fn(),
-  } as unknown as ReturnType<typeof getApiKeyService>);
-}
-
 async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   let result: ReturnType<typeof render>;
   await act(async () => {
@@ -192,10 +198,7 @@ describe("APIKeysSettings - flows", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    setupServiceMock();
-    mockList.mockResolvedValue(
-      JSON.stringify({ api_keys: sampleKeys, total: 2 })
-    );
+    mockListApiKeys.mockResolvedValue({ items: sampleKeys, total: 2, limit: 50, offset: 0 });
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -233,12 +236,14 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should show secret dialog after successful creation", async () => {
-      vi.mocked(mockCreate).mockResolvedValue(
-        JSON.stringify({
-          api_key: { id: 3, name: "New Key" },
-          raw_key: "am_new_secret123",
-        })
-      );
+      vi.mocked(mockCreateApiKey).mockResolvedValue({
+        api_key: {
+          id: 3, organization_id: 10, name: "New Key", key_prefix: "am_new",
+          scopes: [], is_enabled: true, created_by: 1,
+          created_at: "2024-03-01T00:00:00Z", updated_at: "2024-03-01T00:00:00Z",
+        },
+        raw_key: "am_new_secret123",
+      });
 
       await renderAndWaitForLoad();
 
@@ -259,12 +264,14 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should close secret dialog when done is clicked", async () => {
-      vi.mocked(mockCreate).mockResolvedValue(
-        JSON.stringify({
-          api_key: { id: 3, name: "New Key" },
-          raw_key: "am_new_secret123",
-        })
-      );
+      vi.mocked(mockCreateApiKey).mockResolvedValue({
+        api_key: {
+          id: 3, organization_id: 10, name: "New Key", key_prefix: "am_new",
+          scopes: [], is_enabled: true, created_by: 1,
+          created_at: "2024-03-01T00:00:00Z", updated_at: "2024-03-01T00:00:00Z",
+        },
+        raw_key: "am_new_secret123",
+      });
 
       await renderAndWaitForLoad();
 
@@ -290,16 +297,18 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should refresh key list after creation", async () => {
-      vi.mocked(mockCreate).mockResolvedValue(
-        JSON.stringify({
-          api_key: { id: 3, name: "New Key" },
-          raw_key: "am_new_secret123",
-        })
-      );
+      vi.mocked(mockCreateApiKey).mockResolvedValue({
+        api_key: {
+          id: 3, organization_id: 10, name: "New Key", key_prefix: "am_new",
+          scopes: [], is_enabled: true, created_by: 1,
+          created_at: "2024-03-01T00:00:00Z", updated_at: "2024-03-01T00:00:00Z",
+        },
+        raw_key: "am_new_secret123",
+      });
 
       await renderAndWaitForLoad();
 
-      expect(mockList).toHaveBeenCalledTimes(1);
+      expect(mockListApiKeys).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         fireEvent.click(screen.getByText("settings.apiKeys.createKey"));
@@ -310,7 +319,7 @@ describe("APIKeysSettings - flows", () => {
       });
 
       await waitFor(() => {
-        expect(mockList).toHaveBeenCalledTimes(2);
+        expect(mockListApiKeys).toHaveBeenCalledTimes(2);
       });
     });
   });

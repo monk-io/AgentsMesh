@@ -1,5 +1,3 @@
-use agentsmesh_types::{BoardColumn, Label, Ticket, TicketPriority, TicketStatus};
-
 // ── Enums ─────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
@@ -12,28 +10,26 @@ pub enum TicketStatusDto {
     Unknown,
 }
 
-impl From<TicketStatus> for TicketStatusDto {
-    fn from(s: TicketStatus) -> Self {
+impl TicketStatusDto {
+    pub fn from_wire(s: &str) -> Self {
         match s {
-            TicketStatus::Backlog => Self::Backlog,
-            TicketStatus::Todo => Self::Todo,
-            TicketStatus::InProgress => Self::InProgress,
-            TicketStatus::InReview => Self::InReview,
-            TicketStatus::Done => Self::Done,
-            TicketStatus::Unknown => Self::Unknown,
+            "backlog" => Self::Backlog,
+            "todo" => Self::Todo,
+            "in_progress" => Self::InProgress,
+            "in_review" => Self::InReview,
+            "done" => Self::Done,
+            _ => Self::Unknown,
         }
     }
-}
 
-impl From<TicketStatusDto> for TicketStatus {
-    fn from(s: TicketStatusDto) -> Self {
-        match s {
-            TicketStatusDto::Backlog => Self::Backlog,
-            TicketStatusDto::Todo => Self::Todo,
-            TicketStatusDto::InProgress => Self::InProgress,
-            TicketStatusDto::InReview => Self::InReview,
-            TicketStatusDto::Done => Self::Done,
-            TicketStatusDto::Unknown => Self::Unknown,
+    pub fn to_wire(self) -> &'static str {
+        match self {
+            Self::Backlog => "backlog",
+            Self::Todo => "todo",
+            Self::InProgress => "in_progress",
+            Self::InReview => "in_review",
+            Self::Done => "done",
+            Self::Unknown => "unknown",
         }
     }
 }
@@ -48,28 +44,26 @@ pub enum TicketPriorityDto {
     Unknown,
 }
 
-impl From<TicketPriority> for TicketPriorityDto {
-    fn from(p: TicketPriority) -> Self {
-        match p {
-            TicketPriority::None => Self::None,
-            TicketPriority::Low => Self::Low,
-            TicketPriority::Medium => Self::Medium,
-            TicketPriority::High => Self::High,
-            TicketPriority::Urgent => Self::Urgent,
-            TicketPriority::Unknown => Self::Unknown,
+impl TicketPriorityDto {
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "none" => Self::None,
+            "low" => Self::Low,
+            "medium" => Self::Medium,
+            "high" => Self::High,
+            "urgent" => Self::Urgent,
+            _ => Self::Unknown,
         }
     }
-}
 
-impl From<TicketPriorityDto> for TicketPriority {
-    fn from(p: TicketPriorityDto) -> Self {
-        match p {
-            TicketPriorityDto::None => Self::None,
-            TicketPriorityDto::Low => Self::Low,
-            TicketPriorityDto::Medium => Self::Medium,
-            TicketPriorityDto::High => Self::High,
-            TicketPriorityDto::Urgent => Self::Urgent,
-            TicketPriorityDto::Unknown => Self::Unknown,
+    pub fn to_wire(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+            Self::Urgent => "urgent",
+            Self::Unknown => "unknown",
         }
     }
 }
@@ -89,22 +83,6 @@ pub struct TicketDto {
     pub updated_at: Option<String>,
 }
 
-impl From<Ticket> for TicketDto {
-    fn from(t: Ticket) -> Self {
-        Self {
-            slug: t.slug,
-            title: t.title,
-            content: t.content,
-            status: t.status.into(),
-            priority: t.priority.into(),
-            repository_id: t.repository_id,
-            parent_slug: t.parent_slug,
-            created_at: t.created_at,
-            updated_at: t.updated_at,
-        }
-    }
-}
-
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct TicketListResponseDto {
     pub tickets: Vec<TicketDto>,
@@ -118,16 +96,6 @@ pub struct BoardColumnDto {
     pub status: TicketStatusDto,
     pub tickets: Vec<TicketDto>,
     pub total_count: i64,
-}
-
-impl From<BoardColumn> for BoardColumnDto {
-    fn from(c: BoardColumn) -> Self {
-        Self {
-            status: c.status.into(),
-            tickets: c.tickets.into_iter().map(TicketDto::from).collect(),
-            total_count: c.total_count,
-        }
-    }
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -144,16 +112,6 @@ pub struct LabelDto {
     pub id: i64,
     pub name: String,
     pub color: String,
-}
-
-impl From<Label> for LabelDto {
-    fn from(l: Label) -> Self {
-        Self {
-            id: l.id,
-            name: l.name,
-            color: l.color,
-        }
-    }
 }
 
 #[derive(Clone, Debug, uniffi::Record)]

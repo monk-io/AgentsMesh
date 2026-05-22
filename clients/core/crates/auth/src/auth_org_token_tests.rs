@@ -201,7 +201,7 @@ mod auth_org_token_tests {
         let manager = AuthManager::new(server.uri(), storage);
 
         manager.login("dev@test.com", "pass").await.unwrap();
-        let org = agentsmesh_types::Organization {
+        let org = agentsmesh_state::auth_types::Organization {
             id: 99,
             name: "Direct Org".into(),
             slug: "direct-org".into(),

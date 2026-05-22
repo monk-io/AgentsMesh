@@ -1,6 +1,8 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { randomUUID } from "crypto";
 
 import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 // Verifies the semantic search path end-to-end inside a pristine workspace:
 //   1. Create two paragraph blocks with very different content
@@ -14,9 +16,10 @@ import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
 // hundreds of stale kiwi/rocket blocks over many runs, eventually pushing
 // our freshly-written block out of the top hits.
 test("semantic search ranks paragraphs by query relevance", async ({
-  api,
+  token,
   isolatedWorkspace,
 }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID, rootID } = isolatedWorkspace;
 
   const kiwiMarker = `kiwi-fruit-unique-${Date.now()}`;
@@ -24,37 +27,38 @@ test("semantic search ranks paragraphs by query relevance", async ({
   const kiwiID = randomUUID();
   const rocketID = randomUUID();
 
-  await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    workspace_id: workspaceID,
+  await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
     ops: [
       {
         op: "createBlock",
-        payload: {
+        payloadJson: JSON.stringify({
           id: kiwiID,
           type: "paragraph",
           data: { text: kiwiMarker },
           text: `${kiwiMarker} ripe green fruit with fuzzy skin from new zealand orchard`,
-        },
+        }),
       },
       {
         op: "addRef",
-        payload: { from: rootID, to: kiwiID, rel: "nest", order_key: `zzz${Date.now().toString(36)}1` },
+        payloadJson: JSON.stringify({ from: rootID, to: kiwiID, rel: "nest", order_key: `zzz${Date.now().toString(36)}1` }),
       },
       {
         op: "createBlock",
-        payload: {
+        payloadJson: JSON.stringify({
           id: rocketID,
           type: "paragraph",
           data: { text: rocketMarker },
           text: `${rocketMarker} liquid hydrogen thrust chamber combustion nozzle stage`,
-        },
+        }),
       },
       {
         op: "addRef",
-        payload: { from: rootID, to: rocketID, rel: "nest", order_key: `zzz${Date.now().toString(36)}2` },
+        payloadJson: JSON.stringify({ from: rootID, to: rocketID, rel: "nest", order_key: `zzz${Date.now().toString(36)}2` }),
       },
     ],
-    idempotency_key: `e2e-search-${kiwiID}`,
+    idempotencyKey: `e2e-search-${kiwiID}`,
   });
 
   // Wait until both IDs are indexed. Embeddings ride a 256-buffered channel;
@@ -62,32 +66,38 @@ test("semantic search ranks paragraphs by query relevance", async ({
   await expect
     .poll(
       async () => {
-        const res = await api.post<{ hits: Array<{ block_id: string }> }>(
-          `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/search`,
-          { query: "kiwi fruit orchard zealand", top_k: 20 },
-        );
-        return res.hits.some((h) => h.block_id === kiwiID);
+        const res = await cc.blockstore.semanticSearch({
+          orgSlug,
+          workspaceId: workspaceID,
+          query: "kiwi fruit orchard zealand",
+          topK: 20,
+        }) as { hits: Array<{ blockId: string }> };
+        return res.hits.some((h) => h.blockId === kiwiID);
       },
       { timeout: 15_000, message: "kiwi block should be indexed" },
     )
     .toBe(true);
 
   // Ranking check: the fruit query should surface kiwi strictly above rocket.
-  const kiwiHits = await api.post<{ hits: Array<{ block_id: string; score: number }> }>(
-    `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/search`,
-    { query: "kiwi fruit orchard zealand", top_k: 10 },
-  );
-  const kiwiRank = kiwiHits.hits.findIndex((h) => h.block_id === kiwiID);
-  const rocketRankInKiwiQuery = kiwiHits.hits.findIndex((h) => h.block_id === rocketID);
+  const kiwiHits = await cc.blockstore.semanticSearch({
+    orgSlug,
+    workspaceId: workspaceID,
+    query: "kiwi fruit orchard zealand",
+    topK: 10,
+  }) as { hits: Array<{ blockId: string; score: number }> };
+  const kiwiRank = kiwiHits.hits.findIndex((h) => h.blockId === kiwiID);
+  const rocketRankInKiwiQuery = kiwiHits.hits.findIndex((h) => h.blockId === rocketID);
   expect(kiwiRank).toBeGreaterThanOrEqual(0);
   if (rocketRankInKiwiQuery >= 0) expect(kiwiRank).toBeLessThan(rocketRankInKiwiQuery);
 
-  const rocketHits = await api.post<{ hits: Array<{ block_id: string; score: number }> }>(
-    `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/search`,
-    { query: "rocket thrust combustion nozzle engine", top_k: 10 },
-  );
-  const rocketRank = rocketHits.hits.findIndex((h) => h.block_id === rocketID);
-  const kiwiRankInRocketQuery = rocketHits.hits.findIndex((h) => h.block_id === kiwiID);
+  const rocketHits = await cc.blockstore.semanticSearch({
+    orgSlug,
+    workspaceId: workspaceID,
+    query: "rocket thrust combustion nozzle engine",
+    topK: 10,
+  }) as { hits: Array<{ blockId: string; score: number }> };
+  const rocketRank = rocketHits.hits.findIndex((h) => h.blockId === rocketID);
+  const kiwiRankInRocketQuery = rocketHits.hits.findIndex((h) => h.blockId === kiwiID);
   expect(rocketRank).toBeGreaterThanOrEqual(0);
   if (kiwiRankInRocketQuery >= 0) expect(rocketRank).toBeLessThan(kiwiRankInRocketQuery);
 });

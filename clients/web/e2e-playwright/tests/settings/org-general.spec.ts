@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { OrgGeneralPage } from "../../pages/settings/org-general.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
@@ -14,11 +15,10 @@ test.describe("Organization General Settings", () => {
    * TC-ORGSET-001: Get org details (API)
    */
   test("get org details via API", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.organization.slug).toBe(TEST_ORG_SLUG);
-    expect(data.organization.name).toBeTruthy();
+    const cc = await api.connect();
+    const org = await cc.org.getOrg({ orgSlug: TEST_ORG_SLUG }) as { slug: string; name: string };
+    expect(org.slug).toBe(TEST_ORG_SLUG);
+    expect(org.name).toBeTruthy();
   });
 
   /**

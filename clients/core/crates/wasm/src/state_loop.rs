@@ -1,6 +1,5 @@
 
-use agentsmesh_state::loop_state::LoopState;
-use agentsmesh_types::{LoopData, LoopRunData};
+use agentsmesh_state::loop_state::{LoopData, LoopRunData, LoopState};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -81,8 +80,7 @@ impl WasmLoopState {
     }
 
     pub fn update_run_status(&mut self, run_id: i64, status: &str) {
-        let parsed = crate::parse_status::<agentsmesh_types::LoopRunStatus>(status);
-        self.inner.update_run_status(run_id, parsed);
+        self.inner.update_run_status(run_id, status);
     }
 
     pub fn clear_runs(&mut self) {

@@ -97,9 +97,9 @@ func NewServer(
 	return s
 }
 
-// Option mirrors v1.InvitationHandler — functional options for the optional
-// billing dependency so deployments without billing can mount a degraded
-// handler without nil panics.
+// Option — functional options for the optional billing dependency so
+// deployments without billing can mount a degraded handler without nil
+// panics.
 type Option func(*Server)
 
 func WithBillingService(b *billingsvc.Service) Option {

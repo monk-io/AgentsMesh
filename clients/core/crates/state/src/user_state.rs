@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use agentsmesh_persistence::StorageBackend;
-use agentsmesh_types::{User, UserIdentity};
 
+use crate::auth_types::{User, UserIdentity};
 use crate::persist_helpers::JsonStore;
 
 pub struct UserState {

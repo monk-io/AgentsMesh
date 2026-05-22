@@ -3,40 +3,27 @@ use agentsmesh_types::proto_ticket_v1 as ticket_proto;
 use crate::core::AgentsMeshCore;
 use crate::dto::{
     BoardResponseDto, CreateLabelRequestDto, CreateTicketRequestDto, LabelDto,
-    LabelListResponseDto, PodListResponseDto, TicketDto, TicketListResponseDto, TicketStatusDto,
-    UpdateLabelRequestDto, UpdateTicketRequestDto,
+    LabelListResponseDto, PodListResponseDto, TicketDto, TicketListResponseDto,
+    TicketPriorityDto, TicketStatusDto, UpdateLabelRequestDto, UpdateTicketRequestDto,
 };
 use crate::error::CoreError;
 
-fn ticket_status_to_proto(s: TicketStatusDto) -> String {
-    match s {
-        TicketStatusDto::Backlog => "backlog".into(),
-        TicketStatusDto::Todo => "todo".into(),
-        TicketStatusDto::InProgress => "in_progress".into(),
-        TicketStatusDto::InReview => "in_review".into(),
-        TicketStatusDto::Done => "done".into(),
-        TicketStatusDto::Unknown => "unknown".into(),
-    }
-}
-
 fn ticket_from_proto(t: ticket_proto::Ticket) -> TicketDto {
-    use agentsmesh_types::Ticket;
-    Ticket {
+    TicketDto {
         slug: t.slug,
         title: t.title,
         content: t.content,
-        status: serde_json::from_value(serde_json::Value::String(t.status)).unwrap_or_default(),
-        priority: serde_json::from_value(serde_json::Value::String(t.priority)).unwrap_or_default(),
+        status: TicketStatusDto::from_wire(&t.status),
+        priority: TicketPriorityDto::from_wire(&t.priority),
         repository_id: t.repository_id,
         parent_slug: t.parent_ticket_slug,
         created_at: if t.created_at.is_empty() { None } else { Some(t.created_at) },
         updated_at: if t.updated_at.is_empty() { None } else { Some(t.updated_at) },
     }
-    .into()
 }
 
 fn label_from_proto(l: ticket_proto::Label) -> LabelDto {
-    agentsmesh_types::Label { id: l.id, name: l.name, color: l.color }.into()
+    LabelDto { id: l.id, name: l.name, color: l.color }
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -85,12 +72,7 @@ impl AgentsMeshCore {
             title: req.title,
             content: req.content,
             status: None,
-            priority: req.priority.map(|p| {
-                serde_json::to_value(agentsmesh_types::TicketPriority::from(p))
-                    .ok()
-                    .and_then(|v| v.as_str().map(String::from))
-                    .unwrap_or_default()
-            }),
+            priority: req.priority.map(|p| p.to_wire().to_string()),
             repository_id: req.repository_id,
             assignee_ids: req.assignee_ids.unwrap_or_default(),
             labels: req.labels.unwrap_or_default().into_iter().map(|id| id.to_string()).collect(),
@@ -112,12 +94,7 @@ impl AgentsMeshCore {
             title: req.title,
             content: req.content,
             status: None,
-            priority: req.priority.map(|p| {
-                serde_json::to_value(agentsmesh_types::TicketPriority::from(p))
-                    .ok()
-                    .and_then(|v| v.as_str().map(String::from))
-                    .unwrap_or_default()
-            }),
+            priority: req.priority.map(|p| p.to_wire().to_string()),
             repository_id: req.repository_id,
             assignee_ids: vec![],
             labels: vec![],
@@ -144,7 +121,7 @@ impl AgentsMeshCore {
         let req = ticket_proto::UpdateTicketStatusRequest {
             org_slug: self.org_slug()?,
             ticket_slug: slug.clone(),
-            status: ticket_status_to_proto(status),
+            status: status.to_wire().to_string(),
         };
         self.api.update_ticket_status_connect(&req).await?;
         // proto.ticket.v1 UpdateTicketStatus returns empty; refetch the ticket so
@@ -191,11 +168,7 @@ impl AgentsMeshCore {
         let resp = self.api.get_board_connect(&req).await?;
         Ok(BoardResponseDto {
             columns: resp.columns.into_iter().map(|c| BoardColumnDto {
-                status: serde_json::from_value::<agentsmesh_types::TicketStatus>(
-                    serde_json::Value::String(c.status),
-                )
-                .unwrap_or_default()
-                .into(),
+                status: TicketStatusDto::from_wire(&c.status),
                 tickets: c.tickets.into_iter().map(ticket_from_proto).collect(),
                 total_count: c.total_count,
             }).collect(),
@@ -298,10 +271,8 @@ impl AgentsMeshCore {
         // proto.ticket.v1 doesn't own ticket→pod lookup — that's MeshService.
         // The MeshNode projection carries the renderer-facing pod fields;
         // the unset PodDto fields stay None on this lookup path.
-        use agentsmesh_services::parse_status;
-        use agentsmesh_types::PodStatus;
         use agentsmesh_types::proto_mesh_v1 as mp;
-        use crate::dto::PodDto;
+        use crate::dto::{parse_pod_status, PodDto};
         let req = mp::GetTicketPodsRequest {
             org_slug: self.org_slug()?,
             ticket_slug: slug,
@@ -314,7 +285,7 @@ impl AgentsMeshCore {
             .map(|n| PodDto {
                 key: n.pod_key,
                 id: None,
-                status: parse_status::<PodStatus>(&n.status).into(),
+                status: parse_pod_status(&n.status),
                 agent_status: if n.agent_status.is_empty() {
                     None
                 } else {
