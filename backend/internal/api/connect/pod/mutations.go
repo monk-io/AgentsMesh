@@ -43,7 +43,6 @@ func (s *Server) CreatePod(
 		RepositoryID:        optionalInt64(req.Msg.RepositoryId),
 		TicketSlug:          optionalString(req.Msg.TicketSlug),
 		Alias:               alias,
-		CredentialProfileID: optionalInt64(req.Msg.CredentialProfileId),
 		AgentfileLayer:      optionalString(req.Msg.AgentfileLayer),
 		Cols:                req.Msg.GetCols(),
 		Rows:                req.Msg.GetRows(),

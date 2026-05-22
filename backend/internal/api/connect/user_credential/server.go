@@ -1,8 +1,8 @@
-// Package usercredentialconnect hosts Connect-RPC handlers for three user-scoped
-// services that share the proto.user_credential.v1 package: Git credentials,
-// Agent credential profiles, and Repository providers. They're grouped because
-// they're tightly coupled at the data layer (GitCredential references
-// RepositoryProvider) and share the same user-scope auth boundary.
+// Package usercredentialconnect hosts Connect-RPC handlers for user-scoped
+// services that share the proto.user_credential.v1 package: Git credentials
+// and Repository providers. They're grouped because they're tightly coupled
+// at the data layer (GitCredential references RepositoryProvider) and share
+// the same user-scope auth boundary.
 //
 // Per conventions §3.5 these are user-scoped — the auth interceptor populates
 // TenantContext.UserID and that's the only scope each RPC enforces, no
@@ -18,14 +18,12 @@ import (
 
 	"connectrpc.com/connect"
 
-	agentservice "github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	userservice "github.com/anthropics/agentsmesh/backend/internal/service/user"
 )
 
 const (
-	GitServiceName        = "proto.user_credential.v1.UserGitCredentialService"
-	AgentServiceName      = "proto.user_credential.v1.UserAgentCredentialService"
-	ProviderServiceName   = "proto.user_credential.v1.UserRepositoryProviderService"
+	GitServiceName      = "proto.user_credential.v1.UserGitCredentialService"
+	ProviderServiceName = "proto.user_credential.v1.UserRepositoryProviderService"
 )
 
 const (
@@ -40,16 +38,6 @@ const (
 )
 
 const (
-	ListAgentCredentialProfilesProcedure         = "/" + AgentServiceName + "/ListAgentCredentialProfiles"
-	ListAgentCredentialProfilesForAgentProcedure = "/" + AgentServiceName + "/ListAgentCredentialProfilesForAgent"
-	GetAgentCredentialProfileProcedure           = "/" + AgentServiceName + "/GetAgentCredentialProfile"
-	CreateAgentCredentialProfileProcedure        = "/" + AgentServiceName + "/CreateAgentCredentialProfile"
-	UpdateAgentCredentialProfileProcedure        = "/" + AgentServiceName + "/UpdateAgentCredentialProfile"
-	DeleteAgentCredentialProfileProcedure        = "/" + AgentServiceName + "/DeleteAgentCredentialProfile"
-	SetDefaultAgentCredentialProfileProcedure    = "/" + AgentServiceName + "/SetDefaultAgentCredentialProfile"
-)
-
-const (
 	ListRepositoryProvidersProcedure          = "/" + ProviderServiceName + "/ListRepositoryProviders"
 	GetRepositoryProviderProcedure            = "/" + ProviderServiceName + "/GetRepositoryProvider"
 	CreateRepositoryProviderProcedure         = "/" + ProviderServiceName + "/CreateRepositoryProvider"
@@ -60,30 +48,20 @@ const (
 	ListProviderRepositoriesProcedure         = "/" + ProviderServiceName + "/ListProviderRepositories"
 )
 
-// Server implements all three credential services. They share dependencies
-// (userService is the home of both Git credentials and Repository providers),
-// so one struct keeps the dep wiring simple.
+// Server implements the two credential services. They share the user service
+// as their data home (both Git credentials and Repository providers).
 type Server struct {
-	userSvc       *userservice.Service
-	credentialSvc *agentservice.CredentialProfileService
+	userSvc *userservice.Service
 }
 
-// NewServer constructs a Server with the three required service deps.
-func NewServer(
-	userSvc *userservice.Service,
-	credentialSvc *agentservice.CredentialProfileService,
-) *Server {
-	return &Server{
-		userSvc:       userSvc,
-		credentialSvc: credentialSvc,
-	}
+func NewServer(userSvc *userservice.Service) *Server {
+	return &Server{userSvc: userSvc}
 }
 
-// Mount registers all 23 procedures across the three services on mux behind
+// Mount registers all procedures across the two services on mux behind
 // the auth interceptor supplied via opts (cmd/server/connect_init.go).
 func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
 	mountGitCredential(mux, srv, opts...)
-	mountAgentCredential(mux, srv, opts...)
 	mountRepositoryProvider(mux, srv, opts...)
 }
 
@@ -111,30 +89,6 @@ func mountGitCredential(mux *http.ServeMux, srv *Server, opts ...connect.Handler
 	))
 	mux.Handle(ClearDefaultGitCredentialProcedure, connect.NewUnaryHandler(
 		ClearDefaultGitCredentialProcedure, srv.ClearDefaultGitCredential, opts...,
-	))
-}
-
-func mountAgentCredential(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {
-	mux.Handle(ListAgentCredentialProfilesProcedure, connect.NewUnaryHandler(
-		ListAgentCredentialProfilesProcedure, srv.ListAgentCredentialProfiles, opts...,
-	))
-	mux.Handle(ListAgentCredentialProfilesForAgentProcedure, connect.NewUnaryHandler(
-		ListAgentCredentialProfilesForAgentProcedure, srv.ListAgentCredentialProfilesForAgent, opts...,
-	))
-	mux.Handle(GetAgentCredentialProfileProcedure, connect.NewUnaryHandler(
-		GetAgentCredentialProfileProcedure, srv.GetAgentCredentialProfile, opts...,
-	))
-	mux.Handle(CreateAgentCredentialProfileProcedure, connect.NewUnaryHandler(
-		CreateAgentCredentialProfileProcedure, srv.CreateAgentCredentialProfile, opts...,
-	))
-	mux.Handle(UpdateAgentCredentialProfileProcedure, connect.NewUnaryHandler(
-		UpdateAgentCredentialProfileProcedure, srv.UpdateAgentCredentialProfile, opts...,
-	))
-	mux.Handle(DeleteAgentCredentialProfileProcedure, connect.NewUnaryHandler(
-		DeleteAgentCredentialProfileProcedure, srv.DeleteAgentCredentialProfile, opts...,
-	))
-	mux.Handle(SetDefaultAgentCredentialProfileProcedure, connect.NewUnaryHandler(
-		SetDefaultAgentCredentialProfileProcedure, srv.SetDefaultAgentCredentialProfile, opts...,
 	))
 }
 

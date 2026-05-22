@@ -84,7 +84,7 @@ func (s *Server) GetAgentConfigSchema(
 		return nil, err
 	}
 
-	schema, err := s.configBuilder.GetConfigSchema(ctx, req.Msg.GetAgentSlug())
+	schema, err := agentservice.ResolveConfigSchema(ctx, s.agentSvc, req.Msg.GetAgentSlug())
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

@@ -91,7 +91,7 @@ export class ElectronBlockstoreService {
       }
     } catch { /* fall through with original payload */ }
     if (parsed) {
-      try { applyOpToCache(this.cache, parsed as Parameters<typeof applyOpToCache>[1]); }
+      try { applyOpToCache(this.cache, parsed as unknown as Parameters<typeof applyOpToCache>[1]); }
       catch { /* tolerate malformed ops */ }
     }
     // Fire IPC to keep main-process mirror warm for legacy consumers, but

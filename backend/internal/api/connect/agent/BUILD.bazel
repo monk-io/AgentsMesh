@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "agent_handlers.go",
         "agent_handlers_custom.go",
-        "composite_provider.go",
         "convert.go",
         "mount.go",
         "server.go",

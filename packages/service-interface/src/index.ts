@@ -20,6 +20,7 @@ export interface IAgentService {
   create_provider(json: string): Promise<string>;
   delete_provider(id: bigint): Promise<void>;
   get_agentpod_settings(): Promise<string>;
+  list_agents(): Promise<string>;
   list_providers(): Promise<string>;
   set_default_provider(id: bigint): Promise<void>;
   update_agentpod_settings(json: string): Promise<string>;

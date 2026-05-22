@@ -52,29 +52,23 @@ const (
 // (backend/internal/api/rest/v1/agents.go: AgentHandler).
 type Server struct {
 	agentSvc      *agentservice.AgentService
-	credentialSvc *agentservice.CredentialProfileService
 	userConfigSvc *agentservice.UserConfigService
 	configBuilder *agentservice.ConfigBuilder
 	orgSvc        middleware.OrganizationService
 }
 
-// NewServer constructs a Server. configBuilder is built internally from
-// agentSvc + credentialSvc to match the REST handler's compositeProvider
-// pattern (agents.go:28).
+// NewServer constructs a Server. The ConfigBuilder is built from agentSvc
+// (satisfies AgentConfigProvider) + envBundleSvc.
 func NewServer(
 	agentSvc *agentservice.AgentService,
-	credentialSvc *agentservice.CredentialProfileService,
+	envBundleSvc agentservice.EnvBundleLoader,
 	userConfigSvc *agentservice.UserConfigService,
 	orgSvc middleware.OrganizationService,
 ) *Server {
 	return &Server{
 		agentSvc:      agentSvc,
-		credentialSvc: credentialSvc,
 		userConfigSvc: userConfigSvc,
-		configBuilder: agentservice.NewConfigBuilder(&compositeProvider{
-			agentSvc:      agentSvc,
-			credentialSvc: credentialSvc,
-		}),
-		orgSvc: orgSvc,
+		configBuilder: agentservice.NewConfigBuilder(agentSvc, envBundleSvc),
+		orgSvc:        orgSvc,
 	}
 }

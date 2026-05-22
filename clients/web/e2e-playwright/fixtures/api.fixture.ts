@@ -88,6 +88,67 @@ export class ApiFixture {
     return this.baseUrl;
   }
 
+  // REST helpers — a handful of specs (envbundle / personal-agents-credentials)
+  // still call legacy `/api/v1/...` REST endpoints for setup/teardown because
+  // their Connect-RPC counterparts haven't landed yet. Keep these alive on the
+  // fixture so specs don't reach for `fetch` directly with bespoke auth wiring.
+
+  /** GET request with authentication. */
+  async get(path: string): Promise<Response> {
+    await this.ensureToken();
+    return fetch(`${this.baseUrl}${path}`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+    });
+  }
+
+  /** POST request with authentication. */
+  async post(path: string, body?: unknown): Promise<Response> {
+    await this.ensureToken();
+    return fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.token}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  /** PUT request with authentication. */
+  async put(path: string, body: unknown): Promise<Response> {
+    await this.ensureToken();
+    return fetch(`${this.baseUrl}${path}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.token}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** PATCH request with authentication. */
+  async patch(path: string, body: unknown): Promise<Response> {
+    await this.ensureToken();
+    return fetch(`${this.baseUrl}${path}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.token}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** DELETE request with authentication. */
+  async delete(path: string): Promise<Response> {
+    await this.ensureToken();
+    return fetch(`${this.baseUrl}${path}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${this.token}` },
+    });
+  }
+
   /**
    * Retry-aware fetch: automatically retries on 429 (rate limited).
    * Exposed because a few specs build their own auth flows.

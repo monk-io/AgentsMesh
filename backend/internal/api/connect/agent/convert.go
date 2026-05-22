@@ -118,8 +118,7 @@ func toProtoConfigSchema(s *agentservice.ConfigSchemaResponse) *agentv1.ConfigSc
 		return &agentv1.ConfigSchema{}
 	}
 	out := &agentv1.ConfigSchema{
-		Fields:           make([]*agentv1.ConfigField, 0, len(s.Fields)),
-		CredentialFields: make([]*agentv1.CredentialField, 0, len(s.CredentialFields)),
+		Fields: make([]*agentv1.ConfigField, 0, len(s.Fields)),
 	}
 	for _, f := range s.Fields {
 		options := make([]*agentv1.FieldOption, 0, len(f.Options))
@@ -137,13 +136,6 @@ func toProtoConfigSchema(s *agentservice.ConfigSchemaResponse) *agentv1.ConfigSc
 			}
 		}
 		out.Fields = append(out.Fields, field)
-	}
-	for _, cf := range s.CredentialFields {
-		out.CredentialFields = append(out.CredentialFields, &agentv1.CredentialField{
-			Name:     cf.Name,
-			Type:     cf.Type,
-			Optional: cf.Optional,
-		})
 	}
 	return out
 }

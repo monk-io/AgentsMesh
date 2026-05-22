@@ -7,7 +7,6 @@ import (
 
 	"connectrpc.com/connect"
 
-	domainagent "github.com/anthropics/agentsmesh/backend/internal/domain/agent"
 	domainuser "github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	ucv1 "github.com/anthropics/agentsmesh/proto/gen/go/user_credential/v1"
@@ -98,40 +97,4 @@ func toProtoRepositoryProvider(p *domainuser.RepositoryProvider) *ucv1.Repositor
 		CreatedAt:    p.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:    p.UpdatedAt.UTC().Format(time.RFC3339),
 	}
-}
-
-// toProtoAgentCredentialProfile mirrors agent.CredentialProfileService.ProfileToResponse().
-// Secret credential values stay server-side — only field names appear in
-// configured_fields, and only `text`-typed (non-secret) values are echoed
-// via configured_values for edit forms.
-func toProtoAgentCredentialProfile(
-	resp *domainagent.CredentialProfileResponse,
-) *ucv1.AgentCredentialProfile {
-	if resp == nil {
-		return nil
-	}
-	out := &ucv1.AgentCredentialProfile{
-		Id:               resp.ID,
-		UserId:           resp.UserID,
-		AgentSlug:        resp.AgentSlug,
-		Name:             resp.Name,
-		IsRunnerHost:     resp.IsRunnerHost,
-		IsDefault:        resp.IsDefault,
-		IsActive:         resp.IsActive,
-		ConfiguredFields: resp.ConfiguredFields,
-		CreatedAt:        resp.CreatedAt,
-		UpdatedAt:        resp.UpdatedAt,
-	}
-	if resp.Description != nil {
-		v := *resp.Description
-		out.Description = &v
-	}
-	if resp.AgentName != "" {
-		v := resp.AgentName
-		out.AgentName = &v
-	}
-	if resp.ConfiguredValues != nil {
-		out.ConfiguredValues = resp.ConfiguredValues
-	}
-	return out
 }

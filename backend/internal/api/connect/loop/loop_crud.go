@@ -85,7 +85,6 @@ func (s *Server) CreateLoop(
 		RepositoryID:        m.RepositoryId,
 		RunnerID:            m.RunnerId,
 		TicketID:            m.TicketId,
-		CredentialProfileID: m.CredentialProfileId,
 		ExecutionMode:       m.GetExecutionMode(),
 		SandboxStrategy:     m.GetSandboxStrategy(),
 		SessionPersistence:  sessionPersist,
@@ -213,7 +212,6 @@ func buildUpdateRequest(m *loopv1.UpdateLoopRequest) *loopsvc.UpdateLoopRequest 
 		RepositoryID:        m.RepositoryId,
 		RunnerID:            m.RunnerId,
 		TicketID:            m.TicketId,
-		CredentialProfileID: m.CredentialProfileId,
 	}
 	if pv := m.GetPromptVariablesJson(); pv != "" {
 		r.PromptVariables = jsonRawFromString(pv)

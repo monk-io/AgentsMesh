@@ -134,10 +134,10 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	mountRunnerService(mux, svc, rest, cfg, opts)
 	mountPodService(mux, svc, rest, opts)
 	mountAgentPodSettingsService(mux, svc, opts)
-	usercredentialconnect.Mount(mux, usercredentialconnect.NewServer(svc.user, svc.credentialProfile), opts...)
+	usercredentialconnect.Mount(mux, usercredentialconnect.NewServer(svc.user), opts...)
 	userconnect.Mount(mux, userconnect.NewServer(svc.user, svc.org), opts...)
 	agentconnect.Mount(mux, agentconnect.NewServer(
-		svc.agentSvc, svc.credentialProfile, svc.userConfig, svc.org,
+		svc.agentSvc, svc.envBundle, svc.userConfig, svc.org,
 	), opts...)
 	mountBillingService(mux, svc, opts)
 	mountInvitationService(mux, svc, opts)

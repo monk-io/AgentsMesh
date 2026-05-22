@@ -17,13 +17,18 @@ setup("authenticate as test user", async ({ browser }) => {
   // defined in clients/core/crates/auth/src/state.rs) into localStorage via
   // addInitScript so the dashboard's wasm bootstrap can hydrate.
   const apiBaseUrl = getApiBaseUrl();
-  const loginRes = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+  // R5/R6: REST /api/v1/auth/login removed — Connect-RPC is the only auth wire.
+  // Connect+JSON content-type is accepted by the backend Connect handler.
+  const loginRes = await fetch(`${apiBaseUrl}/proto.auth.v1.AuthService/Login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Connect-Protocol-Version": "1" },
     body: JSON.stringify({ email: TEST_USER.email, password: TEST_USER.password }),
   });
   if (!loginRes.ok) throw new Error(`login failed: ${loginRes.status}`);
-  const { token, refresh_token, expires_in } = await loginRes.json();
+  const data = await loginRes.json();
+  const token = data.token;
+  const refresh_token = data.refreshToken ?? data.refresh_token;
+  const expires_in = Number(data.expiresIn ?? data.expires_in ?? 3600);
   const baseUrl = getWebBaseUrl();
   const expiresAt = Math.floor(Date.now() / 1000) + (expires_in ?? 3600);
 

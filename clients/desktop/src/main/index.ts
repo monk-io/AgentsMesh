@@ -178,6 +178,22 @@ function registerStaticHandlers() {
   registerLegacyApiAliases();
 }
 
+// Recursively rename object keys from camelCase to snake_case. Used by
+// the legacy IPC aliases so renderer code written against the REST shape
+// can keep reading snake_case fields off the Connect-JSON envelope.
+function snakeCaseDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(snakeCaseDeep);
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      const sk = k.replace(/([A-Z])/g, "_$1").toLowerCase();
+      out[sk] = snakeCaseDeep(v);
+    }
+    return out;
+  }
+  return value;
+}
+
 // Legacy IPC aliases for method names that predate the R6 Connect-RPC
 // refactor. Desktop e2e specs still invoke `userGetMe` /
 // `autopilotFetchControllers` / `runnerFetchRunners` /
@@ -237,11 +253,19 @@ function registerLegacyApiAliases() {
       { orgSlug: orgSlug() },
     ),
   );
-  ipcMain.handle("runnerFetchRunners", () =>
-    callConnectJson("proto.runner_api.v1.RunnerService", "ListRunners", {
-      orgSlug: orgSlug(),
-    }),
-  );
+  // The Rust runner cache parses `{runners: [...]}` shape — Connect's
+  // ListRunnersResponse uses `items`. Also the renderer reads
+  // `r.available_agents` (snake_case) but Connect emits camelCase, so
+  // recursively rename keys before returning.
+  ipcMain.handle("runnerFetchRunners", async () => {
+    const raw = await callConnectJson(
+      "proto.runner_api.v1.RunnerService",
+      "ListRunners",
+      { orgSlug: orgSlug() },
+    );
+    const parsed = JSON.parse(raw) as { items?: unknown[] };
+    return JSON.stringify({ runners: (parsed.items ?? []).map(snakeCaseDeep) });
+  });
   ipcMain.handle("channelCreateChannel", (_e, requestJson: string) => {
     const req = JSON.parse(requestJson) as Record<string, unknown>;
     return callConnectJson(
@@ -249,6 +273,66 @@ function registerLegacyApiAliases() {
       "CreateChannel",
       { orgSlug: orgSlug(), ...req },
     );
+  });
+
+  // ElectronOrgService.create_personal() invokes this — main → backend
+  // proto.org.v1.OrgService/CreatePersonalOrg. Server derives slug from
+  // users.username; we return the raw Organization JSON unchanged.
+  ipcMain.handle("orgCreatePersonal", () =>
+    callConnectJson("proto.org.v1.OrgService", "CreatePersonalOrg", {}),
+  );
+
+  // ElectronAgentService.list_agents() invokes this. Renderer hooks parse
+  // the response as `{builtin_agents, custom_agents}` (snake_case); the
+  // Connect endpoint emits proto camelCase, so we remap and also rename
+  // nested keys recursively.
+  ipcMain.handle("agentListAgents", async () => {
+    const raw = await callConnectJson(
+      "proto.agent.v1.AgentService",
+      "ListAgents",
+      { orgSlug: orgSlug() },
+    );
+    const parsed = JSON.parse(raw) as {
+      builtinAgents?: unknown[];
+      customAgents?: unknown[];
+      builtin_agents?: unknown[];
+      custom_agents?: unknown[];
+    };
+    return JSON.stringify({
+      builtin_agents: (parsed.builtin_agents ?? parsed.builtinAgents ?? []).map(snakeCaseDeep),
+      custom_agents: (parsed.custom_agents ?? parsed.customAgents ?? []).map(snakeCaseDeep),
+    });
+  });
+
+  // ElectronRepositoryService.list() invokes this. The renderer cache
+  // expects `{repositories: [...]}` (legacy REST shape) while the
+  // Connect endpoint returns `{items, total, ...}` — remap. Also
+  // convert proto camelCase fields to snake_case for legacy callers.
+  ipcMain.handle("repositoryList", async () => {
+    const raw = await callConnectJson(
+      "proto.repository.v1.RepositoryService",
+      "ListRepositories",
+      { orgSlug: orgSlug() },
+    );
+    const parsed = JSON.parse(raw) as { items?: unknown[] };
+    return JSON.stringify({ repositories: (parsed.items ?? []).map(snakeCaseDeep) });
+  });
+
+  // ElectronPodService.create_pod() invokes this. The renderer hands us
+  // a JSON request payload using snake_case (legacy REST shape); we
+  // upgrade it to the proto camelCase shape Connect expects and remap
+  // the response back to snake_case for the renderer's pod cache.
+  ipcMain.handle("podCreatePod", async (_e, requestJson: string) => {
+    const req = JSON.parse(requestJson) as Record<string, unknown>;
+    // Pass through every field unchanged; the Connect JSON layer accepts
+    // both proto camelCase AND grpc-gateway snake_case via @bufbuild/protobuf.
+    const raw = await callConnectJson(
+      "proto.pod.v1.PodService",
+      "CreatePod",
+      { orgSlug: orgSlug(), ...req },
+    );
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return JSON.stringify(snakeCaseDeep(parsed));
   });
 
   // Generic binary Connect-RPC proxy. Web's wasm-side services expose

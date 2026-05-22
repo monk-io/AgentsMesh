@@ -169,6 +169,14 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 				// architecture (use GET /pods/:key/relay/connect for URL+token).
 			}
 
+			// User-scoped env-bundle CRUD. Connect surface still pending; the
+			// REST handler is the SSOT for now and several e2e specs depend on
+			// it for setup/teardown.
+			if svc.EnvBundle != nil {
+				envBundleHandler := v1.NewEnvBundleHandler(svc.EnvBundle)
+				envBundleHandler.RegisterRoutes(protected.Group("/users"))
+			}
+
 			// Note: /org alias route removed - all org-scoped requests must use /orgs/:slug/*
 		}
 

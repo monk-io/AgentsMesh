@@ -52,7 +52,7 @@ func runInterceptor(t *testing.T, header string, next connect.UnaryFunc) (connec
 	if header != "" {
 		req.Header().Set("Authorization", header)
 	}
-	wrapped := interceptor(next)
+	wrapped := interceptor.WrapUnary(next)
 	return wrapped(context.Background(), req)
 }
 
