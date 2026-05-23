@@ -36,16 +36,11 @@ test.describe("Full E2E Scenario", () => {
 
     // Step 3: Check runner availability
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) {
-      if (ticketSlug) {
-        await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug });
-      }
-      test.skip();
-      return;
-    }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     // Step 4: Get agents
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     // Step 5: Create pod with repository and ticket
     const podResp = await cc.pod.createPod({

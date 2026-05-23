@@ -33,7 +33,7 @@ test.describe("Channel API", () => {
       orgSlug: TEST_ORG_SLUG,
       name: "E2E Update Ch " + Date.now(),
     }) as { id: string };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "createChannel must return an id").toBeTruthy();
 
     const updated = await cc.channel.updateChannel({
       orgSlug: TEST_ORG_SLUG,

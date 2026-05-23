@@ -50,7 +50,7 @@ test.describe("Remaining Coverage Gaps", () => {
       orgSlug: TEST_ORG_SLUG,
       name: "E2E Msg Channel " + Date.now(),
     }) as { id?: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "createChannel must return an id").toBeTruthy();
 
     await cc.channel.sendChannelMessage({
       orgSlug: TEST_ORG_SLUG,

@@ -52,12 +52,26 @@ test.describe("User Credential Management API", () => {
   });
 
   test("test repository provider connection", async ({ api, db }) => {
-    const id = db.queryValue("SELECT id FROM user_repository_providers LIMIT 1");
-    if (!id) { test.skip(); return; }
     const cc = await api.connect();
+    // Seed a provider if none exists so the test never silently skips.
+    let id = db.queryValue("SELECT id FROM user_repository_providers LIMIT 1");
+    let createdId: number | null = null;
+    if (!id) {
+      const created = await cc.userRepositoryProvider.createRepositoryProvider({
+        providerType: "github",
+        name: "E2E Connection Seed " + Date.now(),
+        baseUrl: "https://api.github.com",
+        botToken: "ghp_seed_for_connection_test",
+      }) as { id: number };
+      createdId = created.id;
+      id = String(createdId);
+    }
     // Tolerates success or failure due to potentially invalid stored token.
     await cc.userRepositoryProvider
       .testRepositoryProviderConnection({ id: Number(id) })
       .catch((e) => e);
+    if (createdId) {
+      await cc.userRepositoryProvider.deleteRepositoryProvider({ id: createdId });
+    }
   });
 });

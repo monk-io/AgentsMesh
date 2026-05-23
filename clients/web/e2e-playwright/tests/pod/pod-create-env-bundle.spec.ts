@@ -58,18 +58,12 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     const { items: runners } = await cc.runner.listAvailableRunners({
       orgSlug: TEST_ORG_SLUG,
     }) as { items: unknown[] };
-    if (!runners?.length) {
-      test.skip();
-      return;
-    }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
     const { builtinAgents } = await cc.agent.listAgents({
       orgSlug: TEST_ORG_SLUG,
     }) as { builtinAgents: { slug: string }[] };
     const claudeCode = builtinAgents?.find((a) => a.slug === "claude-code");
-    if (!claudeCode) {
-      test.skip();
-      return;
-    }
+    expect(claudeCode, "dev env must include the claude-code builtin agent").toBeTruthy();
 
     const stamp = Date.now();
     const credName = `E2E PodUI Cred ${stamp}`;
@@ -167,18 +161,12 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     const { items: runners } = await cc.runner.listAvailableRunners({
       orgSlug: TEST_ORG_SLUG,
     }) as { items: unknown[] };
-    if (!runners?.length) {
-      test.skip();
-      return;
-    }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
     const { builtinAgents } = await cc.agent.listAgents({
       orgSlug: TEST_ORG_SLUG,
     }) as { builtinAgents: { slug: string }[] };
     const claudeCode = builtinAgents?.find((a) => a.slug === "claude-code");
-    if (!claudeCode) {
-      test.skip();
-      return;
-    }
+    expect(claudeCode, "dev env must include the claude-code builtin agent").toBeTruthy();
 
     // The Pod multi-select auto-checks every primary bundle, so any
     // stray primary for claude-code would flip the assertion below.

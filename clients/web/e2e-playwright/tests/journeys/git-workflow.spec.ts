@@ -47,11 +47,7 @@ test.describe("Journey: Git Workflow", () => {
 
     // ── Step 4: Get available runner and agent ──
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) {
-      await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug });
-      test.skip();
-      return;
-    }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
 

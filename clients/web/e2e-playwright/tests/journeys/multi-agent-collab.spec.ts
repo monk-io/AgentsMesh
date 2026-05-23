@@ -27,10 +27,10 @@ test.describe("Journey: Multi-Agent Collaboration", () => {
 
     // ── Step 1: Check runner availability ──
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     // ── Step 2: Create collaboration channel ──
     const chName = "E2E Collab " + Date.now();

@@ -18,7 +18,7 @@ test.describe("Repository Connect-RPC round-trip", () => {
     const count = db.queryValue(
       `SELECT COUNT(*)::int FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}')`,
     );
-    if (!count || Number(count) === 0) { test.skip(); return; }
+    expect(Number(count), "dev seed must include at least one repository").toBeGreaterThan(0);
 
     const errors = collectConsoleErrors(page);
 
@@ -56,7 +56,7 @@ test.describe("Repository Connect-RPC round-trip", () => {
     const id = db.queryValue(
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`,
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one repository").toBeTruthy();
 
     const errors = collectConsoleErrors(page);
 

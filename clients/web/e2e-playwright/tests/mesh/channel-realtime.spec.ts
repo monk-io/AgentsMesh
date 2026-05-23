@@ -30,12 +30,22 @@ test.describe("Channel realtime delivery", () => {
 
     // Pick any channel the test user is a member of. The dev seed leaves
     // multiple #-channels in dev-org, so this is normally non-empty;
-    // skip cleanly if the slate is bare (e.g., post-reset).
+    // create one if the slate is bare (e.g., post-reset) so we never silently skip.
     const listed = (await cc.channel.listChannels({ orgSlug: TEST_ORG_SLUG })) as {
       items: Array<{ id: bigint | number }>;
     };
-    if (!listed.items.length) { test.skip(); return; }
-    const channelId = listed.items[0].id;
+    let channelId: bigint | number;
+    let createdId: bigint | number | undefined;
+    if (listed.items.length) {
+      channelId = listed.items[0].id;
+    } else {
+      const ch = await cc.channel.createChannel({
+        orgSlug: TEST_ORG_SLUG,
+        name: "E2E Realtime Seed " + Date.now(),
+      }) as { id: bigint | number };
+      channelId = ch.id;
+      createdId = ch.id;
+    }
 
     const marker = `E2E-REALTIME-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const ctrl = new AbortController();
@@ -82,5 +92,9 @@ test.describe("Channel realtime delivery", () => {
     ctrl.abort();
     expect(winner, `timed out waiting for channel:message with marker ${marker}`).toBe("drained");
     expect(seen).toBe(true);
+
+    if (createdId !== undefined) {
+      await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: createdId }).catch(() => undefined);
+    }
   });
 });

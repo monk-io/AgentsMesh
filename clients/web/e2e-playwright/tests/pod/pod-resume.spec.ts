@@ -15,13 +15,13 @@ test.describe("Pod Resume", () => {
   test.beforeAll(async () => { await terminateAllPods(); });
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /** Helper: get a running pod key */
-  async function createAndWaitPod(cc: ConnectClient): Promise<string | null> {
+  /** Helper: get a running pod key. Asserts prerequisites instead of skipping. */
+  async function createAndWaitPod(cc: ConnectClient): Promise<string> {
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) return null;
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) return null;
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const resp = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -29,17 +29,17 @@ test.describe("Pod Resume", () => {
       agentSlug: agents[0].slug,
     }) as { pod: Pod };
     const podKey = resp.pod?.podKey;
-    if (!podKey) return null;
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
 
     await pollUntil(
       async () => {
-        const pod = await cc.pod.getPod({ orgSlug: TEST_ORG_SLUG, podKey }) as Pod;
+        const pod = await cc.pod.getPod({ orgSlug: TEST_ORG_SLUG, podKey: podKey! }) as Pod;
         return pod.status === "running";
       },
       { maxAttempts: 10, intervalMs: 3000, label: "pod-running" }
     ).catch(() => {});
 
-    return podKey;
+    return podKey!;
   }
 
   /**
@@ -48,7 +48,6 @@ test.describe("Pod Resume", () => {
   test("terminate and resume pod preserves sandbox", async ({ api }) => {
     const cc = await api.connect();
     const podKey = await createAndWaitPod(cc);
-    if (!podKey) { test.skip(); return; }
 
     await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
 
@@ -81,7 +80,6 @@ test.describe("Pod Resume", () => {
   test("double resume returns error", async ({ api }) => {
     const cc = await api.connect();
     const podKey = await createAndWaitPod(cc);
-    if (!podKey) { test.skip(); return; }
 
     await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
     await new Promise((r) => setTimeout(r, 2000));

@@ -43,7 +43,7 @@ test.describe("Runner UI Dialogs", () => {
     const hasRunner = db.queryValue(
       `SELECT COUNT(*) FROM runners WHERE node_id = 'dev-runner'`
     );
-    if (hasRunner === "0") { test.skip(); return; }
+    expect(hasRunner, "dev seed must include the 'dev-runner' runner").not.toBe("0");
 
     // Find and click Configure button
     const configBtn = page.getByRole("button", { name: /configure|配置/i }).first();

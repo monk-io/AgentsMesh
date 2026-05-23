@@ -4,7 +4,6 @@
 import { test, expect } from "../../../fixtures/index";
 import { ADMIN_USER } from "../../../helpers/env";
 import { clearAuthRateLimit } from "../../../helpers/redis";
-import { ConnectError } from "../../../helpers/connect-client";
 
 /**
  * SSO Admin UI + API supplements.
@@ -89,27 +88,19 @@ test.describe("SSO Admin Full", () => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
     const cc = await api.connect();
 
-    let id: bigint | null = null;
-    try {
-      const created = await cc.ssoAdmin.createSSOConfig({
-        name: "E2E Toggle SSO",
-        domain: `e2e-toggle-${Date.now()}.example.com`,
-        protocol: "ldap",
-        ldapHost: "ldap.example.com",
-        ldapPort: 389,
-        ldapBaseDn: "dc=example,dc=com",
-        ldapBindDn: "cn=admin,dc=example,dc=com",
-        ldapBindPassword: "test",
-      }) as { id: bigint };
-      id = created.id;
-    } catch (err) {
-      // Create failed for env-dependent reasons — skip the toggle path.
-      expect(err).toBeInstanceOf(ConnectError);
-      test.skip();
-      return;
-    }
-
-    if (id == null) { test.skip(); return; }
+    // LDAP doesn't depend on an external IdP — create must succeed.
+    const created = await cc.ssoAdmin.createSSOConfig({
+      name: "E2E Toggle SSO",
+      domain: `e2e-toggle-${Date.now()}.example.com`,
+      protocol: "ldap",
+      ldapHost: "ldap.example.com",
+      ldapPort: 389,
+      ldapBaseDn: "dc=example,dc=com",
+      ldapBindDn: "cn=admin,dc=example,dc=com",
+      ldapBindPassword: "test",
+    }) as { id: bigint };
+    const id = created.id;
+    expect(id, "SSO config must be created").toBeTruthy();
 
     // Enable
     const enabled = await cc.ssoAdmin.enableSSOConfig({ id }) as { isEnabled: boolean };

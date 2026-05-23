@@ -197,10 +197,8 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
         .getByRole("button")
         .filter({ hasText: /^(Edit|编辑)$/i })
         .first();
-      if (!(await editBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
-        test.skip();
-        return;
-      }
+      await expect(editBtn, "loop detail page must render an Edit button for the loop creator")
+        .toBeVisible({ timeout: 10_000 });
       await editBtn.click();
       await page.locator('[data-dialog-overlay]').first().waitFor({ state: "visible" });
 

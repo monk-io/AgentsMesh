@@ -10,7 +10,7 @@ test.describe("Repository Detail Page", () => {
     const id = db.queryValue(
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one repository").toBeTruthy();
 
     const cc = await api.connect();
     const repo = await cc.repository.getRepository({
@@ -24,7 +24,7 @@ test.describe("Repository Detail Page", () => {
     const id = db.queryValue(
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one repository").toBeTruthy();
 
     const consoleErrors: string[] = [];
     page.on("console", (msg) => {

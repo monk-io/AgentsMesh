@@ -16,10 +16,10 @@ test.describe("Pod Create API", () => {
   test("create basic pod", async ({ api }) => {
     const cc = await api.connect();
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev environment must have at least one online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev environment must have at least one builtin agent").toBeGreaterThan(0);
 
     const created = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -40,10 +40,10 @@ test.describe("Pod Create API", () => {
   test("terminate pod", async ({ api }) => {
     const cc = await api.connect();
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev environment must have at least one online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev environment must have at least one builtin agent").toBeGreaterThan(0);
 
     const created = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -51,7 +51,7 @@ test.describe("Pod Create API", () => {
       agentSlug: agents[0].slug,
     }) as { pod: Pod };
     const podKey = created.pod?.podKey;
-    if (!podKey) { test.skip(); return; }
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
 
     // Connect throws on failure — no need to assert status.
     await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });

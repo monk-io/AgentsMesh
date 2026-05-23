@@ -48,7 +48,7 @@ test.describe("Repository Providers API", () => {
       baseUrl: "https://api.github.com",
       botToken: "ghp_update_test",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
     const updated = await cc.userRepositoryProvider.updateRepositoryProvider({
       id: created.id,
@@ -70,7 +70,7 @@ test.describe("Repository Providers API", () => {
       baseUrl: "https://api.github.com",
       botToken: "ghp_delete_test",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
     await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
 
@@ -91,7 +91,7 @@ test.describe("Repository Providers API", () => {
       baseUrl: "https://api.github.com",
       botToken: "ghp_invalid_token",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
     // Tolerates success or failure due to invalid token — backend dependency.
     await cc.userRepositoryProvider

@@ -26,7 +26,6 @@ test.describe("ACP UI: multi-tab Selector synchronization", () => {
       scenario: "config_change_plan",
       prompt: "multi-tab probe",
     });
-    if (!pod) { test.skip(); return; }
 
     const tabA = await context.newPage();
     const tabB = await context.newPage();

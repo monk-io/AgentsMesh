@@ -17,27 +17,24 @@ interface CreatedPod { podKey: string }
 async function createPodViaApi(
   api: import("../../../../web/e2e-playwright/fixtures/api.fixture").ApiFixture,
   prompt: string,
-): Promise<CreatedPod | null> {
+): Promise<CreatedPod> {
   const cc = await api.connect();
   const runnersResp = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items?: Array<{ id: bigint | number }> };
   const runners = runnersResp.items ?? [];
-  if (runners.length === 0) return null;
+  expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
   const agentsResp = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents?: Array<{ slug: string }> };
   const agents = agentsResp.builtinAgents ?? [];
-  if (agents.length === 0) return null;
+  expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
   const agent = agents.find((a) => a.slug === "e2e-echo") ?? agents[0];
-  try {
-    const resp = await cc.pod.createPod({
-      orgSlug: TEST_ORG_SLUG,
-      runnerId: typeof runners[0].id === "bigint" ? runners[0].id : BigInt(runners[0].id),
-      agentSlug: agent.slug,
-      agentfileLayer: JSON.stringify({ prompt }),
-    }) as { pod?: { podKey?: string }; podKey?: string };
-    const podKey = resp.pod?.podKey ?? resp.podKey;
-    return podKey ? { podKey } : null;
-  } catch {
-    return null;
-  }
+  const resp = await cc.pod.createPod({
+    orgSlug: TEST_ORG_SLUG,
+    runnerId: typeof runners[0].id === "bigint" ? runners[0].id : BigInt(runners[0].id),
+    agentSlug: agent.slug,
+    agentfileLayer: JSON.stringify({ prompt }),
+  }) as { pod?: { podKey?: string }; podKey?: string };
+  const podKey = resp.pod?.podKey ?? resp.podKey;
+  expect(podKey, "createPod must return a pod_key").toBeTruthy();
+  return { podKey: podKey! };
 }
 
 async function archiveChannel(
@@ -59,7 +56,6 @@ async function terminatePod(
 test.describe("Channel × Pod membership (Electron IPC, issue #400)", () => {
   test("D-001 channel_join_channel → RightRail renders pod row", async ({ page, api }) => {
     const pod = await createPodViaApi(api, "desktop-d001");
-    if (!pod) { test.skip(); return; }
 
     // Create channel via IPC (exercises the bridge end-to-end).
     const name = `e2e-desktop-d001-${Date.now()}`;
@@ -97,7 +93,6 @@ test.describe("Channel × Pod membership (Electron IPC, issue #400)", () => {
   test("D-002 channel_leave_channel → pod row removed from RightRail", async ({ page, api }) => {
     const p1 = await createPodViaApi(api, "desktop-d002-a");
     const p2 = await createPodViaApi(api, "desktop-d002-b");
-    if (!p1 || !p2) { test.skip(); return; }
 
     const name = `e2e-desktop-d002-${Date.now()}`;
     const createJson = await invokeIpc<string>(page, "channelCreateChannel",

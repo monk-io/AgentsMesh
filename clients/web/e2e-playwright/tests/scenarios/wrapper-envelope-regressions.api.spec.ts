@@ -36,11 +36,11 @@ test.describe("Backend wrapper envelope contracts", () => {
     const runners = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as {
       items: { id: bigint }[];
     };
-    if (!runners.items?.length) { test.skip(); return; }
+    expect(runners.items.length, "dev env must have an online runner").toBeGreaterThan(0);
     const agents = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as {
       builtinAgents: { slug: string }[];
     };
-    if (!agents.builtinAgents?.length) { test.skip(); return; }
+    expect(agents.builtinAgents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const resp = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -59,12 +59,21 @@ test.describe("Backend wrapper envelope contracts", () => {
 
   test("loop runs list keeps pagination shape", async ({ api }) => {
     const cc = await api.connect();
-    // List all loops, pick any loop to enumerate its runs. Empty result is
-    // also acceptable — we only assert envelope shape.
-    const loops = await cc.loop.listLoops({ orgSlug: TEST_ORG_SLUG }) as {
+    // Seed a loop if the org has none so we always exercise the runs envelope.
+    let loops = await cc.loop.listLoops({ orgSlug: TEST_ORG_SLUG }) as {
       items: { slug: string }[];
     };
-    if (!loops.items?.length) { test.skip(); return; }
+    let createdSlug: string | undefined;
+    if (!loops.items?.length) {
+      const created = await cc.loop.createLoop({
+        orgSlug: TEST_ORG_SLUG,
+        name: "E2E LoopRuns Envelope " + Date.now(),
+        agentSlug: "claude-code",
+        promptTemplate: "noop",
+      }) as { slug: string };
+      createdSlug = created.slug;
+      loops = { items: [{ slug: created.slug }] };
+    }
     const runs = await cc.loop.listRuns({
       orgSlug: TEST_ORG_SLUG,
       loopSlug: loops.items[0].slug,
@@ -73,5 +82,9 @@ test.describe("Backend wrapper envelope contracts", () => {
     expect(typeof runs.total).toMatch(/number|bigint/);
     expect(typeof runs.limit).toBe("number");
     expect(typeof runs.offset).toBe("number");
+
+    if (createdSlug) {
+      await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: createdSlug }).catch(() => undefined);
+    }
   });
 });

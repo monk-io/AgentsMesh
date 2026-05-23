@@ -137,13 +137,10 @@ uiTest.describe("Block Store · UI", () => {
   uiTest("search panel opens on search button click", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/blocks`);
     await page.waitForLoadState("load");
-    // Search is a Button with a search icon/label. If absent, skip — the page
-    // only mounts SearchPanel after a workspace is hydrated.
+    // SearchPanel only mounts after the workspace is hydrated — wait for the
+    // Search button rather than skipping; the spec asserts the open flow.
     const searchBtn = page.getByRole("button", { name: /search|搜索/i }).first();
-    if (!(await searchBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      uiTest.skip();
-      return;
-    }
+    await uiExpect(searchBtn).toBeVisible({ timeout: 15_000 });
     await searchBtn.click();
     await page.waitForTimeout(300);
   });

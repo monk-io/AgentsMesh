@@ -33,10 +33,10 @@ test.describe("CreatePod dialog UI", () => {
   test("dialog auto-closes and new pod appears in sidebar", async ({ page, api }) => {
     const cc = await api.connect();
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     // Start clean so the sidebar count is deterministic.
     await terminateAllPods();

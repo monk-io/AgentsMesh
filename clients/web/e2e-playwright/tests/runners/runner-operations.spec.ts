@@ -10,7 +10,7 @@ test.describe("Runner Operations", () => {
     const id = db.queryValue(
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one runner").toBeTruthy();
 
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/runners/${id}`);
@@ -25,7 +25,7 @@ test.describe("Runner Operations", () => {
     const id = db.queryValue(
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one runner").toBeTruthy();
 
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/runners`);

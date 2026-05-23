@@ -9,10 +9,21 @@ test.describe("Channel Operations", () => {
 
   test("channels: select channel and view messages", async ({ page, api }) => {
     const cc = await api.connect();
-    const { items } = await cc.channel.listChannels({ orgSlug: TEST_ORG_SLUG }) as {
-      items: unknown[];
+    // Ensure there's at least one channel — create a deterministic one rather
+    // than skipping when the org slate is bare.
+    let { items } = await cc.channel.listChannels({ orgSlug: TEST_ORG_SLUG }) as {
+      items: { id?: bigint | number }[];
     };
-    if (!items || items.length === 0) { test.skip(); return; }
+    let createdId: bigint | number | undefined;
+    if (!items || items.length === 0) {
+      const ch = await cc.channel.createChannel({
+        orgSlug: TEST_ORG_SLUG,
+        name: "E2E ChOps Seed " + Date.now(),
+      }) as { id: bigint | number };
+      createdId = ch.id;
+      items = [{ id: ch.id }];
+    }
+    expect(items.length).toBeGreaterThan(0);
 
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/channels`);
@@ -24,6 +35,10 @@ test.describe("Channel Operations", () => {
       await page.waitForTimeout(1000);
     }
     assertNoWasmErrors(errors);
+
+    if (createdId !== undefined) {
+      await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: createdId });
+    }
   });
 
   test("channels: create channel dialog", async ({ page }) => {

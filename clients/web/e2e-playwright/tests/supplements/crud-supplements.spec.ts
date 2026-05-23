@@ -26,10 +26,10 @@ test.describe("CRUD Supplements", () => {
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-test" },
     });
-    if (createRes.status === 404) { test.skip(); return; }
+    expect(createRes.status, "POST /users/env-bundles must succeed").not.toBe(404);
     const created = await createRes.json();
     const id = created.bundle?.id;
-    if (!id) { test.skip(); return; }
+    expect(id, "env-bundle create response must include an id").toBeTruthy();
 
     const updateRes = await api.put(
       `/api/v1/users/env-bundles/${id}`,
@@ -53,10 +53,10 @@ test.describe("CRUD Supplements", () => {
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-test" },
     });
-    if (createRes.status === 404) { test.skip(); return; }
+    expect(createRes.status, "POST /users/env-bundles must succeed").not.toBe(404);
     const created = await createRes.json();
     const id = created.bundle?.id;
-    if (!id) { test.skip(); return; }
+    expect(id, "env-bundle create response must include an id").toBeTruthy();
 
     const setRes = await api.post(
       `/api/v1/users/env-bundles/${id}/set-primary`, {}
@@ -83,7 +83,8 @@ test.describe("CRUD Supplements", () => {
       `SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}'`
     );
     const userId = db.queryValue(`SELECT id FROM users WHERE email = '${email}'`);
-    if (!orgId || !userId) { test.skip(); return; }
+    expect(orgId, "dev seed must have the test org").toBeTruthy();
+    expect(userId, "registered user must exist in users table").toBeTruthy();
 
     db.setup(
       `INSERT INTO organization_members (organization_id, user_id, role) VALUES (${orgId}, ${userId}, 'member') ON CONFLICT DO NOTHING`
@@ -110,7 +111,7 @@ test.describe("CRUD Supplements", () => {
       baseUrl: "https://api.github.com",
       botToken: "ghp_default_test",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
     await cc.userRepositoryProvider.setDefaultRepositoryProvider({ id: created.id });
 
@@ -134,22 +135,13 @@ test.describe("CRUD Supplements", () => {
     const invRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/invitations`, {
       email, role: "member",
     });
-    if (invRes.status !== 201) {
-      // May return 409 if already member, or invitation API differs
-      try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
-      test.skip();
-      return;
-    }
+    expect(invRes.status, "create invitation must succeed").toBe(201);
 
     // Get invitation token from DB
     const token = db.queryValue(
       `SELECT token FROM invitations WHERE email = '${email}' AND accepted_at IS NULL LIMIT 1`
     );
-    if (!token) {
-      try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
-      test.skip();
-      return;
-    }
+    expect(token, "invitation must have been persisted with a token").toBeTruthy();
 
     // Accept as invitee
     await api.loginAs(email, "TestPass123!");
@@ -168,12 +160,12 @@ test.describe("CRUD Supplements", () => {
     const { items: runners } = await cc.runner.listAvailableRunners({
       orgSlug: TEST_ORG_SLUG,
     }) as { items: { id: bigint }[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({
       orgSlug: TEST_ORG_SLUG,
     }) as { builtinAgents: { slug: string }[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const { items: repos } = await cc.repository.listRepositories({
       orgSlug: TEST_ORG_SLUG,

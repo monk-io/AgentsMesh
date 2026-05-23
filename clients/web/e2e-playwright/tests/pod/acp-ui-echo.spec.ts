@@ -23,7 +23,6 @@ test.describe("ACP UI: e2e-echo agent (ACP mode)", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "echo", prompt: "hello world",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText("echo: hello world")).toBeVisible({ timeout: 10_000 });
     ctx.assertWasmHealthy();
@@ -33,7 +32,6 @@ test.describe("ACP UI: e2e-echo agent (ACP mode)", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "echo", prompt: "no-llm probe",
     });
-    if (!ctx) { test.skip(); return; }
     expect(ctx.pod.podKey).toBeTruthy();
     expect(ctx.pod.podKey.length).toBeGreaterThan(0);
   });

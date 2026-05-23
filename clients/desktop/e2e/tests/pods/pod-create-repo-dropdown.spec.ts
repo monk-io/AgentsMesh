@@ -17,10 +17,7 @@ test.describe("Desktop · Create Pod dialog · repository dropdown", () => {
     const { repositories = [] } = JSON.parse(raw) as {
       repositories?: { id: number; slug: string }[];
     };
-    if (repositories.length === 0) {
-      test.skip(true, "backend has no repositories — dropdown would be empty by design");
-      return;
-    }
+    expect(repositories.length, "dev seed must include at least one repository").toBeGreaterThan(0);
 
     const workspace = new WorkspacePage(page);
     await workspace.goto();

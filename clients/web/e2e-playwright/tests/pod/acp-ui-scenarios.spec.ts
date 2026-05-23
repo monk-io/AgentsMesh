@@ -19,7 +19,6 @@ test.describe("ACP UI: mock agent scenario matrix", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "streaming_3", prompt: "hello",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText(/streaming: hello\s+\(done\)/)).toBeVisible({ timeout: 15_000 });
     ctx.assertWasmHealthy();
@@ -29,7 +28,6 @@ test.describe("ACP UI: mock agent scenario matrix", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "thinking_then_answer", prompt: "what is 2+2",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText("Thinking...", { exact: false })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Answer to: what is 2+2")).toBeVisible({ timeout: 15_000 });
@@ -39,7 +37,6 @@ test.describe("ACP UI: mock agent scenario matrix", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "tool_call_edit", prompt: "edit me",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText("Edit", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Editing file for: edit me")).toBeVisible({ timeout: 15_000 });
@@ -49,7 +46,6 @@ test.describe("ACP UI: mock agent scenario matrix", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "permission_request_edit", prompt: "edit me carefully",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText(/Tool: tc-mock-edit-perm-1/)).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /Approve/i }).first().click();

@@ -15,7 +15,6 @@ test.describe("ACP UI: error and degradation paths", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "tool_call_failed", prompt: "edit me",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText("Trying to edit: edit me")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Edit", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
@@ -26,7 +25,6 @@ test.describe("ACP UI: error and degradation paths", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "malformed_json", prompt: "garbled",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText("recovered: garbled")).toBeVisible({ timeout: 15_000 });
     ctx.assertWasmHealthy();
@@ -36,7 +34,6 @@ test.describe("ACP UI: error and degradation paths", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "log_warnings", prompt: "noisy run",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText(/degraded connection/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Completed with warnings: noisy run")).toBeVisible({ timeout: 15_000 });
@@ -46,7 +43,6 @@ test.describe("ACP UI: error and degradation paths", () => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "fail_after_1s", prompt: "crash test",
     });
-    if (!ctx) { test.skip(); return; }
 
     // The agent emits one content chunk and then os.Exit(1)s after 1s. We
     // race three possible outcomes and accept any of them as "not wedged":

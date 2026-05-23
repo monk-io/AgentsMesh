@@ -16,20 +16,22 @@ type ConnectClient = Awaited<ReturnType<import("../../fixtures/api.fixture").Api
 test.describe("Pod Lifecycle Scenarios", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /** Helper: create a pod and return its key. Skips if no runner available. */
-  async function createPod(cc: ConnectClient): Promise<string | null> {
+  /** Helper: create a pod and return its key. Asserts prerequisites instead of skipping. */
+  async function createPod(cc: ConnectClient): Promise<string> {
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) return null;
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) return null;
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const resp = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
       runnerId: runners[0].id,
       agentSlug: agents[0].slug,
     }) as { pod: Pod };
-    return resp.pod?.podKey ?? null;
+    const podKey = resp.pod?.podKey;
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
+    return podKey!;
   }
 
   /**
@@ -38,7 +40,6 @@ test.describe("Pod Lifecycle Scenarios", () => {
   test("full pod lifecycle", async ({ api }) => {
     const cc = await api.connect();
     const podKey = await createPod(cc);
-    if (!podKey) { test.skip(); return; }
 
     await pollUntil(
       async () => {
@@ -60,12 +61,11 @@ test.describe("Pod Lifecycle Scenarios", () => {
   test("runner capacity changes with pods", async ({ api }) => {
     const cc = await api.connect();
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const initialPods = runners[0].currentPods || 0;
 
     const podKey = await createPod(cc);
-    if (!podKey) { test.skip(); return; }
 
     await new Promise((r) => setTimeout(r, 2000));
 

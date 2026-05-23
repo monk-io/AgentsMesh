@@ -38,16 +38,19 @@ interface Runner { id: bigint }
 interface Pod { podKey: string }
 
 // createMockAgentPod spawns a pod backed by the e2e-mock-agent binary via
-// Connect-RPC (PodService.CreatePod). Returns null if no runner is online —
-// caller should `test.skip()`. The returned `cleanup` must be invoked from
-// afterEach to avoid quota bleed.
+// Connect-RPC (PodService.CreatePod). Throws when no runner is online —
+// the e2e suite contract is "dev env has at least one online runner", so
+// returning null here would silently mask a missing prerequisite.
+// The returned `cleanup` must be invoked from afterEach to avoid quota bleed.
 export async function createMockAgentPod(
   api: ApiFixture,
   opts: CreateMockPodOptions,
-): Promise<MockAgentPod | null> {
+): Promise<MockAgentPod> {
   const cc = await api.connect();
   const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items?: Runner[] };
-  if (!runners?.length) return null;
+  if (!runners?.length) {
+    throw new Error("createMockAgentPod: dev env must have at least one online runner");
+  }
   const runnerId = runners[0].id;
 
   const input: Record<string, unknown> = {

@@ -30,7 +30,7 @@ test.describe("Runner API CRUD", () => {
     const id = db.queryValue(
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one runner").toBeTruthy();
 
     const cc = await api.connect();
     const res = await cc.runner.getRunner({ orgSlug: TEST_ORG_SLUG, id: Number(id) }) as { runner: { id?: number } };

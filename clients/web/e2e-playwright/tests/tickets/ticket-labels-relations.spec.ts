@@ -67,10 +67,20 @@ test.describe("Ticket Labels & Relations API", () => {
   // that need multiple tickets fan out client-side.
   test("get ticket pods via ListPodsByTicket", async ({ api }) => {
     const cc = await api.connect();
-    const list = await cc.ticket.listTickets({ orgSlug: TEST_ORG_SLUG, limit: 1 }) as {
+    let list = await cc.ticket.listTickets({ orgSlug: TEST_ORG_SLUG, limit: 1 }) as {
       items: Array<{ id: bigint | number; slug: string }>;
     };
-    if (list.items.length === 0) { test.skip(); return; }
+    // Seed a ticket if the org has none so the listPodsByTicket envelope is
+    // always exercised.
+    let createdSlug: string | undefined;
+    if (list.items.length === 0) {
+      const t = await cc.ticket.createTicket({
+        orgSlug: TEST_ORG_SLUG,
+        title: "E2E ListPodsByTicket Seed " + Date.now(),
+      }) as { slug: string; id: bigint | number };
+      createdSlug = t.slug;
+      list = { items: [{ id: t.id, slug: t.slug }] };
+    }
     const ticketId = list.items[0].id;
     const res = await cc.pod.listPodsByTicket({
       orgSlug: TEST_ORG_SLUG,
@@ -79,5 +89,9 @@ test.describe("Ticket Labels & Relations API", () => {
     expect(Array.isArray(res.items)).toBe(true);
     // total may be 0 (no pods linked) — just assert envelope is well-typed.
     expect(typeof res.total).toMatch(/number|bigint/);
+
+    if (createdSlug) {
+      await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug: createdSlug }).catch(() => undefined);
+    }
   });
 });

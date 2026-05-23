@@ -41,12 +41,12 @@ test.describe("MCP Server Management", () => {
     const cc = await api.connect();
     const market = await cc.market.listMarketMcpServers({ orgSlug: TEST_ORG_SLUG }) as { items: Array<{ id: number; slug?: string }> };
     const filesystem = market.items.find((t) => t.slug === "filesystem");
-    if (!filesystem) { test.skip(); return; }
+    expect(filesystem, "marketplace must contain the seeded filesystem MCP template").toBeTruthy();
 
     const installed = await cc.repoMcp.installMcpFromMarket({
       orgSlug: TEST_ORG_SLUG,
       repositoryId: REPO_ID,
-      marketItemId: Number(filesystem.id),
+      marketItemId: Number(filesystem!.id),
       scope: "user",
     }) as { id?: number };
     expect(installed.id).toBeTruthy();
@@ -102,6 +102,21 @@ test.describe("MCP Server Management", () => {
 
   test("toggle MCP server enabled state", async ({ api }) => {
     const cc = await api.connect();
+    // Clean any prior installation of this slug so the create won't 409.
+    const existing = await cc.repoMcp.listRepoMcpServers({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryId: REPO_ID,
+      scope: "user",
+    }) as { items: Array<{ id: number; slug?: string }> };
+    const stale = existing.items.find((s) => s.slug === "e2e-toggle-mcp");
+    if (stale?.id) {
+      await cc.repoMcp.uninstallMcpServer({
+        orgSlug: TEST_ORG_SLUG,
+        repositoryId: REPO_ID,
+        installId: Number(stale.id),
+      });
+    }
+
     const installed = await cc.repoMcp.installCustomMcpServer({
       orgSlug: TEST_ORG_SLUG,
       repositoryId: REPO_ID,
@@ -111,8 +126,8 @@ test.describe("MCP Server Management", () => {
       command: "echo",
       args: JSON.stringify(["test"]),
       scope: "user",
-    }).catch(() => null) as { id?: number } | null;
-    if (!installed?.id) { test.skip(); return; }
+    }) as { id?: number };
+    expect(installed.id, "install must return an id").toBeTruthy();
 
     await cc.repoMcp.updateMcpServer({
       orgSlug: TEST_ORG_SLUG,

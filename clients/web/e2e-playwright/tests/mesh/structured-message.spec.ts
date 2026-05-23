@@ -522,11 +522,11 @@ uiTest.describe("Structured Message — UI Rendering", () => {
       items: { id: bigint; name: string }[];
     };
     const ch = items.find((c) => c.name === name);
-    if (!ch) { uiTest.skip(); return; }
+    uiExpect(ch, "newly-created channel must appear in listChannels").toBeTruthy();
 
     await cc.channel.sendChannelMessage({
       orgSlug: TEST_ORG_SLUG,
-      channelId: ch.id,
+      channelId: ch!.id,
       contentJson: JSON.stringify({
         kind: "text",
         blocks: [{
@@ -559,11 +559,11 @@ uiTest.describe("Structured Message — UI Rendering", () => {
       items: { id: bigint; name: string }[];
     };
     const ch = items.find((c) => c.name === name);
-    if (!ch) { uiTest.skip(); return; }
+    uiExpect(ch, "newly-created channel must appear in listChannels").toBeTruthy();
 
     await cc.channel.sendChannelMessage({
       orgSlug: TEST_ORG_SLUG,
-      channelId: ch.id,
+      channelId: ch!.id,
       contentJson: JSON.stringify({
         kind: "text",
         blocks: [{
@@ -597,11 +597,11 @@ uiTest.describe("Structured Message — UI Rendering", () => {
       items: { id: bigint; name: string }[];
     };
     const ch = items.find((c) => c.name === name);
-    if (!ch) { uiTest.skip(); return; }
+    uiExpect(ch, "newly-created channel must appear in listChannels").toBeTruthy();
 
     await cc.channel.sendChannelMessage({
       orgSlug: TEST_ORG_SLUG,
-      channelId: ch.id,
+      channelId: ch!.id,
       source: "# Big heading\n\n- bullet a\n- bullet b\n\n```\nfn main() {}\n```",
     });
 

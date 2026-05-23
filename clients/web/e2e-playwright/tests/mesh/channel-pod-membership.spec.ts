@@ -26,25 +26,23 @@ const RAIL = '[data-testid="channel-right-rail"]';
 interface CreatedPod { podKey: string }
 interface CreatedChannel { id: bigint; name: string; memberCount: number; agentCount: number }
 
-async function createPod(cc: ConnectClient, _prompt: string): Promise<CreatedPod | null> {
+async function createPod(cc: ConnectClient, _prompt: string): Promise<CreatedPod> {
   const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-  if (!runners?.length) return null;
+  expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
   const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-  if (!agents?.length) return null;
+  expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
   // Prefer `e2e-echo` — a runner-side stub agent that boots instantly without
   // an LLM. Falls back to the first builtin agent if the dev runner doesn't
   // ship it (e.g. a stripped-down image).
   const agent = agents.find((a) => a.slug === "e2e-echo") ?? agents[0];
-  try {
-    const resp = await cc.pod.createPod({
-      orgSlug: TEST_ORG_SLUG,
-      runnerId: runners[0].id,
-      agentSlug: agent.slug,
-    }) as { pod: { podKey: string } };
-    return resp.pod?.podKey ? { podKey: resp.pod.podKey } : null;
-  } catch {
-    return null;
-  }
+  const resp = await cc.pod.createPod({
+    orgSlug: TEST_ORG_SLUG,
+    runnerId: runners[0].id,
+    agentSlug: agent.slug,
+  }) as { pod: { podKey: string } };
+  const podKey = resp.pod?.podKey;
+  expect(podKey, "createPod must return a pod_key").toBeTruthy();
+  return { podKey: podKey! };
 }
 
 async function terminatePod(cc: ConnectClient, podKey: string): Promise<void> {
@@ -96,7 +94,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
   test("W-002 join first pod → agent_count 0→1, RightRail shows pod row", async ({ api, page }) => {
     const cc = await api.connect();
     const pod = await createPod(cc, "agent-count-w002");
-    if (!pod) { test.skip(); return; }
     const ch = await createChannel(cc, "first-pod");
     try {
       await joinPod(cc, ch.id, pod.podKey);
@@ -119,7 +116,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
     const cc = await api.connect();
     const p1 = await createPod(cc, "w003-a");
     const p2 = await createPod(cc, "w003-b");
-    if (!p1 || !p2) { test.skip(); return; }
     const ch = await createChannel(cc, "two-pods");
     try {
       await joinPod(cc, ch.id, p1.podKey);
@@ -146,7 +142,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
     const cc = await api.connect();
     const p1 = await createPod(cc, "w004-a");
     const p2 = await createPod(cc, "w004-b");
-    if (!p1 || !p2) { test.skip(); return; }
     const ch = await createChannel(cc, "leave-pod");
     try {
       await joinPod(cc, ch.id, p1.podKey);
@@ -168,7 +163,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
   test("W-005 member_count and agent_count are independent counters", async ({ api }) => {
     const cc = await api.connect();
     const pod = await createPod(cc, "w005");
-    if (!pod) { test.skip(); return; }
     const ch = await createChannel(cc, "independence");
     try {
       const initial = await fetchChannel(cc, ch.id);
@@ -207,7 +201,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
   test("W-006 Header agent count matches RightRail count", async ({ api, page }) => {
     const cc = await api.connect();
     const pod = await createPod(cc, "w006");
-    if (!pod) { test.skip(); return; }
     const ch = await createChannel(cc, "header-rail-sync");
     try {
       await joinPod(cc, ch.id, pod.podKey);
@@ -227,7 +220,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
   test("W-007 agent_count persists across navigation", async ({ api, page }) => {
     const cc = await api.connect();
     const pod = await createPod(cc, "w007");
-    if (!pod) { test.skip(); return; }
     const ch = await createChannel(cc, "persist-nav");
     try {
       await joinPod(cc, ch.id, pod.podKey);
@@ -251,7 +243,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
     const cc = await api.connect();
     const podA = await createPod(cc, "w008-a");
     const podB = await createPod(cc, "w008-b");
-    if (!podA || !podB) { test.skip(); return; }
     const chA = await createChannel(cc, "switch-A");
     const chB = await createChannel(cc, "switch-B");
     try {
@@ -283,7 +274,6 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
     // change agent_count — explicit LeavePod is required.
     const cc = await api.connect();
     const pod = await createPod(cc, "w009");
-    if (!pod) { test.skip(); return; }
     const ch = await createChannel(cc, "terminate-still-counted");
     try {
       await joinPod(cc, ch.id, pod.podKey);

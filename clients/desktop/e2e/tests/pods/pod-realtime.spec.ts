@@ -58,22 +58,24 @@ test.describe("Desktop pod realtime", () => {
   });
 
   test("opening a pod from sidebar keeps it listed and shows non-unknown status", async ({ page }) => {
-    // Skip if no runner / no agent — same gate as pod-lifecycle.spec.
+    // Assert prerequisites — same gate as pod-lifecycle.spec, but as a hard
+    // fail rather than a silent skip. The dev env contract is "at least one
+    // online runner + one builtin agent".
     const runners = await invokeIpc<string>(page, "runnerFetchRunners");
     const runnerList = JSON.parse(runners) as { runners?: { id: number; status: string }[] } | { id: number; status: string }[];
     const onlineRunner = (Array.isArray(runnerList) ? runnerList : runnerList.runners ?? [])
       .find((r) => r.status === "online");
-    if (!onlineRunner) { test.skip(); return; }
+    expect(onlineRunner, "dev env must have an online runner").toBeTruthy();
 
     const agentsJson = await invokeIpc<string>(page, "agentListAgents");
     const agents = JSON.parse(agentsJson) as { builtin_agents?: { slug: string }[] };
     const agent = agents.builtin_agents?.[0];
-    if (!agent) { test.skip(); return; }
+    expect(agent, "dev env must have a builtin agent").toBeTruthy();
 
     // Seed a running pod via the same IPC the renderer uses.
     const created = await invokeIpc<string>(page, "podCreatePod", JSON.stringify({
-      agent_slug: agent.slug,
-      runner_id: onlineRunner.id,
+      agent_slug: agent!.slug,
+      runner_id: onlineRunner!.id,
       cols: 142,
       rows: 34,
     }));

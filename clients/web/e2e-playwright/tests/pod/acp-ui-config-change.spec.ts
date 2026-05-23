@@ -31,7 +31,6 @@ test.describe("ACP UI: control plane round-trip", () => {
       scenario: "config_change_plan",
       prompt: "ready",
     });
-    if (!pod) { test.skip(); return; }
 
     await page.goto(workspaceUrlForPod(pod.podKey));
     // Use "load" (matches setupAcpScenarioPage in helpers/acp-spec-setup.ts):

@@ -24,25 +24,20 @@ test.describe("SSO Enforcement", () => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
     const adminCc = await api.connect();
 
-    let configId: bigint | null = null;
-    try {
-      const created = await adminCc.ssoAdmin.createSSOConfig({
-        name: "E2E Enforce SSO",
-        domain: SSO_DOMAIN,
-        protocol: "ldap", // LDAP doesn't need OIDC discovery
-        enforceSso: true,
-        ldapHost: "ldap.example.com",
-        ldapPort: 389,
-        ldapBaseDn: "dc=example,dc=com",
-        ldapBindDn: "cn=admin,dc=example,dc=com",
-        ldapBindPassword: "test",
-      }) as { id: bigint };
-      configId = created.id;
-    } catch {
-      // SSO config creation may fail — skip gracefully.
-      test.skip();
-      return;
-    }
+    // LDAP protocol doesn't need OIDC discovery — create must succeed.
+    const created = await adminCc.ssoAdmin.createSSOConfig({
+      name: "E2E Enforce SSO",
+      domain: SSO_DOMAIN,
+      protocol: "ldap",
+      enforceSso: true,
+      ldapHost: "ldap.example.com",
+      ldapPort: 389,
+      ldapBaseDn: "dc=example,dc=com",
+      ldapBindDn: "cn=admin,dc=example,dc=com",
+      ldapBindPassword: "test",
+    }) as { id: bigint };
+    const configId = created.id;
+    expect(configId, "SSO config must be created").toBeTruthy();
 
     // Enable the config
     await adminCc.ssoAdmin.enableSSOConfig({ id: configId });
@@ -65,9 +60,7 @@ test.describe("SSO Enforcement", () => {
     // Cleanup
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
     const adminCc2 = await api.connect();
-    if (configId != null) {
-      await adminCc2.ssoAdmin.deleteSSOConfig({ id: configId });
-    }
+    await adminCc2.ssoAdmin.deleteSSOConfig({ id: configId });
   });
 
   /**

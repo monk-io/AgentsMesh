@@ -160,12 +160,12 @@ test.describe("Channel IM Group Model", () => {
       items: { userId: bigint; user?: { email: string } }[];
     };
     const admin = members?.find((m) => m.user?.email === SECOND_USER.email);
-    if (!admin?.userId) { test.skip(); return; }
+    expect(admin?.userId, `seed second user ${SECOND_USER.email} must be an org member`).toBeTruthy();
 
     await cc.channel.inviteChannelMembers({
       orgSlug: TEST_ORG_SLUG,
       id: channel.id,
-      userIds: [admin.userId],
+      userIds: [admin!.userId],
     });
 
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
@@ -180,7 +180,7 @@ test.describe("Channel IM Group Model", () => {
     await cc.channel.removeChannelMember({
       orgSlug: TEST_ORG_SLUG,
       id: channel.id,
-      userId: admin.userId,
+      userId: admin!.userId,
     });
 
     await expect(
@@ -204,7 +204,7 @@ test.describe("Channel IM Group Model", () => {
       id: channel.id,
     }) as { items: { userId: bigint }[] };
     const creatorId = chMembers?.[0]?.userId;
-    if (!creatorId) { test.skip(); return; }
+    expect(creatorId, "channel must have a creator listed in its member roster").toBeTruthy();
 
     const adminToken = await api.loginAs(SECOND_USER.email, SECOND_USER.password);
     const adminCc = api.connectWithToken(adminToken);

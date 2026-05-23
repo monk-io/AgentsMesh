@@ -25,13 +25,13 @@ test.describe("Journey: Runner Scaling", () => {
 
     // ── Step 1: Get available runner and record initial state ──
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
     const runner = runners[0];
     const runnerId = runner.id;
     const initialPods = runner.currentPods || 0;
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     // ── Step 2: Create a pod and verify capacity increases ──
     const pod1Resp = await cc.pod.createPod({

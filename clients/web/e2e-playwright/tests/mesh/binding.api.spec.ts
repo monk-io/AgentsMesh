@@ -20,16 +20,16 @@ test.describe("Pod Binding API", () => {
   async function createRunningPod(
     cc: ConnectClient,
     prompt: string,
-  ): Promise<string | null> {
+  ): Promise<string> {
     const runnersRes = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as {
       items: { id: bigint }[];
     };
-    if (!runnersRes.items?.length) return null;
+    expect(runnersRes.items.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const agentsRes = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as {
       builtinAgents: { slug: string }[];
     };
-    if (!agentsRes.builtinAgents?.length) return null;
+    expect(agentsRes.builtinAgents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const created = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -40,11 +40,11 @@ test.describe("Pod Binding API", () => {
       rows: 24,
     }) as { pod?: { podKey: string } };
     const podKey = created.pod?.podKey;
-    if (!podKey) return null;
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
 
     await pollUntil(
       async () => {
-        const res = await cc.pod.getPod({ orgSlug: TEST_ORG_SLUG, podKey }) as {
+        const res = await cc.pod.getPod({ orgSlug: TEST_ORG_SLUG, podKey: podKey! }) as {
           status: string;
         };
         return res.status === "running";
@@ -52,7 +52,7 @@ test.describe("Pod Binding API", () => {
       { maxAttempts: 10, intervalMs: 3000, label: "pod-running" }
     ).catch(() => {});
 
-    return podKey;
+    return podKey!;
   }
 
   /**
@@ -62,7 +62,6 @@ test.describe("Pod Binding API", () => {
     const cc = await api.connect();
     const podA = await createRunningPod(cc, "E2E Bind Pod A");
     const podB = await createRunningPod(cc, "E2E Bind Pod B");
-    if (!podA || !podB) { test.skip(); return; }
 
     try {
       const binding = await cc.binding.requestBinding({

@@ -21,10 +21,10 @@ test.describe("ACP Pod API", () => {
   test("create ACP pod with agent_slug", async ({ api }) => {
     const cc = await api.connect();
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const resp = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -45,10 +45,10 @@ test.describe("ACP Pod API", () => {
   test("send prompt to pod via API", async ({ api }) => {
     const cc = await api.connect();
     const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
-    if (!runners?.length) { test.skip(); return; }
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
     const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
-    if (!agents?.length) { test.skip(); return; }
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     const created = await cc.pod.createPod({
       orgSlug: TEST_ORG_SLUG,
@@ -56,7 +56,7 @@ test.describe("ACP Pod API", () => {
       agentSlug: agents[0].slug,
     }) as { pod: Pod };
     const podKey = created.pod?.podKey;
-    if (!podKey) { test.skip(); return; }
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
 
     await new Promise((r) => setTimeout(r, 3000));
 

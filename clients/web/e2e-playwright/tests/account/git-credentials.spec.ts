@@ -55,7 +55,7 @@ test.describe("Git Credentials API", () => {
       pat: "ghp_update_test",
       hostPattern: "github.com",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a credential id").toBeTruthy();
 
     const updated = await cc.userGitCredential.updateGitCredential({
       id: created.id,
@@ -77,7 +77,7 @@ test.describe("Git Credentials API", () => {
       pat: "ghp_delete_test",
       hostPattern: "github.com",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a credential id").toBeTruthy();
 
     await cc.userGitCredential.deleteGitCredential({ id: created.id });
   });
@@ -96,7 +96,7 @@ test.describe("Git Credentials API", () => {
       pat: "ghp_default_test",
       hostPattern: "github.com",
     }) as { id: number };
-    if (!created.id) { test.skip(); return; }
+    expect(created.id, "create must return a credential id").toBeTruthy();
 
     // Set default
     await cc.userGitCredential.setDefaultGitCredential({ credentialId: created.id });
