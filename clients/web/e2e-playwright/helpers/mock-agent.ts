@@ -4,7 +4,6 @@ import { TEST_ORG_SLUG, getApiBaseUrl } from "./env";
 // Slug of the built-in e2e-mock-agent AgentFile, owned by the
 // universal-mock plan. See backend/migrations/000151_e2e_echo_dual_mode.
 const E2E_AGENT_SLUG = "e2e-echo";
-const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
 
 export type MockAgentMode = "pty" | "acp";
 
@@ -31,58 +30,51 @@ export interface CreateMockPodOptions {
 
 export interface MockAgentPod {
   podKey: string;
-  runnerId: number;
+  runnerId: bigint;
   cleanup: () => Promise<void>;
 }
 
-// createMockAgentPod spawns a pod backed by the e2e-mock-agent binary.
-// Returns null if no runner is online — caller should `test.skip()`. The
-// returned `cleanup` must be invoked from afterEach to avoid quota bleed.
+interface Runner { id: bigint }
+interface Pod { podKey: string }
+
+// createMockAgentPod spawns a pod backed by the e2e-mock-agent binary via
+// Connect-RPC (PodService.CreatePod). Returns null if no runner is online —
+// caller should `test.skip()`. The returned `cleanup` must be invoked from
+// afterEach to avoid quota bleed.
 export async function createMockAgentPod(
   api: ApiFixture,
   opts: CreateMockPodOptions,
 ): Promise<MockAgentPod | null> {
-  const runner = await pickAvailableRunner(api);
-  if (!runner) return null;
+  const cc = await api.connect();
+  const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items?: Runner[] };
+  if (!runners?.length) return null;
+  const runnerId = runners[0].id;
 
-  const body: Record<string, unknown> = {
-    runner_id: runner.id,
-    agent_slug: E2E_AGENT_SLUG,
-    prompt: opts.prompt ?? "",
-    agentfile_layer: buildAgentfileLayer(opts),
+  const input: Record<string, unknown> = {
+    orgSlug: TEST_ORG_SLUG,
+    runnerId,
+    agentSlug: E2E_AGENT_SLUG,
+    agentfileLayer: buildAgentfileLayer(opts),
   };
-  if (opts.alias) body.alias = opts.alias;
+  if (opts.alias) input.alias = opts.alias;
 
-  const res = await api.post(PODS_BASE, body);
-  if (![200, 201].includes(res.status)) {
-    throw new Error(`createMockAgentPod failed: ${res.status} ${await res.text()}`);
-  }
-  const data = await res.json();
-  const podKey = data.pod_key || data.pod?.pod_key;
+  const resp = await cc.pod.createPod(input) as { pod?: Pod };
+  const podKey = resp.pod?.podKey;
   if (!podKey) {
-    throw new Error(`createMockAgentPod missing podKey: ${JSON.stringify(data)}`);
+    throw new Error(`createMockAgentPod missing podKey: ${JSON.stringify(resp)}`);
   }
 
   return {
     podKey,
-    runnerId: runner.id,
+    runnerId,
     cleanup: async () => {
       try {
-        await api.post(`${PODS_BASE}/${podKey}/terminate`, {});
+        await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
       } catch {
         // best-effort: tests should not fail because cleanup raced
       }
     },
   };
-}
-
-interface AvailableRunner { id: number }
-
-async function pickAvailableRunner(api: ApiFixture): Promise<AvailableRunner | null> {
-  const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
-  if (!res.ok) return null;
-  const { runners } = (await res.json()) as { runners?: AvailableRunner[] };
-  return runners && runners.length > 0 ? runners[0] : null;
 }
 
 function buildAgentfileLayer(opts: CreateMockPodOptions): string {
@@ -94,13 +86,25 @@ function buildAgentfileLayer(opts: CreateMockPodOptions): string {
   if (opts.scenario && opts.scenario !== "echo") {
     lines.push(`CONFIG scenario = "${opts.scenario}"`);
   }
+  // PROMPT travels through the AgentFile layer in the Connect-RPC create
+  // path — CreatePodRequest does not expose a top-level prompt field.
+  if (opts.prompt) {
+    // Escape backslashes and double-quotes for the AgentFile single-line
+    // string syntax (`PROMPT "..."`). Tests pass plain ASCII so this is
+    // sufficient — no multi-line / unicode-escape handling needed.
+    const safe = opts.prompt.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    lines.push(`PROMPT "${safe}"`);
+  }
   return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 
 // Returns the workspace URL for a given pod, which renders the
 // AcpActivityStream / AcpPromptInput / AcpPermissionDialog stack.
+// Pod selection travels via the `pod` query param — the workspace page
+// reads it through useSearchParams and calls addPane(podKey) once the
+// store hydrates.
 export function workspaceUrlForPod(podKey: string): string {
-  return `/${TEST_ORG_SLUG}/workspace/${podKey}`;
+  return `/${TEST_ORG_SLUG}/workspace?pod=${encodeURIComponent(podKey)}`;
 }
 
 // getApiBaseUrl re-export for tests that need it without an extra import.

@@ -103,22 +103,18 @@ test.describe("CRUD Supplements", () => {
    * TC-REPOPROV-005: Set default repository provider
    */
   test("set repository provider as default", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E Default Provider",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_default_test",
-    });
-    const created = await createRes.json();
-    const id = created.provider?.id || created.id;
-    if (!id) { test.skip(); return; }
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E Default Provider " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_default_test",
+    }) as { id: number };
+    if (!created.id) { test.skip(); return; }
 
-    const setRes = await api.post(
-      `/api/v1/users/repository-providers/${id}/default`, {}
-    );
-    expect(setRes.status).toBe(200);
+    await cc.userRepositoryProvider.setDefaultRepositoryProvider({ id: created.id });
 
-    await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
   });
 
   /**
@@ -168,34 +164,36 @@ test.describe("CRUD Supplements", () => {
    * TC-POD-002: Create pod with repository
    */
   test("create pod with repository association", async ({ api }) => {
-    const runnersRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
-    const runners = (await runnersRes.json()).runners;
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { items: { id: bigint }[] };
     if (!runners?.length) { test.skip(); return; }
 
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentsRes.json()).builtin_agents;
+    const { builtinAgents: agents } = await cc.agent.listAgents({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { builtinAgents: { slug: string }[] };
     if (!agents?.length) { test.skip(); return; }
 
-    // Get repositories
-    const repoRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/repositories`);
-    const repos = (await repoRes.json()).repositories;
+    const { items: repos } = await cc.repository.listRepositories({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { items: { id: bigint }[] };
 
-    const body: Record<string, unknown> = {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E Pod with Repo",
+    const req: Record<string, unknown> = {
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
     };
     if (repos?.length) {
-      body.repository_id = repos[0].id;
+      req.repositoryId = repos[0].id;
     }
 
-    const res = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/pods`, body);
-    expect([200, 201]).toContain(res.status);
-    const data = await res.json();
-    const podKey = data.pod_key || data.pod?.pod_key;
+    const created = await cc.pod.createPod(req) as { pod: { podKey: string } };
+    const podKey = created.pod?.podKey;
+    expect(podKey).toBeTruthy();
 
     if (podKey) {
-      await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/pods/${podKey}/terminate`, {});
+      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
     }
   });
 });

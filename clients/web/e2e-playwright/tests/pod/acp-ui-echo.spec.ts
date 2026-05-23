@@ -10,6 +10,14 @@ import { setupAcpScenarioPage } from "../../helpers/acp-spec-setup";
 //   2. accept a prompt and echo it back as an agent_message_chunk
 //   3. surface that chunk through AcpActivityStream's rendered DOM
 //   4. transition through processing → idle without leaving the panel stuck
+// Pre-r6 used REST /pods; mock-agent.ts now uses Connect-RPC and the
+// helper falls back to waitForLoadState("load") (Connect EventsService
+// keeps the page non-idle on r6). Pod-store hydration via Connect-RPC
+// ListPods/notification flow still does not surface freshly-created
+// pods in the workspace pane — the sidebar shows "No pods yet" even
+// after CreatePod returns a podKey. Activating these requires a
+// deeper investigation into Connect notification → pod-store wiring
+// after r6 migration. Kept fixme until that lands.
 test.describe.fixme("ACP UI: e2e-echo agent (ACP mode)", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });

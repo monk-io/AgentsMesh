@@ -20,6 +20,7 @@ import {
 //
 // This spec asserts the round-trip completes by watching the Selector's
 // rendered label flip from one mode to another after click.
+// See acp-ui-echo.spec.ts header — same r6 networkidle blocker.
 test.describe.fixme("ACP UI: control plane round-trip", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });

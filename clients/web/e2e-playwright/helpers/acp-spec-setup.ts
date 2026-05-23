@@ -42,7 +42,11 @@ export async function setupAcpScenarioPage(
   if (!pod) return null;
 
   await page.goto(workspaceUrlForPod(pod.podKey));
-  await page.waitForLoadState("networkidle");
+  // Connect-RPC EventsService streams keep the page in flight indefinitely
+  // on r6, so "networkidle" (the original pre-r6 strategy) times out. "load"
+  // matches what pod-create-ui.spec.ts and pod-lifecycle.spec.ts use against
+  // the same workspace route.
+  await page.waitForLoadState("load");
 
   return {
     pod,

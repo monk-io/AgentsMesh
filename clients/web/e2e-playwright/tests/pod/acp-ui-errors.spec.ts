@@ -6,6 +6,7 @@ import { setupAcpScenarioPage } from "../../helpers/acp-spec-setup";
 // Defensive-path coverage: every scenario here exercises an unhappy
 // runner/agent boundary that should NOT crash the web UI or wedge the
 // activity stream.
+// See acp-ui-echo.spec.ts header — same r6 networkidle blocker.
 test.describe.fixme("ACP UI: error and degradation paths", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });

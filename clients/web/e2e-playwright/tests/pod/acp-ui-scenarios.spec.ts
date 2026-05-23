@@ -10,6 +10,7 @@ import { setupAcpScenarioPage } from "../../helpers/acp-spec-setup";
 //   thinking_then_answer     ThinkingIndicator spinner + collapse
 //   tool_call_edit           AcpToolCallCard animate-pulse → ✓ icon
 //   permission_request_edit  AcpPermissionDialog full approve flow
+// See acp-ui-echo.spec.ts header — same r6 networkidle blocker.
 test.describe.fixme("ACP UI: mock agent scenario matrix", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });
