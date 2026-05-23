@@ -35,9 +35,11 @@ test.describe("ACP UI: multi-tab Selector synchronization", () => {
       tabA.goto(workspaceUrlForPod(pod.podKey)),
       tabB.goto(workspaceUrlForPod(pod.podKey)),
     ]);
+    // Use "load" — see acp-ui-config-change.spec.ts header for the same r6
+    // Connect-RPC streaming rationale.
     await Promise.all([
-      tabA.waitForLoadState("networkidle"),
-      tabB.waitForLoadState("networkidle"),
+      tabA.waitForLoadState("load"),
+      tabB.waitForLoadState("load"),
     ]);
 
     // Wait for both tabs to render the initial activity (so both have
@@ -47,9 +49,9 @@ test.describe("ACP UI: multi-tab Selector synchronization", () => {
       expect(tabB.getByText("Ready for mode switches", { exact: false })).toBeVisible({ timeout: 15_000 }),
     ]);
 
-    // Drive the change from tab A. Selector trigger button shows the
-    // current label; click opens the dropdown, click "Default" commits.
-    await tabA.locator('button[title]').filter({ has: tabA.locator('svg').first() }).first().click();
+    // Drive the change from tab A. DropdownMenuTrigger carries the active
+    // mode's i18n description as `title` (see AcpPermissionModeSelector).
+    await tabA.locator('button[title*="Mode" i], button[title*="Approve" i], button[title*="Auto-approve" i]').first().click();
     await tabA.getByText("Default", { exact: true }).first().click();
 
     // Tab B must observe the new label through the broadcast → wasm

@@ -48,7 +48,17 @@ test.describe("ACP UI: error and degradation paths", () => {
     });
     if (!ctx) { test.skip(); return; }
 
-    await expect(page.getByText("Will crash soon: crash test")).toBeVisible({ timeout: 15_000 });
+    // The agent emits one content chunk and then os.Exit(1)s after 1s. We
+    // race two outcomes:
+    //   (a) chunk renders in the activity stream before the crash arrives, OR
+    //   (b) PaneErrorState replaces the panel because the crashed status
+    //       reaches the browser before / instead of the chunk.
+    // Either outcome proves "not wedged in processing" — the failure mode
+    // we care about is the UI sitting on a loading spinner indefinitely.
+    await expect(
+      page.getByText("Will crash soon: crash test")
+        .or(page.getByText(/process exited with code/i))
+    ).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(4000);
     ctx.assertWasmHealthy();
   });
