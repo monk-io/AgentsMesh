@@ -266,13 +266,131 @@ function registerLegacyApiAliases() {
     const parsed = JSON.parse(raw) as { items?: unknown[] };
     return JSON.stringify({ runners: (parsed.items ?? []).map(snakeCaseDeep) });
   });
-  ipcMain.handle("channelCreateChannel", (_e, requestJson: string) => {
+
+  // R6 dropped the Rust channel_join_channel napi (replaced by direct
+  // ChannelService.JoinChannelPod). Renderer paths use wasm Connect; main
+  // exposes these aliases for desktop e2e specs that still invoke through
+  // IPC by name. The cache update is necessary because main's AppState
+  // holds a separate Rust state from the renderer wasm — without the
+  // set_channel_pods_local fan-out, channelChannelPodsJson stays empty.
+  //
+  // Connect-JSON serializes int64 as a JSON string to preserve precision —
+  // IPC callers parse the channel response and forward `id` to us as a
+  // string. Coerce to a JS number before handing it to napi (i64 binding).
+  const toIdNumber = (v: number | string): number =>
+    typeof v === "number" ? v : Number(v);
+
+  // Recursively coerce numeric-looking string values to numbers for keys
+  // known to be int64 fields. The Connect-JSON wire serializes int64 as a
+  // string, but desktop e2e callers (and the legacy Rust napi shape) expect
+  // numbers — `expect(joined.agent_count).toBe(1)` would fail on "1".
+  const INT64_KEYS = new Set([
+    "id", "organization_id", "repository_id", "ticket_id",
+    "created_by_user_id", "member_count", "agent_count",
+    "message_count", "sender_user_id", "channel_id", "reply_to",
+  ]);
+  const coerceInt64 = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(coerceInt64);
+    if (value !== null && typeof value === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (INT64_KEYS.has(k) && typeof v === "string" && /^-?\d+$/.test(v)) {
+          out[k] = Number(v);
+        } else {
+          out[k] = coerceInt64(v);
+        }
+      }
+      return out;
+    }
+    return value;
+  };
+
+  // Connect-JSON omits proto3 default values (0, "", false). The legacy
+  // Rust napi shape always emitted them explicitly. Channel-shaped responses
+  // need agent_count / member_count present as numbers so e2e specs that
+  // do `expect(channel.agent_count).toBe(0)` get a number, not undefined.
+  const ensureChannelDefaults = (value: Record<string, unknown>): Record<string, unknown> => {
+    const defaults: Record<string, unknown> = {
+      agent_count: 0,
+      member_count: 0,
+      is_member: false,
+      is_archived: false,
+    };
+    return { ...defaults, ...value };
+  };
+
+  ipcMain.handle("channelCreateChannel", async (_e, requestJson: string) => {
     const req = JSON.parse(requestJson) as Record<string, unknown>;
-    return callConnectJson(
+    const raw = await callConnectJson(
       "proto.channel.v1.ChannelService",
       "CreateChannel",
       { orgSlug: orgSlug(), ...req },
     );
+    // Coerce int64-string fields and emit proto3 defaults (Connect-JSON
+    // omits zero values; legacy Rust napi shape always included them).
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return JSON.stringify(ensureChannelDefaults(coerceInt64(parsed) as Record<string, unknown>));
+  });
+
+  const refreshChannelPodsCache = async (channelId: number): Promise<void> => {
+    const raw = await callConnectJson(
+      "proto.channel.v1.ChannelService",
+      "ListChannelPods",
+      { orgSlug: orgSlug(), id: channelId },
+    );
+    const parsed = JSON.parse(raw) as { items?: unknown[] };
+    // Items are ChannelPod {id, pod_key, status, agent_status, alias}. Apply
+    // snake_case + int64 coerce so the cache deserializer (#[serde(default)]
+    // proto_pod_v1::Pod) accepts the shape.
+    const pods = (parsed.items ?? []).map((p) => coerceInt64(snakeCaseDeep(p)));
+    await (appState as { channelSetChannelPodsLocal: (id: number, json: string) => Promise<void> })
+      .channelSetChannelPodsLocal(channelId, JSON.stringify(pods));
+  };
+
+  const fetchChannelEnvelope = async (channelId: number): Promise<string> => {
+    const channelRaw = await callConnectJson(
+      "proto.channel.v1.ChannelService",
+      "GetChannel",
+      { orgSlug: orgSlug(), id: channelId },
+    );
+    const parsed = JSON.parse(channelRaw) as Record<string, unknown>;
+    const coerced = coerceInt64(snakeCaseDeep(parsed)) as Record<string, unknown>;
+    return JSON.stringify(ensureChannelDefaults(coerced));
+  };
+
+  ipcMain.handle("channelJoinChannel", async (_e, rawId: number | string, podKey: string) => {
+    const channelId = toIdNumber(rawId);
+    await callConnectJson(
+      "proto.channel.v1.ChannelService",
+      "JoinChannelPod",
+      { orgSlug: orgSlug(), id: channelId, podKey },
+    );
+    await refreshChannelPodsCache(channelId);
+    return fetchChannelEnvelope(channelId);
+  });
+
+  ipcMain.handle("channelLeaveChannel", async (_e, rawId: number | string, podKey: string) => {
+    const channelId = toIdNumber(rawId);
+    await callConnectJson(
+      "proto.channel.v1.ChannelService",
+      "LeaveChannelPod",
+      { orgSlug: orgSlug(), id: channelId, podKey },
+    );
+    await refreshChannelPodsCache(channelId);
+    return fetchChannelEnvelope(channelId);
+  });
+
+  ipcMain.handle("channelGetChannelPods", async (_e, rawId: number | string) => {
+    const channelId = toIdNumber(rawId);
+    await refreshChannelPodsCache(channelId);
+    // ElectronChannelService.get_channel_pods (electron-adapter) expects the
+    // legacy envelope `{pods: [...], total: N}` so it can mirror the array
+    // into its renderer-side cache. The Rust cache JSON is a bare array —
+    // wrap it back into the legacy shape.
+    const cacheJson = await (appState as { channelChannelPodsJson: (id: number) => Promise<string> })
+      .channelChannelPodsJson(channelId);
+    const pods = JSON.parse(cacheJson) as unknown[];
+    return JSON.stringify({ pods, total: pods.length });
   });
 
   // ElectronOrgService.create_personal() invokes this — main → backend

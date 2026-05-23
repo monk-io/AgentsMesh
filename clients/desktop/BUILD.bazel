@@ -175,6 +175,9 @@ playwright_test(
         "//:node_modules/electron",
         # Workspace link to the napi addon.
         "//:node_modules/@agentsmesh/node-bridge",
+        # Shared connect-client.ts re-exported through shared_fixtures uses
+        # `@bufbuild/protobuf` to build the typed binary client.
+        "//:node_modules/@bufbuild/protobuf",
         # Shared helpers/fixtures from web/e2e-playwright.
         "//clients/web/e2e-playwright:shared_fixtures",
         # Generated TS proto messages — connect-client.ts (re-exported

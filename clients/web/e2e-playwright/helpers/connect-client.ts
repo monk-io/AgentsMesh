@@ -41,6 +41,11 @@ import { AuthService, AuthSessionService } from "../../../../proto/gen/ts/auth/v
 import { OrgService } from "../../../../proto/gen/ts/org/v1/org_pb";
 import { UserService } from "../../../../proto/gen/ts/user/v1/user_pb";
 import {
+  InvitationService,
+  UserInvitationService,
+  PublicInvitationService,
+} from "../../../../proto/gen/ts/invitation/v1/invitation_pb";
+import {
   UserGitCredentialService,
   UserAgentCredentialService,
   UserRepositoryProviderService,
@@ -169,6 +174,9 @@ export function makeConnectClient(token: string | null) {
     notification: makeServiceClient(NotificationService, token),
     org: makeServiceClient(OrgService, token),
     user: makeServiceClient(UserService, token),
+    invitation: makeServiceClient(InvitationService, token),
+    userInvitation: makeServiceClient(UserInvitationService, token),
+    publicInvitation: makeServiceClient(PublicInvitationService, token),
     userGitCredential: makeServiceClient(UserGitCredentialService, token),
     userAgentCredential: makeServiceClient(UserAgentCredentialService, token),
     userRepositoryProvider: makeServiceClient(UserRepositoryProviderService, token),

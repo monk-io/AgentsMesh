@@ -30,7 +30,7 @@ async function createPodViaApi(
     orgSlug: TEST_ORG_SLUG,
     runnerId: typeof runners[0].id === "bigint" ? runners[0].id : BigInt(runners[0].id),
     agentSlug: agent.slug,
-    agentfileLayer: JSON.stringify({ prompt }),
+    agentfileLayer: `PROMPT ${JSON.stringify(prompt)}\n`,
   }) as { pod?: { podKey?: string }; podKey?: string };
   const podKey = resp.pod?.podKey ?? resp.podKey;
   expect(podKey, "createPod must return a pod_key").toBeTruthy();

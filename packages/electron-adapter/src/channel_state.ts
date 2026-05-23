@@ -29,6 +29,12 @@ export class ChannelLocalState {
   set_channel_pods(channelId: bigint, json: string): void {
     this._podsByChannel.set(String(channelId), json);
   }
+  // Alias mirroring the wasm service_channel.rs export name. clients/web's
+  // channelApi.getPods calls `set_channel_pods_local` (matches WASM); the
+  // desktop adapter needs the same name so the call doesn't silently no-op.
+  set_channel_pods_local(channelId: bigint, json: string): void {
+    this._podsByChannel.set(String(channelId), json);
+  }
   current_channel_json(): unknown {
     if (this._currentChannelId == null) return null;
     const chs = JSON.parse(this._channelsCache) as { id: number }[];

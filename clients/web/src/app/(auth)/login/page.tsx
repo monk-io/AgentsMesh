@@ -24,7 +24,11 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations();
-  useRedirectIfAuthenticated();
+  // Skip the authenticated-redirect race when ?redirect= is present —
+  // navigateAfterLogin owns the post-auth navigation in that case.
+  useRedirectIfAuthenticated({
+    skipIfRedirectParam: searchParams.get("redirect"),
+  });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
