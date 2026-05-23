@@ -14,6 +14,11 @@ import {
 import { getCache, updateCache } from "./channelMessageTypes";
 import type { ChannelMessageState } from "./channelMessageTypes";
 import type { ChannelMessage } from "@/lib/api/channel";
+import {
+  toWasmMessage,
+  fromWasmMessage,
+  type WasmChannelMessage,
+} from "./channelMessageWasmAdapter";
 import { registerOrgScopedReset } from "@/lib/org-scope/registry";
 
 export { EMPTY_CACHE, type ChannelMessageCache } from "./channelMessageTypes";
@@ -32,8 +37,9 @@ function orgSlug(): string {
 export function readMessages(channelId: number): { messages: ChannelMessage[]; hasMore: boolean } {
   const raw = svc().get_messages_json(BigInt(channelId));
   if (!raw) return { messages: [], hasMore: false };
-  const parsed = typeof raw === "string" ? JSON.parse(raw) : (raw as { messages?: ChannelMessage[]; has_more?: boolean });
-  return { messages: parsed.messages || [], hasMore: parsed.has_more ?? false };
+  const parsed = typeof raw === "string" ? JSON.parse(raw) : (raw as { messages?: WasmChannelMessage[]; has_more?: boolean });
+  const wasmMessages = parsed.messages || [];
+  return { messages: wasmMessages.map(fromWasmMessage), hasMore: parsed.has_more ?? false };
 }
 
 const bumpMessages = () =>
@@ -58,10 +64,11 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         beforeId,
         limit,
       });
+      const wasmItems = items.map(toWasmMessage);
       if (isLoadMore) {
-        svc().prepend_messages(BigInt(channelId), JSON.stringify(items), has_more);
+        svc().prepend_messages(BigInt(channelId), JSON.stringify(wasmItems), has_more);
       } else {
-        svc().set_messages(BigInt(channelId), JSON.stringify(items), has_more);
+        svc().set_messages(BigInt(channelId), JSON.stringify(wasmItems), has_more);
       }
       set((state) => updateCache(state, channelId, {
         loading: false, loadingMore: false, error: null,
@@ -98,7 +105,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         }
       }
 
-      svc().add_message(BigInt(channelId), JSON.stringify(msg));
+      svc().add_message(BigInt(channelId), JSON.stringify(toWasmMessage(msg)));
       bumpMessages();
       return msg;
     } catch (error: unknown) {
@@ -108,7 +115,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
   },
 
   addMessage: (_channelId, message) => {
-    svc().on_new_message(JSON.stringify(message));
+    svc().on_new_message(JSON.stringify(toWasmMessage(message)));
     bumpMessages();
   },
 
@@ -118,7 +125,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         source: payload.source,
         mentions: payload.mentions && Object.keys(payload.mentions).length > 0 ? payload.mentions : undefined,
       });
-      svc().update_message_local(BigInt(channelId), JSON.stringify(updated));
+      svc().update_message_local(BigInt(channelId), JSON.stringify(toWasmMessage(updated)));
       bumpMessages();
     } catch (error: unknown) {
       console.error("Failed to edit message:", getErrorMessage(error, "Unknown error"));
@@ -138,7 +145,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
   },
 
   updateMessage: (channelId, data) => {
-    svc().update_message_local(BigInt(channelId), JSON.stringify(data));
+    svc().update_message_local(BigInt(channelId), JSON.stringify(toWasmMessage(data)));
     bumpMessages();
   },
 

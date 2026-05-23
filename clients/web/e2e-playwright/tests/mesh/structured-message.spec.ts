@@ -499,18 +499,12 @@ uiTest.describe("Structured Message — UI Rendering", () => {
     return data.token;
   }
 
-  // **Skipped — server-side message AST hydration:** `cc.channel.sendChannelMessage`
-  // accepts the structured `content`/`source` fields, but the message that
-  // reloads via `/proto.channel.v1.ChannelService/ListChannelMessages`
-  // appears in the UI as ToPlainText concatenation (`message.body`) rather
-  // than the structured AST (`message.content`). Either the backend isn't
-  // persisting `content_json` for messages sent through this Connect path,
-  // or the wasm-side message cache (state crate) drops the content_json
-  // before it reaches the page. Phase E ServerStream is now real (rules
-  // out the realtime broadcast layer), so the gap is in the unary
-  // send→list pipeline. StructuredContent's bold→<strong> rendering is
-  // unit-tested in StructuredContent.test.tsx.
-  uiTest.skip("bold text renders as <strong> in UI — pending server-side content_json hydration through Connect send/list pipeline", async ({ page }) => {
+  // Verifies the full Connect send/list pipeline: send a content_json AST,
+  // reload, listChannelMessages returns content_json, wasm cache preserves it
+  // (channelMessageWasmAdapter converts content↔content_json at the wasm
+  // boundary), renderer (StructuredContent) emits <strong>. Counterpart
+  // unit coverage lives in StructuredContent.test.tsx.
+  uiTest("bold text renders as <strong> in UI", async ({ page }) => {
     const name = "E2E StructUI Bold " + Date.now();
     await sidebar.navigateTo("channels");
     await channels.createChannel(name);
@@ -582,10 +576,7 @@ uiTest.describe("Structured Message — UI Rendering", () => {
     await uiExpect(page.locator("[data-message-id]").getByText("@dev-user").first()).toBeVisible({ timeout: 5000 });
   });
 
-  // **Skipped — same root cause as the bold sub-test:** server-side
-  // message AST hydration through the Connect send/list pipeline does not
-  // surface the structured `content` field on the rendered message.
-  uiTest.skip("source-mode roundtrip renders heading + list + code — pending server-side content_json hydration through Connect send/list pipeline", async ({ page }) => {
+  uiTest("source-mode roundtrip renders heading + list + code", async ({ page }) => {
     const name = "E2E StructUI Source " + Date.now();
     await sidebar.navigateTo("channels");
     await channels.createChannel(name);
