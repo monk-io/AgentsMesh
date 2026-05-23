@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api/api-types";
 import { reconnectRegistry } from "@/lib/realtime";
 import { readCurrentOrg, readCurrentUser } from "@/stores/auth";
 import { getErrorMessage } from "@/lib/utils";
-import { initWasmCore, getPodService } from "@/lib/wasm-core";
+import { initWasmCore, getPodState } from "@/lib/wasm-core";
 import {
   listPods as listPodsConnect,
   getPod as getPodConnect,
@@ -28,14 +28,14 @@ function sidebarStatusParam(filter: string): string | undefined {
 
 export function usePods(): Pod[] {
   const tick = usePodStore((s) => s._tick);
-  return useMemo(() => JSON.parse(getPodService().pods_json()) as Pod[], [tick]);
+  return useMemo(() => JSON.parse(getPodState().pods_json()) as Pod[], [tick]);
 }
 
 export function usePod(podKey: string | undefined): Pod | undefined {
   const tick = usePodStore((s) => s._tick);
   return useMemo(() => {
     if (!podKey) return undefined;
-    const json = getPodService().get_pod_json(podKey);
+    const json = getPodState().get_pod_json(podKey);
     if (!json) return undefined;
     return JSON.parse(json as string) as Pod;
   }, [tick, podKey]);
@@ -44,7 +44,7 @@ export function usePod(podKey: string | undefined): Pod | undefined {
 export function useCurrentPod(): Pod | null {
   const tick = usePodStore((s) => s._tick);
   return useMemo(() => {
-    const json = getPodService().current_pod_json();
+    const json = getPodState().current_pod_json();
     if (!json) return null;
     return JSON.parse(json as string) as Pod;
   }, [tick]);
@@ -64,7 +64,7 @@ export const usePodStore = create<PodState>((set, get) => ({
       const { items } = await listPodsConnect(orgSlug(), {
         status: filters?.status,
       });
-      getPodService().set_pods(JSON.stringify(items));
+      getPodState().set_pods(JSON.stringify(items));
       bump();
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, "Failed to fetch pods") });
@@ -78,7 +78,7 @@ export const usePodStore = create<PodState>((set, get) => ({
       await initWasmCore();
       try {
         const pod = await getPodConnect(orgSlug(), podKey);
-        getPodService().upsert_pod(JSON.stringify(pod));
+        getPodState().upsert_pod(JSON.stringify(pod));
         bump();
       } catch (error: unknown) {
         console.warn("[PodStore] fetchPod failed for", podKey, error);
@@ -100,7 +100,7 @@ export const usePodStore = create<PodState>((set, get) => ({
         limit: SIDEBAR_PAGE_SIZE,
         offset: 0,
       });
-      getPodService().set_pods(JSON.stringify(items));
+      getPodState().set_pods(JSON.stringify(items));
       const hasMore = items.length < total;
       set({ podTotal: total, podHasMore: hasMore, loading: false, _tick: get()._tick + 1 });
     } catch (error: unknown) {
@@ -115,20 +115,20 @@ export const usePodStore = create<PodState>((set, get) => ({
     set({ loadingMore: true });
     try {
       const uid = currentSidebarFilter === "mine" ? readCurrentUser()?.id ?? null : null;
-      const existing: Pod[] = JSON.parse(getPodService().pods_json());
+      const existing: Pod[] = JSON.parse(getPodState().pods_json());
       const { items: newPods, total } = await listPodsConnect(orgSlug(), {
         status: sidebarStatusParam(currentSidebarFilter),
         created_by_id: uid ?? undefined,
         limit: SIDEBAR_PAGE_SIZE,
         offset: existing.length,
       });
-      const svc = getPodService();
-      for (const pod of newPods) svc.upsert_pod(JSON.stringify(pod));
-      const allCount = (JSON.parse(svc.pods_json()) as Pod[]).length;
+      const state = getPodState();
+      for (const pod of newPods) state.upsert_pod(JSON.stringify(pod));
+      const allCount = (JSON.parse(state.pods_json()) as Pod[]).length;
       const hasMore = allCount < total;
-      set((state) => {
-        if (state.currentSidebarFilter !== currentSidebarFilter) return { loadingMore: false };
-        return { podTotal: total, podHasMore: hasMore, loadingMore: false, _tick: state._tick + 1 };
+      set((s) => {
+        if (s.currentSidebarFilter !== currentSidebarFilter) return { loadingMore: false };
+        return { podTotal: total, podHasMore: hasMore, loadingMore: false, _tick: s._tick + 1 };
       });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error, "Failed to load more pods"), loadingMore: false });
@@ -138,7 +138,7 @@ export const usePodStore = create<PodState>((set, get) => ({
   terminatePod: async (podKey) => {
     try {
       await terminatePodConnect(orgSlug(), podKey);
-      getPodService().update_pod_status(podKey, "terminated", undefined, undefined, undefined);
+      getPodState().update_pod_status(podKey, "terminated", undefined, undefined, undefined);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       const isNotFound = (error instanceof ApiError && error.status === 404) || msg.includes("404");
@@ -148,32 +148,32 @@ export const usePodStore = create<PodState>((set, get) => ({
   },
 
   upsertPod: (pod) => {
-    getPodService().upsert_pod(JSON.stringify(pod));
+    getPodState().upsert_pod(JSON.stringify(pod));
     bump();
   },
 
   setCurrentPod: (pod) => {
-    getPodService().set_current_pod(pod ? JSON.stringify(pod) : "");
+    getPodState().set_current_pod(pod ? JSON.stringify(pod) : "");
     bump();
   },
 
   updatePodStatus: (podKey, status, agentStatus, errorCode, errorMessage) => {
-    getPodService().update_pod_status(podKey, status, agentStatus ?? undefined, errorCode ?? undefined, errorMessage ?? undefined);
+    getPodState().update_pod_status(podKey, status, agentStatus ?? undefined, errorCode ?? undefined, errorMessage ?? undefined);
     bump();
   },
 
   updateAgentStatus: (podKey, agentStatus) => {
-    getPodService().update_agent_status(podKey, agentStatus);
+    getPodState().update_agent_status(podKey, agentStatus);
     bump();
   },
 
   updatePodTitle: (podKey, title) => {
-    getPodService().update_pod_title(podKey, title);
+    getPodState().update_pod_title(podKey, title);
     bump();
   },
 
   updatePodAliasFromEvent: (podKey, alias) => {
-    getPodService().update_pod_alias(podKey, alias ?? "");
+    getPodState().update_pod_alias(podKey, alias ?? "");
     bump();
   },
 
@@ -181,7 +181,7 @@ export const usePodStore = create<PodState>((set, get) => ({
     await initWasmCore();
     try {
       await updatePodAliasConnect(orgSlug(), podKey, alias);
-      getPodService().update_pod_alias(podKey, alias ?? "");
+      getPodState().update_pod_alias(podKey, alias ?? "");
       bump();
     } catch (error: unknown) {
       console.warn("[PodStore] updatePodAlias failed, reverting", error);
@@ -191,10 +191,10 @@ export const usePodStore = create<PodState>((set, get) => ({
   },
 
   updatePodPerpetualFromEvent: (podKey, perpetual) => {
-    const raw = getPodService().get_pod_json(podKey);
+    const raw = getPodState().get_pod_json(podKey);
     if (!raw) return;
     const pod = JSON.parse(String(raw)) as Pod;
-    getPodService().upsert_pod(JSON.stringify({ ...pod, perpetual }));
+    getPodState().upsert_pod(JSON.stringify({ ...pod, perpetual }));
     bump();
   },
 
@@ -202,10 +202,10 @@ export const usePodStore = create<PodState>((set, get) => ({
     await initWasmCore();
     try {
       await updatePodPerpetualConnect(orgSlug(), podKey, perpetual);
-      const raw = getPodService().get_pod_json(podKey);
+      const raw = getPodState().get_pod_json(podKey);
       if (raw) {
         const pod = JSON.parse(String(raw)) as Pod;
-        getPodService().upsert_pod(JSON.stringify({ ...pod, perpetual }));
+        getPodState().upsert_pod(JSON.stringify({ ...pod, perpetual }));
       }
       bump();
     } catch (error: unknown) {

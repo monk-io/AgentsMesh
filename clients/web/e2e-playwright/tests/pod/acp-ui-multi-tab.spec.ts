@@ -15,12 +15,12 @@ import {
 // Before Phase D this would silently desync because each Selector kept
 // its own useState; Phase D made the value server-derived through the
 // wasm session cache, and Phase B added the broadcast that updates it.
-// See acp-ui-echo.spec.ts header — same r6 pod-store/notification blocker.
-test.describe.fixme("ACP UI: multi-tab Selector synchronization", () => {
+// See acp-ui-echo.spec.ts header — same r6 fix applies.
+test.describe("ACP UI: multi-tab Selector synchronization", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });
 
-  test.fixme("mode change in tab A appears in tab B without refresh", async ({ context, api }) => {
+  test("mode change in tab A appears in tab B without refresh", async ({ context, api }) => {
     const pod = await createMockAgentPod(api, {
       mode: "acp",
       scenario: "config_change_plan",

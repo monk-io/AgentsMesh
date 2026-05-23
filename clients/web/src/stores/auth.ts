@@ -197,12 +197,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setCurrentOrg: async (org) => {
+    // Guard against same-org re-set: DashboardShell/OrgLayout both call this
+    // on every mount/hydrate to mirror the URL slug into Rust SSOT. A same-org
+    // call must be a no-op — otherwise it wipes workspace panes that
+    // /workspace?pod=<key> just added via addPane, leaving the user with an
+    // empty workspace on deep-link navigation.
+    const previousSlug = readCurrentOrg()?.slug;
     try { await mgr().set_current_org(JSON.stringify(org)); } catch { /* noop */ }
-    try {
-      useWorkspaceStore.getState().clearAllPanes();
-      useWorkspaceStore.persist.clearStorage?.();
-    } catch { /* noop */ }
-    resetOrgScopedServices();
+    if (previousSlug !== org.slug) {
+      try {
+        useWorkspaceStore.getState().clearAllPanes();
+        useWorkspaceStore.persist.clearStorage?.();
+      } catch { /* noop */ }
+      resetOrgScopedServices();
+    }
     bump();
   },
 
