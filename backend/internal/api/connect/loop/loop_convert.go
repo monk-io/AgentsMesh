@@ -75,6 +75,7 @@ func toProtoLoop(l *loopDomain.Loop) *loopv1.Loop {
 		LastRunAt:           optTimePtr(l.LastRunAt),
 		CreatedAt:           l.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:           l.UpdatedAt.UTC().Format(time.RFC3339),
+		UsedEnvBundles:      []string(l.UsedEnvBundles),
 	}
 	return out
 }

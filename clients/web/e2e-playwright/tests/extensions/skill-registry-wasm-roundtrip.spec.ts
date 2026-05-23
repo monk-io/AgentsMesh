@@ -67,7 +67,10 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
     // The bug manifested as an empty list even though the POST succeeded.
     // Asserting the URL is rendered proves the wasm relay preserved the
     // `skill_registries` wrapper key on the subsequent list refresh.
-    await expect(page.getByText(testUrl)).toBeVisible();
+    // Scope to the title span: the row's `sync_error` field also embeds
+    // the URL once the initial sync fails (the test URLs aren't reachable),
+    // so an unscoped getByText would race the sync.
+    await expect(page.locator("span.font-medium", { hasText: testUrl })).toBeVisible();
 
     // Belt-and-braces: confirm the DB row exists, so a future bug that hides
     // rows in the UI without ever POSTing can't pass by simply staying empty.
@@ -94,7 +97,11 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "extensions");
 
-    await expect(page.getByText(testUrl)).toBeVisible();
+    // Strict-mode scope: target the registry row's title span specifically.
+    // The initial-sync against a non-existent GitHub URL fails fast and
+    // the resulting `sync_error` text also contains the URL — without
+    // scoping we'd hit two matches.
+    await expect(page.locator("span.font-medium", { hasText: testUrl })).toBeVisible();
   });
 
   // Connect-RPC binary lane (proto-migration feature branch). Asserts the
@@ -129,8 +136,10 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
     // single-entity, not a list), and the post-create refresh now goes
     // through Connect (`listSkillRegistries(orgSlug)`). If the Connect
     // handler dropped the entity (wrong envelope, drifted prost tag,
-    // missing field), this assertion fails.
-    await expect(page.getByText(testUrl)).toBeVisible();
+    // missing field), this assertion fails. Scope to the row title span
+    // since the row's sync_error also embeds the URL once initial sync
+    // fails (test URLs aren't reachable).
+    await expect(page.locator("span.font-medium", { hasText: testUrl })).toBeVisible();
 
     const dbCount = db.queryValue(
       `SELECT COUNT(*) FROM skill_registries WHERE organization_id = ${orgIdSql} AND repository_url = '${testUrl}'`

@@ -3,7 +3,10 @@ import { test, expect } from "../../fixtures/index";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
 test.describe("Agent Credentials API", () => {
-  test.beforeEach(async () => { clearAuthRateLimit(); });
+  test.beforeEach(async () => {
+    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
+    clearAuthRateLimit();
+  });
 
   /**
    * TC-AGENTCRED-001: List agent credentials

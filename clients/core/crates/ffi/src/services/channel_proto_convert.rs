@@ -17,6 +17,7 @@ impl From<channel_proto::Channel> for ChannelDto {
             visibility: Some(c.visibility),
             is_member: c.is_member,
             member_count: Some(c.member_count),
+            agent_count: Some(c.agent_count),
             organization_id: Some(c.organization_id),
             document: c.document,
             repository_id: c.repository_id,

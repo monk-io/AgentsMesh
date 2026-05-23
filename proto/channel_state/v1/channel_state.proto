@@ -48,6 +48,8 @@ message Channel {
   optional int64 member_count = 14;
   optional string created_at = 15;
   optional string updated_at = 16;
+  // Computed: total joined pods count.
+  optional int64 agent_count = 17;
 
   // --- client-derived business fields (Rust maintains; UI consumes) ---
 

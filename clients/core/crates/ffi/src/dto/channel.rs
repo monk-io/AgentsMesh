@@ -11,6 +11,7 @@ pub struct ChannelDto {
     pub visibility: Option<String>,
     pub is_member: bool,
     pub member_count: Option<i64>,
+    pub agent_count: Option<i64>,
     pub organization_id: Option<i64>,
     pub document: Option<String>,
     pub repository_id: Option<i64>,

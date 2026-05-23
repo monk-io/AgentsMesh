@@ -36,6 +36,7 @@ test.describe("Personal Agent Configuration", () => {
    * TC-AGENT-003: Add custom credential EnvBundle via the new API
    */
   test("add and delete custom credential bundle", async ({ api, db }) => {
+    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle (see personal-agents-credentials.spec.ts)");
     db.cleanup(
       `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`
     );

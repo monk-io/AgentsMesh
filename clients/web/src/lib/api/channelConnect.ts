@@ -91,6 +91,7 @@ export function channelFromProto(c: ProtoChannel): ChannelData {
     is_archived: c.isArchived,
     is_member: c.isMember,
     member_count: Number(c.memberCount),
+    agent_count: Number(c.agentCount),
     created_at: c.createdAt,
     updated_at: c.updatedAt,
   };

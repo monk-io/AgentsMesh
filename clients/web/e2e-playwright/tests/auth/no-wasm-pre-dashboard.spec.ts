@@ -58,16 +58,20 @@ test.describe("Dashboard still loads wasm after login", () => {
 
   test("wasm boots when navigating into the workspace", async ({ browser }) => {
     // Skip the UI form (CI webpack-dev races against fill). Mirror the
-    // lightLogin code path: hit /auth/login, seed PersistedSession, then
-    // measure what gets requested on the dashboard route.
+    // lightLogin code path: hit Connect AuthService.Login, seed
+    // PersistedSession, then measure what gets requested on the
+    // dashboard route.
     const apiBaseUrl = getApiBaseUrl();
-    const loginRes = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+    const loginRes = await fetch(`${apiBaseUrl}/proto.auth.v1.AuthService/Login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Connect-Protocol-Version": "1" },
       body: JSON.stringify({ email: TEST_USER.email, password: TEST_USER.password }),
     });
     expect(loginRes.status).toBe(200);
-    const { token, refresh_token, expires_in } = await loginRes.json();
+    const data = await loginRes.json();
+    const token = data.token;
+    const refresh_token = data.refreshToken ?? data.refresh_token;
+    const expires_in = Number(data.expiresIn ?? data.expires_in ?? 3600);
     const baseUrl = getWebBaseUrl();
     const expiresAt = Math.floor(Date.now() / 1000) + (expires_in ?? 3600);
 

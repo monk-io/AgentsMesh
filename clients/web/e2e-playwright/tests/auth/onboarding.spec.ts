@@ -1,13 +1,13 @@
 import { test, expect } from "../../fixtures/index";
 import { CLEANUP, uniqueEmail } from "../../helpers/test-data";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { getApiBaseUrl, getWebBaseUrl } from "../../helpers/env";
+import { getWebBaseUrl } from "../../helpers/env";
 
 // Onboarding spec — guards the kudin.private bug regression and the
 // downstream "Create Personal Workspace" flow. The original bug was that
 // frontend built the slug as `${user.username}-workspace`, producing
 // invalid identifiers for OAuth-derived usernames containing dots. Fix
-// routes the call through POST /api/v1/orgs/personal so the server
+// routes the call through OrgService.CreatePersonalOrg so the server
 // derives a slugkit-compliant slug from users.username.
 
 test.describe("Auth · onboarding personal workspace", () => {
@@ -17,27 +17,27 @@ test.describe("Auth · onboarding personal workspace", () => {
     clearAuthRateLimit();
   });
 
-  test("API: POST /orgs/personal derives sanitized slug, no client-side slug needed", async ({ api, db }) => {
+  test("API: CreatePersonalOrg derives sanitized slug, no client-side slug needed", async ({ api, db }) => {
     const email = uniqueEmail("onboard");
     const username = `onboarduser${Date.now()}`;
     try { db.cleanup(CLEANUP.userAndOrgsByEmail(email)); } catch { /* noop */ }
 
-    const regRes = await api.postPublic("/api/v1/auth/register", {
+    const ccAnon = api.connectWithToken("");
+    const regRes = await ccAnon.auth.register({
       email, username, password: "TestPass123!", name: "Onboard E2E",
-    });
-    expect(regRes.status).toBe(201);
-    const { token } = await regRes.json();
-    expect(token).toBeTruthy();
+    }) as { token: string };
+    expect(regRes.token).toBeTruthy();
 
     // Critical: caller sends NO slug, server derives. This is the
     // post-fix contract — kudin.private regression cannot reoccur because
     // userService.EnsureUniqueUsername + orgService.CreatePersonal both
     // funnel through slugkit.Sanitize.
-    const createRes = await api.postWithToken("/api/v1/orgs/personal", {}, token);
-    expect(createRes.status).toBe(201);
-    const { organization } = await createRes.json();
-    expect(organization.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-    expect(organization.slug.endsWith("-workspace")).toBe(true);
+    const cc = api.connectWithToken(regRes.token);
+    const createRes = await cc.org.createPersonalOrg({}) as {
+      organization: { slug: string };
+    };
+    expect(createRes.organization.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(createRes.organization.slug.endsWith("-workspace")).toBe(true);
 
     db.cleanup(CLEANUP.userAndOrgsByEmail(email));
   });
@@ -47,16 +47,18 @@ test.describe("Auth · onboarding personal workspace", () => {
   // fails the `users_username_format` CHECK. The system invariant after
   // backfill is "no dot in users.username", so there's nothing to test.
 
-  test("UI: Quick Start button calls /orgs/personal and navigates onward", async ({ page, api, db }) => {
+  test("UI: Quick Start button calls CreatePersonalOrg and navigates onward", async ({ page, api, db }) => {
     const email = uniqueEmail("uionboard");
     const username = `uionboarduser${Date.now()}`;
     try { db.cleanup(CLEANUP.userAndOrgsByEmail(email)); } catch { /* noop */ }
 
-    const regRes = await api.postPublic("/api/v1/auth/register", {
+    const ccAnon = api.connectWithToken("");
+    const regRes = await ccAnon.auth.register({
       email, username, password: "TestPass123!", name: "UI Onboard",
-    });
-    expect(regRes.status).toBe(201);
-    const { token, refresh_token, expires_in } = await regRes.json();
+    }) as { token: string; refreshToken: string; expiresIn: number | string };
+    const token = regRes.token;
+    const refresh_token = regRes.refreshToken;
+    const expires_in = Number(regRes.expiresIn ?? 3600);
 
     // Mirror global.setup.ts: inject PersistedSession blob so the wasm
     // bootstrap is happy when /onboarding loads.
@@ -77,9 +79,9 @@ test.describe("Auth · onboarding personal workspace", () => {
       { token, refresh_token, expiresAt, baseUrl },
     );
 
-    // Watch for the /orgs/personal POST to confirm correct endpoint usage.
+    // Watch for the CreatePersonalOrg POST to confirm correct endpoint usage.
     const personalReq = page.waitForRequest(
-      (req) => req.url().endsWith("/api/v1/orgs/personal") && req.method() === "POST",
+      (req) => req.url().endsWith("/proto.org.v1.OrgService/CreatePersonalOrg") && req.method() === "POST",
     );
 
     await page.goto("/onboarding");

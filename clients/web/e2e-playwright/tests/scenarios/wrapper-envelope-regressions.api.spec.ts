@@ -16,7 +16,6 @@ test.describe("Backend wrapper envelope contracts", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("ticket list keeps total/limit/offset", async ({ api }) => {
-  test("ticket list keeps total/limit/offset", async ({ api }) => {
     const cc = await api.connect();
     const res = await cc.ticket.listTickets({ orgSlug: TEST_ORG_SLUG }) as {
       items: unknown[];
@@ -74,6 +73,5 @@ test.describe("Backend wrapper envelope contracts", () => {
     expect(typeof runs.total).toMatch(/number|bigint/);
     expect(typeof runs.limit).toBe("number");
     expect(typeof runs.offset).toBe("number");
-  });
   });
 });

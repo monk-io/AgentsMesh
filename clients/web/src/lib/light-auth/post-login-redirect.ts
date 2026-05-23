@@ -4,31 +4,27 @@
 // when it loads, so we just need to pick a sensible destination.
 // Order of preference:
 //   1. ?redirect=<safe path> (deep-link restoration; matches login/page.tsx)
-//   2. First org's default route (fetched via REST with the Bearer token
-//      we just persisted)
+//   2. First org's default route (fetched via Connect with the Bearer
+//      token we just persisted)
 //   3. /onboarding (no orgs yet)
 
-import { lightFetch } from "./api-fetch";
+import { lightConnect } from "./api-fetch";
 import { getDefaultRoute } from "@/lib/default-route";
 import { safeRedirectPath } from "@/lib/auth/redirect";
 
-interface Organization {
-  id: number;
-  name: string;
-  slug: string;
-}
-
-interface ListOrgsResponse {
-  organizations: Organization[];
+interface ListMyOrgsResponse {
+  items?: Array<{ slug: string }>;
 }
 
 export async function fetchFirstOrgSlug(): Promise<string | null> {
   try {
-    const resp = await lightFetch<ListOrgsResponse>(
-      "/api/v1/orgs",
+    const resp = await lightConnect<Record<string, never>, ListMyOrgsResponse>(
+      "proto.org.v1.OrgService",
+      "ListMyOrgs",
+      {},
       { authenticated: true },
     );
-    const orgs = resp?.organizations ?? [];
+    const orgs = resp?.items ?? [];
     return orgs.length > 0 ? orgs[0].slug : null;
   } catch {
     return null;

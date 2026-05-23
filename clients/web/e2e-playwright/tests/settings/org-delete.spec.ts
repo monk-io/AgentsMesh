@@ -2,31 +2,30 @@ import { test, expect } from "../../fixtures/index";
 import { uniqueSuffix } from "../../helpers/test-data";
 
 /**
- * Regression for the production bug where DELETE /api/v1/orgs/:slug always
- * returned 500 due to `DELETE FROM pod_bindings WHERE channel_id IN (...)` —
+ * Regression for the production bug where deleting an organization returned
+ * 500 due to `DELETE FROM pod_bindings WHERE channel_id IN (...)` —
  * pod_bindings has no channel_id column (see migration 000001). Every user
  * attempting to delete an organization hit "An internal error occurred".
  *
  * Three layers of guard now cover the fix: repo-level cleanup test in
  * backend/internal/infra/organization_repo_test.go, handler integration test
- * in backend/internal/api/rest/v1/organizations_delete_test.go, and this
- * full-stack flow.
+ * in the Connect OrgService, and this full-stack flow.
  */
 test.describe("Organization Deletion", () => {
   test("owner deletes org via API and the row is gone", async ({ api, db }) => {
     const slug = `e2e-delete-${uniqueSuffix()}`.toLowerCase().replace(/_/g, "-");
+    const cc = await api.connect();
 
-    const createRes = await api.post("/api/v1/orgs", {
+    await cc.org.createOrg({
       name: "E2E Delete Target",
       slug,
     });
-    expect(createRes.status, await createRes.text()).toBe(201);
 
-    const delRes = await api.delete(`/api/v1/orgs/${slug}`);
-    expect(delRes.status, await delRes.text()).toBe(200);
+    await cc.org.deleteOrg({ orgSlug: slug });
 
-    const getRes = await api.get(`/api/v1/orgs/${slug}`);
-    expect(getRes.status).toBe(404);
+    await expect(
+      cc.org.getOrg({ orgSlug: slug })
+    ).rejects.toMatchObject({ status: 404 });
 
     // Belt-and-suspenders teardown in case the test failed mid-way.
     db.cleanup(`DELETE FROM organizations WHERE slug = '${slug}'`);
@@ -38,16 +37,20 @@ test.describe("Organization Deletion", () => {
     db,
   }) => {
     const slug = `e2e-uidel-${uniqueSuffix()}`.toLowerCase().replace(/_/g, "-");
+    const cc = await api.connect();
 
-    const createRes = await api.post("/api/v1/orgs", {
+    await cc.org.createOrg({
       name: "E2E UI Delete",
       slug,
     });
-    expect(createRes.status, await createRes.text()).toBe(201);
 
     try {
       await page.goto(`/${slug}/settings?scope=organization&tab=general`);
-      await page.waitForLoadState("networkidle");
+      // The dashboard keeps long-lived WS connections open, so
+      // "networkidle" never resolves; wait for the Danger Zone button to
+      // appear instead (it's gated on org owner perms loading).
+      await expect(page.getByRole("button", { name: /delete organization/i }))
+        .toBeVisible({ timeout: 30_000 });
 
       // Danger Zone "Delete Organization" button — case-insensitive to be
       // resilient against locale shifts (the button label is i18n-driven).
@@ -73,8 +76,9 @@ test.describe("Organization Deletion", () => {
         timeout: 10_000,
       });
 
-      const getRes = await api.get(`/api/v1/orgs/${slug}`);
-      expect(getRes.status).toBe(404);
+      await expect(
+        cc.org.getOrg({ orgSlug: slug })
+      ).rejects.toMatchObject({ status: 404 });
     } finally {
       db.cleanup(`DELETE FROM organizations WHERE slug = '${slug}'`);
     }

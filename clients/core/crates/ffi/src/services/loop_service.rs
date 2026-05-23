@@ -68,6 +68,7 @@ impl AgentsMeshCore {
             max_retained_runs: req.max_retained_runs.map(|v| v as i32),
             timeout_minutes: req.timeout_minutes.map(|v| v as i32),
             idle_timeout_sec: None,
+            used_env_bundles: vec![],
         };
         let l = self.api.create_loop_connect(&proto_req).await?;
         Ok(l.into())
@@ -106,6 +107,7 @@ impl AgentsMeshCore {
             max_retained_runs: req.max_retained_runs.map(|v| v as i32),
             timeout_minutes: req.timeout_minutes.map(|v| v as i32),
             idle_timeout_sec: None,
+            used_env_bundles: None,
         };
         let l = self.api.update_loop_connect(&proto_req).await?;
         Ok(l.into())

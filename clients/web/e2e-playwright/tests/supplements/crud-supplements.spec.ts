@@ -12,6 +12,7 @@ test.describe("CRUD Supplements", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("update agent credential profile name", async ({ api, db }) => {
+    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
     // user_agent_credential_profiles has UNIQUE(user_id, agent_slug, name);
     // a residue from a prior failed run would make POST return
     // ALREADY_EXISTS and silently skip. Pre-clean.
@@ -45,6 +46,7 @@ test.describe("CRUD Supplements", () => {
   });
 
   test("set agent credential as default", async ({ api, db }) => {
+    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
     db.cleanup(
       `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Default Cred'`
     );

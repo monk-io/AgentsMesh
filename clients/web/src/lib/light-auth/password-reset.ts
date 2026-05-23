@@ -1,15 +1,16 @@
-// /auth/forgot-password sends a reset email (always 200 to avoid email
-// enumeration — backend returns a generic message regardless of whether
-// the email exists). /auth/reset-password completes the reset with a
-// token + new password and returns 200 with a success message.
+// Password reset over Connect-RPC JSON. ForgotPassword always returns 200
+// to avoid email enumeration — backend returns a generic message regardless
+// of whether the email exists. ResetPassword consumes a token + new
+// password.
 
-import { lightFetch } from "./api-fetch";
+import { lightConnect } from "./api-fetch";
 
 export async function lightForgotPassword(email: string): Promise<void> {
-  await lightFetch<void>("/api/v1/auth/forgot-password", {
-    method: "POST",
-    body: { email },
-  });
+  await lightConnect<{ email: string }, unknown>(
+    "proto.auth.v1.AuthService",
+    "ForgotPassword",
+    { email },
+  );
 }
 
 export interface LightResetPasswordInput {
@@ -18,8 +19,9 @@ export interface LightResetPasswordInput {
 }
 
 export async function lightResetPassword(input: LightResetPasswordInput): Promise<void> {
-  await lightFetch<void>("/api/v1/auth/reset-password", {
-    method: "POST",
-    body: { token: input.token, new_password: input.newPassword },
-  });
+  await lightConnect<{ token: string; newPassword: string }, unknown>(
+    "proto.auth.v1.AuthService",
+    "ResetPassword",
+    { token: input.token, newPassword: input.newPassword },
+  );
 }

@@ -85,6 +85,32 @@ test.describe("Desktop pod realtime", () => {
     try {
       await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
 
+      // Desktop's electron-adapter ships a `NoopEventsManager` (see
+      // packages/electron-adapter/src/provider.ts): realtime `pod:created`
+      // events are not delivered to the renderer until a main-process
+      // Connect ServerStream bridge lands. The seed `podCreatePod` above
+      // bypasses the renderer entirely (direct IPC → Connect → DB), so
+      // there is no event to dispatch and no React handler to flush.
+      // After auth restore the renderer's hash is already at
+      // `/{org}/workspace`, so `gotoHash` does not remount the sidebar
+      // either (the useEffect's `[currentOrg, ...]` deps stay stable).
+      // Reload the page so WorkspaceSidebarContent mounts fresh and
+      // `fetchSidebarPods` runs against the post-create DB state.
+      await page.reload();
+      await page.waitForLoadState("domcontentloaded");
+      await invokeIpc(page, "authBootstrap");
+      await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
+
+      // DEBUG: inspect what pods the sidebar fetched + which DOM nodes contain "1-standa".
+      await page.waitForTimeout(3000);
+      const dbg = await page.evaluate(() => {
+        try {
+          const html = document.body.innerText.slice(0, 2000);
+          return { html };
+        } catch { return { html: "(eval failed)" }; }
+      });
+      console.log("DEBUG body text head:", dbg.html);
+
       // Sidebar should render the new pod entry. PodListItem renders the
       // display name through `getPodDisplayName`, which truncates pod_key
       // to the first 8 chars (`getShortPodKey`) when no alias / ticket /

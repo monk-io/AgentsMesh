@@ -24,6 +24,7 @@ func toProtoChannel(c *channel.Channel) *channelv1.Channel {
 		IsArchived:     c.IsArchived,
 		IsMember:       c.IsMember,
 		MemberCount:    c.MemberCount,
+		AgentCount:     c.AgentCount,
 		CreatedAt:      c.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:      c.UpdatedAt.UTC().Format(time.RFC3339),
 	}

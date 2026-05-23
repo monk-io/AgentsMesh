@@ -95,7 +95,7 @@ export default function LoginPage() {
       await lightLogin({ email, password });
       await navigateAfterLogin();
     } catch (err) {
-      if (err instanceof ApiError && err.hasCode("SSO_REQUIRED")) {
+      if (err instanceof ApiError && /sso/i.test(err.serverMessage ?? "")) {
         setError(t("auth.sso.ssoRequired"));
         discoverSSO(email);
       } else {

@@ -149,6 +149,36 @@ export class ApiFixture {
     });
   }
 
+  /** POST without authentication. Used by specs that exercise the
+   *  runner CLI bootstrap endpoint (/api/v1/runners/grpc/auth-url) and
+   *  legacy REST setup that hasn't been Connect-migrated yet. */
+  async postPublic(path: string, body: unknown): Promise<Response> {
+    return this.fetchWithRetry(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /** POST with a caller-supplied bearer token (multi-user / fresh-token flows). */
+  async postWithToken(path: string, body: unknown, token: string): Promise<Response> {
+    return this.fetchWithRetry(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  /** GET with a caller-supplied bearer token. */
+  async getWithToken(path: string, token: string): Promise<Response> {
+    return fetch(`${this.baseUrl}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   /**
    * Retry-aware fetch: automatically retries on 429 (rate limited).
    * Exposed because a few specs build their own auth flows.

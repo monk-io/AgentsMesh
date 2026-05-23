@@ -69,37 +69,44 @@ uiTest.describe("Infra page — UI", () => {
 // empty-state branch always renders, regardless of dev seed data. Guards the
 // regression PR #379 fixed: empty-state buttons used to push a URL no one
 // consumed, so clicking them did nothing.
+//
+// The runner/repo data plane moved to Connect-RPC (binary protobuf) — the
+// REST `/api/v1/organizations/.../runners` path is gone, so the page.route
+// glob has to target the Connect procedure URLs instead. An empty `application/
+// proto` body (zero bytes) decodes to the response's all-default state, which
+// gives us `{items: [], total: 0}` — the exact shape the empty-state branch
+// gates on.
 uiTest.describe("Infra empty state — CTA opens modal", () => {
   uiTest.beforeEach(async ({ page }) => {
     clearAuthRateLimit();
-    await page.route(`**/api/v1/organizations/${TEST_ORG_SLUG}/runners**`, (route) =>
+    const fulfillEmptyProto = (route: import("@playwright/test").Route) =>
       route.fulfill({
         status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ runners: [] }),
-      }),
-    );
-    await page.route(`**/api/v1/organizations/${TEST_ORG_SLUG}/repositories**`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ repositories: [] }),
-      }),
-    );
+        contentType: "application/proto",
+        body: Buffer.alloc(0),
+      });
+    await page.route("**/proto.runner_api.v1.RunnerService/ListRunners", fulfillEmptyProto);
+    await page.route("**/proto.runner_api.v1.RunnerService/ListAvailableRunners", fulfillEmptyProto);
+    await page.route("**/proto.repository.v1.RepositoryService/ListRepositories", fulfillEmptyProto);
   });
 
   uiTest("Add Runner empty-state button opens the Add Runner modal", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: /^add runner$/i }).click();
+    // Two "Add Runner" buttons exist on the empty page: the always-present
+    // list-header button (left sidebar) and the empty-state CTA in <main>.
+    // The spec asserts the latter — scope to main to avoid strict-mode hits.
+    const addBtn = page.getByRole("main").getByRole("button", { name: /^add runner$/i });
+    await uiExpect(addBtn).toBeVisible({ timeout: 15_000 });
+    await addBtn.click();
     await new AddRunnerModal(page).waitForOpen();
     await uiExpect(page.getByRole("heading", { name: /^add runner$/i })).toBeVisible();
   });
 
   uiTest("Add Runner modal closes via cancel", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: /^add runner$/i }).click();
+    const addBtn = page.getByRole("main").getByRole("button", { name: /^add runner$/i });
+    await uiExpect(addBtn).toBeVisible({ timeout: 15_000 });
+    await addBtn.click();
     const modal = new AddRunnerModal(page);
     await modal.waitForOpen();
     await modal.close();
@@ -108,15 +115,17 @@ uiTest.describe("Infra empty state — CTA opens modal", () => {
 
   uiTest("Import Repository empty-state button opens the Import modal", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=repositories`);
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: /^import repository$/i }).click();
+    const importBtn = page.getByRole("main").getByRole("button", { name: /^import repository$/i });
+    await uiExpect(importBtn).toBeVisible({ timeout: 15_000 });
+    await importBtn.click();
     await new ImportRepositoryModal(page).waitForOpen();
   });
 
   uiTest("Import Repository modal closes via cancel", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=repositories`);
-    await page.waitForLoadState("networkidle");
-    await page.getByRole("button", { name: /^import repository$/i }).click();
+    const importBtn = page.getByRole("main").getByRole("button", { name: /^import repository$/i });
+    await uiExpect(importBtn).toBeVisible({ timeout: 15_000 });
+    await importBtn.click();
     const modal = new ImportRepositoryModal(page);
     await modal.waitForOpen();
     await modal.close();

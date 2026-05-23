@@ -65,6 +65,8 @@ message Loop {
   optional string last_run_at = 32;
   string created_at = 33;
   string updated_at = 34;
+  // Ordered list of EnvBundle names attached to this Loop (USE_ENV_BUNDLE).
+  repeated string used_env_bundles = 35;
 }
 
 message LoopRun {
@@ -128,6 +130,8 @@ message CreateLoopRequest {
   optional int32 max_retained_runs = 23;
   optional int32 timeout_minutes = 24;
   optional int32 idle_timeout_sec = 25;
+  // Ordered list of EnvBundle names to attach (USE_ENV_BUNDLE); nil/empty = none.
+  repeated string used_env_bundles = 26;
 }
 
 message UpdateLoopRequest {
@@ -156,6 +160,13 @@ message UpdateLoopRequest {
   optional int32 max_retained_runs = 23;
   optional int32 timeout_minutes = 24;
   optional int32 idle_timeout_sec = 25;
+  // Bundle list patch: nil leaves binding unchanged; non-nil (including empty list) replaces.
+  optional EnvBundleList used_env_bundles = 26;
+}
+
+// Wrapper enabling tri-state (nil/[]/[...]) over repeated string on proto3.
+message EnvBundleList {
+  repeated string names = 1;
 }
 
 message DeleteLoopRequest {

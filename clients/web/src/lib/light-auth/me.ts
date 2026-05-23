@@ -1,13 +1,11 @@
-// /api/v1/users/me — the only authenticated user-info endpoint that the
-// (auth) route group needs. Three pages (invite acceptance, onboarding,
-// runners/authorize) read it just to display "Signed in as <email>" /
-// derive a default workspace name without booting wasm. Centralising it
-// here avoids three slightly-different inline `MeResponse` interfaces.
-// The function returns `null` on any failure (network, 401, parse error)
-// — these pages use it as best-effort UI sugar and must keep working
-// when the call fails.
+// /api/v1/users/me equivalent over Connect (proto.user.v1.UserService/GetMe).
+// Three (auth) pages (invite acceptance, onboarding, runners/authorize) read
+// the viewer's email just to display "Signed in as <email>" / derive a
+// default workspace name without booting wasm. Returns null on any failure —
+// these pages use it as best-effort UI sugar and must keep working when the
+// call fails.
 
-import { lightFetch } from "./api-fetch";
+import { lightConnect } from "./api-fetch";
 
 export interface LightUser {
   id: number;
@@ -17,14 +15,33 @@ export interface LightUser {
   avatar_url?: string;
 }
 
-interface MeResponse {
-  user?: LightUser;
+interface ConnectGetMeResponse {
+  user?: {
+    id: number | string;
+    email: string;
+    username: string;
+    name?: string;
+    avatarUrl?: string;
+  };
 }
 
 export async function lightFetchMe(): Promise<LightUser | null> {
   try {
-    const resp = await lightFetch<MeResponse>("/api/v1/users/me", { authenticated: true });
-    return resp?.user ?? null;
+    const resp = await lightConnect<Record<string, never>, ConnectGetMeResponse>(
+      "proto.user.v1.UserService",
+      "GetMe",
+      {},
+      { authenticated: true },
+    );
+    const u = resp?.user;
+    if (!u) return null;
+    return {
+      id: Number(u.id),
+      email: u.email,
+      username: u.username,
+      name: u.name,
+      avatar_url: u.avatarUrl,
+    };
   } catch {
     return null;
   }

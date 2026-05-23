@@ -131,7 +131,8 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
       ) ?? undefined;
     } finally {
       if (loopSlug) {
-        await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${loopSlug}`);
+        const cc = await api.connect();
+        await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug }).catch(() => null);
       }
       if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
       if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);
@@ -166,13 +167,15 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
     });
     const runtimeId = (await runtimeRes.json()).bundle?.id;
 
-    const loopRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/loops`, {
+    const cc = await api.connect();
+    const loopRes = await cc.loop.createLoop({
+      orgSlug: TEST_ORG_SLUG,
       name: loopName,
-      agent_slug: "claude-code",
-      prompt_template: "echo bound",
-      used_env_bundles: [credName, runtimeName],
-    });
-    const loopSlug = (await loopRes.json()).loop?.slug;
+      agentSlug: "claude-code",
+      promptTemplate: "echo bound",
+      usedEnvBundles: [credName, runtimeName],
+    }) as { slug: string };
+    const loopSlug = loopRes.slug;
 
     try {
       await page.goto(`/${TEST_ORG_SLUG}/loops/${loopSlug}`);
@@ -211,7 +214,7 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
       expect(await runtimeCheckbox.isChecked()).toBe(true);
     } finally {
       if (loopSlug) {
-        await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${loopSlug}`);
+        await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug }).catch(() => null);
       }
       if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
       if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);

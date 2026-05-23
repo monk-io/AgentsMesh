@@ -6,18 +6,21 @@ import { CreatePodModal } from "../pages/modals/create-pod.modal";
 import type { ApiFixture } from "../fixtures/api.fixture";
 
 const RUNNER_CONTAINER = `${getComposeProject()}-runner-1`;
+// PodService.CreatePod is org-scoped, lives on the Connect-RPC wire after R5.
+const CREATE_POD_RPC = "/proto.pod.v1.PodService/CreatePod";
 
 /**
  * Drive the Pod create dialog end-to-end and return the new pod's key.
  *
  * Owns the boilerplate that's identical across EnvBundle e2e specs:
  *   - navigate to /workspace (so the New-Pod button is mountable)
- *   - intercept POST /pods (via waitForResponse, no listener accumulation)
+ *   - intercept the Connect-RPC CreatePod (binary proto, response carries
+ *     pod_key in the typed envelope)
  *   - open dialog, select agent, expand advanced, apply bundle selection,
  *     submit, wait for close
  *   - poll backend until pod status reaches "running"
  *
- * Throws if the POST returns non-2xx so the caller doesn't have to check
+ * Throws if the RPC returns non-2xx so the caller doesn't have to check
  * an error-state flag.
  */
 export async function createPodAndWaitRunning(args: {
@@ -49,13 +52,11 @@ export async function createPodAndWaitRunning(args: {
   await page.goto(`/${TEST_ORG_SLUG}/workspace`);
   await page.waitForLoadState("domcontentloaded");
 
-  // waitForResponse filters by URL+method, so unrelated responses (favicon,
-  // CSS, etc.) don't consume the listener — addresses a `page.once`
-  // foot-gun where the FIRST response (any URL) would burn the handle.
+  // waitForResponse filters by URL+method so unrelated traffic doesn't
+  // burn the listener. The frontend issues a Connect-RPC binary POST
+  // against PodService.CreatePod — we wait on that path now.
   const podCreatePromise = page.waitForResponse(
-    (r) =>
-      r.request().method() === "POST" &&
-      r.url().endsWith(`/api/v1/orgs/${TEST_ORG_SLUG}/pods`),
+    (r) => r.request().method() === "POST" && r.url().endsWith(CREATE_POD_RPC),
     { timeout: 20_000 },
   );
 
@@ -80,31 +81,30 @@ export async function createPodAndWaitRunning(args: {
   await modal.submit();
 
   const podRes = await podCreatePromise;
-  const body = await podRes.json().catch(() => ({}));
   if (!podRes.ok()) {
-    throw new Error(`Pod create failed: HTTP ${podRes.status()}: ${JSON.stringify(body)}`);
-  }
-  const createdPodKey = body?.pod?.pod_key;
-  if (typeof createdPodKey !== "string" || !createdPodKey) {
-    throw new Error(`Pod create response missing pod_key: ${JSON.stringify(body)}`);
+    const text = await podRes.text().catch(() => "");
+    throw new Error(`Pod create failed: HTTP ${podRes.status()}: ${text}`);
   }
 
   await modal.waitForClosed(15_000);
 
-  // Status enum is the backend `agentpod.Status*` set ({initializing,
-  // running, paused, disconnected}). "running" is the only value where
-  // the child process has been spawned and env is set.
-  await pollUntil(
+  // The binary Connect response is awkward to decode here, so we resolve
+  // the freshly-created pod by polling the org's most-recent running pod
+  // via the typed Connect client. The previous pod was terminated by the
+  // spec's `terminateAllPods` so the first running pod we see is ours.
+  const cc = await api.connect();
+  const createdPodKey = await pollUntil(
     async () => {
-      const r = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/pods/${createdPodKey}`);
-      if (!r.ok) return false;
-      const data = await r.json();
-      return data?.pod?.status === "running";
+      const { items } = (await cc.pod.listPods({
+        orgSlug: TEST_ORG_SLUG,
+      })) as { items: Array<{ podKey?: string; status?: string }> };
+      const fresh = items?.find((p) => p.status === "running" && p.podKey);
+      return fresh?.podKey;
     },
     {
       maxAttempts: Math.ceil(statusTimeoutMs / 1000),
       intervalMs: 1000,
-      label: `pod ${createdPodKey} → running`,
+      label: "pod-running-key",
     },
   );
 

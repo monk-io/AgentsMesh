@@ -95,6 +95,8 @@ message Channel {
   // RFC 3339 (conventions §6).
   string created_at = 15;
   string updated_at = 16;
+  // Computed: total joined pods count. Populated by GetChannel.
+  int64 agent_count = 17;
 }
 
 // ChannelMessage — body is the plain-text projection. content + mentions

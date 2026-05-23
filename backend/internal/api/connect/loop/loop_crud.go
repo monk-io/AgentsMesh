@@ -85,6 +85,7 @@ func (s *Server) CreateLoop(
 		RepositoryID:        m.RepositoryId,
 		RunnerID:            m.RunnerId,
 		TicketID:            m.TicketId,
+		UsedEnvBundles:      m.GetUsedEnvBundles(),
 		ExecutionMode:       m.GetExecutionMode(),
 		SandboxStrategy:     m.GetSandboxStrategy(),
 		SessionPersistence:  sessionPersist,
@@ -237,6 +238,14 @@ func buildUpdateRequest(m *loopv1.UpdateLoopRequest) *loopsvc.UpdateLoopRequest 
 	if m.IdleTimeoutSec != nil {
 		v := int(m.GetIdleTimeoutSec())
 		r.IdleTimeoutSec = &v
+	}
+	if m.UsedEnvBundles != nil {
+		// Wrapper presence => caller intends to replace. Empty inner list clears.
+		names := m.GetUsedEnvBundles().GetNames()
+		if names == nil {
+			names = []string{}
+		}
+		r.UsedEnvBundles = &names
 	}
 	return r
 }

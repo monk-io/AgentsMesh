@@ -5,9 +5,13 @@ import { clearAuthRateLimit } from "../../helpers/redis";
 /**
  * Loop ↔ EnvBundle binding end-to-end.
  *
- * Covers the I4 contract: creating a Loop with `used_env_bundles = ["<name>", ...]`
- * persists the ordered list, GET round-trips it, PUT clears it via empty array,
- * and unknown-bundle names still create the Loop (eval is warn-only at run-time).
+ * Covers the I4 contract: creating a Loop with `usedEnvBundles = ["<name>", ...]`
+ * persists the ordered list, GetLoop round-trips it, UpdateLoop clears it via
+ * empty list, and unknown-bundle names still create the Loop (eval is warn-only
+ * at run-time).
+ *
+ * EnvBundle CRUD is still REST (`/api/v1/users/env-bundles`); Loop CRUD has
+ * fully migrated to Connect-RPC (`proto.loop.v1.LoopService/*`).
  *
  * Pod-level KV injection is left to higher-tier integration tests since it
  * requires a Pod to actually launch and read its env.
@@ -17,7 +21,8 @@ test.describe("Loop ↔ EnvBundle binding", () => {
     clearAuthRateLimit();
   });
 
-  test("Loop persists used_env_bundles (multi) and round-trips on GET", async ({ api }) => {
+  test("Loop persists usedEnvBundles (multi) and round-trips on GetLoop", async ({ api }) => {
+    const cc = await api.connect();
     const ts = Date.now();
     const bundleAName = `e2e-loop-A-${ts}`;
     const bundleBName = `e2e-loop-B-${ts}`;
@@ -35,33 +40,36 @@ test.describe("Loop ↔ EnvBundle binding", () => {
     expect(bundleAId).toBeTruthy();
     expect(bundleBId).toBeTruthy();
 
+    let slug: string | undefined;
     try {
-      const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/loops`, {
+      const created = await cc.loop.createLoop({
+        orgSlug: TEST_ORG_SLUG,
         name: `E2E Loop Bundle ${ts}`,
-        agent_slug: "claude-code",
-        prompt_template: "echo bound",
-        used_env_bundles: [bundleAName, bundleBName],
-      });
-      expect([200, 201]).toContain(createRes.status);
-      const created = await createRes.json();
-      const slug = created.loop?.slug;
+        agentSlug: "claude-code",
+        promptTemplate: "echo bound",
+        usedEnvBundles: [bundleAName, bundleBName],
+      }) as { slug: string; usedEnvBundles: string[] };
+      slug = created.slug;
       expect(slug).toBeTruthy();
       // Order preserved exactly.
-      expect(created.loop?.used_env_bundles).toEqual([bundleAName, bundleBName]);
+      expect(created.usedEnvBundles).toEqual([bundleAName, bundleBName]);
 
-      const getRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${slug}`);
-      expect(getRes.status).toBe(200);
-      const fetched = await getRes.json();
-      expect(fetched.loop?.used_env_bundles).toEqual([bundleAName, bundleBName]);
-
-      await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${slug}`);
+      const fetched = await cc.loop.getLoop({
+        orgSlug: TEST_ORG_SLUG,
+        loopSlug: slug,
+      }) as { usedEnvBundles: string[] };
+      expect(fetched.usedEnvBundles).toEqual([bundleAName, bundleBName]);
     } finally {
+      if (slug) {
+        await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: slug }).catch(() => null);
+      }
       await api.delete(`/api/v1/users/env-bundles/${bundleAId}`);
       await api.delete(`/api/v1/users/env-bundles/${bundleBId}`);
     }
   });
 
-  test("PUT with used_env_bundles=[] clears the binding", async ({ api }) => {
+  test("UpdateLoop with usedEnvBundles={names:[]} clears the binding", async ({ api }) => {
+    const cc = await api.connect();
     const ts = Date.now();
     const bundleName = `e2e-clear-${ts}`;
 
@@ -76,45 +84,52 @@ test.describe("Loop ↔ EnvBundle binding", () => {
 
     let slug: string | undefined;
     try {
-      const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/loops`, {
+      const created = await cc.loop.createLoop({
+        orgSlug: TEST_ORG_SLUG,
         name: `E2E Loop Clear ${ts}`,
-        agent_slug: "claude-code",
-        prompt_template: "echo bound",
-        used_env_bundles: [bundleName],
-      });
-      expect([200, 201]).toContain(createRes.status);
-      slug = (await createRes.json()).loop?.slug;
+        agentSlug: "claude-code",
+        promptTemplate: "echo bound",
+        usedEnvBundles: [bundleName],
+      }) as { slug: string };
+      slug = created.slug;
       expect(slug).toBeTruthy();
 
-      // Empty array explicitly clears the binding.
-      const updateRes = await api.put(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${slug}`, {
-        used_env_bundles: [],
+      // Wrapper present with empty `names` explicitly clears the binding.
+      await cc.loop.updateLoop({
+        orgSlug: TEST_ORG_SLUG,
+        loopSlug: slug,
+        usedEnvBundles: { names: [] },
       });
-      expect(updateRes.status).toBe(200);
 
-      const after = await (await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${slug}`)).json();
+      const after = await cc.loop.getLoop({
+        orgSlug: TEST_ORG_SLUG,
+        loopSlug: slug,
+      }) as { usedEnvBundles: string[] };
       // Backend returns [] (not null) for an empty array column.
-      expect(after.loop?.used_env_bundles).toEqual([]);
+      expect(after.usedEnvBundles).toEqual([]);
     } finally {
-      if (slug) await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${slug}`);
+      if (slug) {
+        await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: slug }).catch(() => null);
+      }
       await api.delete(`/api/v1/users/env-bundles/${bundleId}`);
     }
   });
 
   test("Loop with unknown bundle name is still creatable (warn-only at run-time)", async ({ api }) => {
+    const cc = await api.connect();
     const ts = Date.now();
     // Use a name we know does NOT exist; the AgentFile eval contract is
     // tolerant of dangling references (USE_ENV_BUNDLE skips silently when
     // the name isn't in ctx.EnvBundles).
-    const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/loops`, {
+    const created = await cc.loop.createLoop({
+      orgSlug: TEST_ORG_SLUG,
       name: `E2E Loop Dangling ${ts}`,
-      agent_slug: "claude-code",
-      prompt_template: "echo dangling",
-      used_env_bundles: [`nonexistent-bundle-${ts}`],
-    });
-    expect([200, 201]).toContain(createRes.status);
-    const slug = (await createRes.json()).loop?.slug;
+      agentSlug: "claude-code",
+      promptTemplate: "echo dangling",
+      usedEnvBundles: [`nonexistent-bundle-${ts}`],
+    }) as { slug: string };
+    const slug = created.slug;
     expect(slug).toBeTruthy();
-    await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${slug}`);
+    await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: slug }).catch(() => null);
   });
 });

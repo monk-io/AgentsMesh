@@ -24,6 +24,7 @@ test.describe("User Credential Management API", () => {
   });
 
   test("list agent credentials", async ({ api }) => {
+    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
     const cc = await api.connect();
     const res = await cc.userAgentCredential.listAgentCredentialProfiles({}) as Record<string, unknown>;
     expect(res).toBeTruthy();

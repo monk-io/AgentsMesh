@@ -1,4 +1,6 @@
 import { test, expect } from "../../fixtures/index";
+import { fromBinary } from "@bufbuild/protobuf";
+import { CreatePodRequestSchema } from "../../../../../proto/gen/ts/pod/v1/pod_pb";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { terminateAllPods } from "../../helpers/pod-cleanup";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -18,10 +20,26 @@ import { CreatePodModal } from "../../pages/modals/create-pod.modal";
  *
  * We don't have a persisted `pods.agentfile_layer` column — the merged
  * layer is built per-request and shipped to Runner. So we verify the wire
- * contract via Playwright route interception: the create-pod POST body
- * carries the expected agentfile_layer with the expected lines in the
- * expected order.
+ * contract via Playwright route interception: the Connect-RPC CreatePod
+ * binary request carries the expected agentfile_layer with the expected
+ * lines in the expected order.
  */
+const CREATE_POD_RPC = "/proto.pod.v1.PodService/CreatePod";
+
+function decodeCreatePodLayer(rawBody: Buffer | string | null): string | undefined {
+  if (!rawBody) return undefined;
+  const bytes =
+    typeof rawBody === "string"
+      ? new Uint8Array(Buffer.from(rawBody, "binary"))
+      : new Uint8Array(rawBody);
+  try {
+    const msg = fromBinary(CreatePodRequestSchema, bytes);
+    return msg.agentfileLayer;
+  } catch {
+    return undefined;
+  }
+}
+
 test.describe("Pod create — EnvBundle binding UI", () => {
   test.beforeEach(async () => {
     clearAuthRateLimit();
@@ -36,18 +54,18 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     api,
     db,
   }) => {
-    const runnersRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnersRes.json()).runners;
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { items: unknown[] };
     if (!runners?.length) {
       test.skip();
       return;
     }
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const claudeCode = (await agentsRes.json()).builtin_agents?.find(
-      (a: { slug: string }) => a.slug === "claude-code"
-    );
+    const { builtinAgents } = await cc.agent.listAgents({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { builtinAgents: { slug: string }[] };
+    const claudeCode = builtinAgents?.find((a) => a.slug === "claude-code");
     if (!claudeCode) {
       test.skip();
       return;
@@ -76,18 +94,12 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     expect([200, 201]).toContain(runtimeRes.status);
     const runtimeId = (await runtimeRes.json()).bundle?.id;
 
-    // Capture the agentfile_layer the form submits.
+    // Frontend now goes Connect-RPC (binary proto) — capture and decode.
     let capturedLayer: string | undefined;
-    await page.route("**/api/v1/orgs/*/pods", async (route) => {
+    await page.route(`**${CREATE_POD_RPC}`, async (route) => {
       if (route.request().method() === "POST") {
-        try {
-          const body = route.request().postDataJSON() ?? {};
-          if (typeof body.agentfile_layer === "string") {
-            capturedLayer = body.agentfile_layer;
-          }
-        } catch {
-          // body wasn't JSON — ignore, let the request through anyway
-        }
+        const layer = decodeCreatePodLayer(route.request().postDataBuffer());
+        if (typeof layer === "string") capturedLayer = layer;
       }
       await route.continue();
     });
@@ -150,18 +162,18 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     api,
     db,
   }) => {
-    const runnersRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnersRes.json()).runners;
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { items: unknown[] };
     if (!runners?.length) {
       test.skip();
       return;
     }
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const claudeCode = (await agentsRes.json()).builtin_agents?.find(
-      (a: { slug: string }) => a.slug === "claude-code"
-    );
+    const { builtinAgents } = await cc.agent.listAgents({
+      orgSlug: TEST_ORG_SLUG,
+    }) as { builtinAgents: { slug: string }[] };
+    const claudeCode = builtinAgents?.find((a) => a.slug === "claude-code");
     if (!claudeCode) {
       test.skip();
       return;
@@ -175,19 +187,11 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     );
 
     let capturedLayer: string | undefined;
-    await page.route("**/api/v1/orgs/*/pods", async (route) => {
+    await page.route(`**${CREATE_POD_RPC}`, async (route) => {
       if (route.request().method() === "POST") {
-        try {
-          const body = route.request().postDataJSON() ?? {};
-          if (typeof body.agentfile_layer === "string") {
-            capturedLayer = body.agentfile_layer;
-          } else {
-            // Absent agentfile_layer also counts as "no USE_ENV_BUNDLE".
-            capturedLayer = "";
-          }
-        } catch {
-          capturedLayer = "";
-        }
+        const layer = decodeCreatePodLayer(route.request().postDataBuffer());
+        // Absent agentfile_layer also counts as "no USE_ENV_BUNDLE".
+        capturedLayer = typeof layer === "string" ? layer : "";
       }
       await route.continue();
     });
