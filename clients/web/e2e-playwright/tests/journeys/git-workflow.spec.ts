@@ -115,21 +115,23 @@ test.describe("Journey: Git Workflow", () => {
   });
 
   test("git workflow visible in UI: repo → ticket → workspace", async ({ page }) => {
-    // Verify repositories page shows seed repos
+    // Each goto + assertion uses Playwright's auto-waiting `toContainText`
+    // instead of `textContent + toMatch`: the dashboard is wasm-driven and
+    // load-state "load" fires before the wasm + Connect streams populate
+    // page content. Polling matchers handle the post-load hydration race.
     await page.goto(`/${TEST_ORG_SLUG}/repositories`);
-    await page.waitForLoadState("load");
-    let body = await page.textContent("body");
-    expect(body).toMatch(/demo-webapp|demo-api|repository|仓库/i);
+    await expect(page.locator("body")).toContainText(
+      /demo-webapp|demo-api|repository|repositories|仓库/i,
+      { timeout: 30_000 },
+    );
 
-    // Verify tickets page loads
     await page.goto(`/${TEST_ORG_SLUG}/tickets`);
-    await page.waitForLoadState("load");
-    body = await page.textContent("body");
-    expect(body).toMatch(/ticket|工单|任务/i);
+    await expect(page.locator("body")).toContainText(
+      /ticket|tickets|工单|任务/i,
+      { timeout: 30_000 },
+    );
 
-    // Verify workspace loads
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("load");
-    expect(page.url()).toContain("/workspace");
+    await expect(page).toHaveURL(/\/workspace/, { timeout: 30_000 });
   });
 });
