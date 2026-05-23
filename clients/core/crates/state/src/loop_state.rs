@@ -64,6 +64,12 @@ pub struct LoopData {
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
+    /// Ordered list of EnvBundle names attached to this Loop. Mirrors the
+    /// `proto.loop.v1.Loop.used_env_bundles` field; preserved across the
+    /// serde round-trip so the edit dialog can reconcile saved bundles back
+    /// into the credential select + runtime checkbox split.
+    #[serde(default)]
+    pub used_env_bundles: Vec<String>,
 }
 
 /// Client-side aggregated view of a Loop run. proto.loop.v1.LoopRun only

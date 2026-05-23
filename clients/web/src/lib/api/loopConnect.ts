@@ -13,6 +13,7 @@ import {
   CreateLoopRequestSchema,
   DeleteLoopRequestSchema,
   DeleteLoopResponseSchema,
+  EnvBundleListSchema,
   GetLoopRequestSchema,
   ListLoopsRequestSchema,
   ListLoopsResponseSchema,
@@ -171,6 +172,7 @@ export async function createLoop(orgSlug: string, data: CreateLoopRequest): Prom
     maxConcurrentRuns: data.max_concurrent_runs,
     maxRetainedRuns: data.max_retained_runs,
     timeoutMinutes: data.timeout_minutes,
+    usedEnvBundles: data.used_env_bundles ?? [],
   });
   const bytes = toBinary(CreateLoopRequestSchema, req);
   const respBytes = await getLoopService().createLoopConnect(bytes);
@@ -207,6 +209,10 @@ export async function updateLoop(
     maxConcurrentRuns: data.max_concurrent_runs,
     maxRetainedRuns: data.max_retained_runs,
     timeoutMinutes: data.timeout_minutes,
+    usedEnvBundles:
+      data.used_env_bundles !== undefined
+        ? create(EnvBundleListSchema, { names: data.used_env_bundles ?? [] })
+        : undefined,
   });
   const bytes = toBinary(UpdateLoopRequestSchema, req);
   const respBytes = await getLoopService().updateLoopConnect(bytes);
