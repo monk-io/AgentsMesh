@@ -1,9 +1,7 @@
-// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { CLEANUP } from "../../helpers/test-data";
 import { TEST_ORG_SLUG } from "../../helpers/env";
-import { makeConnectClient } from "../../helpers/connect-client";
 
 /**
  * CRUD supplement tests — filling gaps in existing modules.
@@ -11,78 +9,73 @@ import { makeConnectClient } from "../../helpers/connect-client";
 test.describe("CRUD Supplements", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  test("update agent credential profile name", async ({ api, db }) => {
-    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
-    // user_agent_credential_profiles has UNIQUE(user_id, agent_slug, name);
-    // a residue from a prior failed run would make POST return
-    // ALREADY_EXISTS and silently skip. Pre-clean.
+  /**
+   * EnvBundle update via /users/env-bundles. Replaces the legacy
+   * /users/agent-credentials/profiles/:id endpoint.
+   */
+  test("update env bundle name", async ({ api, db }) => {
+    // env_bundles has UNIQUE(owner_scope, owner_id, name); a residue from a
+    // prior failed run would make POST return ALREADY_EXISTS and silently
+    // skip. Pre-clean.
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name IN ('E2E Update Cred', 'E2E Updated Cred')`
+      `DELETE FROM env_bundles WHERE name IN ('E2E Update Bundle', 'E2E Updated Bundle')`
     );
-    const cc = await api.connect();
-    let created: { id?: number };
-    try {
-      created = await cc.userAgentCredential.createAgentCredentialProfile({
-        agentSlug: "claude-code",
-        name: "E2E Update Cred",
-        credentials: { ANTHROPIC_API_KEY: "sk-test" },
-        isRunnerHost: false,
-        isDefault: false,
-      }) as { id?: number };
-    } catch (err) {
-      if ((err as { status: number }).status === 404) { test.skip(); return; }
-      throw err;
-    }
-    if (!created.id) { test.skip(); return; }
-
-    await cc.userAgentCredential.updateAgentCredentialProfile({
-      id: Number(created.id),
-      name: "E2E Updated Cred",
+    const createRes = await api.post("/api/v1/users/env-bundles", {
+      agent_slug: "claude-code",
+      name: "E2E Update Bundle",
+      kind: "credential",
+      data: { ANTHROPIC_API_KEY: "sk-test" },
     });
+    if (createRes.status === 404) { test.skip(); return; }
+    const created = await createRes.json();
+    const id = created.bundle?.id;
+    if (!id) { test.skip(); return; }
+
+    const updateRes = await api.put(
+      `/api/v1/users/env-bundles/${id}`,
+      { name: "E2E Updated Bundle" }
+    );
+    expect(updateRes.status).toBe(200);
 
     db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name IN ('E2E Update Cred', 'E2E Updated Cred')`
+      `DELETE FROM env_bundles WHERE name IN ('E2E Update Bundle', 'E2E Updated Bundle')`
     );
   });
 
-  test("set agent credential as default", async ({ api, db }) => {
-    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
-    db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Default Cred'`
-    );
-    const cc = await api.connect();
-    let created: { id?: number };
-    try {
-      created = await cc.userAgentCredential.createAgentCredentialProfile({
-        agentSlug: "claude-code",
-        name: "E2E Default Cred",
-        credentials: { ANTHROPIC_API_KEY: "sk-test" },
-        isRunnerHost: false,
-        isDefault: false,
-      }) as { id?: number };
-    } catch (err) {
-      if ((err as { status: number }).status === 404) { test.skip(); return; }
-      throw err;
-    }
-    if (!created.id) { test.skip(); return; }
-
-    await cc.userAgentCredential.setDefaultAgentCredentialProfile({
-      id: Number(created.id),
+  /**
+   * Promote a bundle to primary within its (agent, kind) group.
+   */
+  test("set env bundle as primary", async ({ api, db }) => {
+    db.cleanup(`DELETE FROM env_bundles WHERE name = 'E2E Primary Bundle'`);
+    const createRes = await api.post("/api/v1/users/env-bundles", {
+      agent_slug: "claude-code",
+      name: "E2E Primary Bundle",
+      kind: "credential",
+      data: { ANTHROPIC_API_KEY: "sk-test" },
     });
+    if (createRes.status === 404) { test.skip(); return; }
+    const created = await createRes.json();
+    const id = created.bundle?.id;
+    if (!id) { test.skip(); return; }
 
-    db.cleanup(
-      `DELETE FROM user_agent_credential_profiles WHERE name = 'E2E Default Cred'`
+    const setRes = await api.post(
+      `/api/v1/users/env-bundles/${id}/set-primary`, {}
     );
+    expect(setRes.status).toBe(200);
+    const after = await setRes.json();
+    expect(after.bundle?.kind_primary).toBe(true);
+
+    db.cleanup(`DELETE FROM env_bundles WHERE name = 'E2E Primary Bundle'`);
   });
 
+  /**
+   * TC-MEMBER-005: Change member role
+   */
   test("change organization member role", async ({ api, db }) => {
     const email = "role-change-e2e@test.local";
     try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
 
-    // Unauthenticated register call — no token needed; cc.auth.register is
-    // public per AuthService proto annotations.
-    const anonCc = makeConnectClient(null);
-    await anonCc.auth.register({
+    await api.postPublic("/api/v1/auth/register", {
       email, username: "rolechangee2e", password: "TestPass123!", name: "Role Change",
     });
 
@@ -96,66 +89,113 @@ test.describe("CRUD Supplements", () => {
       `INSERT INTO organization_members (organization_id, user_id, role) VALUES (${orgId}, ${userId}, 'member') ON CONFLICT DO NOTHING`
     );
 
-    const cc = await api.connect();
-    await cc.org.updateMemberRole({
-      orgSlug: TEST_ORG_SLUG,
-      userId: Number(userId),
-      role: "admin",
-    });
+    // Update role via PUT with user_id
+    const putRes = await api.put(
+      `/api/v1/orgs/${TEST_ORG_SLUG}/members/${userId}`,
+      { role: "admin" }
+    );
+    expect([200, 204]).toContain(putRes.status);
 
     db.cleanup(CLEANUP.userByEmail(email));
   });
 
+  /**
+   * TC-REPOPROV-005: Set default repository provider
+   */
   test("set repository provider as default", async ({ api }) => {
-    const cc = await api.connect();
-    const created = await cc.userRepositoryProvider.createRepositoryProvider({
-      providerType: "github",
+    const createRes = await api.post("/api/v1/users/repository-providers", {
+      provider_type: "github",
       name: "E2E Default Provider",
-      baseUrl: "https://api.github.com",
-      botToken: "ghp_default_test",
-    }) as { id?: number };
-    if (!created.id) { test.skip(); return; }
-
-    await cc.userRepositoryProvider.setDefaultRepositoryProvider({
-      id: Number(created.id),
+      base_url: "https://api.github.com",
+      bot_token: "ghp_default_test",
     });
+    const created = await createRes.json();
+    const id = created.provider?.id || created.id;
+    if (!id) { test.skip(); return; }
 
-    await cc.userRepositoryProvider.deleteRepositoryProvider({
-      id: Number(created.id),
-    });
+    const setRes = await api.post(
+      `/api/v1/users/repository-providers/${id}/default`, {}
+    );
+    expect(setRes.status).toBe(200);
+
+    await api.delete(`/api/v1/users/repository-providers/${id}`);
   });
 
-  test("create pod with repository association", async ({ api }) => {
-    const cc = await api.connect();
-    const runners = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as {
-      items: Array<{ id: number }>;
-    };
-    if (!runners.items?.length) { test.skip(); return; }
+  /**
+   * TC-MEMBER-007: Accept invitation (API)
+   */
+  test("accept organization invitation via API", async ({ api, db }) => {
+    const email = "invite-accept-e2e@test.local";
+    try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
+    try { db.cleanup(`DELETE FROM invitations WHERE email = '${email}'`); } catch { /* */ }
 
-    const agents = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as {
-      builtinAgents: Array<{ slug: string }>;
-    };
-    if (!agents.builtinAgents?.length) { test.skip(); return; }
+    // Register invitee
+    await api.postPublic("/api/v1/auth/register", {
+      email, username: "inviteaccepte2e", password: "TestPass123!", name: "Invite Accept",
+    });
 
-    const repos = await cc.repository.listRepositories({ orgSlug: TEST_ORG_SLUG }) as {
-      items: Array<{ id: number }>;
-    };
-
-    const body: Record<string, unknown> = {
-      orgSlug: TEST_ORG_SLUG,
-      runnerId: Number(runners.items[0].id),
-      agentSlug: agents.builtinAgents[0].slug,
-      cols: 80,
-      rows: 24,
-    };
-    if (repos.items?.length) {
-      body.repositoryId = Number(repos.items[0].id);
+    // Create invitation via org members endpoint
+    const invRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/invitations`, {
+      email, role: "member",
+    });
+    if (invRes.status !== 201) {
+      // May return 409 if already member, or invitation API differs
+      try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
+      test.skip();
+      return;
     }
 
-    const res = await cc.pod.createPod(body) as { pod?: { podKey?: string } };
-    const podKey = res.pod?.podKey;
+    // Get invitation token from DB
+    const token = db.queryValue(
+      `SELECT token FROM invitations WHERE email = '${email}' AND accepted_at IS NULL LIMIT 1`
+    );
+    if (!token) {
+      try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
+      test.skip();
+      return;
+    }
+
+    // Accept as invitee
+    await api.loginAs(email, "TestPass123!");
+    const acceptRes = await api.post(`/api/v1/invitations/${token}/accept`, {});
+    expect([200, 201]).toContain(acceptRes.status);
+
+    try { db.cleanup(`DELETE FROM invitations WHERE email = '${email}'`); } catch { /* */ }
+    try { db.cleanup(CLEANUP.userByEmail(email)); } catch { /* */ }
+  });
+
+  /**
+   * TC-POD-002: Create pod with repository
+   */
+  test("create pod with repository association", async ({ api }) => {
+    const runnersRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
+    const runners = (await runnersRes.json()).runners;
+    if (!runners?.length) { test.skip(); return; }
+
+    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
+    const agents = (await agentsRes.json()).builtin_agents;
+    if (!agents?.length) { test.skip(); return; }
+
+    // Get repositories
+    const repoRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/repositories`);
+    const repos = (await repoRes.json()).repositories;
+
+    const body: Record<string, unknown> = {
+      runner_id: runners[0].id,
+      agent_slug: agents[0].slug,
+      prompt: "E2E Pod with Repo",
+    };
+    if (repos?.length) {
+      body.repository_id = repos[0].id;
+    }
+
+    const res = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/pods`, body);
+    expect([200, 201]).toContain(res.status);
+    const data = await res.json();
+    const podKey = data.pod_key || data.pod?.pod_key;
+
     if (podKey) {
-      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
+      await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/pods/${podKey}/terminate`, {});
     }
   });
 });

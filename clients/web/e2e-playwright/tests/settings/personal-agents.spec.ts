@@ -1,4 +1,3 @@
-// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
@@ -36,18 +35,17 @@ test.describe("Personal Agent Configuration", () => {
    * TC-AGENT-003: Add custom credential EnvBundle via the new API
    */
   test("add and delete custom credential bundle", async ({ api, db }) => {
-    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle (see personal-agents-credentials.spec.ts)");
     db.cleanup(
       `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`
     );
-    const cc = await api.connect();
-    const created = await cc.userAgentCredential.createAgentCredentialProfile({
-      agentSlug: "claude-code",
-      name: "E2E Test Credential",
-      description: "Test credential for E2E",
-      credentials: { ANTHROPIC_API_KEY: "sk-ant-test-key-12345" },
-    }) as { id: number };
-    expect(created.id).toBeTruthy();
+    const res = await api.post("/api/v1/users/env-bundles", {
+      agent_slug: "claude-code",
+      name: "E2E Test Bundle",
+      description: "Test credential bundle for E2E",
+      kind: "credential",
+      data: { ANTHROPIC_API_KEY: "sk-ant-test-key-12345" },
+    });
+    expect([200, 201]).toContain(res.status);
 
     db.cleanup(
       `DELETE FROM env_bundles WHERE name = 'E2E Test Bundle'`

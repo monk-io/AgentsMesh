@@ -1,4 +1,3 @@
-// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
@@ -6,55 +5,57 @@ test.describe("User Credential Management API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("list git credentials", async ({ api }) => {
-    const cc = await api.connect();
-    const res = await cc.userGitCredential.listGitCredentials({}) as { items: unknown[] };
-    expect(Array.isArray(res.items)).toBe(true);
+    const res = await api.get("/api/v1/users/git-credentials");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.credentials).toBeDefined();
   });
 
   test("get default git credential", async ({ api }) => {
-    const cc = await api.connect();
-    const res = await cc.userGitCredential.getDefaultGitCredential({}) as Record<string, unknown>;
-    expect(res).toBeTruthy();
+    const res = await api.get("/api/v1/users/git-credentials/default");
+    expect(res.status).toBe(200);
   });
 
   test("list repository providers", async ({ api }) => {
-    const cc = await api.connect();
-    const res = await cc.userRepositoryProvider.listRepositoryProviders({}) as { items: unknown[] };
-    expect(Array.isArray(res.items)).toBe(true);
+    const res = await api.get("/api/v1/users/repository-providers");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.providers).toBeDefined();
   });
 
-  test("list agent credentials", async ({ api }) => {
-    test.skip(true, "UserAgentCredentialService removed in PR #404; superseded by EnvBundle");
-    const cc = await api.connect();
-    const res = await cc.userAgentCredential.listAgentCredentialProfiles({}) as Record<string, unknown>;
-    expect(res).toBeTruthy();
+  test("list env bundles", async ({ api }) => {
+    const res = await api.get("/api/v1/users/env-bundles");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test("get user profile", async ({ api }) => {
-    const cc = await api.connect();
-    const user = await cc.user.getMe({}) as { id: string | number; email: string };
-    expect(user.id).toBeTruthy();
-    expect(user.email).toBeTruthy();
+    const res = await api.get("/api/v1/users/me");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.user).toBeTruthy();
   });
 
   test("create and delete git credential", async ({ api }) => {
-    const cc = await api.connect();
-    const created = await cc.userGitCredential.createGitCredential({
-      name: "E2E PAT Credential " + Date.now(),
-      credentialType: "pat",
+    const createRes = await api.post("/api/v1/users/git-credentials", {
+      name: "E2E PAT Credential",
+      credential_type: "pat",
       pat: "ghp_test123456789",
-    }) as { id: number };
-    if (created.id) {
-      await cc.userGitCredential.deleteGitCredential({ id: created.id });
+    });
+    expect([200, 201]).toContain(createRes.status);
+    const data = await createRes.json();
+    const id = data.credential?.id || data.id;
+    if (id) {
+      const delRes = await api.delete(`/api/v1/users/git-credentials/${id}`);
+      expect([200, 204]).toContain(delRes.status);
     }
   });
 
   test("test repository provider connection", async ({ api, db }) => {
-    const idStr = db.queryValue("SELECT id FROM user_repository_providers LIMIT 1");
-    if (!idStr) return;
-    const cc = await api.connect();
-    // Tolerates success or backend test-call failure with invalid token.
-    await cc.userRepositoryProvider.testRepositoryProviderConnection({ id: Number(idStr) })
-      .catch((e) => e);
+    const id = db.queryValue("SELECT id FROM user_repository_providers LIMIT 1");
+    if (!id) return;
+    const res = await api.post(`/api/v1/users/repository-providers/${id}/test`);
+    expect([200, 400, 500]).toContain(res.status);
   });
 });
