@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { getAgentService } from "@/lib/wasm-core";
+import { getAgentConfigSchema, getUserAgentConfig } from "@/lib/api/agentConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { ConfigField } from "@/lib/api";
 
 export interface ConfigOptionsState {
@@ -42,12 +43,13 @@ export function useConfigOptions(
   const [fields, setFields] = useState<ConfigField[]>([]);
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState<Record<string, unknown>>({});
+  const currentOrg = useCurrentOrg();
 
   useEffect(() => {
     let cancelled = false;
 
     const loadOptions = async () => {
-      if (!agentSlug) {
+      if (!agentSlug || !currentOrg) {
         setFields([]);
         setConfig({});
         return;
@@ -55,11 +57,12 @@ export function useConfigOptions(
 
       setLoading(true);
       try {
-        const schemaResponse = JSON.parse(await getAgentService().get_config_schema(agentSlug));
+        const schema = await getAgentConfigSchema(currentOrg.slug, agentSlug).catch(
+          () => ({ fields: [] as ConfigField[] }),
+        );
 
         if (cancelled) return;
 
-        const schema = schemaResponse || { fields: [] };
         const baseFields = schema.fields || [];
 
         const mergedConfig: Record<string, unknown> = {};
@@ -70,13 +73,13 @@ export function useConfigOptions(
         }
 
         try {
-          const userConfigResponse = JSON.parse(await getAgentService().get_user_config(agentSlug));
-          if (!cancelled && userConfigResponse.config?.config_values) {
-            const userConfig = userConfigResponse.config.config_values;
+          const userConfig = await getUserAgentConfig(agentSlug);
+          if (!cancelled && userConfig.config_values) {
+            const overrides = userConfig.config_values;
 
             for (const field of baseFields) {
-              if (userConfig[field.name] !== undefined) {
-                mergedConfig[field.name] = userConfig[field.name];
+              if (overrides[field.name] !== undefined) {
+                mergedConfig[field.name] = overrides[field.name];
               }
             }
           }
@@ -108,7 +111,7 @@ export function useConfigOptions(
     return () => {
       cancelled = true;
     };
-  }, [agentSlug]);
+  }, [agentSlug, currentOrg]);
 
   const updateConfig = useCallback(
     (fieldName: string, value: unknown) => {

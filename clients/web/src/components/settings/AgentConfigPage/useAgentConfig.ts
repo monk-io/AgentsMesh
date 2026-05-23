@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { AgentData } from "@/lib/api";
-import { getAgentService } from "@/lib/wasm-core";
+import { listAgents } from "@/lib/api/agentConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type {
   AgentConfigState,
   AgentConfigActions,
@@ -38,6 +39,7 @@ export function useAgentConfig(
 ): AgentConfigState & AgentConfigActions {
   const [loading, setLoading] = useState(true);
   const [agent, setAgent] = useState<AgentData | null>(null);
+  const currentOrg = useCurrentOrg();
 
   const msgs = useAgentConfigMessages();
   const creds = useCredentialBundles(msgs, t);
@@ -48,15 +50,19 @@ export function useAgentConfig(
   // then parallel slice loads (each slice owns its own error fallback so
   // one failing won't take down the rest).
   const loadData = useCallback(async () => {
+    if (!currentOrg) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     msgs.setError(null);
 
     try {
-      const agentsRes = JSON.parse(await getAgentService().list_agents());
+      const agentsRes = await listAgents(currentOrg.slug);
       const allAgents: AgentData[] = [
-        ...(agentsRes.builtin_agents || []),
-        ...(agentsRes.custom_agents || []),
-        ...(agentsRes.agents || []),
+        ...agentsRes.builtin_agents,
+        ...agentsRes.custom_agents,
+        ...agentsRes.agents,
       ];
       const found = allAgents.find((a) => a.slug === agentSlug);
       if (!found) {
@@ -77,15 +83,15 @@ export function useAgentConfig(
     }
     // creds/runtime/cfg are stable identity-by-reference (useCallback inside);
     // exhaustive-deps would still flag them so we list them explicitly.
-  }, [agentSlug, t, creds, runtime, cfg, msgs]);
+  }, [agentSlug, t, creds, runtime, cfg, msgs, currentOrg]);
 
   useEffect(() => {
     loadData();
-    // We intentionally re-run only on agentSlug change, not on identity churn
-    // of the helper hooks (their handlers are stable enough that re-loading
-    // would create thrash).
+    // We intentionally re-run only on agentSlug / org change, not on identity
+    // churn of the helper hooks (their handlers are stable enough that
+    // re-loading would create thrash).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentSlug]);
+  }, [agentSlug, currentOrg?.slug]);
 
   // Surface adapters: call-site components still pass the bare profile/
   // bundle/id; the facade injects the current agent so slice hooks don't

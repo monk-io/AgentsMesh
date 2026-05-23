@@ -1,11 +1,20 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getEnvBundleService, getAgentService } from "@/lib/wasm-core";
+import { getEnvBundleService } from "@/lib/wasm-core";
+import * as agentConnect from "@/lib/api/agentConnect";
 
 const mockList = vi.fn();
 const mockListAgents = vi.fn();
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
+
+vi.mock("@/stores/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/auth")>();
+  return {
+    ...actual,
+    useCurrentOrg: () => ({ slug: "test-org" }),
+  };
+});
 
 import { useAgentCredentials } from "../useAgentCredentials";
 import type { CredentialFormData } from "../types";
@@ -16,9 +25,11 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockList.mockResolvedValue(JSON.stringify({ items: [] }));
-    mockListAgents.mockResolvedValue(
-      JSON.stringify({ agents: [{ name: "Claude", slug: "claude-code" }] })
-    );
+    mockListAgents.mockResolvedValue({
+      builtin_agents: [{ name: "Claude", slug: "claude-code", is_builtin: true, is_active: true }],
+      custom_agents: [],
+      agents: [],
+    });
 
     vi.mocked(getEnvBundleService).mockReturnValue({
       ...getEnvBundleService(),
@@ -28,11 +39,7 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
 
-    vi.mocked(getAgentService).mockReturnValue({
-      ...getAgentService(),
-      list_agents: mockListAgents,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    vi.spyOn(agentConnect, "listAgents").mockImplementation(mockListAgents);
   });
 
   it("should propagate API errors from create to caller", async () => {

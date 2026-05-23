@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { type AgentData } from "@/lib/api";
-import { getAgentService, getEnvBundleService } from "@/lib/wasm-core";
+import { getEnvBundleService } from "@/lib/wasm-core";
+import { listAgents } from "@/lib/api/agentConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { AgentCredentialsState, AgentCredentialsActions, CredentialFormData } from "./types";
 import type {
   CredentialProfileViewModel,
@@ -64,23 +66,28 @@ export function useAgentCredentials(
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [agentsWithoutPrimaryBundle, setAgentsWithoutPrimaryBundle] = useState<Set<string>>(new Set());
+  const currentOrg = useCurrentOrg();
 
   const loadData = useCallback(async () => {
+    if (!currentOrg) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
 
       const [bundlesRes, agentsRes] = await Promise.all([
         getEnvBundleService().list("credential", "").then((j: string) => JSON.parse(j)),
-        getAgentService().list_agents().then((j: string) => JSON.parse(j)),
+        listAgents(currentOrg.slug),
       ]);
 
       const grouped = groupByAgent(bundlesRes.items || []);
       setProfilesByAgent(grouped);
       const agentList = [
-        ...(agentsRes.builtin_agents || []),
-        ...(agentsRes.custom_agents || []),
-        ...(agentsRes.agents || []),
+        ...agentsRes.builtin_agents,
+        ...agentsRes.custom_agents,
+        ...agentsRes.agents,
       ];
       setAgents(agentList);
 
@@ -105,7 +112,7 @@ export function useAgentCredentials(
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, currentOrg]);
 
   useEffect(() => {
     loadData();

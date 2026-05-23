@@ -62,6 +62,7 @@ function fromProtoLoop(p: ProtoLoop): LoopData {
     branch_name: p.branchName || undefined,
     ticket_id: p.ticketId != null ? Number(p.ticketId) : undefined,
     credential_profile_id: p.credentialProfileId != null ? Number(p.credentialProfileId) : undefined,
+    used_env_bundles: p.usedEnvBundles ?? [],
     config_overrides: parseJSONObject(p.configOverridesJson),
     execution_mode: p.executionMode as LoopData["execution_mode"],
     cron_expression: p.cronExpression || undefined,

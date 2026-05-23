@@ -108,11 +108,12 @@ test.describe("Pod create — EnvBundle binding UI", () => {
 
     try {
       await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-      await page.waitForLoadState("domcontentloaded");
+      await page.waitForLoadState("load");
 
       const newPodBtn = page
         .getByRole("button", { name: /new pod|create new pod|新建 pod/i })
         .first();
+      await newPodBtn.waitFor({ state: "visible", timeout: 15_000 });
       await newPodBtn.click();
 
       const modal = new CreatePodModal(page);
@@ -199,11 +200,12 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     await terminateAllPods();
 
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("load");
 
     const newPodBtn = page
       .getByRole("button", { name: /new pod|create new pod|新建 pod/i })
       .first();
+    await newPodBtn.waitFor({ state: "visible", timeout: 15_000 });
     await newPodBtn.click();
 
     const modal = new CreatePodModal(page);

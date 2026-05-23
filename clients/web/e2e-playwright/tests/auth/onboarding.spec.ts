@@ -32,12 +32,13 @@ test.describe("Auth · onboarding personal workspace", () => {
     // post-fix contract — kudin.private regression cannot reoccur because
     // userService.EnsureUniqueUsername + orgService.CreatePersonal both
     // funnel through slugkit.Sanitize.
+    //
+    // Wire shape: proto returns the Organization message directly (no
+    // {organization: ...} wrapper) per proto/org/v1/org.proto conventions.
     const cc = api.connectWithToken(regRes.token);
-    const createRes = await cc.org.createPersonalOrg({}) as {
-      organization: { slug: string };
-    };
-    expect(createRes.organization.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-    expect(createRes.organization.slug.endsWith("-workspace")).toBe(true);
+    const createRes = await cc.org.createPersonalOrg({}) as { slug: string };
+    expect(createRes.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(createRes.slug.endsWith("-workspace")).toBe(true);
 
     db.cleanup(CLEANUP.userAndOrgsByEmail(email));
   });

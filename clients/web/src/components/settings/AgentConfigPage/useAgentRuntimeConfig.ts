@@ -1,6 +1,11 @@
 import { useCallback, useState } from "react";
 import { type ConfigField, type AgentData } from "@/lib/api";
-import { getAgentService } from "@/lib/wasm-core";
+import {
+  getAgentConfigSchema,
+  getUserAgentConfig,
+  setUserAgentConfig,
+} from "@/lib/api/agentConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { AgentConfigMessages } from "./useAgentConfigMessages";
 
 export interface AgentRuntimeConfigState {
@@ -31,13 +36,18 @@ export function useAgentRuntimeConfig(
   const [configFields, setConfigFields] = useState<ConfigField[]>([]);
   const [configValues, setConfigValues] = useState<Record<string, unknown>>({});
   const [savingConfig, setSavingConfig] = useState(false);
+  const currentOrg = useCurrentOrg();
 
   const loadRuntimeConfig = useCallback(async (agent: AgentData) => {
-    const svc = getAgentService();
-    const schemaRes = await svc
-      .get_config_schema(agent.slug)
-      .then((j: string) => JSON.parse(j))
-      .catch(() => ({ fields: [] }));
+    const orgSlug = currentOrg?.slug;
+    if (!orgSlug) {
+      setConfigFields([]);
+      setConfigValues({});
+      return;
+    }
+    const schemaRes = await getAgentConfigSchema(orgSlug, agent.slug).catch(
+      () => ({ fields: [] as ConfigField[] }),
+    );
     const fields: ConfigField[] = schemaRes.fields || [];
     setConfigFields(fields);
 
@@ -48,9 +58,9 @@ export function useAgentRuntimeConfig(
     }
 
     try {
-      const userConfigRes = JSON.parse(await svc.get_user_config(agent.slug));
-      if (userConfigRes.config?.config_values) {
-        setConfigValues({ ...defaults, ...userConfigRes.config.config_values });
+      const userConfig = await getUserAgentConfig(agent.slug);
+      if (userConfig.config_values) {
+        setConfigValues({ ...defaults, ...userConfig.config_values });
       } else {
         setConfigValues(defaults);
       }
@@ -58,7 +68,7 @@ export function useAgentRuntimeConfig(
       // No saved config yet — defaults stand.
       setConfigValues(defaults);
     }
-  }, []);
+  }, [currentOrg]);
 
   const handleConfigChange = useCallback((fieldName: string, value: unknown) => {
     setConfigValues((prev) => ({ ...prev, [fieldName]: value }));
@@ -74,7 +84,7 @@ export function useAgentRuntimeConfig(
       for (const [k, v] of Object.entries(configValues)) {
         if (v !== undefined) cleaned[k] = v;
       }
-      await getAgentService().set_user_config(agent.slug, JSON.stringify(cleaned));
+      await setUserAgentConfig(agent.slug, cleaned);
       msgs.reportSuccess(t("settings.agentConfig.configSaved"));
     } catch (err) {
       msgs.reportError(err, t, "settings.agentConfig.configSaveFailed");

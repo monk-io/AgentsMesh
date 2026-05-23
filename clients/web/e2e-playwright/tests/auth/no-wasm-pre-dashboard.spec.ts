@@ -103,8 +103,16 @@ test.describe("Dashboard still loads wasm after login", () => {
       if (isWasmRequest(req.url())) wasmRequests.push(req.url());
     });
 
+    // The dashboard layout boots wasm on entry. networkidle is unreliable
+    // here — the dashboard keeps long-lived connections (SSE / WS / poll)
+    // alive once mounted, so waitForLoadState("networkidle") never resolves
+    // within timeout. Wait for the first wasm request instead, which is
+    // the actual signal we care about.
+    const wasmRequest = page.waitForRequest((req) => isWasmRequest(req.url()), {
+      timeout: 30_000,
+    });
     await page.goto(`${baseUrl}/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await wasmRequest;
 
     expect(
       wasmRequests.length,

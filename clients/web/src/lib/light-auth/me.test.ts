@@ -31,13 +31,11 @@ describe("lightFetchMe", () => {
     const fetchSpy = vi.fn(async () =>
       new Response(
         JSON.stringify({
-          user: {
-            id: 5,
-            email: "me@b.c",
-            username: "me",
-            name: "Mr Me",
-            avatar_url: "https://cdn/a.png",
-          },
+          id: 5,
+          email: "me@b.c",
+          username: "me",
+          name: "Mr Me",
+          avatarUrl: "https://cdn/a.png",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -49,7 +47,7 @@ describe("lightFetchMe", () => {
     expect(user?.email).toBe("me@b.c");
     expect(user?.id).toBe(5);
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/users/me`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.user.v1.UserService/GetMe`);
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer tok");
   });
@@ -74,7 +72,7 @@ describe("lightFetchMe", () => {
     expect(user).toBeNull();
   });
 
-  it("returns null when 200 response has no user field", async () => {
+  it("returns null when 200 response has no email/username fields", async () => {
     globalThis.fetch = vi.fn(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;

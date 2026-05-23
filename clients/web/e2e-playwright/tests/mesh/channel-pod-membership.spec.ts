@@ -236,7 +236,7 @@ test.describe("Channel × Pod membership (issue #400 regression)", () => {
       await expect(page.locator(RAIL)).toContainText("1");
 
       await page.goto(`/${TEST_ORG_SLUG}/channels`);
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("load");
       await selectInUI(page, ch.name);
 
       await expect(page.locator(RAIL)).toContainText("1");

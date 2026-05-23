@@ -28,9 +28,10 @@ interface ListMyOrgsResponse {
   items?: ConnectOrg[];
 }
 
-interface SingleOrgResponse {
-  organization?: ConnectOrg;
-}
+// Per proto/org/v1/org.proto convention: create/get/update return the
+// Organization message directly (no envelope wrapper). The Connect JSON
+// transport mirrors the proto shape, so the response is the Organization
+// itself, not { organization: ... }.
 
 function toLightOrg(o: ConnectOrg): LightOrganization {
   return {
@@ -63,15 +64,14 @@ export interface LightCreateOrgInput {
 export async function lightCreateOrganization(
   input: LightCreateOrgInput,
 ): Promise<LightOrganization> {
-  const resp = await lightConnect<{ name: string; slug: string; logoUrl?: string }, SingleOrgResponse>(
+  const resp = await lightConnect<{ name: string; slug: string; logoUrl?: string }, ConnectOrg>(
     "proto.org.v1.OrgService",
     "CreateOrg",
     { name: input.name, slug: input.slug, logoUrl: input.logo_url },
     { authenticated: true },
   );
-  const org = resp?.organization;
-  if (!org) throw new Error("OrgService.CreateOrg returned 200 with no organization payload");
-  const light = toLightOrg(org);
+  if (!resp?.slug) throw new Error("OrgService.CreateOrg returned 200 with no organization payload");
+  const light = toLightOrg(resp);
   updateLightSessionOrgSlug(light.slug);
   return light;
 }
@@ -80,15 +80,14 @@ export async function lightCreateOrganization(
 // no body. Use this for onboarding "Quick Start"; never construct the slug
 // client-side.
 export async function lightCreatePersonalOrganization(): Promise<LightOrganization> {
-  const resp = await lightConnect<Record<string, never>, SingleOrgResponse>(
+  const resp = await lightConnect<Record<string, never>, ConnectOrg>(
     "proto.org.v1.OrgService",
     "CreatePersonalOrg",
     {},
     { authenticated: true },
   );
-  const org = resp?.organization;
-  if (!org) throw new Error("OrgService.CreatePersonalOrg returned 200 with no organization payload");
-  const light = toLightOrg(org);
+  if (!resp?.slug) throw new Error("OrgService.CreatePersonalOrg returned 200 with no organization payload");
+  const light = toLightOrg(resp);
   updateLightSessionOrgSlug(light.slug);
   return light;
 }

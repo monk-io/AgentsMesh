@@ -23,10 +23,13 @@ function unique(prefix: string, label: string): string {
 
 async function openCreateLoopDialog(page: import("@playwright/test").Page) {
   await page.goto(`/${TEST_ORG_SLUG}/loops`);
-  await page.waitForLoadState("networkidle");
+  // Use "load" not "networkidle" — DashboardShell holds an open
+  // RealtimeProvider WebSocket, so the page never reaches networkidle.
+  await page.waitForLoadState("load");
   const btn = page
     .getByRole("button", { name: /create loop|新建 ?loop|创建 ?loop|创建你的第一个/i })
     .first();
+  await btn.waitFor({ state: "visible", timeout: 15_000 });
   await btn.click();
   await page.locator('[data-dialog-overlay]').first().waitFor({ state: "visible" });
 }
@@ -82,10 +85,14 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
         .first()
         .fill(loopName);
 
-      await page
+      // The dialog opens before usePodCreationData finishes loading; the
+      // agent <select> mounts only once runners + agents arrive, so wait
+      // for visibility instead of racing the selectOption call.
+      const agentSelect = page
         .locator('[data-dialog-overlay] select#agent-select')
-        .first()
-        .selectOption("claude-code");
+        .first();
+      await agentSelect.waitFor({ state: "visible", timeout: 15_000 });
+      await agentSelect.selectOption("claude-code");
 
       const promptInput = page
         .locator('[data-dialog-overlay] textarea#prompt-input')
@@ -179,7 +186,7 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
 
     try {
       await page.goto(`/${TEST_ORG_SLUG}/loops/${loopSlug}`);
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("load");
 
       await page
         .getByRole("heading", { name: loopName, level: 1 })

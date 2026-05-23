@@ -45,7 +45,7 @@ describe("lightListOrganizations", () => {
     const fetchSpy = vi.fn(async () =>
       new Response(
         JSON.stringify({
-          organizations: [
+          items: [
             { id: 1, name: "Alpha", slug: "alpha" },
             { id: 2, name: "Beta", slug: "beta" },
           ],
@@ -60,12 +60,12 @@ describe("lightListOrganizations", () => {
     expect(orgs).toHaveLength(2);
     expect(orgs[0].slug).toBe("alpha");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/orgs`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.org.v1.OrgService/ListMyOrgs`);
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer tok");
   });
 
-  it("returns empty array when organizations field is missing", async () => {
+  it("returns empty array when items field is missing", async () => {
     globalThis.fetch = vi.fn(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
@@ -109,9 +109,7 @@ describe("lightCreateOrganization", () => {
   it("POSTs and updates current_org_slug to the new org's slug", async () => {
     const fetchSpy = vi.fn(async () =>
       new Response(
-        JSON.stringify({
-          organization: { id: 7, name: "Gamma", slug: "gamma-co" },
-        }),
+        JSON.stringify({ id: 7, name: "Gamma", slug: "gamma-co" }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
@@ -121,7 +119,7 @@ describe("lightCreateOrganization", () => {
 
     expect(org.slug).toBe("gamma-co");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/orgs`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.org.v1.OrgService/CreateOrg`);
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(
       JSON.stringify({ name: "Gamma", slug: "gamma-co" }),
@@ -137,7 +135,7 @@ describe("lightCreateOrganization", () => {
     await expect(
       lightCreateOrganization({ name: "X", slug: "x" }),
     ).rejects.toThrow(
-      "organizations.create returned 200 with no organization payload",
+      "OrgService.CreateOrg returned 200 with no organization payload",
     );
   });
 
@@ -175,13 +173,13 @@ describe("lightCreatePersonalOrganization", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /api/v1/orgs/personal with empty body and no slug", async () => {
+  it("POSTs to the personal-org RPC with empty body and no slug", async () => {
     const fetchSpy = vi.fn(async () =>
       new Response(
         JSON.stringify({
-          organization: { id: 1, name: "kudin-private's Workspace", slug: "kudin-private-workspace" },
+          id: 1, name: "kudin-private's Workspace", slug: "kudin-private-workspace",
         }),
-        { status: 201, headers: { "Content-Type": "application/json" } },
+        { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
     globalThis.fetch = fetchSpy as typeof fetch;
@@ -190,7 +188,7 @@ describe("lightCreatePersonalOrganization", () => {
 
     expect(org.slug).toBe("kudin-private-workspace");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/orgs/personal`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.org.v1.OrgService/CreatePersonalOrg`);
     expect((init as RequestInit).method).toBe("POST");
     // Body is empty {} — caller does NOT send slug; server derives it.
     expect((init as RequestInit).body).toBe("{}");
@@ -202,7 +200,7 @@ describe("lightCreatePersonalOrganization", () => {
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
     await expect(lightCreatePersonalOrganization()).rejects.toThrow(
-      "organizations.createPersonal returned 200 with no organization payload",
+      "OrgService.CreatePersonalOrg returned 200 with no organization payload",
     );
   });
 

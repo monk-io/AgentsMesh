@@ -15,28 +15,27 @@ export interface LightUser {
   avatar_url?: string;
 }
 
-interface ConnectGetMeResponse {
-  user?: {
-    id: number | string;
-    email: string;
-    username: string;
-    name?: string;
-    avatarUrl?: string;
-  };
+// Per proto/user/v1/user.proto convention: GetMe returns the User message
+// directly (no envelope wrapper). Connect JSON transport mirrors that shape.
+interface ConnectMeUser {
+  id?: number | string;
+  email?: string;
+  username?: string;
+  name?: string;
+  avatarUrl?: string;
 }
 
 export async function lightFetchMe(): Promise<LightUser | null> {
   try {
-    const resp = await lightConnect<Record<string, never>, ConnectGetMeResponse>(
+    const u = await lightConnect<Record<string, never>, ConnectMeUser>(
       "proto.user.v1.UserService",
       "GetMe",
       {},
       { authenticated: true },
     );
-    const u = resp?.user;
-    if (!u) return null;
+    if (!u || u.email === undefined || u.username === undefined) return null;
     return {
-      id: Number(u.id),
+      id: Number(u.id ?? 0),
       email: u.email,
       username: u.username,
       name: u.name,
