@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Dialog, DialogContent, DialogBody, DialogFooter } from "@/components/ui/dialog";
-import { createGitCredential } from "@/lib/api/userGitCredential";
+import { createGitCredential } from "@/lib/api/facade/userGitCredential";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 

@@ -1,4 +1,4 @@
-// Migrated R6+: Connect-RPC for user/credentials/providers; env-bundle still REST.
+// Migrated R6+: Connect-RPC for user/credentials/providers/env-bundles.
 // Mirror tests/account/git-credentials.spec.ts + repo-providers.api.spec.ts +
 // profile.api.spec.ts conventions: typed clients, optional id-from-existing-row
 // fallback, no REST when a Connect method exists.
@@ -27,10 +27,9 @@ test.describe("User Credential Management API", () => {
   });
 
   test("list env bundles", async ({ api }) => {
-    const res = await api.get("/api/v1/users/env-bundles");
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(Array.isArray(body.items)).toBe(true);
+    const cc = await api.connect();
+    const res = await cc.envBundle.listEnvBundles({}) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
   test("get user profile", async ({ api }) => {

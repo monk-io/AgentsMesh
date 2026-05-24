@@ -114,7 +114,7 @@ func TestToProtoUser_AllFieldsMapped(t *testing.T) {
 		CreatedAt:              time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		UpdatedAt:              time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
 	}
-	out := toProtoUser(in)
+	out := ToProtoUser(in)
 	require.NotNil(t, out)
 	assert.Equal(t, int64(42), out.GetId())
 	assert.Equal(t, "alice@example.com", out.GetEmail())
@@ -140,7 +140,7 @@ func TestToProtoUser_OptionalFieldsAbsent(t *testing.T) {
 		CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		UpdatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
-	out := toProtoUser(in)
+	out := ToProtoUser(in)
 	require.NotNil(t, out)
 	assert.Nil(t, out.Name)
 	assert.Nil(t, out.AvatarUrl)
@@ -182,7 +182,7 @@ func TestToProtoIdentity_AllFieldsMapped(t *testing.T) {
 		CreatedAt:        time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		UpdatedAt:        time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
 	}
-	out := toProtoIdentity(in)
+	out := ToProtoIdentity(in)
 	require.NotNil(t, out)
 	assert.Equal(t, int64(101), out.GetId())
 	assert.Equal(t, int64(42), out.GetUserId())

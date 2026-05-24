@@ -1,12 +1,20 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("//build_defs/protoconv:defs.bzl", "amesh_proto_convert")
+
+amesh_proto_convert(
+    name = "runner_convert_amesh",
+    output = "runner_convert.amesh.go",
+    proto = "//proto/runner_api/v1:runner_api_proto",
+)
 
 go_library(
     name = "runner",
     srcs = [
-        "convert.go",
         "handlers.go",
         "handlers_auth.go",
+        "runner_convert_custom.go",
         "server.go",
+        ":runner_convert_amesh",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/runner",
     visibility = ["//backend:__subpackages__"],
@@ -18,6 +26,7 @@ go_library(
         "//backend/internal/service/runner",
         "//backend/internal/service/runnerlog",
         "//backend/pkg/policy",
+        "//backend/pkg/protoconv",
         "//proto/runner_api/v1:runner_api_go_proto",
         "@com_connectrpc_connect//:connect",
         "@com_github_google_uuid//:uuid",

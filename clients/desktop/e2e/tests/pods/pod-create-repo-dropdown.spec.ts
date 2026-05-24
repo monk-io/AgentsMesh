@@ -21,7 +21,7 @@ test.describe("Desktop · Create Pod dialog · repository dropdown", () => {
 
     const workspace = new WorkspacePage(page);
     await workspace.goto();
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await workspace.openCreatePodModal();
 
     // The modal mounts a role="dialog" with aria-labelledby="create-pod-title"

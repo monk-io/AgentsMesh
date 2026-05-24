@@ -4,10 +4,9 @@ use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::EnvBundleService;
 use wasm_bindgen::prelude::*;
 
-/// Wasm wrapper around EnvBundleService. Mirrors the facade method shape
-/// (Strings in/out) for renderer consumption — the frontend just relays
-/// JSON. `kind` and `agent_slug` are optional query filters; pass empty
-/// string to omit.
+/// Wasm wrapper around EnvBundleService. Connect-RPC binary wire — the TS
+/// caller encodes via `@bufbuild/protobuf .toBinary()`, passes the
+/// Uint8Array in, receives a Uint8Array back, decodes via `.fromBinary()`.
 #[wasm_bindgen]
 pub struct WasmEnvBundleService {
     inner: EnvBundleService,
@@ -19,29 +18,33 @@ impl WasmEnvBundleService {
         Self { inner: EnvBundleService::new(client) }
     }
 
-    pub async fn list(&self, kind: String, agent_slug: String) -> Result<String, String> {
-        let k = if kind.is_empty() { None } else { Some(kind.as_str()) };
-        let a = if agent_slug.is_empty() { None } else { Some(agent_slug.as_str()) };
-        self.inner.list(k, a).await
+    #[wasm_bindgen(js_name = listEnvBundlesConnect)]
+    pub async fn list_env_bundles_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.list_env_bundles_connect(request).await
     }
 
-    pub async fn get(&self, id: i64) -> Result<String, String> {
-        self.inner.get(id).await
+    #[wasm_bindgen(js_name = getEnvBundleConnect)]
+    pub async fn get_env_bundle_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.get_env_bundle_connect(request).await
     }
 
-    pub async fn create(&self, json: String) -> Result<String, String> {
-        self.inner.create(&json).await
+    #[wasm_bindgen(js_name = createEnvBundleConnect)]
+    pub async fn create_env_bundle_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.create_env_bundle_connect(request).await
     }
 
-    pub async fn update(&self, id: i64, json: String) -> Result<String, String> {
-        self.inner.update(id, &json).await
+    #[wasm_bindgen(js_name = updateEnvBundleConnect)]
+    pub async fn update_env_bundle_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.update_env_bundle_connect(request).await
     }
 
-    pub async fn delete(&self, id: i64) -> Result<(), String> {
-        self.inner.delete(id).await
+    #[wasm_bindgen(js_name = deleteEnvBundleConnect)]
+    pub async fn delete_env_bundle_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.delete_env_bundle_connect(request).await
     }
 
-    pub async fn set_primary(&self, id: i64) -> Result<String, String> {
-        self.inner.set_primary(id).await
+    #[wasm_bindgen(js_name = setPrimaryEnvBundleConnect)]
+    pub async fn set_primary_env_bundle_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.set_primary_env_bundle_connect(request).await
     }
 }

@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => ({
   leaveChannelConnect: vi.fn(),
 }));
 
-vi.mock("@/lib/api/channelConnect", () => ({
+vi.mock("@/lib/api/facade/channelConnect", () => ({
   listChannels: mocks.listChannels,
   getChannel: mocks.getChannel,
   createChannel: mocks.createChannel,

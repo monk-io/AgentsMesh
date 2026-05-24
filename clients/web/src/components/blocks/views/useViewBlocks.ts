@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import type { Block, ViewFilter, ViewSort, ViewSpec } from "@/lib/api/blockstoreTypes";
+import type { Block, ViewFilter, ViewSort, ViewSpec } from "@/lib/viewModels/blockstore";
 import { useBlocks } from "@/stores/blockstore";
 
 export function useViewBlocks(spec: ViewSpec, workspaceID: string): Block[] {

@@ -38,7 +38,7 @@ func (s *Server) CreateSupportTicket(
 	if err != nil {
 		return nil, mapSupportTicketError(err)
 	}
-	return connect.NewResponse(toProtoTicket(ticket)), nil
+	return connect.NewResponse(ToProtoSupportTicket(ticket)), nil
 }
 
 // AddSupportTicketMessage appends a user message to an existing ticket.
@@ -64,7 +64,7 @@ func (s *Server) AddSupportTicketMessage(
 	if err != nil {
 		return nil, mapSupportTicketError(err)
 	}
-	return connect.NewResponse(toProtoMessage(msg)), nil
+	return connect.NewResponse(ToProtoSupportTicketMessage(msg)), nil
 }
 
 // PresignAttachmentUpload returns a presigned PUT URL + opaque storage_key.
@@ -135,7 +135,7 @@ func (s *Server) AssociateAttachments(
 		if err != nil {
 			return nil, mapSupportTicketError(err)
 		}
-		out = append(out, toProtoAttachment(att))
+		out = append(out, ToProtoSupportTicketAttachment(att))
 	}
 	return connect.NewResponse(&supportticketv1.AssociateAttachmentsResponse{
 		Items: out,

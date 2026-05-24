@@ -20,6 +20,7 @@ proto_library(
     srcs = ["user_credential.proto"],
     data = [":user_credential_serde_transform"],
     visibility = ["//visibility:public"],
+    deps = ["//proto/codegen/v1:codegen_proto"],
 )
 
 go_proto_library(
@@ -28,6 +29,7 @@ go_proto_library(
     importpath = "github.com/anthropics/agentsmesh/proto/gen/go/user_credential/v1",
     proto = ":user_credential_proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/codegen/v1:codegen_go_proto"],
 )
 
 rust_prost_library(

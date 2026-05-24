@@ -1,6 +1,7 @@
 // RepoSkill sub-service handlers — installed Skill management per repository.
-// Mirrors backend/internal/api/rest/v1/extension_skills.go (minus
-// install-from-upload, which stays REST because Connect lacks multipart).
+// Mirrors backend/internal/api/rest/v1/extension_skills.go. Upload-install
+// is a 2-step Connect flow (PresignSkillUpload + InstallSkillFromUploadedFile)
+// — same pattern as support_ticket attachments; no multipart on the wire.
 package extensionconnect
 
 import (
@@ -17,11 +18,13 @@ import (
 const RepoSkillServiceName = "proto.extension.v1.RepoSkillService"
 
 const (
-	ListRepoSkillsProcedure         = "/" + RepoSkillServiceName + "/ListRepoSkills"
-	InstallSkillFromMarketProcedure = "/" + RepoSkillServiceName + "/InstallSkillFromMarket"
-	InstallSkillFromGitHubProcedure = "/" + RepoSkillServiceName + "/InstallSkillFromGitHub"
-	UpdateSkillProcedure            = "/" + RepoSkillServiceName + "/UpdateSkill"
-	UninstallSkillProcedure         = "/" + RepoSkillServiceName + "/UninstallSkill"
+	ListRepoSkillsProcedure                = "/" + RepoSkillServiceName + "/ListRepoSkills"
+	InstallSkillFromMarketProcedure        = "/" + RepoSkillServiceName + "/InstallSkillFromMarket"
+	InstallSkillFromGitHubProcedure        = "/" + RepoSkillServiceName + "/InstallSkillFromGitHub"
+	PresignSkillUploadProcedure            = "/" + RepoSkillServiceName + "/PresignSkillUpload"
+	InstallSkillFromUploadedFileProcedure  = "/" + RepoSkillServiceName + "/InstallSkillFromUploadedFile"
+	UpdateSkillProcedure                   = "/" + RepoSkillServiceName + "/UpdateSkill"
+	UninstallSkillProcedure                = "/" + RepoSkillServiceName + "/UninstallSkill"
 )
 
 type RepoSkillServer struct{ *Server }
@@ -163,6 +166,12 @@ func MountRepoSkill(mux *http.ServeMux, srv *RepoSkillServer, opts ...connect.Ha
 	))
 	mux.Handle(InstallSkillFromGitHubProcedure, connect.NewUnaryHandler(
 		InstallSkillFromGitHubProcedure, srv.InstallSkillFromGitHub, opts...,
+	))
+	mux.Handle(PresignSkillUploadProcedure, connect.NewUnaryHandler(
+		PresignSkillUploadProcedure, srv.PresignSkillUpload, opts...,
+	))
+	mux.Handle(InstallSkillFromUploadedFileProcedure, connect.NewUnaryHandler(
+		InstallSkillFromUploadedFileProcedure, srv.InstallSkillFromUploadedFile, opts...,
 	))
 	mux.Handle(UpdateSkillProcedure, connect.NewUnaryHandler(
 		UpdateSkillProcedure, srv.UpdateSkill, opts...,

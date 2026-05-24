@@ -13,7 +13,7 @@
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { AgentSchema } from "@proto/agent/v1/agent_pb";
-import { fromProtoAgent } from "../agentConnect";
+import { fromProtoAgent } from "../connect/agentConnect";
 
 describe("fromProtoAgent", () => {
   it("maps the full Agent proto to AgentData (snake_case)", () => {

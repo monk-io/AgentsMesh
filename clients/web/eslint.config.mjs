@@ -45,6 +45,42 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Business code (components / stores / hooks) must not deep-import Connect
+  // adapters or wire-shape converters — those are internal to the facade
+  // layer. Going through @/lib/api or @/lib/api/facade keeps the proto types
+  // contained so we can swap the wire (e.g. Connect → REST fallback) without
+  // touching call sites.
+  //
+  // Phase 10 baseline cleanup complete (2026-05-24): all 53 pre-existing
+  // direct-Connect imports under components/stores/hooks rewritten to use
+  // facade siblings. Rule flipped to "error" to prevent regressions.
+  {
+    files: [
+      "src/components/**/*.ts",
+      "src/components/**/*.tsx",
+      "src/stores/**/*.ts",
+      "src/stores/**/*.tsx",
+      "src/hooks/**/*.ts",
+      "src/hooks/**/*.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/lib/api/connect/*"],
+              message: "Business code must go through the facade — use `@/lib/api` barrel or `@/lib/api/facade/*` instead of importing Connect adapters directly.",
+            },
+            {
+              group: ["@/lib/api/shapes/*"],
+              message: "Wire shape converters are internal to the facade layer — use `@/lib/api` barrel or `@/lib/api/facade/*` instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

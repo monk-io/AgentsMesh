@@ -7,7 +7,7 @@ import { EMPTY_CACHE, LOAD_MORE_MESSAGE_LIMIT, useChannelMessages } from "@/stor
 import { useMeshStore, useTopology } from "@/stores/mesh";
 import { transformMessage } from "@/components/channel/transformMessage";
 import type { TransformedMessage } from "@/components/channel/types";
-import type { MessageSendPayload, MessageEditPayload } from "@/lib/api/channel-message-types";
+import type { MessageSendPayload, MessageEditPayload } from "@/lib/viewModels/channelMessage";
 
 interface UseChannelChatOptions {
   channelId: number;

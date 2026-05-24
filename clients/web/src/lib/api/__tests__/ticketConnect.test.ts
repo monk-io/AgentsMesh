@@ -15,7 +15,7 @@ import {
   LabelSchema,
   TicketSchema,
 } from "@proto/ticket/v1/ticket_pb";
-import { fromProtoLabel, fromProtoTicket } from "../ticketConnect";
+import { fromProtoLabel, fromProtoTicket } from "../connect/ticketConnect";
 
 describe("fromProtoTicket", () => {
   it("converts the full Ticket proto to TicketData", () => {

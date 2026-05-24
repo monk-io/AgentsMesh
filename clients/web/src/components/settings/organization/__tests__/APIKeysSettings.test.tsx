@@ -7,31 +7,23 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData } from "@/lib/api/apikeyTypes";
+import type { ApiKey } from "@/lib/api/facade/apikey";
+import { create } from "@bufbuild/protobuf";
+import { ApiKeySchema } from "@proto/apikey/v1/api_key_pb";
 
-// Mock the wrapper layer instead of the wasm bridge — the wrapper does the
-// proto binary encoding internally, so the test stays decoupled from wire
-// format details (Uint8Array, BigInt, etc).
-//
-// vi.hoisted lifts the mock fns above vi.mock's hoisting so the factory can
-// reference them (without it the factory captures `undefined`).
 const { mockListApiKeys, mockCreateApiKey, mockUpdateApiKey, mockRevokeApiKey } = vi.hoisted(() => ({
   mockListApiKeys: vi.fn(),
   mockCreateApiKey: vi.fn(),
   mockUpdateApiKey: vi.fn(),
   mockRevokeApiKey: vi.fn(),
 }));
-vi.mock("@/lib/api/apikey", () => ({
+vi.mock("@/lib/api/facade/apikey", () => ({
   listApiKeys: mockListApiKeys,
   createApiKey: mockCreateApiKey,
   updateApiKey: mockUpdateApiKey,
   revokeApiKey: mockRevokeApiKey,
 }));
 
-// Component bails out via `if (!currentOrg) return` when there's no org —
-// give every test a stable org so fetch actually fires. The object must
-// be stable across calls — otherwise `useEffect([currentOrg])` reruns
-// every render and loops forever.
 const { stableOrg } = vi.hoisted(() => ({
   stableOrg: { id: 10, slug: "test-org", name: "Test Org", role: "owner" },
 }));
@@ -60,9 +52,9 @@ vi.mock("../apikeys", () => ({
     onEdit,
     onRevoke,
   }: {
-    apiKey: APIKeyData;
-    onEdit: (key: APIKeyData) => void;
-    onRevoke: (id: number) => void;
+    apiKey: ApiKey;
+    onEdit: (key: ApiKey) => void;
+    onRevoke: (id: bigint) => void;
     t: unknown;
   }) => (
     <div data-testid={`api-key-card-${apiKey.id}`}>
@@ -140,10 +132,10 @@ vi.mock("../apikeys", () => ({
     onOpenChange,
     onSave,
   }: {
-    apiKey: APIKeyData;
+    apiKey: ApiKey;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (id: number, data: { name?: string }) => Promise<void>;
+    onSave: (id: bigint, data: { name?: string }) => Promise<void>;
     t: unknown;
   }) => {
     if (!open) return null;
@@ -180,29 +172,29 @@ async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
 }
 
 describe("APIKeysSettings", () => {
-  const sampleKeys: APIKeyData[] = [
-    {
-      id: 1,
-      organization_id: 10,
+  const sampleKeys: ApiKey[] = [
+    create(ApiKeySchema, {
+      id: BigInt(1),
+      organizationId: BigInt(10),
       name: "CI/CD Key",
-      key_prefix: "am_ci",
+      keyPrefix: "am_ci",
       scopes: ["pods:read", "pods:write"],
-      is_enabled: true,
-      created_by: 1,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-01T00:00:00Z",
-    },
-    {
-      id: 2,
-      organization_id: 10,
+      isEnabled: true,
+      createdBy: BigInt(1),
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+    }),
+    create(ApiKeySchema, {
+      id: BigInt(2),
+      organizationId: BigInt(10),
       name: "Monitoring Key",
-      key_prefix: "am_mon",
+      keyPrefix: "am_mon",
       scopes: ["tickets:read"],
-      is_enabled: false,
-      created_by: 1,
-      created_at: "2024-02-01T00:00:00Z",
-      updated_at: "2024-02-01T00:00:00Z",
-    },
+      isEnabled: false,
+      createdBy: BigInt(1),
+      createdAt: "2024-02-01T00:00:00Z",
+      updatedAt: "2024-02-01T00:00:00Z",
+    }),
   ];
 
   beforeEach(() => {

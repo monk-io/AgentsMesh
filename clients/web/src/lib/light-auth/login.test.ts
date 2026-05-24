@@ -23,14 +23,14 @@ describe("lightLogin", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /api/v1/auth/login and persists session on 200", async () => {
+  it("POSTs to AuthService/Login Connect endpoint and persists session on 200", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const fetchSpy = vi.fn(async () =>
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           token: "access-1",
-          refresh_token: "refresh-1",
-          expires_in: 3600,
+          refreshToken: "refresh-1",
+          expiresIn: 3600,
           user: { id: 1, email: "a@b.c", username: "alice" },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -43,7 +43,7 @@ describe("lightLogin", () => {
     expect(resp.token).toBe("access-1");
     expect(resp.refresh_token).toBe("refresh-1");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/auth/login`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.auth.v1.AuthService/Login`);
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(
       JSON.stringify({ email: "a@b.c", password: "secret" }),
@@ -56,7 +56,7 @@ describe("lightLogin", () => {
   });
 
   it("throws ApiError with 401 code on invalid credentials and does not persist", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({ code: "INVALID_CREDENTIALS", error: "wrong password" }),
         { status: 401, headers: { "Content-Type": "application/json" } },
@@ -76,7 +76,7 @@ describe("lightLogin", () => {
   });
 
   it("propagates raw network errors", async () => {
-    globalThis.fetch = vi.fn(async () => {
+    globalThis.fetch = vi.fn<typeof fetch>(async () => {
       throw new TypeError("network down");
     }) as typeof fetch;
     await expect(lightLogin({ email: "a@b.c", password: "x" })).rejects.toThrow(

@@ -9,7 +9,6 @@ mod connect_stream_wasm;
 mod error;
 mod modules;
 mod refresh;
-mod request;
 mod token_store;
 #[cfg(test)]
 mod tests;
@@ -25,5 +24,4 @@ pub use connect_call::connect_call;
 #[cfg(target_arch = "wasm32")]
 pub use connect_stream_wasm::WasmAbortHandle;
 pub use error::ApiError;
-pub use request::RequestOptions;
 pub use token_store::AuthTokenStore;

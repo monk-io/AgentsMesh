@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import type { OrganizationMember } from "@/lib/api";
-import { listMembers } from "@/lib/api/org";
+import { listMembers } from "@/lib/api/facade/org";
 
 interface MentionPopoverProps {
   visible: boolean;
@@ -95,7 +95,7 @@ export function MentionPopover({
     >
       {filtered.slice(0, 10).map((member, index) => (
         <button
-          key={member.user_id ?? member.user?.id ?? index}
+          key={Number(member.userId ?? member.user?.id ?? index)}
           type="button"
           className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors ${
             index === selectedIndex ? "bg-muted/50" : ""
@@ -108,10 +108,10 @@ export function MentionPopover({
           }}
           onMouseEnter={() => setSelectedIndex(index)}
         >
-          {member.user?.avatar_url ? (
+          {member.user?.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={member.user.avatar_url}
+              src={member.user.avatarUrl}
               alt=""
               className="w-6 h-6 rounded-full"
             />

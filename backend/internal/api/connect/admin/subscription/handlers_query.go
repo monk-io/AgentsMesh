@@ -48,7 +48,7 @@ func (s *Server) ListPlans(
 
 	items := make([]*billingv1.AdminSubscriptionPlan, 0, len(plans))
 	for _, p := range plans {
-		items = append(items, toProtoPlan(p))
+		items = append(items, ToProtoAdminSubscriptionPlan(p))
 	}
 	return connect.NewResponse(&billingv1.ListAdminPlansResponse{Data: items}), nil
 }

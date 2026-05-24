@@ -53,7 +53,7 @@ export interface PodPerpetualChangedData {
   perpetual: boolean;
 }
 
-import type { MessageContent, MessageMentions } from "@/lib/api/channel-message-types";
+import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
 
 export interface ChannelMessageData {
   id: number;

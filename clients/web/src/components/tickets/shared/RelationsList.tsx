@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { TicketRelation } from "@/lib/api/ticketTypes";
+import type { TicketRelation } from "@/lib/viewModels/ticket";
 import { ChevronRight, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

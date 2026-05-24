@@ -41,7 +41,17 @@ syntax = "proto3";
 
 package proto.license.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/license/v1;licensev1";
+
+// Convert codegen target — emits license_convert.amesh.go into the backend
+// connect handler tree so it can reach domain/billing + service/license
+// (which proto/gen/go packages cannot import under Go's internal-package rule).
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/license"
+  output_package: "licenseconnect"
+};
 
 // --- Authenticated service (owner-only mutations + validation). ---
 
@@ -77,17 +87,21 @@ service LicensePublicService {
 // returned from /status. Field-for-field parity with the legacy JSON
 // surface (snake_case → camelCase getters in TS, prost tags pin order).
 message LicenseStatus {
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/billing.LicenseStatus"
+  };
+
   bool is_active = 1;
   string license_key = 2;
   string organization_name = 3;
   string plan = 4;
   // RFC 3339, omitted when no license active.
-  optional string expires_at = 5;
+  optional string expires_at = 5 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
   // -1 represents unlimited (mirrors REST semantics).
-  int32 max_users = 6;
-  int32 max_runners = 7;
-  int32 max_repositories = 8;
-  int32 max_pod_minutes = 9;
+  int32 max_users = 6 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_runners = 7 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_repositories = 8 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_pod_minutes = 9 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
   repeated string features = 10;
   string message = 11;
 }
@@ -97,25 +111,36 @@ message LicenseStatus {
 // preview shows raw plan/limits/features and does NOT carry status flags
 // (the license isn't active yet).
 message ValidatedLicense {
-  bool valid = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/service/license.LicenseData"
+  };
+
+  // `valid` is derived (not stored in LicenseData) — set by the wrapper.
+  bool valid = 1 [(amesh.codegen.v1.field_skip) = true];
   string license_key = 2;
   string organization_name = 3;
   string contact_email = 4;
   string plan = 5;
-  LicenseLimits limits = 6;
+  // LicenseData embeds LicenseLimits by value; the custom helper boxes/unboxes
+  // around the pointer-shaped proto field.
+  LicenseLimits limits = 6 [(amesh.codegen.v1.field_custom) = "limitsValueToProto"];
   repeated string features = 7;
   // RFC 3339.
-  string issued_at = 8;
-  string expires_at = 9;
+  string issued_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string expires_at = 9 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // LicenseLimits mirrors LicenseLimits in backend/internal/service/license/
 // license_types.go. -1 in any field encodes "unlimited".
 message LicenseLimits {
-  int32 max_users = 1;
-  int32 max_runners = 2;
-  int32 max_repositories = 3;
-  int32 max_pod_minutes = 4;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/service/license.LicenseLimits"
+  };
+
+  int32 max_users = 1 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_runners = 2 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_repositories = 3 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_pod_minutes = 4 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
 }
 
 // --- Requests ---

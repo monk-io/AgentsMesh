@@ -189,6 +189,8 @@ export declare class AppState {
   extensionListRepoSkills(repoId: number, scope?: string | undefined | null): Promise<string>
   extensionInstallSkillFromMarket(repoId: number, json: string): Promise<string>
   extensionInstallSkillFromGithub(repoId: number, json: string): Promise<string>
+  extensionPresignSkillUploadConnect(request: Array<number>): Promise<Array<number>>
+  extensionInstallSkillFromUploadedFileConnect(request: Array<number>): Promise<Array<number>>
   extensionUpdateSkill(repoId: number, installId: number, json: string): Promise<string>
   extensionUninstallSkill(repoId: number, installId: number): Promise<void>
   extensionListRepoMcpServers(repoId: number, scope?: string | undefined | null): Promise<string>
@@ -196,7 +198,6 @@ export declare class AppState {
   extensionInstallCustomMcpServer(repoId: number, json: string): Promise<string>
   extensionUpdateMcpServer(repoId: number, installId: number, json: string): Promise<string>
   extensionUninstallMcpServer(repoId: number, installId: number): Promise<void>
-  extensionInstallSkillFromUpload(repoId: number, fileData: Array<number>, fileName: string, scope?: string | undefined | null): Promise<string>
   filePresignUpload(json: string): Promise<string>
   fileUploadFile(fileData: Array<number>, filename: string, contentType: string): Promise<string>
   grantList(resourceType: string, resourceId: string): Promise<string>

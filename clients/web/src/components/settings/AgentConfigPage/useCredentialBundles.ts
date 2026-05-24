@@ -1,13 +1,16 @@
 import { useCallback, useState } from "react";
 import type { AgentData } from "@/lib/api";
 import type { CredentialProfileViewModel } from "../_shared/credentialViewModel";
-import { getEnvBundleService } from "@/lib/wasm-core";
+import {
+  listEnvBundles,
+  createEnvBundle,
+  updateEnvBundle,
+  deleteEnvBundle,
+  setPrimaryEnvBundle,
+} from "@/lib/api/facade/envBundleConnect";
 import type { CredentialFormData } from "./types";
 import type { AgentConfigMessages } from "./useAgentConfigMessages";
-import {
-  type WireEnvBundle,
-  toCredentialProfile,
-} from "./envBundleWire";
+import { toCredentialProfile } from "./envBundleWire";
 
 export interface CredentialBundlesState {
   credentialProfiles: CredentialProfileViewModel[];
@@ -44,12 +47,9 @@ export function useCredentialBundles(
 
   const loadCredentialBundles = useCallback(async (agent: AgentData) => {
     try {
-      const res = await getEnvBundleService()
-        .list("credential", agent.slug)
-        .then((j: string) => JSON.parse(j))
+      const res = await listEnvBundles({ kind: "credential", agentSlug: agent.slug })
         .catch(() => ({ items: [] }));
-      const bundles: WireEnvBundle[] = res.items ?? [];
-      const profiles = bundles.map((b) => toCredentialProfile(b, agent.slug));
+      const profiles = (res.items ?? []).map((b) => toCredentialProfile(b, agent.slug));
       setCredentialProfiles(profiles);
       setNoPrimaryBundle(!profiles.some((p) => p.is_default));
     } catch (err) {
@@ -64,10 +64,7 @@ export function useCredentialBundles(
       msgs.setError(null);
       const currentDefault = credentialProfiles.find((p) => p.is_default);
       if (currentDefault) {
-        await getEnvBundleService().update(
-          BigInt(currentDefault.id),
-          JSON.stringify({ kind_primary: false })
-        );
+        await updateEnvBundle(BigInt(currentDefault.id), { kindPrimary: false });
       }
       // Reflect locally so the UI updates before the next loadAll.
       setCredentialProfiles((prev) =>
@@ -83,7 +80,7 @@ export function useCredentialBundles(
   const handleSetDefault = useCallback(async (profileId: number) => {
     try {
       msgs.setError(null);
-      await getEnvBundleService().set_primary(BigInt(profileId));
+      await setPrimaryEnvBundle(BigInt(profileId));
       setCredentialProfiles((prev) =>
         prev.map((p) => ({ ...p, is_default: p.id === profileId }))
       );
@@ -97,7 +94,7 @@ export function useCredentialBundles(
   const handleDeleteProfile = useCallback(async (profileId: number) => {
     try {
       msgs.setError(null);
-      await getEnvBundleService().delete(BigInt(profileId));
+      await deleteEnvBundle(BigInt(profileId));
       setCredentialProfiles((prev) => {
         const next = prev.filter((p) => p.id !== profileId);
         setNoPrimaryBundle(!next.some((p) => p.is_default));
@@ -119,25 +116,21 @@ export function useCredentialBundles(
       agent: AgentData
     ) => {
       if (editingProfile) {
-        await getEnvBundleService().update(
-          BigInt(editingProfile.id),
-          JSON.stringify({
-            name: data.name,
-            description: data.description || undefined,
-            data: Object.keys(data.credentials).length > 0 ? data.credentials : undefined,
-          })
-        );
+        await updateEnvBundle(BigInt(editingProfile.id), {
+          name: data.name,
+          description: data.description || undefined,
+          hasData: Object.keys(data.credentials).length > 0,
+          data: Object.keys(data.credentials).length > 0 ? data.credentials : undefined,
+        });
         msgs.reportSuccess(t("settings.agentCredentials.profileUpdated"));
       } else {
-        await getEnvBundleService().create(
-          JSON.stringify({
-            agent_slug: agent.slug,
-            name: data.name,
-            description: data.description || undefined,
-            kind: "credential",
-            data: data.credentials,
-          })
-        );
+        await createEnvBundle({
+          agentSlug: agent.slug,
+          name: data.name,
+          description: data.description || undefined,
+          kind: "credential",
+          data: data.credentials,
+        });
         msgs.reportSuccess(t("settings.agentCredentials.profileCreated"));
       }
       await loadCredentialBundles(agent);

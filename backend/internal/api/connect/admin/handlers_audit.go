@@ -57,7 +57,7 @@ func (s *Server) ListAuditLogs(
 
 	items := make([]*adminv1.AdminAuditLog, 0, len(result.Data))
 	for i := range result.Data {
-		items = append(items, toProtoAdminAuditLog(&result.Data[i]))
+		items = append(items, ToProtoAdminAuditLog(&result.Data[i]))
 	}
 	return connect.NewResponse(&adminv1.ListAuditLogsResponse{
 		Items:      items,

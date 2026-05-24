@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { Block, ViewSpec } from "@/lib/api/blockstoreTypes";
+import type { Block, ViewSpec } from "@/lib/viewModels/blockstore";
 
 import { BlockRenderer } from "../BlockRenderer";
 import { useViewBlocks } from "./useViewBlocks";

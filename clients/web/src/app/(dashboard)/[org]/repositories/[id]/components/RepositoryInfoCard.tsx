@@ -1,6 +1,6 @@
 "use client";
 
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import type { RepositoryData } from "@/lib/viewModels/repository";
 import { useTranslations } from "next-intl";
 
 interface RepositoryInfoCardProps {

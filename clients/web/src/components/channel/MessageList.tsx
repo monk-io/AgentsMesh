@@ -11,7 +11,7 @@ import { getPodDisplayName, getShortPodKey } from "@/lib/pod-display-name";
 import { usePods, type Pod } from "@/stores/pod";
 import { cn } from "@/lib/utils";
 import type { TransformedMessage } from "./types";
-import type { MessageEditPayload } from "@/lib/api/channel-message-types";
+import type { MessageEditPayload } from "@/lib/viewModels/channelMessage";
 
 interface MessageListProps {
   messages: TransformedMessage[];

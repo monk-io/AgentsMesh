@@ -1513,6 +1513,28 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Vec<u8>"
   },
   {
+    "name": "extension_presign_skill_upload_connect",
+    "group": "extension",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
+    "name": "extension_install_skill_from_uploaded_file_connect",
+    "group": "extension",
+    "params": [
+      {
+        "name": "request",
+        "type": "Vec<u8>"
+      }
+    ],
+    "returnType": "Vec<u8>"
+  },
+  {
     "name": "extension_update_skill_connect",
     "group": "extension",
     "params": [
@@ -1588,29 +1610,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Vec<u8>"
-  },
-  {
-    "name": "extension_install_skill_from_upload",
-    "group": "extension",
-    "params": [
-      {
-        "name": "repo_id",
-        "type": "i64"
-      },
-      {
-        "name": "file_data",
-        "type": "Vec<u8>"
-      },
-      {
-        "name": "file_name",
-        "type": "String"
-      },
-      {
-        "name": "scope",
-        "type": "Option<String>"
-      }
-    ],
-    "returnType": "String"
   },
   {
     "name": "file_presign_upload",

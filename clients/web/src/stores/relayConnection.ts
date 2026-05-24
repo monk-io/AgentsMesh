@@ -1,5 +1,5 @@
 import { MsgType, encodeMessage, encodeJsonMessage } from "./relayProtocol";
-import { getPodConnection } from "@/lib/api/podConnect";
+import { getPodConnection } from "@/lib/api/facade/podConnect";
 import { readCurrentOrg } from "@/stores/auth";
 import { getLocalRunnerService } from "@agentsmesh/service-runtime";
 import type { RelayConnection, ConnectionHandle, StatusListener } from "./relayConnectionTypes";

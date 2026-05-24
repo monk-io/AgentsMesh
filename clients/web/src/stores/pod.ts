@@ -11,7 +11,7 @@ import {
   terminatePod as terminatePodConnect,
   updatePodAlias as updatePodAliasConnect,
   updatePodPerpetual as updatePodPerpetualConnect,
-} from "@/lib/api/podConnect";
+} from "@/lib/api/facade/podConnect";
 import type { PodState, Pod } from "./podTypes";
 import { SIDEBAR_STATUS_MAP, SIDEBAR_PAGE_SIZE } from "./podTypes";
 

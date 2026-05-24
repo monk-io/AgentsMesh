@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getLocalRunnerService } from "@agentsmesh/service-runtime";
-import { createRunnerToken } from "@/lib/api/runnerConnect";
+import { createRunnerToken } from "@/lib/api/facade/runnerConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import type { ILocalRunnerService, LocalRunnerStatus } from "@agentsmesh/service-interface";
 

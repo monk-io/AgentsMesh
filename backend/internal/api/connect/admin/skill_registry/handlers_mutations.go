@@ -46,7 +46,7 @@ func (s *Server) SyncSkillRegistry(
 
 	return connect.NewResponse(&extensionv1.SyncAdminSkillRegistryResponse{
 		Message:  "sync completed",
-		Registry: toProtoAdminSkillRegistry(registry),
+		Registry: ToProtoAdminSkillRegistry(registry),
 	}), nil
 }
 

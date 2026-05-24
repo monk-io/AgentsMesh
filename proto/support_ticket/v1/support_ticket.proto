@@ -31,7 +31,18 @@ syntax = "proto3";
 
 package proto.support_ticket.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/support_ticket/v1;supportticketv1";
+
+// Convert codegen target — emits support_ticket_convert.amesh.go into the
+// backend user-facing support_ticket connect handler tree so it can reach
+// domain/supportticket (which proto/gen/go packages cannot import under Go's
+// internal-package rule).
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/support_ticket"
+  output_package: "supportticketconnect"
+};
 
 // ============================================================================
 // SupportTicketService — user-scoped (auth-required, no org_slug)
@@ -55,8 +66,12 @@ service SupportTicketService {
 // user-facing wire (it's an admin-only detail that the user-side handler
 // never returned anyway).
 message SupportTicket {
-  int64 id = 1;
-  int64 user_id = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/supportticket.SupportTicket"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 user_id = 2 [(amesh.codegen.v1.field_rename) = "UserID"];
   string title = 3;
   // bug / feature_request / usage_question / account / other
   string category = 4;
@@ -64,9 +79,9 @@ message SupportTicket {
   string status = 5;
   // low / medium / high
   string priority = 6;
-  string created_at = 7;
-  string updated_at = 8;
-  optional string resolved_at = 9;
+  string created_at = 7 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  optional string resolved_at = 9 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
 }
 
 // SupportTicketUser is the trimmed user view embedded in messages —
@@ -83,27 +98,39 @@ message SupportTicketUser {
 // SupportTicketAttachment mirrors the renderer-facing fields of the
 // domain Attachment (storage_key is intentionally hidden — internal).
 message SupportTicketAttachment {
-  int64 id = 1;
-  int64 ticket_id = 2;
-  optional int64 message_id = 3;
-  int64 uploader_id = 4;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/supportticket.SupportTicketAttachment"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 ticket_id = 2 [(amesh.codegen.v1.field_rename) = "TicketID"];
+  optional int64 message_id = 3 [(amesh.codegen.v1.field_rename) = "MessageID"];
+  int64 uploader_id = 4 [(amesh.codegen.v1.field_rename) = "UploaderID"];
   string original_name = 5;
   string mime_type = 6;
   int64 size = 7;
-  string created_at = 8;
+  string created_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // SupportTicketMessage mirrors the renderer shape used by the
 // detail page (with eager-loaded User + Attachments).
 message SupportTicketMessage {
-  int64 id = 1;
-  int64 ticket_id = 2;
-  int64 user_id = 3;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/supportticket.SupportTicketMessage"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 ticket_id = 2 [(amesh.codegen.v1.field_rename) = "TicketID"];
+  int64 user_id = 3 [(amesh.codegen.v1.field_rename) = "UserID"];
   string content = 4;
   bool is_admin_reply = 5;
-  string created_at = 6;
-  optional SupportTicketUser user = 7;
-  repeated SupportTicketAttachment attachments = 8;
+  string created_at = 6 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  // Trimmed user view (id/email/name/avatar). Custom-mapped because the
+  // domain field is *user.User but the proto wire shape is the smaller
+  // SupportTicketUser.
+  optional SupportTicketUser user = 7 [(amesh.codegen.v1.field_custom) = "messageUserToProto"];
+  // Value-slice on the domain side, pointer-slice on the wire.
+  repeated SupportTicketAttachment attachments = 8 [(amesh.codegen.v1.field_custom) = "messageAttachmentsToProto"];
 }
 
 // ----------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useMemo } from "react";
-import type { LoopData, LoopRunData, RunStatus, CreateLoopRequest, UpdateLoopRequest } from "@/lib/api/loopTypes";
+import type { LoopData, LoopRunData, RunStatus, CreateLoopRequest, UpdateLoopRequest } from "@/lib/viewModels/loop";
 import { getLoopService } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import { reconnectRegistry } from "@/lib/realtime";
@@ -16,7 +16,7 @@ import {
   triggerLoop as triggerLoopConnect,
   listLoopRuns as listLoopRunsConnect,
   cancelLoopRun as cancelLoopRunConnect,
-} from "@/lib/api/loopConnect";
+} from "@/lib/api/facade/loopConnect";
 
 export type { LoopData, LoopRunData, RunStatus };
 

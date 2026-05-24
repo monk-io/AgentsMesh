@@ -77,7 +77,7 @@ test.describe("Block Store · API", () => {
     const { items } = await cc.blockstore.streamOps({
       orgSlug: TEST_ORG_SLUG,
       workspaceId,
-      after: 0n,
+      after: BigInt(0),
       limit: 50,
     }) as { items: unknown[] };
     expect(Array.isArray(items)).toBe(true);

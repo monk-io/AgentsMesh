@@ -60,21 +60,22 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
 
     db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
 
-    const credRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    const cred = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: credName,
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-e2e-loopui" },
-    });
-    const credId = (await credRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const credId = cred.id;
 
-    const runtimeRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const runtime = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: runtimeName,
       kind: "runtime",
       data: { CLAUDE_LOG_LEVEL: "debug" },
-    });
-    const runtimeId = (await runtimeRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const runtimeId = runtime.id;
 
     let loopSlug: string | undefined;
     try {
@@ -138,11 +139,10 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
       ) ?? undefined;
     } finally {
       if (loopSlug) {
-        const cc = await api.connect();
         await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug }).catch(() => null);
       }
-      if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
-      if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);
+      if (credId) await cc.envBundle.deleteEnvBundle({ id: credId }).catch(() => null);
+      if (runtimeId) await cc.envBundle.deleteEnvBundle({ id: runtimeId }).catch(() => null);
       db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
     }
   });
@@ -158,23 +158,23 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
 
     db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
 
-    const credRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    const cred = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: credName,
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-e2e-loopui-edit" },
-    });
-    const credId = (await credRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const credId = cred.id;
 
-    const runtimeRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const runtime = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: runtimeName,
       kind: "runtime",
       data: { CLAUDE_LOG_LEVEL: "debug" },
-    });
-    const runtimeId = (await runtimeRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const runtimeId = runtime.id;
 
-    const cc = await api.connect();
     const loopRes = await cc.loop.createLoop({
       orgSlug: TEST_ORG_SLUG,
       name: loopName,
@@ -221,8 +221,8 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
       if (loopSlug) {
         await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug }).catch(() => null);
       }
-      if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
-      if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);
+      if (credId) await cc.envBundle.deleteEnvBundle({ id: credId }).catch(() => null);
+      if (runtimeId) await cc.envBundle.deleteEnvBundle({ id: runtimeId }).catch(() => null);
       db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
     }
   });

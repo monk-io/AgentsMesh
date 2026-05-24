@@ -12,12 +12,10 @@
 // workspace to consume.
 
 mod enums;
-mod env_bundle;
 mod runner;
 mod service_error;
 
 pub use enums::*;
-pub use env_bundle::*;
 pub use runner::*;
 pub use service_error::*;
 
@@ -65,6 +63,10 @@ pub mod proto_channel_state_v1 {
 
 pub mod proto_extension_v1 {
     pub use ::extension_proto::proto::extension::v1::*;
+}
+
+pub mod proto_env_bundle_v1 {
+    pub use ::env_bundle_proto::proto::env_bundle::v1::*;
 }
 
 pub mod proto_events_v1 {

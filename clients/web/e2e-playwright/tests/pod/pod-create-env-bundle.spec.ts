@@ -71,22 +71,20 @@ test.describe("Pod create — EnvBundle binding UI", () => {
     db.cleanup(
       `DELETE FROM env_bundles WHERE name LIKE 'E2E PodUI %'`
     );
-    const credRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cred = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: credName,
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-e2e-multi" },
-    });
-    expect([200, 201]).toContain(credRes.status);
-    const credId = (await credRes.json()).bundle?.id;
-    const runtimeRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    }) as { id: bigint };
+    const credId = cred.id;
+    const runtime = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: runtimeName,
       kind: "runtime",
       data: { CLAUDE_LOG_LEVEL: "debug" },
-    });
-    expect([200, 201]).toContain(runtimeRes.status);
-    const runtimeId = (await runtimeRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const runtimeId = runtime.id;
 
     // Frontend now goes Connect-RPC (binary proto) — capture and decode.
     let capturedLayer: string | undefined;
@@ -146,8 +144,8 @@ test.describe("Pod create — EnvBundle binding UI", () => {
         `USE_ENV_BUNDLE "${runtimeName}"`,
       ]);
     } finally {
-      if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
-      if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);
+      if (credId) await cc.envBundle.deleteEnvBundle({ id: credId }).catch(() => null);
+      if (runtimeId) await cc.envBundle.deleteEnvBundle({ id: runtimeId }).catch(() => null);
       db.cleanup(`DELETE FROM env_bundles WHERE name LIKE 'E2E PodUI %'`);
     }
   });

@@ -104,6 +104,20 @@ impl ExtensionService {
         Ok(resp.encode_to_vec())
     }
 
+    pub async fn presign_skill_upload_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::PresignSkillUploadRequest::decode(request_bytes)
+            .map_err(|e| format!("decode presign_skill_upload request: {e}"))?;
+        let resp = self.client.presign_skill_upload_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
+    pub async fn install_skill_from_uploaded_file_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        let req = ext_proto::InstallSkillFromUploadedFileRequest::decode(request_bytes)
+            .map_err(|e| format!("decode install_skill_from_uploaded_file request: {e}"))?;
+        let resp = self.client.install_skill_from_uploaded_file_connect(&req).await.map_err(crate::wire)?;
+        Ok(resp.encode_to_vec())
+    }
+
     pub async fn update_skill_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
         let req = ext_proto::UpdateSkillRequest::decode(request_bytes)
             .map_err(|e| format!("decode update_skill request: {e}"))?;
@@ -153,21 +167,5 @@ impl ExtensionService {
             .map_err(|e| format!("decode uninstall_mcp_server request: {e}"))?;
         let resp = self.client.uninstall_mcp_server_connect(&req).await.map_err(crate::wire)?;
         Ok(resp.encode_to_vec())
-    }
-
-    // -------- Multipart upload (stays REST forever — Connect doesn't do multipart) --------
-
-    pub async fn install_skill_from_upload(
-        &self, repo_id: i64, file_data: Vec<u8>,
-        file_name: &str, scope: Option<String>,
-    ) -> Result<String, String> {
-        let part = reqwest::multipart::Part::bytes(file_data).file_name(file_name.to_string());
-        let mut form = reqwest::multipart::Form::new().part("file", part);
-        if let Some(s) = scope { form = form.text("scope", s); }
-        let endpoint = self.client.org_path(&format!("/repositories/{repo_id}/skills/install-from-upload"));
-        let resp = self.client
-            .post_multipart::<serde_json::Value>(&endpoint, form)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
     }
 }

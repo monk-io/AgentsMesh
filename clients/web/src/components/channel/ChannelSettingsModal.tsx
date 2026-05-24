@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { channelApi } from "@/lib/api/channel";
+import { channelApi } from "@/lib/api/facade/channel";
 import { useChannelStore } from "@/stores/channelStore";
 import { cn } from "@/lib/utils";
 

@@ -3,9 +3,9 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createSkillRegistry } from "@/lib/api/skillRegistry";
+import { createSkillRegistry } from "@/lib/api/facade/skillRegistry";
 import { useCurrentOrg } from "@/stores/auth";
-import type { SkillRegistryAuthType } from "@/lib/api/extensionTypes";
+import type { SkillRegistryAuthType } from "@/lib/viewModels/extension";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";

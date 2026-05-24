@@ -28,7 +28,7 @@ func (s *Server) ListRelays(
 	relays := s.relayMgr.GetRelays()
 	items := make([]*adminv1.AdminRelay, 0, len(relays))
 	for _, r := range relays {
-		items = append(items, toProtoRelay(r))
+		items = append(items, ToProtoAdminRelay(r))
 	}
 	return connect.NewResponse(&adminv1.ListRelaysResponse{
 		Items: items,
@@ -74,7 +74,7 @@ func (s *Server) GetRelay(
 			errors.New("relay not found"))
 	}
 	return connect.NewResponse(&adminv1.GetRelayResponse{
-		Relay: toProtoRelay(relayInfo),
+		Relay: ToProtoAdminRelay(relayInfo),
 	}), nil
 }
 

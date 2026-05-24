@@ -9,9 +9,9 @@ import {
   deleteRepositoryWebhook,
   markRepositoryWebhookConfigured,
   getRepositoryWebhookSecret,
-} from "@/lib/api/repositoryConnect";
+} from "@/lib/api/connect/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
-import type { WebhookStatus, RepositoryData } from "@/lib/api/repositoryTypes";
+import type { WebhookStatus, RepositoryData } from "@/lib/viewModels/repository";
 import { cn } from "@/lib/utils";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";

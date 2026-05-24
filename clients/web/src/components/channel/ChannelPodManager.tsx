@@ -5,7 +5,7 @@ import { Bot, Plus, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { channelApi } from "@/lib/api/channel";
+import { channelApi } from "@/lib/api/facade/channel";
 import { usePods, usePodStore } from "@/stores/pod";
 import { useChannelPods, invalidateChannelPods } from "@/hooks/useChannelPods";
 import { getPodDisplayName, getShortPodKey } from "@/lib/pod-display-name";

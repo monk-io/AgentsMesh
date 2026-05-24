@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { InstalledMcpServer } from "@/lib/api";
-import { updateMcpServer } from "@/lib/api/repoMcpExtension";
+import { updateMcpServer } from "@/lib/api/facade/repoMcpExtension";
 import { useCurrentOrg } from "@/stores/auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";

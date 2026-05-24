@@ -23,7 +23,7 @@ const {
   associateMock: vi.fn(),
 }));
 
-vi.mock("../supportTicketConnect", () => ({
+vi.mock("../connect/supportTicketConnect", () => ({
   listSupportTickets: listMock,
   getSupportTicketDetail: getDetailMock,
   getSupportTicketAttachmentUrl: getAttUrlMock,
@@ -36,7 +36,7 @@ vi.mock("../supportTicketConnect", () => ({
 import {
   listSupportTickets, getSupportTicketDetail, addSupportTicketMessage,
   createSupportTicket, getSupportTicketAttachmentUrl,
-} from "../support-ticket";
+} from "../facade/support-ticket";
 
 describe("support-ticket API (Connect-only)", () => {
   beforeEach(() => {
@@ -70,8 +70,8 @@ describe("support-ticket API (Connect-only)", () => {
   });
 
   it("listSupportTickets delegates to Connect adapter", async () => {
-    await listSupportTickets({ status: "open", page: 2, page_size: 10 });
-    expect(listMock).toHaveBeenCalledWith({ status: "open", page: 2, page_size: 10 });
+    await listSupportTickets({ status: "open", page: 2, pageSize: 10 });
+    expect(listMock).toHaveBeenCalledWith({ status: "open", page: 2, pageSize: 10 });
   });
 
   it("getSupportTicketDetail delegates to Connect adapter", async () => {

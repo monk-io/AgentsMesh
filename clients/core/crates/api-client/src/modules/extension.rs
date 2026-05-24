@@ -144,6 +144,30 @@ impl ApiClient {
         .await
     }
 
+    pub async fn presign_skill_upload_connect(
+        &self,
+        req: &ext_proto::PresignSkillUploadRequest,
+    ) -> Result<ext_proto::PresignSkillUploadResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.extension.v1.RepoSkillService/PresignSkillUpload",
+            req,
+        )
+        .await
+    }
+
+    pub async fn install_skill_from_uploaded_file_connect(
+        &self,
+        req: &ext_proto::InstallSkillFromUploadedFileRequest,
+    ) -> Result<ext_proto::InstalledSkill, ApiError> {
+        connect_call(
+            self,
+            "/proto.extension.v1.RepoSkillService/InstallSkillFromUploadedFile",
+            req,
+        )
+        .await
+    }
+
     pub async fn update_skill_connect(
         &self,
         req: &ext_proto::UpdateSkillRequest,

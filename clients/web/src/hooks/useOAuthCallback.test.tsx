@@ -33,7 +33,7 @@ const ORIGIN = resolveLightBaseUrl();
 
 function mockOrgsFetch(orgs: { id: number; slug: string; name: string }[]) {
   const spy = vi.fn(async () =>
-    new Response(JSON.stringify({ organizations: orgs }), {
+    new Response(JSON.stringify({ items: orgs }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }),

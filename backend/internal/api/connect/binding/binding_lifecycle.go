@@ -51,7 +51,7 @@ func (s *Server) RequestBinding(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoBinding(binding)), nil
+	return connect.NewResponse(ToProtoPodBinding(binding)), nil
 }
 
 func (s *Server) AcceptBinding(
@@ -80,7 +80,7 @@ func (s *Server) AcceptBinding(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoBinding(binding)), nil
+	return connect.NewResponse(ToProtoPodBinding(binding)), nil
 }
 
 func (s *Server) RejectBinding(
@@ -109,7 +109,7 @@ func (s *Server) RejectBinding(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoBinding(binding)), nil
+	return connect.NewResponse(ToProtoPodBinding(binding)), nil
 }
 
 func (s *Server) Unbind(

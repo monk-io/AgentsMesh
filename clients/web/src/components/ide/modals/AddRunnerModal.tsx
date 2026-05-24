@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useCurrentOrg } from "@/stores/auth";
-import { createRunnerToken } from "@/lib/api/runnerConnect";
+import { createRunnerToken } from "@/lib/api/facade/runnerConnect";
 import { isApiErrorCode, getLocalizedErrorMessage } from "@/lib/api/errors";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Check, Copy, Terminal, ShieldAlert } from "lucide-react";

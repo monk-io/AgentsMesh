@@ -3,7 +3,7 @@
 import React from "react";
 import { Link as LinkIcon } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 import { useBlock } from "@/stores/blockstore";
 
 import { BlockRenderer } from "../BlockRenderer";

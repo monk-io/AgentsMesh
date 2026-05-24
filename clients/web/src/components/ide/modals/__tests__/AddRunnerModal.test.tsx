@@ -15,7 +15,7 @@ vi.mock("@/stores/auth", () => ({
 }));
 
 const mockCreateToken = vi.fn();
-vi.mock("@/lib/api/runnerConnect", () => ({
+vi.mock("@/lib/api/facade/runnerConnect", () => ({
   createRunnerToken: (...args: unknown[]) => mockCreateToken(...args),
 }));
 

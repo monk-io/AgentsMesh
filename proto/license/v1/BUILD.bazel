@@ -20,6 +20,7 @@ proto_library(
     srcs = ["license.proto"],
     data = [":license_serde_transform"],
     visibility = ["//visibility:public"],
+    deps = ["//proto/codegen/v1:codegen_proto"],
 )
 
 go_proto_library(
@@ -28,6 +29,7 @@ go_proto_library(
     importpath = "github.com/anthropics/agentsmesh/proto/gen/go/license/v1",
     proto = ":license_proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/codegen/v1:codegen_go_proto"],
 )
 
 rust_prost_library(

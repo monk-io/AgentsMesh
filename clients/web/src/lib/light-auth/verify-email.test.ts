@@ -23,14 +23,14 @@ describe("lightVerifyEmail", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs token and persists fresh session on 200", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs token to AuthService/VerifyEmail and persists fresh session on 200", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           token: "verified-tok",
-          refresh_token: "verified-ref",
-          expires_in: 3600,
-          user: { id: 3, email: "v@b.c", username: "verified", is_email_verified: true },
+          refreshToken: "verified-ref",
+          expiresIn: 3600,
+          user: { id: 3, email: "v@b.c", username: "verified", isEmailVerified: true },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -41,14 +41,14 @@ describe("lightVerifyEmail", () => {
 
     expect(resp.token).toBe("verified-tok");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/auth/verify-email`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.auth.v1.AuthService/VerifyEmail`);
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(JSON.stringify({ token: "magic-link-token" }));
     expect(readBlob().access_token).toBe("verified-tok");
   });
 
   it("throws ApiError on 400 invalid token without persisting", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({ code: "INVALID_TOKEN", error: "token expired or invalid" }),
         { status: 400, headers: { "Content-Type": "application/json" } },
@@ -81,8 +81,8 @@ describe("lightResendVerification", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /resend-verification and does not write localStorage", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs to AuthService/ResendVerification and does not write localStorage", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ message: "sent" }), { status: 200 }),
     );
     globalThis.fetch = fetchSpy as typeof fetch;
@@ -90,14 +90,14 @@ describe("lightResendVerification", () => {
     await lightResendVerification("v@b.c");
 
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/auth/resend-verification`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.auth.v1.AuthService/ResendVerification`);
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(JSON.stringify({ email: "v@b.c" }));
     expect(readBlob()).toBeNull();
   });
 
   it("propagates server errors as ApiError", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "RATE_LIMITED" }), {
         status: 429,
         headers: { "Content-Type": "application/json" },

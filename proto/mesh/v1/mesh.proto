@@ -33,7 +33,16 @@ syntax = "proto3";
 
 package proto.mesh.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/mesh/v1;meshv1";
+
+// Convert codegen target — emits mesh_convert.amesh.go into the backend
+// connect handler tree so it can reach the mesh / agentpod domain layers.
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/mesh"
+  output_package: "meshconnect"
+};
 
 service MeshService {
   // Topology — aggregate view of active pods + bindings + channels + runners
@@ -235,34 +244,46 @@ message ReplayDeadLetterResponse {
 // Rust DTO and the TS store interface; aliases collapsed to the canonical
 // name (pod_key, not key).
 message MeshNode {
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/mesh.MeshNode"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
   string pod_key = 1;
   string status = 2;
   string agent_status = 3;
-  optional string model = 4;
-  optional string title = 5;
-  optional string alias = 6;
-  // Agent slug (Claude, Codex, Aider, …). Populated for renderer display;
-  // absent on the Go domain projection today, present on Rust.
-  string agent_slug = 7;
-  optional int64 ticket_id = 8;
-  optional string ticket_slug = 9;
-  optional string ticket_title = 10;
-  optional int64 repository_id = 11;
+  optional string model = 4 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string title = 5 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string alias = 6 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  // Agent slug — proto-only (the topology projection on the Go side
+  // doesn't populate it today; Rust DTO has it for renderer display).
+  string agent_slug = 7 [(amesh.codegen.v1.field_skip) = true];
+  optional int64 ticket_id = 8 [(amesh.codegen.v1.field_rename) = "TicketID"];
+  optional string ticket_slug = 9 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string ticket_title = 10 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional int64 repository_id = 11 [(amesh.codegen.v1.field_rename) = "RepositoryID"];
   // CreatedByID is non-optional on the Go domain (zero is "unknown"). Keep
   // as required scalar to match REST wire.
-  int64 created_by_id = 12;
+  int64 created_by_id = 12 [(amesh.codegen.v1.field_rename) = "CreatedByID"];
   // Runner association — set when the pod is scheduled. zero = unassigned.
-  int64 runner_id = 13;
+  int64 runner_id = 13 [(amesh.codegen.v1.field_rename) = "RunnerID"];
   // Runner display info (preloaded on the topology projection).
-  string runner_node_id = 14;
+  string runner_node_id = 14 [(amesh.codegen.v1.field_rename) = "RunnerNodeID"];
   string runner_status = 15;
-  optional string started_at = 16;
+  optional string started_at = 16 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
 }
 
 // MeshEdge — a binding edge between two pods. Mirrors
 // backend/internal/domain/mesh/mesh.go:MeshEdge.
 message MeshEdge {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/mesh.MeshEdge"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string source = 2;
   string target = 3;
   repeated string granted_scopes = 4;
@@ -273,11 +294,17 @@ message MeshEdge {
 // ChannelInfo — channel projection for topology display. Mirrors
 // backend/internal/domain/mesh/mesh.go:ChannelInfo.
 message ChannelInfo {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/mesh.ChannelInfo"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string name = 2;
-  optional string description = 3;
+  optional string description = 3 [(amesh.codegen.v1.field_convert) = "string_ptr"];
   repeated string pod_keys = 4;
-  int32 message_count = 5;
+  int32 message_count = 5 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
   bool is_archived = 6;
 }
 
@@ -285,11 +312,17 @@ message ChannelInfo {
 // backend/internal/domain/mesh/mesh.go:RunnerInfo. Includes max/current
 // pod counts used by the topology's capacity badges.
 message RunnerInfo {
-  int64 id = 1;
-  string node_id = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/mesh.RunnerInfo"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  string node_id = 2 [(amesh.codegen.v1.field_rename) = "NodeID"];
   string status = 3;
-  int32 max_concurrent_pods = 4;
-  int32 current_pods = 5;
+  int32 max_concurrent_pods = 4 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 current_pods = 5 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
 }
 
 // MeshTopology — aggregate response from GetMeshTopology.

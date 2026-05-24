@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 
 import { BlockChrome } from "../editor/BlockChrome";
 import { useBlockstoreDispatch } from "../editor/useBlockstoreDispatch";

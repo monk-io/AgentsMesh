@@ -7,15 +7,15 @@ import type {
   RunnerPodData,
   SandboxStatus,
   RelayConnectionInfo,
-} from "@/lib/api/runnerTypes";
+} from "@/lib/viewModels/runner";
 import { getRunnerService } from "@/lib/wasm-core";
 import {
   getRunner as getRunnerConnect,
   updateRunner as updateRunnerConnect,
   deleteRunner as deleteRunnerConnect,
   querySandboxes as querySandboxesConnect,
-} from "@/lib/api/runnerConnect";
-import { createPod as createPodConnect } from "@/lib/api/podConnect";
+} from "@/lib/api/connect/runnerConnect";
+import { createPod as createPodConnect } from "@/lib/api/connect/podConnect";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";

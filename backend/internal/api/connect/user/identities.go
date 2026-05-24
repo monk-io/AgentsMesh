@@ -28,7 +28,7 @@ func (s *Server) ListIdentities(
 	}
 	items := make([]*userv1.Identity, 0, len(identities))
 	for _, identity := range identities {
-		items = append(items, toProtoIdentity(identity))
+		items = append(items, ToProtoIdentity(identity))
 	}
 	total := int64(len(items))
 	return connect.NewResponse(&userv1.ListIdentitiesResponse{

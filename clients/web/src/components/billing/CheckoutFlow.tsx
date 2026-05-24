@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import type { SubscriptionPlan, BillingCycle, OrderType, CheckoutResponse, DeploymentInfo } from "@/lib/api/billing-types";
-import { createCheckoutConnect } from "@/lib/api/billingConnect";
+import type { SubscriptionPlan, BillingCycle, OrderType, CheckoutResponse, DeploymentInfo } from "@/lib/viewModels/billing";
+import { createCheckoutConnect } from "@/lib/api/facade/billingConnect";
 import { readCurrentOrg } from "@/stores/auth";
 import { useLemonSqueezy } from "@/hooks/useLemonSqueezy";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";

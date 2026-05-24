@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, Loader2 } from "lucide-react";
 import { McpMarketItem } from "@/lib/api";
-import { listMarketMcpServers } from "@/lib/api/marketExtension";
+import { listMarketMcpServers } from "@/lib/api/facade/marketExtension";
 import { useCurrentOrg } from "@/stores/auth";
 import type { TranslationFn } from "../GeneralSettings";
 

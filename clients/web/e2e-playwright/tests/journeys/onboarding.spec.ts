@@ -32,8 +32,14 @@ test.describe("Journey: New User Onboarding", () => {
     await page.locator("#email").fill(EMAIL);
     await page.locator("#username").fill("journeyuser");
     await page.locator("#password").fill(PASSWORD);
+    // confirmPassword is required and always rendered (see register page.tsx).
+    // The previous `if (await isVisible())` race condition let the spec skip
+    // the fill during slow renders → handleSubmit's password mismatch check
+    // tripped → silent setError → no redirect → 15s waitForURL timeout.
+    // Use waitFor to guarantee the field is mountable before filling.
     const confirmPwd = page.locator("#confirmPassword");
-    if (await confirmPwd.isVisible()) await confirmPwd.fill(PASSWORD);
+    await confirmPwd.waitFor({ state: "visible", timeout: 10_000 });
+    await confirmPwd.fill(PASSWORD);
     await page.locator('button[type="submit"]').click();
 
     // Should redirect away from register

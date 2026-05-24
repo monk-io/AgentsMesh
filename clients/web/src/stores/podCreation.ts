@@ -77,7 +77,7 @@ export const usePodCreationStore = create<PodCreationPreferences>()(
           s.lastCredentialName = "";
           s.lastRuntimeBundleNames = [];
         }
-        return s as PodCreationPreferences;
+        return s as unknown as PodCreationPreferences;
       },
       partialize: (state) => ({
         lastAgentSlug: state.lastAgentSlug,

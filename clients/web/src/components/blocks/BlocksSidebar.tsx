@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useBlocks, useRefs, useNestChildrenIndex, useBlockstoreStore, useWorkspace } from "@/stores/blockstore";
 import { useBlockTypeSpecs } from "@/lib/blockstore/useBlockTypeSpec";
 import { useBlockstoreDispatch } from "@/components/blocks/editor/useBlockstoreDispatch";
-import { BLOCK_TYPE_PAGE } from "@/lib/api/blockstoreTypes";
+import { BLOCK_TYPE_PAGE } from "@/lib/viewModels/blockstore";
 import { buildPageTree, countByType, colorForType, type PageNode } from "@/lib/blockstore/page-tree";
 import {
   ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem,

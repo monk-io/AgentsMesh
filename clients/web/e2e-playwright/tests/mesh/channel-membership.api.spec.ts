@@ -331,7 +331,7 @@ test.describe("Channel IM Group Model", () => {
     const counts = await adminCc.channel.getChannelUnreadCounts({ orgSlug: TEST_ORG_SLUG }) as {
       unread: Record<string, bigint>;
     };
-    const count = Number(counts.unread?.[String(channel.id)] ?? 0n);
+    const count = Number(counts.unread?.[String(channel.id)] ?? BigInt(0));
     expect(count).toBeGreaterThanOrEqual(2);
 
     await adminCc.channel.markChannelRead({
@@ -343,7 +343,7 @@ test.describe("Channel IM Group Model", () => {
     const counts2 = await adminCc.channel.getChannelUnreadCounts({ orgSlug: TEST_ORG_SLUG }) as {
       unread: Record<string, bigint>;
     };
-    const count2 = Number(counts2.unread?.[String(channel.id)] ?? 0n);
+    const count2 = Number(counts2.unread?.[String(channel.id)] ?? BigInt(0));
     expect(count2).toBeLessThan(count);
 
     await api.login();
@@ -368,7 +368,7 @@ test.describe("Channel IM Group Model", () => {
     expect(found).toBeTruthy();
     expect(found?.visibility).toBe("public");
     expect(found?.isMember).toBe(true);
-    expect(typeof Number(found?.memberCount ?? 0n)).toBe("number");
+    expect(typeof Number(found?.memberCount ?? BigInt(0))).toBe("number");
 
     await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: channel.id });
   });

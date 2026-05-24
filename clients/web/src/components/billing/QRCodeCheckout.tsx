@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { CheckoutResponse } from "@/lib/api/billing-types";
-import { getCheckoutStatusConnect } from "@/lib/api/billingConnect";
+import type { CheckoutResponse } from "@/lib/viewModels/billing";
+import { getCheckoutStatusConnect } from "@/lib/api/facade/billingConnect";
 import { readCurrentOrg } from "@/stores/auth";
 
 interface QRCodeCheckoutProps {

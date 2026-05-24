@@ -3,16 +3,20 @@
 import { useState, useCallback } from "react";
 import { useAsyncData } from "@/hooks";
 import {
-  RepositoryProviderData,
   GitCredentialData,
   RunnerLocalCredentialData,
   CredentialType,
 } from "@/lib/api";
-import { listRepositoryProviders, deleteRepositoryProvider, testRepositoryProviderConnection } from "@/lib/api/userRepositoryProvider";
-import { listGitCredentials, deleteGitCredential, setDefaultGitCredential } from "@/lib/api/userGitCredential";
+import {
+  listRepositoryProviders,
+  deleteRepositoryProvider,
+  testRepositoryProviderConnection,
+  type RepositoryProvider,
+} from "@/lib/api/facade/userRepositoryProvider";
+import { listGitCredentials, deleteGitCredential, setDefaultGitCredential } from "@/lib/api/facade/userGitCredential";
 
 export interface GitSettingsData {
-  providers: RepositoryProviderData[];
+  providers: RepositoryProvider[];
   credentials: GitCredentialData[];
   runnerLocal: RunnerLocalCredentialData | null;
   defaultCredentialId: number | null | "runner_local";

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import type { BillingOverview, SubscriptionPlan, DeploymentInfo } from "@/lib/api/billing-types";
+import type { BillingOverview, SubscriptionPlan, DeploymentInfo } from "@/lib/viewModels/billing";
 import { readCurrentOrg } from "@/stores/auth";
 import {
   getOverviewConnect,
@@ -12,7 +12,7 @@ import {
   updateSubscriptionConnect,
   upgradeSubscriptionConnect,
   reactivateSubscriptionConnect,
-} from "@/lib/api/billingConnect";
+} from "@/lib/api/facade/billingConnect";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import type { TranslationFn } from "../GeneralSettings";
 

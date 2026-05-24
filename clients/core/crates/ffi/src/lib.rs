@@ -1,6 +1,5 @@
 uniffi::setup_scaffolding!();
 
-mod api_ffi;
 mod auth_ffi;
 mod callbacks;
 mod core;

@@ -89,7 +89,7 @@ func (s *Server) GetRunner(
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("forbidden"))
 	}
 
-	resp := &runnerapiv1.GetRunnerResponse{Runner: toProtoRunner(r)}
+	resp := &runnerapiv1.GetRunnerResponse{Runner: ToProtoRunner(r)}
 	if s.podCoordinator != nil {
 		resp.RelayConnections = toProtoRelayConnections(s.podCoordinator.GetRelayConnections(runnerID))
 	}
@@ -157,7 +157,7 @@ func (s *Server) UpdateRunner(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoRunner(updated)), nil
+	return connect.NewResponse(ToProtoRunner(updated)), nil
 }
 
 func (s *Server) DeleteRunner(

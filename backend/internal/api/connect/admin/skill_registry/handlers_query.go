@@ -25,7 +25,7 @@ func (s *Server) ListSkillRegistries(
 
 	items := make([]*extensionv1.AdminSkillRegistry, 0, len(registries))
 	for _, r := range registries {
-		items = append(items, toProtoAdminSkillRegistry(r))
+		items = append(items, ToProtoAdminSkillRegistry(r))
 	}
 	return connect.NewResponse(&extensionv1.ListAdminSkillRegistriesResponse{
 		Items: items,
@@ -71,5 +71,5 @@ func (s *Server) CreateSkillRegistry(
 		triggerAsyncSync(s.worker, registry.ID)
 	}
 
-	return connect.NewResponse(toProtoAdminSkillRegistry(registry)), nil
+	return connect.NewResponse(ToProtoAdminSkillRegistry(registry)), nil
 }

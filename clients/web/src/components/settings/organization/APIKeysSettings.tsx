@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
-import { listApiKeys, createApiKey, updateApiKey, revokeApiKey } from "@/lib/api/apikey";
+import { listApiKeys, createApiKey, updateApiKey, revokeApiKey, type ApiKey } from "@/lib/api/facade/apikey";
 import { useCurrentOrg } from "@/stores/auth";
 import { APIKeyCard, CreateAPIKeyDialog, APIKeySecretDialog, EditAPIKeyDialog } from "./apikeys";
 import type { TranslationFn } from "./GeneralSettings";
@@ -13,15 +12,29 @@ interface APIKeysSettingsProps {
   t: TranslationFn;
 }
 
+interface CreateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  expiresIn?: bigint;
+}
+
+interface UpdateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  isEnabled?: boolean;
+}
+
 export function APIKeysSettings({ t }: APIKeysSettingsProps) {
   const currentOrg = useCurrentOrg();
-  const [apiKeys, setApiKeys] = useState<APIKeyData[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createdRawKey, setCreatedRawKey] = useState<string | null>(null);
-  const [editingKey, setEditingKey] = useState<APIKeyData | null>(null);
+  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
 
   const { dialogProps, confirm } = useConfirmDialog();
 
@@ -44,16 +57,11 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
     fetchKeys();
   }, [fetchKeys]);
 
-  const handleCreate = useCallback(async (data: {
-    name: string;
-    description?: string;
-    scopes: string[];
-    expires_in?: number;
-  }) => {
+  const handleCreate = useCallback(async (data: CreateInput) => {
     if (!currentOrg) return;
     try {
       const response = await createApiKey(currentOrg.slug, data);
-      setCreatedRawKey(response.raw_key);
+      setCreatedRawKey(response.rawKey);
       setShowCreateDialog(false);
       fetchKeys();
     } catch (err) {
@@ -63,7 +71,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
     }
   }, [currentOrg, fetchKeys, t]);
 
-  const handleUpdate = useCallback(async (id: number, data: UpdateAPIKeyRequest) => {
+  const handleUpdate = useCallback(async (id: bigint, data: UpdateInput) => {
     if (!currentOrg) return;
     try {
       await updateApiKey(currentOrg.slug, id, data);
@@ -76,7 +84,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
   }, [currentOrg, fetchKeys, t]);
 
   const handleRevoke = useCallback(
-    async (id: number) => {
+    async (id: bigint) => {
       if (!currentOrg) return;
       const confirmed = await confirm({
         title: t("settings.apiKeys.revokeDialog.title"),
@@ -134,7 +142,7 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
           <div className="space-y-3">
             {apiKeys.map((key) => (
               <APIKeyCard
-                key={key.id}
+                key={String(key.id)}
                 apiKey={key}
                 onEdit={setEditingKey}
                 onRevoke={handleRevoke}
@@ -147,7 +155,6 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
         <ConfirmDialog {...dialogProps} />
       </div>
 
-      {/* Create Dialog */}
       <CreateAPIKeyDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -155,7 +162,6 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
         t={t}
       />
 
-      {/* Secret Display Dialog */}
       <APIKeySecretDialog
         rawKey={createdRawKey || ""}
         open={createdRawKey !== null}
@@ -163,10 +169,9 @@ export function APIKeysSettings({ t }: APIKeysSettingsProps) {
         t={t}
       />
 
-      {/* Edit Dialog */}
       {editingKey && (
         <EditAPIKeyDialog
-          key={editingKey.id}
+          key={String(editingKey.id)}
           apiKey={editingKey}
           open={true}
           onOpenChange={(open) => { if (!open) setEditingKey(null); }}

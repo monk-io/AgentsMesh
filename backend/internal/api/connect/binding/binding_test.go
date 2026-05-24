@@ -140,7 +140,7 @@ func TestToProtoBinding_AllFieldsPopulated(t *testing.T) {
 		UpdatedAt:       updatedAt,
 	}
 
-	got := toProtoBinding(b)
+	got := ToProtoPodBinding(b)
 	require.NotNil(t, got)
 	assert.Equal(t, int64(7), got.GetId())
 	assert.Equal(t, int64(42), got.GetOrganizationId())
@@ -168,7 +168,7 @@ func TestToProtoBinding_NilOptionalsAbsent(t *testing.T) {
 		CreatedAt: mustParseTime(t, "2026-05-01T00:00:00Z"),
 		UpdatedAt: mustParseTime(t, "2026-05-01T00:00:00Z"),
 	}
-	got := toProtoBinding(b)
+	got := ToProtoPodBinding(b)
 	require.NotNil(t, got)
 	assert.Nil(t, got.RequestedAt, "absent requested_at must remain nil")
 	assert.Nil(t, got.RespondedAt, "absent responded_at must remain nil")
@@ -177,5 +177,5 @@ func TestToProtoBinding_NilOptionalsAbsent(t *testing.T) {
 }
 
 func TestToProtoBinding_NilInput_ReturnsNil(t *testing.T) {
-	assert.Nil(t, toProtoBinding(nil))
+	assert.Nil(t, ToProtoPodBinding(nil))
 }

@@ -2,8 +2,8 @@
 
 import React from "react";
 
-import type { Block, JSONMap } from "@/lib/api/blockstoreTypes";
-import { BLOCK_TYPE_COLUMN } from "@/lib/api/blockstoreTypes";
+import type { Block, JSONMap } from "@/lib/viewModels/blockstore";
+import { BLOCK_TYPE_COLUMN } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 import { useNestChildren, useRefs, useBlocks } from "@/stores/blockstore";
 

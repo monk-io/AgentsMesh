@@ -1,7 +1,6 @@
-// Unit tests for clients/web/src/lib/api/notificationConnect.ts proto →
-// snake_case converter. Pins the field-by-field translation across the
-// binary wire so the wire-drift bug class (PR 986a38ca6) is compile-time
-// impossible for notification preferences.
+// Unit tests for clients/web/src/lib/api/notificationConnect.ts proto-SSOT
+// adapter. After Phase 5 migration, wire types stay proto camelCase end-to-end
+// (no DTO conversion); these tests pin field round-trip across the binary wire.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { create, toBinary } from "@bufbuild/protobuf";
@@ -15,7 +14,7 @@ vi.mock("@/lib/wasm-core", () => ({
 }));
 
 import { getNotificationService } from "@/lib/wasm-core";
-import { listPreferencesConnect, setPreferenceConnect } from "../notificationConnect";
+import { listPreferencesConnect, setPreferenceConnect } from "../connect/notificationConnect";
 
 describe("listPreferencesConnect", () => {
   beforeEach(() => {
@@ -27,13 +26,13 @@ describe("listPreferencesConnect", () => {
     const respBytes = toBinary(ListPreferencesResponseSchema, respProto);
     vi.mocked(getNotificationService).mockReturnValue({
       listPreferencesConnect: vi.fn().mockResolvedValue(respBytes),
-    });
+    } as ReturnType<typeof getNotificationService>);
 
     const out = await listPreferencesConnect("acme");
     expect(out).toEqual([]);
   });
 
-  it("maps camelCase proto fields to snake_case web shape", async () => {
+  it("returns proto camelCase shape directly", async () => {
     const pref = create(NotificationPreferenceSchema, {
       source: "channel:message",
       entityId: "42",
@@ -47,22 +46,19 @@ describe("listPreferencesConnect", () => {
     const respBytes = toBinary(ListPreferencesResponseSchema, respProto);
     vi.mocked(getNotificationService).mockReturnValue({
       listPreferencesConnect: vi.fn().mockResolvedValue(respBytes),
-    });
+    } as ReturnType<typeof getNotificationService>);
 
     const out = await listPreferencesConnect("acme");
     expect(out).toHaveLength(1);
-    expect(out[0]).toEqual({
-      source: "channel:message",
-      entity_id: "42",
-      is_muted: true,
-      channels: { toast: true, browser: false },
-    });
+    expect(out[0].source).toBe("channel:message");
+    expect(out[0].entityId).toBe("42");
+    expect(out[0].isMuted).toBe(true);
+    expect(out[0].channels).toEqual({ toast: true, browser: false });
   });
 
-  it("treats absent entity_id as undefined (not empty string)", async () => {
-    // Source-level preference: proto3 `optional` distinguishes "absent" from
-    // "explicit empty string". The web shape uses `entity_id?: string` so
-    // absent must be undefined, never "".
+  it("treats absent entityId as empty string (proto3 optional default)", async () => {
+    // proto3 `optional` distinguishes "absent" from "explicit empty". When
+    // server doesn't set entityId, proto-es decodes to empty string default.
     const pref = create(NotificationPreferenceSchema, {
       source: "terminal:osc",
       isMuted: false,
@@ -72,10 +68,10 @@ describe("listPreferencesConnect", () => {
     const respBytes = toBinary(ListPreferencesResponseSchema, respProto);
     vi.mocked(getNotificationService).mockReturnValue({
       listPreferencesConnect: vi.fn().mockResolvedValue(respBytes),
-    });
+    } as ReturnType<typeof getNotificationService>);
 
     const out = await listPreferencesConnect("acme");
-    expect(out[0].entity_id).toBeUndefined();
+    expect(out[0].entityId ?? "").toBe("");
   });
 });
 
@@ -84,7 +80,7 @@ describe("setPreferenceConnect", () => {
     vi.clearAllMocks();
   });
 
-  it("encodes web snake_case pref to proto camelCase wire", async () => {
+  it("encodes proto camelCase init shape to wire", async () => {
     const captured: Uint8Array[] = [];
     const respProto = create(NotificationPreferenceSchema, {
       source: "channel:mention",
@@ -98,22 +94,20 @@ describe("setPreferenceConnect", () => {
         captured.push(b);
         return respBytes;
       }),
-    });
+    } as ReturnType<typeof getNotificationService>);
 
-    const out = await setPreferenceConnect("acme", {
+    const out = await setPreferenceConnect({
       source: "channel:mention",
-      entity_id: "42",
-      is_muted: true,
+      entityId: "42",
+      isMuted: true,
       channels: { toast: false, email: true },
     });
 
     expect(captured).toHaveLength(1);
-    expect(out).toEqual({
-      source: "channel:mention",
-      entity_id: "42",
-      is_muted: true,
-      channels: { toast: false, email: true },
-    });
+    expect(out.source).toBe("channel:mention");
+    expect(out.entityId).toBe("42");
+    expect(out.isMuted).toBe(true);
+    expect(out.channels).toEqual({ toast: false, email: true });
   });
 
   it("sends empty channels map when none provided (server fills defaults)", async () => {
@@ -125,14 +119,14 @@ describe("setPreferenceConnect", () => {
     const respBytes = toBinary(NotificationPreferenceSchema, respProto);
     vi.mocked(getNotificationService).mockReturnValue({
       setPreferenceConnect: vi.fn().mockResolvedValue(respBytes),
-    });
+    } as ReturnType<typeof getNotificationService>);
 
-    const out = await setPreferenceConnect("acme", {
+    const out = await setPreferenceConnect({
       source: "channel:message",
-      is_muted: false,
+      isMuted: false,
       channels: {},
     });
     expect(out.channels).toEqual({ toast: true, browser: true });
-    expect(out.entity_id).toBeUndefined();
+    expect(out.entityId ?? "").toBe("");
   });
 });

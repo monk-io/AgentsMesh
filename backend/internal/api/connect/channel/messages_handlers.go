@@ -44,7 +44,7 @@ func (s *Server) ListChannelMessages(
 	}
 	items := make([]*channelv1.ChannelMessage, 0, len(messages))
 	for _, m := range messages {
-		items = append(items, toProtoMessage(m))
+		items = append(items, ToProtoChannelMessage(m))
 	}
 	return connect.NewResponse(&channelv1.ListChannelMessagesResponse{
 		Items:   items,
@@ -77,7 +77,7 @@ func (s *Server) SearchChannelMessages(
 	}
 	items := make([]*channelv1.ChannelMessage, 0, len(messages))
 	for _, m := range messages {
-		items = append(items, toProtoMessage(m))
+		items = append(items, ToProtoChannelMessage(m))
 	}
 	return connect.NewResponse(&channelv1.SearchChannelMessagesResponse{
 		Items:  items,
@@ -119,7 +119,7 @@ func (s *Server) SendChannelMessage(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoMessage(msg)), nil
+	return connect.NewResponse(ToProtoChannelMessage(msg)), nil
 }
 
 func (s *Server) EditChannelMessage(
@@ -142,7 +142,7 @@ func (s *Server) EditChannelMessage(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoMessage(msg)), nil
+	return connect.NewResponse(ToProtoChannelMessage(msg)), nil
 }
 
 func (s *Server) DeleteChannelMessage(

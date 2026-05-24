@@ -65,7 +65,8 @@ func (s *Server) UpdateSettings(
 }
 
 // ListProviders — REST analogue: GET /api/v1/users/me/agentpod/providers.
-// Encrypted credentials scrubbed in toProtoProvider (never leave the server).
+// Encrypted credentials never leave the server — the domain field has no
+// proto counterpart, so codegen omits it automatically.
 func (s *Server) ListProviders(
 	ctx context.Context, _ *connect.Request[podv1.ListProvidersRequest],
 ) (*connect.Response[podv1.ListProvidersResponse], error) {
@@ -79,7 +80,7 @@ func (s *Server) ListProviders(
 	}
 	items := make([]*podv1.AIProvider, 0, len(providers))
 	for _, p := range providers {
-		items = append(items, toProtoProvider(p))
+		items = append(items, ToProtoAIProvider(p))
 	}
 	return connect.NewResponse(&podv1.ListProvidersResponse{
 		Items: items,
@@ -108,7 +109,7 @@ func (s *Server) CreateProvider(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(toProtoProvider(provider)), nil
+	return connect.NewResponse(ToProtoAIProvider(provider)), nil
 }
 
 // UpdateProvider — REST analogue: PUT /api/v1/users/me/agentpod/providers/:id.
@@ -140,7 +141,7 @@ func (s *Server) UpdateProvider(
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(toProtoProvider(provider)), nil
+	return connect.NewResponse(ToProtoAIProvider(provider)), nil
 }
 
 // DeleteProvider — REST analogue: DELETE /api/v1/users/me/agentpod/providers/:id.

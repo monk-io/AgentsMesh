@@ -25,7 +25,7 @@ import {
   fromProtoWebhookSecret,
   fromProtoWebhookResult,
   fromProtoMergeRequest,
-} from "../repositoryConnectShapes";
+} from "../shapes/repositoryConnectShapes";
 
 describe("fromProtoRepository", () => {
   it("converts the full 19-field Repository proto to RepositoryData", () => {

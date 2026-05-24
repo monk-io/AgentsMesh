@@ -42,7 +42,7 @@ func (s *Server) ListUsers(
 
 	items := make([]*adminv1.AdminUser, 0, len(result.Data))
 	for i := range result.Data {
-		items = append(items, toProtoAdminUser(&result.Data[i]))
+		items = append(items, ToProtoAdminUser(&result.Data[i]))
 	}
 	return connect.NewResponse(&adminv1.ListUsersResponse{
 		Items:      items,
@@ -71,7 +71,7 @@ func (s *Server) GetUser(
 		admin.AuditActionUserView, admin.TargetTypeUser, userID,
 		nil, nil, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }
 
 func (s *Server) UpdateUser(
@@ -115,5 +115,5 @@ func (s *Server) UpdateUser(
 		admin.AuditActionUserUpdate, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }

@@ -5,7 +5,28 @@ import { pollUntil } from "./retry";
 import { CreatePodModal } from "../pages/modals/create-pod.modal";
 import type { ApiFixture } from "../fixtures/api.fixture";
 
-const RUNNER_CONTAINER = `${getComposeProject()}-runner-1`;
+// Dev compose has TWO runner services (runner-1 + runner-2 — see
+// deploy/dev/docker-compose.yml). The pod scheduler picks one via
+// least-loaded affinity, so we can't hard-code which container holds the
+// dump file. Discover candidates at runtime via `docker ps`; reads happen
+// against all of them and the first non-empty wins.
+//
+// docker-compose name suffix differs per service: `runner-1` has the
+// short form, `runner-2` has `runner-2-1` (compose appends an instance
+// index when the service name itself contains a digit). Filter by prefix
+// and trust docker to list them all.
+function listRunnerContainers(): string[] {
+  const prefix = `${getComposeProject()}-runner`;
+  try {
+    const out = execSync(
+      `docker ps --filter "name=${prefix}" --format "{{.Names}}"`,
+      { encoding: "utf-8" },
+    ).trim();
+    return out.length ? out.split("\n") : [];
+  } catch {
+    return [];
+  }
+}
 // PodService.CreatePod is org-scoped, lives on the Connect-RPC wire after R5.
 const CREATE_POD_RPC = "/proto.pod.v1.PodService/CreatePod";
 
@@ -93,13 +114,18 @@ export async function createPodAndWaitRunning(args: {
   // via the typed Connect client. The previous pod was terminated by the
   // spec's `terminateAllPods` so the first running pod we see is ours.
   const cc = await api.connect();
-  const createdPodKey = await pollUntil(
+  let createdPodKey: string | undefined;
+  await pollUntil(
     async () => {
       const { items } = (await cc.pod.listPods({
         orgSlug: TEST_ORG_SLUG,
       })) as { items: Array<{ podKey?: string; status?: string }> };
       const fresh = items?.find((p) => p.status === "running" && p.podKey);
-      return fresh?.podKey;
+      if (fresh?.podKey) {
+        createdPodKey = fresh.podKey;
+        return true;
+      }
+      return false;
     },
     {
       maxAttempts: Math.ceil(statusTimeoutMs / 1000),
@@ -108,16 +134,16 @@ export async function createPodAndWaitRunning(args: {
     },
   );
 
+  if (!createdPodKey) {
+    throw new Error("pollUntil resolved without capturing a pod key");
+  }
   return createdPodKey;
 }
 
 /**
  * Read the env dump file that the e2e-echo agent writes on startup
- * (`/tmp/e2e-echo-env-dump-<pid>`). Polls until any matching file is
- * non-empty or the timeout fires; returns the concatenated content.
- *
- * Attempts immediately on entry so the typical case (file already there)
- * doesn't pay the 500ms backoff at all.
+ * (`/tmp/e2e-echo-env-dump-<pid>`). Polls every runner container until
+ * one returns non-empty content or the timeout fires.
  *
  * 60s timeout (was 30s): the full chain is runner.gRPC stream →
  * create_pod RPC → PTY spawn → bash → `echo ready; env > /tmp/dump`,
@@ -129,33 +155,43 @@ export async function createPodAndWaitRunning(args: {
 export async function readEnvDumpFromRunner(timeoutMs = 60_000): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   let lastErr: string | undefined;
+  const containers = listRunnerContainers();
+  if (containers.length === 0) {
+    throw new Error(
+      `no runner containers found matching ${getComposeProject()}-runner — is the dev environment up?`,
+    );
+  }
   while (true) {
-    try {
-      const out = execSync(
-        `docker exec ${RUNNER_CONTAINER} sh -c 'cat /tmp/e2e-echo-env-dump-* 2>/dev/null || true'`,
-        { encoding: "utf-8" },
-      ).trim();
-      if (out.length > 0) return out;
-    } catch (err) {
-      lastErr = (err as Error).message;
+    for (const container of containers) {
+      try {
+        const out = execSync(
+          `docker exec ${container} sh -c 'cat /tmp/e2e-echo-env-dump-* 2>/dev/null || true'`,
+          { encoding: "utf-8" },
+        ).trim();
+        if (out.length > 0) return out;
+      } catch (err) {
+        lastErr = (err as Error).message;
+      }
     }
     if (Date.now() >= deadline) break;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(
-    `env dump file did not appear in ${RUNNER_CONTAINER} within ${timeoutMs}ms` +
+    `env dump file did not appear in any of [${containers.join(", ")}] within ${timeoutMs}ms` +
       (lastErr ? ` (last error: ${lastErr})` : ""),
   );
 }
 
-/** Wipe any stale dump files from prior runs. */
+/** Wipe any stale dump files from prior runs across every runner container. */
 export function clearRunnerDumps(): void {
-  try {
-    execSync(
-      `docker exec ${RUNNER_CONTAINER} sh -c 'rm -f /tmp/e2e-echo-env-dump-* 2>/dev/null || true'`,
-      { encoding: "utf-8" },
-    );
-  } catch {
-    // Container may not be up yet — best effort.
+  for (const container of listRunnerContainers()) {
+    try {
+      execSync(
+        `docker exec ${container} sh -c 'rm -f /tmp/e2e-echo-env-dump-* 2>/dev/null || true'`,
+        { encoding: "utf-8" },
+      );
+    } catch {
+      // Container may not be up yet — best effort.
+    }
   }
 }

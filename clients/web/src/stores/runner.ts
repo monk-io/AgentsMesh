@@ -12,7 +12,7 @@ import {
   updateRunner as updateRunnerConnect,
   deleteRunner as deleteRunnerConnect,
   createRunnerToken as createRunnerTokenConnect,
-} from "@/lib/api/runnerConnect";
+} from "@/lib/api/facade/runnerConnect";
 
 export type RunnerStatus = "online" | "offline" | "maintenance" | "busy";
 export type Runner = RunnerData;

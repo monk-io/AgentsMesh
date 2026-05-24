@@ -1,14 +1,23 @@
 load("@rules_go//go:def.bzl", "go_library")
+load("//build_defs/protoconv:defs.bzl", "amesh_proto_convert")
+
+amesh_proto_convert(
+    name = "billing_admin_convert_amesh",
+    output = "billing_admin_convert.amesh.go",
+    proto = "//proto/billing/v1:billing_proto",
+    proto_file = "billing_admin.proto",
+)
 
 go_library(
     name = "subscription",
     srcs = [
         "audit.go",
-        "convert.go",
+        "billing_admin_convert_custom.go",
         "handlers_mutations.go",
         "handlers_query.go",
         "handlers_status.go",
         "server.go",
+        ":billing_admin_convert_amesh",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/admin/subscription",
     visibility = ["//backend:__subpackages__"],
@@ -19,6 +28,7 @@ go_library(
         "//backend/internal/infra/database",
         "//backend/internal/service/admin",
         "//backend/internal/service/billing",
+        "//backend/pkg/protoconv",
         "//proto/billing/v1:billing_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

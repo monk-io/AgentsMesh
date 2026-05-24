@@ -1,26 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import * as repositoryConnect from "@/lib/api/repositoryConnect";
 import {
   mockCreatedRepository,
   setupProviderMocks,
   mockRepositoryCreate,
   createRepositoryResponse,
+  stableRepoSvc,
 } from "./ImportRepositoryModal.utils";
 
 const stable = vi.hoisted(() => ({
   org: { id: 1, name: "TestOrg", slug: "test-org" },
   user: { id: 1, email: "u@e.com", username: "u" },
-}));
-
-vi.mock("@/lib/api/repositoryConnect", () => ({
-  createRepository: vi.fn(),
-  fromProtoRepository: vi.fn(),
-}));
-
-vi.mock("@/lib/api/userRepositoryProvider", () => ({
-  listRepositoryProviders: vi.fn(),
-  listProviderRepositories: vi.fn(),
 }));
 
 vi.mock("@/stores/auth", () => ({
@@ -43,7 +33,7 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupProviderMocks();
-    vi.mocked(repositoryConnect.createRepository).mockResolvedValue(mockCreatedRepository);
+    mockRepositoryCreate();
   });
 
   it("should complete manual import flow successfully", async () => {
@@ -87,8 +77,9 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(vi.mocked(repositoryConnect.createRepository)).toHaveBeenCalledWith(
-        "test-org",
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
         expect.objectContaining({ provider_type: "github" }),
       );
       expect(mockOnImported).toHaveBeenCalled();
@@ -130,8 +121,9 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(vi.mocked(repositoryConnect.createRepository)).toHaveBeenCalledWith(
-        "test-org",
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
         expect.objectContaining({ visibility: "private" }),
       );
     });

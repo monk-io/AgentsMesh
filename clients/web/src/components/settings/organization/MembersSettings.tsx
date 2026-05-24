@@ -7,16 +7,17 @@ import { useConfirmDialog, ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { ApiError } from "@/lib/api/api-types";
 import { isApiErrorCode } from "@/lib/api/errors";
-import type { Invitation } from "@/lib/api/invitationTypes";
+import type { Invitation } from "@/lib/api/facade/invitationConnect";
 import {
   createInvitation,
   listInvitations,
   resendInvitation,
   revokeInvitation,
-} from "@/lib/api/invitationConnect";
-import { listMembers, removeMember, updateMemberRole } from "@/lib/api/org";
+} from "@/lib/api/facade/invitationConnect";
+import { listMembers, removeMember, updateMemberRole } from "@/lib/api/facade/org";
+import type { OrganizationMember } from "@/lib/api/facade/org";
 import type { TranslationFn } from "./GeneralSettings";
-import { MembersList, type Member } from "./MembersList";
+import { MembersList } from "./MembersList";
 import { PendingInvitations } from "./PendingInvitations";
 import { InviteDialog } from "./InviteDialog";
 
@@ -28,7 +29,7 @@ export function MembersSettings({ t }: MembersSettingsProps) {
   const router = useRouter();
   const currentOrg = useCurrentOrg();
   const user = useCurrentUser();
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");

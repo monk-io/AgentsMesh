@@ -55,7 +55,7 @@ func (s *Server) ListChannels(
 	}
 	items := make([]*channelv1.Channel, 0, len(channels))
 	for _, c := range channels {
-		items = append(items, toProtoChannel(c))
+		items = append(items, ToProtoChannel(c))
 	}
 	return connect.NewResponse(&channelv1.ListChannelsResponse{
 		Items:  items,
@@ -80,9 +80,9 @@ func (s *Server) GetChannel(
 	enriched, err := s.channelSvc.GetChannelForUser(ctx, ch.ID, tenant.UserID)
 	if err != nil {
 		// requireChannelAccess already validated existence; fall back to ch.
-		return connect.NewResponse(toProtoChannel(ch)), nil
+		return connect.NewResponse(ToProtoChannel(ch)), nil
 	}
-	return connect.NewResponse(toProtoChannel(enriched)), nil
+	return connect.NewResponse(ToProtoChannel(enriched)), nil
 }
 
 func (s *Server) CreateChannel(
@@ -120,9 +120,9 @@ func (s *Server) CreateChannel(
 	}
 	enriched, err := s.channelSvc.GetChannelForUser(ctx, ch.ID, tenant.UserID)
 	if err != nil {
-		return connect.NewResponse(toProtoChannel(ch)), nil
+		return connect.NewResponse(ToProtoChannel(ch)), nil
 	}
-	return connect.NewResponse(toProtoChannel(enriched)), nil
+	return connect.NewResponse(ToProtoChannel(enriched)), nil
 }
 
 func (s *Server) UpdateChannel(
@@ -149,9 +149,9 @@ func (s *Server) UpdateChannel(
 	tenant := middleware.GetTenant(ctx)
 	enriched, err := s.channelSvc.GetChannelForUser(ctx, updated.ID, tenant.UserID)
 	if err != nil {
-		return connect.NewResponse(toProtoChannel(updated)), nil
+		return connect.NewResponse(ToProtoChannel(updated)), nil
 	}
-	return connect.NewResponse(toProtoChannel(enriched)), nil
+	return connect.NewResponse(ToProtoChannel(enriched)), nil
 }
 
 func (s *Server) ArchiveChannel(

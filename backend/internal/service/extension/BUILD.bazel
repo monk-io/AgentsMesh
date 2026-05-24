@@ -30,6 +30,7 @@ go_library(
         "//backend/internal/domain/extension",
         "//backend/internal/infra/storage",
         "//backend/pkg/crypto",
+        "@com_github_google_uuid//:uuid",
         "@io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp//:otelhttp",
     ],
 )

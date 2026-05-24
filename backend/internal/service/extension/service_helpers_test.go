@@ -303,6 +303,7 @@ type svcMockStorage struct {
 	deleteFn func(ctx context.Context, key string) error
 	getURLFn func(ctx context.Context, key string, expiry time.Duration) (string, error)
 	existsFn func(ctx context.Context, key string) (bool, error)
+	downloadFn func(ctx context.Context, key string) (io.ReadCloser, int64, error)
 }
 
 func (m *svcMockStorage) Upload(ctx context.Context, key string, reader io.Reader, size int64, contentType string) (*storage.FileInfo, error) {
@@ -310,6 +311,13 @@ func (m *svcMockStorage) Upload(ctx context.Context, key string, reader io.Reade
 		return m.uploadFn(ctx, key, reader, size, contentType)
 	}
 	return &storage.FileInfo{Key: key}, nil
+}
+
+func (m *svcMockStorage) Download(ctx context.Context, key string) (io.ReadCloser, int64, error) {
+	if m.downloadFn != nil {
+		return m.downloadFn(ctx, key)
+	}
+	return io.NopCloser(bytes.NewReader(nil)), 0, nil
 }
 
 func (m *svcMockStorage) Delete(ctx context.Context, key string) error {

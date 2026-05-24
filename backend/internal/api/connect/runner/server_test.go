@@ -136,7 +136,7 @@ func TestToProtoRunner_AllFieldsPopulated(t *testing.T) {
 		UpdatedAt:          updatedAt,
 	}
 
-	got := toProtoRunner(r)
+	got := ToProtoRunner(r)
 	require.NotNil(t, got)
 	assert.Equal(t, int64(7), got.GetId())
 	assert.Equal(t, int64(99), got.GetOrganizationId())
@@ -163,7 +163,7 @@ func TestToProtoRunner_AllFieldsPopulated(t *testing.T) {
 }
 
 func TestToProtoRunner_NilInput_ReturnsNil(t *testing.T) {
-	assert.Nil(t, toProtoRunner(nil))
+	assert.Nil(t, ToProtoRunner(nil))
 }
 
 func TestToProtoRunner_MinimalFields_OmitsAbsentOptionals(t *testing.T) {
@@ -176,7 +176,7 @@ func TestToProtoRunner_MinimalFields_OmitsAbsentOptionals(t *testing.T) {
 		CreatedAt:         mustParseTime(t, "2026-05-01T00:00:00Z"),
 		UpdatedAt:         mustParseTime(t, "2026-05-01T00:00:00Z"),
 	}
-	got := toProtoRunner(r)
+	got := ToProtoRunner(r)
 	require.NotNil(t, got)
 	assert.Nil(t, got.LastHeartbeat, "absent heartbeat must remain nil")
 	assert.Nil(t, got.RunnerVersion, "absent runner_version must remain nil")

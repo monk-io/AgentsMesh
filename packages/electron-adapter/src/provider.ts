@@ -33,38 +33,14 @@ import {
 } from './state_adapters';
 
 /**
- * Mirrors `WasmApiClient` shape for legacy callers that still go through
- * `lib/api/base.request`. Every raw HTTP method delegates to node-bridge IPC
- * handlers (`api_get` / `api_post` / ...), which call the shared Rust
- * `ApiClient` with auth token + org slug already bound on the native side.
- *
- * Plan I6 SSOT: orgSlug is read from the AuthManager (single source of
- * truth) instead of being mirrored via `set_org_slug()`. ElectronAuthService
- * caches the current org locally so `org_path()` stays synchronous.
+ * Mirrors the subset of `WasmApiClient` that the renderer still depends on —
+ * which after R6/R7 is just `create_events_manager()` for the realtime
+ * subscription manager. All historical raw HTTP methods (get/post/put/...)
+ * have been removed; everything goes through typed Connect services now.
  */
 class ElectronApiClientProxy {
-  constructor(private readonly auth: ElectronAuthService) {}
-
-  /** Must match Rust `ApiClient::org_path`. */
-  org_path(path: string): string {
-    const slug = this.auth.get_current_org_slug();
-    return slug ? `/api/v1/orgs/${slug}${path}` : `/api/v1${path}`;
-  }
-
-  async get(endpoint: string): Promise<string> {
-    return invoke<string>("apiGet", endpoint);
-  }
-  async post(endpoint: string, body: string): Promise<string> {
-    return invoke<string>("apiPost", endpoint, body ?? "");
-  }
-  async put(endpoint: string, body: string): Promise<string> {
-    return invoke<string>("apiPut", endpoint, body ?? "");
-  }
-  async patch(endpoint: string, body: string): Promise<string> {
-    return invoke<string>("apiPatch", endpoint, body ?? "");
-  }
-  async delete(endpoint: string): Promise<string> {
-    return invoke<string>("apiDelete", endpoint);
+  constructor(private readonly _auth: ElectronAuthService) {
+    void this._auth;
   }
 
   /**
@@ -156,7 +132,7 @@ export function createElectronServiceProvider(baseUrl = '') {
       "proto.user_credential.v1.UserRepositoryProviderService",
       USER_CREDENTIAL_METHOD_OVERRIDES,
     ),
-    envBundleService: new ElectronEnvBundleService(),
+    envBundleService: withConnectFallback(new ElectronEnvBundleService(), "proto.env_bundle.v1.EnvBundleService"),
     agentService: withConnectFallback(new ElectronAgentService(), "proto.agent.v1.AgentService"),
     ssoService: withConnectFallback(new ElectronSSOService(), "proto.sso.v1.SSOService"),
     fileService: withConnectFallback(new ElectronFileService(), "proto.file.v1.FileService"),

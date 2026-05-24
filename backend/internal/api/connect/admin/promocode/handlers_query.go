@@ -45,7 +45,7 @@ func (s *Server) ListPromoCodes(
 
 	items := make([]*promocodev1.PromoCode, 0, len(result.Data))
 	for _, p := range result.Data {
-		items = append(items, toProtoPromoCode(p))
+		items = append(items, ToProtoPromoCode(p))
 	}
 	return connect.NewResponse(&promocodev1.ListPromoCodesResponse{
 		Data:       items,
@@ -68,7 +68,7 @@ func (s *Server) GetPromoCode(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoPromoCode(code)), nil
+	return connect.NewResponse(ToProtoPromoCode(code)), nil
 }
 
 func (s *Server) ListPromoCodeRedemptions(

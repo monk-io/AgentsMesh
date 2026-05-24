@@ -4,7 +4,7 @@
 
 import { lightConnect } from "./api-fetch";
 import { updateLightSessionOrgSlug } from "@/lib/light-session";
-import type { InvitationInfo } from "@/lib/api/invitationTypes";
+import type { InvitationInfo } from "@/lib/api/connect/invitationConnect";
 
 interface ConnectInvitationInfo {
   id: number | string;
@@ -24,15 +24,16 @@ interface GetByTokenResponse {
 
 function toInfo(i: ConnectInvitationInfo): InvitationInfo {
   return {
-    id: Number(i.id),
+    $typeName: "proto.invitation.v1.InvitationInfo",
+    id: BigInt(i.id),
     email: i.email,
     role: i.role,
-    organization_id: Number(i.organizationId),
-    organization_name: i.organizationName,
-    organization_slug: i.organizationSlug,
-    inviter_name: i.inviterName,
-    expires_at: i.expiresAt,
-    is_expired: i.isExpired,
+    organizationId: BigInt(i.organizationId),
+    organizationName: i.organizationName,
+    organizationSlug: i.organizationSlug,
+    inviterName: i.inviterName,
+    expiresAt: i.expiresAt,
+    isExpired: i.isExpired,
   };
 }
 

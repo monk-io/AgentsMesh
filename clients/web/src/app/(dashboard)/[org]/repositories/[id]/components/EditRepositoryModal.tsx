@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
-import { updateRepository } from "@/lib/api/repositoryConnect";
+import type { RepositoryData } from "@/lib/viewModels/repository";
+import { updateRepository } from "@/lib/api/connect/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 

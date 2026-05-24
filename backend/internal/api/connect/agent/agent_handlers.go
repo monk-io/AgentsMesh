@@ -39,7 +39,7 @@ func (s *Server) ListAgents(
 
 	builtinProto := make([]*agentv1.Agent, 0, len(builtin))
 	for _, b := range builtin {
-		builtinProto = append(builtinProto, toProtoBuiltinAgent(b))
+		builtinProto = append(builtinProto, ToProtoAgent(b))
 	}
 	customProto := make([]*agentv1.Agent, 0, len(custom))
 	for _, c := range custom {
@@ -72,7 +72,7 @@ func (s *Server) GetAgent(
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(toProtoBuiltinAgent(agentDef)), nil
+	return connect.NewResponse(ToProtoAgent(agentDef)), nil
 }
 
 // GetAgentConfigSchema mirrors REST `GetAgentConfigSchema` (agents_types.go:47).

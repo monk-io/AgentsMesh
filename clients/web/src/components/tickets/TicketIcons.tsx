@@ -12,7 +12,7 @@ import {
   ChevronUp,
   AlertTriangle,
 } from "lucide-react";
-import type { TicketStatus, TicketPriority } from "@/lib/api/ticketTypes";
+import type { TicketStatus, TicketPriority } from "@/lib/viewModels/ticket";
 import { cn } from "@/lib/utils";
 
 type IconSize = "xs" | "sm" | "md" | "lg";

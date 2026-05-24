@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import type { RepositoryData, WebhookStatus, WebhookSecretResponse, WebhookResult } from "@/lib/api";
 
-vi.mock("@/lib/api/repositoryConnect", () => ({
+vi.mock("@/lib/api/facade/repositoryConnect", () => ({
   getRepositoryWebhookStatus: vi.fn(),
   getRepositoryWebhookSecret: vi.fn(),
   registerRepositoryWebhook: vi.fn(),
@@ -20,7 +20,7 @@ import {
   registerRepositoryWebhook,
   deleteRepositoryWebhook,
   markRepositoryWebhookConfigured,
-} from "@/lib/api/repositoryConnect";
+} from "@/lib/api/facade/repositoryConnect";
 
 // Each helper is the vi.fn() bound to the connect adapter symbol the
 // component-under-test imports. Tests can .mockResolvedValue(WebhookStatus)

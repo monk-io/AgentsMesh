@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import type { JSONMap } from "@/lib/api/blockstoreTypes";
+import type { JSONMap } from "@/lib/viewModels/blockstore";
 import {
   addRefOp,
   createBlockOp,

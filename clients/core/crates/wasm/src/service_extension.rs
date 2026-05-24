@@ -82,6 +82,16 @@ impl WasmExtensionService {
         self.0.install_skill_from_github_connect(request).await
     }
 
+    #[wasm_bindgen(js_name = presignSkillUploadConnect)]
+    pub async fn presign_skill_upload_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.presign_skill_upload_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = installSkillFromUploadedFileConnect)]
+    pub async fn install_skill_from_uploaded_file_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.install_skill_from_uploaded_file_connect(request).await
+    }
+
     #[wasm_bindgen(js_name = updateSkillConnect)]
     pub async fn update_skill_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
         self.0.update_skill_connect(request).await
@@ -117,15 +127,5 @@ impl WasmExtensionService {
     #[wasm_bindgen(js_name = uninstallMcpServerConnect)]
     pub async fn uninstall_mcp_server_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
         self.0.uninstall_mcp_server_connect(request).await
-    }
-
-    // -------- Multipart upload (stays REST forever — Connect doesn't do multipart) --------
-
-    pub async fn install_skill_from_upload(
-        &self, repo_id: i64, file_data: js_sys::Uint8Array,
-        file_name: &str, scope: Option<String>,
-    ) -> Result<String, String> {
-        let bytes = file_data.to_vec();
-        self.0.install_skill_from_upload(repo_id, bytes, file_name, scope).await
     }
 }

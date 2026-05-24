@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { BillingCycle } from "@/lib/api/billing-types";
-import { changeBillingCycleConnect } from "@/lib/api/billingConnect";
+import type { BillingCycle } from "@/lib/viewModels/billing";
+import { changeBillingCycleConnect } from "@/lib/api/facade/billingConnect";
 import { readCurrentOrg } from "@/stores/auth";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 

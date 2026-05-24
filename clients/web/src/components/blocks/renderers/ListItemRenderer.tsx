@@ -2,11 +2,11 @@
 
 import React from "react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 import {
   BLOCK_TYPE_BULLETED_LIST_ITEM,
   BLOCK_TYPE_NUMBERED_LIST_ITEM,
-} from "@/lib/api/blockstoreTypes";
+} from "@/lib/viewModels/blockstore";
 
 import { NestChildren } from "../BlockRenderer";
 import { BlockChrome } from "../editor/BlockChrome";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import * as ticketConnect from "@/lib/api/ticketConnect";
+import * as ticketConnect from "@/lib/api/facade/ticketConnect";
 
 // Mock useBreakpoint
 const mockUseBreakpoint = vi.fn();
@@ -13,7 +13,7 @@ vi.mock("@/lib/wasm-getters", async () => {
   return { ...wasmCore };
 });
 
-vi.mock("@/lib/api/ticketConnect", () => ({
+vi.mock("@/lib/api/facade/ticketConnect", () => ({
   createTicket: vi.fn(),
 }));
 

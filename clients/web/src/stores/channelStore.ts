@@ -15,7 +15,7 @@ import {
   leaveChannel as leaveChannelConnect,
   inviteChannelMembers,
   listChannelMembers,
-} from "@/lib/api/channelConnect";
+} from "@/lib/api/facade/channelConnect";
 import type { Channel } from "./channelTypes";
 import { readChannel } from "./channelSelectors";
 

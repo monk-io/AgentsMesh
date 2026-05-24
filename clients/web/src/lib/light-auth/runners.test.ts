@@ -31,13 +31,13 @@ describe("lightGetRunnerAuthStatus", () => {
     window.localStorage.clear();
   });
 
-  it("encodes key as query param and returns the status payload", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs authKey body to RunnerPublicService/GetRunnerAuthStatus and returns the status payload", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           status: "authorized",
-          node_id: "node-1",
-          expires_at: "2026-12-31T00:00:00Z",
+          nodeId: "node-1",
+          expiresAt: "2026-12-31T00:00:00Z",
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
@@ -50,9 +50,12 @@ describe("lightGetRunnerAuthStatus", () => {
     expect(status.node_id).toBe("node-1");
     const [url, init] = fetchSpy.mock.calls[0];
     expect(String(url)).toBe(
-      `${ORIGIN}/api/v1/runners/grpc/auth-status?key=abc%2Bkey%2Fwith+space`,
+      `${ORIGIN}/proto.runner_api.v1.RunnerPublicService/GetRunnerAuthStatus`,
     );
-    expect((init as RequestInit).method ?? "GET").toBe("GET");
+    expect((init as RequestInit).method).toBe("POST");
+    expect((init as RequestInit).body).toBe(
+      JSON.stringify({ authKey: "abc+key/with space" }),
+    );
   });
 });
 
@@ -70,10 +73,10 @@ describe("lightAuthorizeRunner", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /api/v1/orgs/:slug/runners/grpc/authorize with auth_key + node_id", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs to RunnerService/AuthorizeRunner with orgSlug + authKey + nodeId (camelCase)", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({ runner_id: 42, node_id: "node-42", message: "ok" }),
+        JSON.stringify({ runnerId: 42, nodeId: "node-42", message: "ok" }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
@@ -88,19 +91,19 @@ describe("lightAuthorizeRunner", () => {
     expect(resp.runner_id).toBe(42);
     const [url, init] = fetchSpy.mock.calls[0];
     expect(String(url)).toBe(
-      `${ORIGIN}/api/v1/orgs/dev-org/runners/grpc/authorize`,
+      `${ORIGIN}/proto.runner_api.v1.RunnerService/AuthorizeRunner`,
     );
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(
-      JSON.stringify({ auth_key: "key-1", node_id: "node-42" }),
+      JSON.stringify({ orgSlug: "dev-org", authKey: "key-1", nodeId: "node-42" }),
     );
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer tok");
   });
 
-  it("encodes org slug containing special chars", async () => {
-    const fetchSpy = vi.fn(async () =>
-      new Response(JSON.stringify({ runner_id: 1 }), { status: 200 }),
+  it("sends org slug as part of JSON body (Connect-RPC, no URL encoding)", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ runnerId: 1 }), { status: 200 }),
     );
     globalThis.fetch = fetchSpy as typeof fetch;
 
@@ -109,15 +112,17 @@ describe("lightAuthorizeRunner", () => {
       authKey: "k",
     });
 
-    const [url] = fetchSpy.mock.calls[0];
+    const [url, init] = fetchSpy.mock.calls[0];
     expect(String(url)).toBe(
-      `${ORIGIN}/api/v1/orgs/ns%2Fdev/runners/grpc/authorize`,
+      `${ORIGIN}/proto.runner_api.v1.RunnerService/AuthorizeRunner`,
     );
+    const bodyJson = JSON.parse((init as RequestInit).body as string);
+    expect(bodyJson.orgSlug).toBe("ns/dev");
   });
 
-  it("omits node_id from payload when not provided", async () => {
-    const fetchSpy = vi.fn(async () =>
-      new Response(JSON.stringify({ runner_id: 1 }), { status: 200 }),
+  it("defaults nodeId to empty string when not provided", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ runnerId: 1 }), { status: 200 }),
     );
     globalThis.fetch = fetchSpy as typeof fetch;
 
@@ -125,7 +130,7 @@ describe("lightAuthorizeRunner", () => {
 
     const [, init] = fetchSpy.mock.calls[0];
     expect((init as RequestInit).body).toBe(
-      JSON.stringify({ auth_key: "k" }),
+      JSON.stringify({ orgSlug: "dev", authKey: "k", nodeId: "" }),
     );
   });
 });
@@ -144,10 +149,10 @@ describe("lightCreateRunnerToken", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /api/v1/orgs/:slug/runners/grpc/tokens and returns the token", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs to RunnerService/CreateRunnerToken and returns the token", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({ token: "reg-token-xyz", expires_at: "..." }),
+        JSON.stringify({ token: "reg-token-xyz", expiresAt: "..." }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
@@ -157,13 +162,17 @@ describe("lightCreateRunnerToken", () => {
 
     expect(tok).toBe("reg-token-xyz");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/orgs/dev-org/runners/grpc/tokens`);
+    expect(String(url)).toBe(
+      `${ORIGIN}/proto.runner_api.v1.RunnerService/CreateRunnerToken`,
+    );
     expect((init as RequestInit).method).toBe("POST");
-    expect((init as RequestInit).body).toBe("{}");
+    expect((init as RequestInit).body).toBe(
+      JSON.stringify({ orgSlug: "dev-org", labels: [] }),
+    );
   });
 
   it("returns null when token field is missing", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
     const tok = await lightCreateRunnerToken("dev-org");
@@ -185,18 +194,18 @@ describe("lightListRunners", () => {
     window.localStorage.clear();
   });
 
-  it("returns the runners array from /api/v1/orgs/:slug/runners", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("returns the runners array from RunnerService/ListRunners", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
-          runners: [
+          items: [
             {
               id: 1,
-              node_id: "n1",
+              nodeId: "n1",
               status: "online",
-              current_pods: 0,
-              max_concurrent_pods: 4,
-              is_enabled: true,
+              currentPods: 0,
+              maxConcurrentPods: 4,
+              isEnabled: true,
             },
           ],
         }),
@@ -210,13 +219,17 @@ describe("lightListRunners", () => {
     expect(runners).toHaveLength(1);
     expect(runners[0].node_id).toBe("n1");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/orgs/dev-org/runners`);
+    expect(String(url)).toBe(
+      `${ORIGIN}/proto.runner_api.v1.RunnerService/ListRunners`,
+    );
+    expect((init as RequestInit).method).toBe("POST");
+    expect((init as RequestInit).body).toBe(JSON.stringify({ orgSlug: "dev-org" }));
     const headers = (init as RequestInit).headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer tok");
   });
 
-  it("returns empty array when runners field is missing", async () => {
-    globalThis.fetch = vi.fn(async () =>
+  it("returns empty array when items field is missing", async () => {
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
     const runners = await lightListRunners("dev-org");

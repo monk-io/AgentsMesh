@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { AgentData } from "@/lib/api";
-import { listAgents } from "@/lib/api/agentConnect";
+import { listAgents } from "@/lib/api/facade/agentConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import type {
   AgentConfigState,

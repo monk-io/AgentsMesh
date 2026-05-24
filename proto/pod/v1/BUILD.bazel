@@ -23,6 +23,7 @@ proto_library(
     ],
     data = [":pod_serde_transform"],
     visibility = ["//visibility:public"],
+    deps = ["//proto/codegen/v1:codegen_proto"],
 )
 
 go_proto_library(
@@ -31,6 +32,7 @@ go_proto_library(
     importpath = "github.com/anthropics/agentsmesh/proto/gen/go/pod/v1",
     proto = ":pod_proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/codegen/v1:codegen_go_proto"],
 )
 
 rust_prost_library(

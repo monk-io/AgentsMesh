@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { useTranslations } from "next-intl";
-import { listAgents } from "@/lib/api/agentConnect";
+import { listAgents } from "@/lib/api/facade/agentConnect";
 import type { AgentData } from "@/lib/api";
 import {
   Settings,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { InstalledSkill, InstalledMcpServer } from "@/lib/api/extensionTypes";
+import type { InstalledSkill, InstalledMcpServer } from "@/lib/viewModels/extension";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";

@@ -1,13 +1,21 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("//build_defs/protoconv:defs.bzl", "amesh_proto_convert")
+
+amesh_proto_convert(
+    name = "mesh_convert_amesh",
+    output = "mesh_convert.amesh.go",
+    proto = "//proto/mesh/v1:mesh_proto",
+)
 
 go_library(
     name = "mesh",
     srcs = [
-        "convert.go",
         "mesh.go",
+        "mesh_convert_custom.go",
         "mesh_handlers.go",
         "mesh_message_handlers.go",
         "message_convert.go",
+        ":mesh_convert_amesh",
     ],
     importpath = "github.com/anthropics/agentsmesh/backend/internal/api/connect/mesh",
     visibility = ["//backend:__subpackages__"],
@@ -20,6 +28,7 @@ go_library(
         "//backend/internal/service/agent",
         "//backend/internal/service/mesh",
         "//backend/internal/service/ticket",
+        "//backend/pkg/protoconv",
         "//proto/mesh/v1:mesh_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

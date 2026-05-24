@@ -5,8 +5,8 @@ import { clearAuthRateLimit } from "../../helpers/redis";
 
 // Regression coverage for the credential dialog after the EnvBundle refactor:
 //
-//   - "Credential" is now one kind of EnvBundle (kind='credential'); REST
-//     reaches /api/v1/users/env-bundles with a unified {kind, data} payload.
+//   - "Credential" is now one kind of EnvBundle (kind='credential'); requests
+//     reach EnvBundleService over Connect-RPC with a unified {kind, data} payload.
 //   - Backend stays a pure KV store; the per-agent form spec lives on the
 //     frontend (declared ENVs + custom ENV section).
 //
@@ -58,14 +58,14 @@ test.describe("Personal Agent Credentials — Claude Code (XOR auth)", () => {
     db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${NAME_PREFIX}%'`);
 
     await api.login(TEST_USER.email, TEST_USER.password);
-    const res = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: bundleName,
       description: "seeded by e2e",
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-e2e-seeded" },
     });
-    expect([200, 201]).toContain(res.status);
 
     try {
       const nav = new SettingsNavPage(page, TEST_ORG_SLUG);

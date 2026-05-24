@@ -4,7 +4,7 @@ import { getTicketService, getPodState, parseWasmAny } from "@/lib/wasm-core";
 import { useTicketStore } from "@/stores/ticket";
 import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
 import { readCurrentUser } from "@/stores/auth";
-import type { PodData } from "@/lib/api/pod";
+import type { PodData } from "@/lib/api/facade/pod";
 import type {
   RealtimeEvent, RunnerStatusData, TicketStatusChangedData,
   ChannelMessageData, ChannelMessageEditedData, ChannelMessageDeletedData,

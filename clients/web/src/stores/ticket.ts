@@ -4,7 +4,7 @@ import type { TicketData, TicketStatus, TicketPriority, BoardColumn } from "@/li
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
 import { getTicketService, parseWasmAny } from "@/lib/wasm-core";
-import * as ticketApi from "@/lib/api/ticketConnect";
+import * as ticketApi from "@/lib/api/facade/ticketConnect";
 import { readCurrentOrg } from "@/stores/auth";
 
 export type { TicketStatus, TicketPriority };

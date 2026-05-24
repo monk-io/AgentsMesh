@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { useMemo } from "react";
 import { getRepoState } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
-import { repositoryApi } from "@/lib/api/repository";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import { repositoryApi } from "@/lib/api/facade/repository";
+import type { RepositoryData } from "@/lib/viewModels/repository";
 
 export type Repository = RepositoryData;
 

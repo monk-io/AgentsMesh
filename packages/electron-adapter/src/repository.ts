@@ -2,13 +2,13 @@ import { invoke } from "./invoke";
 import type { IRepositoryService, IRepoState } from "@agentsmesh/service-interface";
 
 // Web's wasm-side `WasmRepositoryService` exposes `<verb>Connect(bytes)`
-// methods. The hand-written IPC handlers on the Rust napi side only
-// cover the legacy json-shaped surface (`repositoryList` /
-// `repositoryGet` etc), not the proto wire. Renderers that go through
-// `lib/api/repositoryConnect.ts` need the proto-binary entry points
-// too, so we forward them through the generic `connectCall` IPC handler
-// in main/index.ts (registerLegacyApiAliases) — main owns the auth
-// header injection, the URL prefix, and the binary-over-IPC marshalling.
+// methods. RepositoryService in Rust core is a thin proxy (no cache, no
+// business logic — see ADR 2026-05-24-service-binding-matrix.md "Decision
+// 1: thin-proxy services don't require binding symmetry"). Desktop renderer
+// reaches the backend through `connectCall` generic IPC proxy (main owns
+// the auth header injection + URL prefix) — adding a dedicated napi binding
+// would be form symmetry without functional gain, so we go directly to the
+// backend Connect endpoint through main process.
 async function connectCall(method: string, request: Uint8Array): Promise<Uint8Array> {
   const resp = await invoke<number[] | Uint8Array>(
     "connectCall",

@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { ColumnSpec, JSONMap, SelectOption } from "@/lib/api/blockstoreTypes";
+import type { ColumnSpec, JSONMap, SelectOption } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 import { useBlock } from "@/stores/blockstore";
 

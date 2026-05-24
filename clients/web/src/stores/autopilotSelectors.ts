@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AutopilotControllerData, AutopilotIterationData } from "@/lib/api/autopilotTypes";
+import type { AutopilotControllerData, AutopilotIterationData } from "@/lib/viewModels/autopilot";
 import type { AutopilotThinkingData } from "@/lib/realtime/types";
 import { getAutopilotService, parseWasmAny } from "@/lib/wasm-core";
 import { useAutopilotStore } from "./autopilot";

@@ -1,4 +1,4 @@
-import { BLOCK_TYPE_PAGE, type Block, type BlockRef } from "@/lib/api/blockstoreTypes";
+import { BLOCK_TYPE_PAGE, type Block, type BlockRef } from "@/lib/viewModels/blockstore";
 
 export interface PageNode {
   id: string;

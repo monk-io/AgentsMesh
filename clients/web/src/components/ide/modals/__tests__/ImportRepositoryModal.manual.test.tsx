@@ -4,11 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import { setupProviderMocks } from "./ImportRepositoryModal.utils";
 
-vi.mock("@/lib/api/userRepositoryProvider", () => ({
-  listRepositoryProviders: vi.fn(),
-  listProviderRepositories: vi.fn(),
-}));
-
 describe("ImportRepositoryModal - Manual Entry", () => {
   const mockOnClose = vi.fn();
   const mockOnImported = vi.fn();

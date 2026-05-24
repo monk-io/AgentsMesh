@@ -4,17 +4,29 @@
 // `ChannelMessage.content` (parsed `MessageContent`) does not deserialize into
 // the wasm side's `content_json: Option<String>` — convert at the boundary.
 
-import type { ChannelMessage } from "@/lib/api/channel";
-import type { MessageContent, MessageMentions } from "@/lib/api/channel-message-types";
+import type { ChannelMessage } from "@/lib/api/facade/channel";
+import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
 
 export type WasmChannelMessage = Omit<ChannelMessage, "content" | "mentions"> & {
   content_json?: string;
   mentions_json?: string;
 };
 
-export function toWasmMessage(m: ChannelMessage): WasmChannelMessage {
+type WithRichAst = {
+  content?: MessageContent;
+  mentions?: MessageMentions;
+};
+
+// Generic over the input — full ChannelMessage from server flows, or a
+// partial diff payload from local-state updates both project the same way.
+export function toWasmMessage<T extends WithRichAst>(
+  m: T,
+): Omit<T, "content" | "mentions"> & { content_json?: string; mentions_json?: string } {
   const { content, mentions, ...rest } = m;
-  const out: WasmChannelMessage = { ...rest };
+  const out = { ...rest } as Omit<T, "content" | "mentions"> & {
+    content_json?: string;
+    mentions_json?: string;
+  };
   if (content) out.content_json = JSON.stringify(content);
   if (mentions) out.mentions_json = JSON.stringify(mentions);
   return out;

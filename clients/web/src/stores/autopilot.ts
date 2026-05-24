@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type {
   AutopilotControllerData, AutopilotIterationData,
   CreateAutopilotControllerRequest, ApproveRequest,
-} from "@/lib/api/autopilotTypes";
+} from "@/lib/viewModels/autopilot";
 import { AutopilotThinkingData } from "@/lib/realtime/types";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
@@ -21,7 +21,7 @@ import {
   getAutopilotIterations as getAutopilotIterationsConnect,
   type AutopilotControllerWire,
   type AutopilotIterationWire,
-} from "@/lib/api/autopilotConnect";
+} from "@/lib/api/facade/autopilotConnect";
 
 export type AutopilotController = AutopilotControllerData;
 export type AutopilotIteration = AutopilotIterationData;

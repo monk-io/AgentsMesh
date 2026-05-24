@@ -10,7 +10,7 @@ test.describe("CRUD Supplements", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   /**
-   * EnvBundle update via /users/env-bundles. Replaces the legacy
+   * EnvBundle update via Connect EnvBundleService. Replaces the legacy
    * /users/agent-credentials/profiles/:id endpoint.
    */
   test("update env bundle name", async ({ api, db }) => {
@@ -20,22 +20,16 @@ test.describe("CRUD Supplements", () => {
     db.cleanup(
       `DELETE FROM env_bundles WHERE name IN ('E2E Update Bundle', 'E2E Updated Bundle')`
     );
-    const createRes = await api.post("/api/v1/users/env-bundles", {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    const created = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: "E2E Update Bundle",
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-test" },
-    });
-    expect(createRes.status, "POST /users/env-bundles must succeed").not.toBe(404);
-    const created = await createRes.json();
-    const id = created.bundle?.id;
-    expect(id, "env-bundle create response must include an id").toBeTruthy();
+    }) as { id: bigint };
+    expect(created.id, "env-bundle create response must include an id").toBeTruthy();
 
-    const updateRes = await api.put(
-      `/api/v1/users/env-bundles/${id}`,
-      { name: "E2E Updated Bundle" }
-    );
-    expect(updateRes.status).toBe(200);
+    await cc.envBundle.updateEnvBundle({ id: created.id, name: "E2E Updated Bundle" });
 
     db.cleanup(
       `DELETE FROM env_bundles WHERE name IN ('E2E Update Bundle', 'E2E Updated Bundle')`
@@ -47,23 +41,18 @@ test.describe("CRUD Supplements", () => {
    */
   test("set env bundle as primary", async ({ api, db }) => {
     db.cleanup(`DELETE FROM env_bundles WHERE name = 'E2E Primary Bundle'`);
-    const createRes = await api.post("/api/v1/users/env-bundles", {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    const created = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: "E2E Primary Bundle",
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-test" },
-    });
-    expect(createRes.status, "POST /users/env-bundles must succeed").not.toBe(404);
-    const created = await createRes.json();
-    const id = created.bundle?.id;
-    expect(id, "env-bundle create response must include an id").toBeTruthy();
+    }) as { id: bigint };
+    expect(created.id, "env-bundle create response must include an id").toBeTruthy();
 
-    const setRes = await api.post(
-      `/api/v1/users/env-bundles/${id}/set-primary`, {}
-    );
-    expect(setRes.status).toBe(200);
-    const after = await setRes.json();
-    expect(after.bundle?.kind_primary).toBe(true);
+    await cc.envBundle.setPrimaryEnvBundle({ id: created.id });
+    const after = await cc.envBundle.getEnvBundle({ id: created.id }) as { kindPrimary: boolean };
+    expect(after.kindPrimary).toBe(true);
 
     db.cleanup(`DELETE FROM env_bundles WHERE name = 'E2E Primary Bundle'`);
   });

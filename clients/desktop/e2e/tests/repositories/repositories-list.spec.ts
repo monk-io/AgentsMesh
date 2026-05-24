@@ -27,7 +27,7 @@ test.describe("Desktop infra · repositories list", () => {
 
     const infra = new InfraPage(page);
     await infra.gotoTab("repositories");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Empty-state heading is the canonical fingerprint of the regression —
     // RepoSection renders it only when `repositories.length === 0` after

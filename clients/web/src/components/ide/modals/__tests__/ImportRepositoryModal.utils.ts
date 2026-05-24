@@ -1,10 +1,10 @@
 import { vi } from "vitest";
-import type { RepositoryProviderData, ProviderRepositoryData } from "@/lib/api/userRepositoryProviderTypes";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import type { RepositoryProviderData, ProviderRepositoryData } from "@/lib/viewModels/repositoryProvider";
+import type { RepositoryData } from "@/lib/viewModels/repository";
+import { getUserCredentialService, getRepositoryService } from "@/lib/wasm-core";
 
 export const mockProvider: RepositoryProviderData = {
   id: 1,
-  user_id: 1,
   name: "My GitHub",
   provider_type: "github",
   base_url: "https://github.com",
@@ -19,7 +19,6 @@ export const mockProvider: RepositoryProviderData = {
 
 export const mockGitLabProvider: RepositoryProviderData = {
   id: 2,
-  user_id: 1,
   name: "My GitLab",
   provider_type: "gitlab",
   base_url: "https://gitlab.com",
@@ -60,41 +59,43 @@ export const mockCreatedRepository: RepositoryData = {
   updated_at: "2024-01-01T00:00:00Z",
 };
 
-export const createMockOnClose = () => vi.fn();
-export const createMockOnImported = () => vi.fn();
+export const createMockOnClose = () => vi.fn<() => void>();
+export const createMockOnImported = () => vi.fn<() => void>();
 
-// Connect-RPC adapter accessors. Tests must vi.mock the modules themselves
-// (vi.mock is hoisted per test file). These accessors retrieve the mocked
-// instances at setup time. Use stableCredSvc.* to assert against calls made
-// by useImportWizard.
-import * as userRepositoryProvider from "@/lib/api/userRepositoryProvider";
-import * as repositoryConnect from "@/lib/api/repositoryConnect";
-
+// useImportWizard calls getUserCredentialService() / getRepositoryService()
+// directly on each render — the global wasm-core mock creates a fresh
+// service object every call. Lock the return value to a stable singleton
+// so per-test method overrides survive across invocations.
 export const stableCredSvc = {
-  list_repo_providers: vi.mocked(userRepositoryProvider.listRepositoryProviders),
-  list_provider_repositories: vi.mocked(userRepositoryProvider.listProviderRepositories),
+  list_repo_providers: vi.fn(),
+  list_provider_repositories: vi.fn(),
 };
 
 export const stableRepoSvc = {
-  create: vi.mocked(repositoryConnect.createRepository),
+  create: vi.fn(),
 };
 
+function applyMocks() {
+  vi.mocked(getUserCredentialService).mockReturnValue(stableCredSvc as never);
+  vi.mocked(getRepositoryService).mockReturnValue(stableRepoSvc as never);
+}
+
 export function setupProviderMocks(providers: RepositoryProviderData[] = [mockProvider, mockGitLabProvider]) {
-  vi.mocked(userRepositoryProvider.listRepositoryProviders).mockResolvedValue({
-    items: providers,
-    total: providers.length,
-  });
-  vi.mocked(userRepositoryProvider.listProviderRepositories).mockResolvedValue({
-    items: [mockRepository],
-    total: 1,
-  });
+  applyMocks();
+  stableCredSvc.list_repo_providers.mockResolvedValue(
+    JSON.stringify({ providers })
+  );
+  stableCredSvc.list_provider_repositories.mockResolvedValue(
+    JSON.stringify({ repositories: [mockRepository] })
+  );
 }
 
 export function mockRepositoryCreate(response?: RepositoryData) {
-  vi.mocked(repositoryConnect.createRepository).mockResolvedValue(response ?? mockCreatedRepository);
+  applyMocks();
+  stableRepoSvc.create.mockResolvedValue(
+    JSON.stringify(response ?? mockCreatedRepository)
+  );
   return stableRepoSvc;
 }
 
-// Pass-through used by navigation tests to compose a RepositoryData literal
-// before handing it to mockRepositoryCreate.
 export const createRepositoryResponse = (r: RepositoryData): RepositoryData => r;

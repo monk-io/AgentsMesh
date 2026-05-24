@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { getChannelService } from "@/lib/wasm-core";
 import { useChannelMessageStore, readMessages } from "./channelMessageStore";
-import type { ChannelMessage } from "@/lib/api/channel";
+import type { ChannelMessage } from "@/lib/api/facade/channel";
 
 const svc = () => getChannelService();
 

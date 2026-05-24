@@ -32,7 +32,7 @@ func (s *Server) ListOrganizations(
 
 	items := make([]*adminv1.AdminOrganization, 0, len(result.Data))
 	for i := range result.Data {
-		items = append(items, toProtoAdminOrganization(&result.Data[i]))
+		items = append(items, ToProtoAdminOrganization(&result.Data[i]))
 	}
 	return connect.NewResponse(&adminv1.ListOrganizationsResponse{
 		Items:      items,
@@ -61,7 +61,7 @@ func (s *Server) GetOrganization(
 		admin.AuditActionOrgView, admin.TargetTypeOrganization, orgID,
 		nil, nil, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminOrganization(org)), nil
+	return connect.NewResponse(ToProtoAdminOrganization(org)), nil
 }
 
 func (s *Server) GetOrganizationMembers(
@@ -80,11 +80,11 @@ func (s *Server) GetOrganizationMembers(
 
 	items := make([]*adminv1.AdminOrganizationMember, 0, len(members))
 	for i := range members {
-		items = append(items, toProtoAdminOrganizationMember(&members[i]))
+		items = append(items, ToProtoAdminOrganizationMember(&members[i]))
 	}
 
 	return connect.NewResponse(&adminv1.GetOrganizationMembersResponse{
-		Organization: toProtoAdminOrganization(org),
+		Organization: ToProtoAdminOrganization(org),
 		Members:      items,
 	}), nil
 }

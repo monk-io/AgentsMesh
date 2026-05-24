@@ -8,13 +8,13 @@
 
 import { lightConnect } from "./api-fetch";
 import { persistLoginResponse, type AuthLoginResponse } from "./persist";
-import type { SSOConfig } from "@/lib/api/ssoTypes";
+import type { SSODiscoverConfig } from "@/lib/api/connect/ssoConnect";
 
 interface ConnectDiscoverResponse {
-  items?: SSOConfig[];
+  items?: SSODiscoverConfig[];
 }
 
-export async function lightDiscoverSSO(email: string): Promise<SSOConfig[]> {
+export async function lightDiscoverSSO(email: string): Promise<SSODiscoverConfig[]> {
   if (!email || !email.includes("@")) return [];
   try {
     const resp = await lightConnect<{ email: string }, ConnectDiscoverResponse>(

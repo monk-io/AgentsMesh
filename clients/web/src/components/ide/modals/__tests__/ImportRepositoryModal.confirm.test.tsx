@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import * as repositoryConnect from "@/lib/api/repositoryConnect";
 import {
   setupProviderMocks,
   mockRepositoryCreate,
-  mockCreatedRepository,
+  stableRepoSvc,
 } from "./ImportRepositoryModal.utils";
 
 // Stable references so React's useCallback([currentOrg]) doesn't churn.
@@ -12,19 +11,6 @@ import {
 const stable = vi.hoisted(() => ({
   org: { id: 1, name: "TestOrg", slug: "test-org" },
   user: { id: 1, email: "u@e.com", username: "u" },
-}));
-
-// Production calls createRepository (Connect adapter) which encodes proto
-// via .toBinary(); mock the adapter so tests assert structured input
-// instead of stringified JSON (legacy stableRepoSvc.create lane is gone).
-vi.mock("@/lib/api/repositoryConnect", () => ({
-  createRepository: vi.fn(),
-  fromProtoRepository: vi.fn(),
-}));
-
-vi.mock("@/lib/api/userRepositoryProvider", () => ({
-  listRepositoryProviders: vi.fn(),
-  listProviderRepositories: vi.fn(),
 }));
 
 // useImportWizard.handleImport bails on !currentOrg; provide a non-null org.
@@ -48,7 +34,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupProviderMocks();
-    vi.mocked(repositoryConnect.createRepository).mockResolvedValue(mockCreatedRepository);
+    mockRepositoryCreate();
   });
 
   it("should navigate to confirm step after selecting repository", async () => {
@@ -150,8 +136,11 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(vi.mocked(repositoryConnect.createRepository)).toHaveBeenCalledWith(
-        "test-org",
+      // useImportWizard.handleImport calls getRepositoryService().create(JSON.stringify({...}))
+      // — assert on the parsed JSON payload.
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
         expect.objectContaining({ ticket_prefix: "TEST" }),
       );
     });

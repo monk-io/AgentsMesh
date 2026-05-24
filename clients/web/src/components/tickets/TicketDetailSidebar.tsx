@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Ticket } from "@/stores/ticket";
-import type { TicketRelation } from "@/lib/api/ticketTypes";
+import type { TicketRelation } from "@/lib/viewModels/ticket";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Circle, GitPullRequest, Clock, Terminal } from "lucide-react";

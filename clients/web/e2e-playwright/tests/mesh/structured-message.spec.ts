@@ -339,7 +339,7 @@ test.describe("Structured Message — API", () => {
         orgSlug: TEST_ORG_SLUG,
         channelId,
         contentJson: JSON.stringify(textContent("orphan reply")),
-        replyTo: 99999999n,
+        replyTo: BigInt(99999999),
       }) as SentMessage;
       expect(msg.id).toBeTruthy();
     } catch (err: unknown) {

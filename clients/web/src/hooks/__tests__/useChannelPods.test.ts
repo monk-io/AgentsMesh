@@ -12,8 +12,8 @@ import {
 const podsByChannel = new Map<number, { pod_key: string; status?: string; alias?: string }[]>();
 let pendingFetch: ((_: void) => void) | null = null;
 
-vi.mock("@/lib/api/channel", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api/channel")>("@/lib/api/channel");
+vi.mock("@/lib/api/facade/channel", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api/facade/channel")>("@/lib/api/facade/channel");
   return {
     ...actual,
     channelApi: {
@@ -43,7 +43,7 @@ vi.mock("@/lib/wasm-core", async () => {
   };
 });
 
-import { channelApi } from "@/lib/api/channel";
+import { channelApi } from "@/lib/api/facade/channel";
 
 function seed(channelId: number, pods: { pod_key: string; status?: string; alias?: string }[]) {
   podsByChannel.set(channelId, pods);

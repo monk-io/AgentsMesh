@@ -5,7 +5,7 @@ import * as ContextMenu from "@radix-ui/react-context-menu";
 import { Copy, GripVertical, Lock, LockOpen, MessageSquare, Trash } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { JSONMap } from "@/lib/api/blockstoreTypes";
+import type { JSONMap } from "@/lib/viewModels/blockstore";
 import { useBlockstoreStore, useBlock } from "@/stores/blockstore";
 
 import { useDragHandle } from "./SortableNest";

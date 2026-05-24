@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useLoopStore } from "@/stores/loop";
 import { toast } from "sonner";
-import type { LoopData } from "@/lib/api/loopTypes";
+import type { LoopData } from "@/lib/viewModels/loop";
 
 /**
  * useLoopForm — owns every per-field useState for the LoopCreateDialog, plus

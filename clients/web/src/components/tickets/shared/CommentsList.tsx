@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Reply, Pencil, Trash2 } from "lucide-react";
-import type { TicketComment } from "@/lib/api/ticketTypes";
+import type { TicketComment } from "@/lib/viewModels/ticket";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Markdown } from "@/components/ui/markdown";
 import { useCurrentUser, useAuthStore } from "@/stores/auth";

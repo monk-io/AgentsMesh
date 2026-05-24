@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
-import { listRepositoryMergeRequests } from "@/lib/api/repositoryConnect";
+import { listRepositoryMergeRequests } from "@/lib/api/facade/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import { useEventSubscription } from "@/hooks/useRealtimeEvents";
 import type { MREventData, PipelineEventData } from "@/lib/realtime";

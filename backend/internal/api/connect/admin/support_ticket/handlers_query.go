@@ -45,7 +45,7 @@ func (s *Server) ListSupportTickets(
 
 	items := make([]*supportticketv1.AdminSupportTicket, 0, len(result.Data))
 	for i := range result.Data {
-		items = append(items, toProtoAdminTicket(&result.Data[i]))
+		items = append(items, ToProtoAdminSupportTicket(&result.Data[i]))
 	}
 
 	totalPages := int32(0)
@@ -110,11 +110,11 @@ func (s *Server) GetSupportTicket(
 
 	protoMsgs := make([]*supportticketv1.AdminSupportTicketMessage, 0, len(messages))
 	for i := range messages {
-		protoMsgs = append(protoMsgs, toProtoAdminMessage(&messages[i]))
+		protoMsgs = append(protoMsgs, ToProtoAdminSupportTicketMessage(&messages[i]))
 	}
 
 	return connect.NewResponse(&supportticketv1.AdminSupportTicketDetail{
-		Ticket:   toProtoAdminTicket(ticket),
+		Ticket:   ToProtoAdminSupportTicket(ticket),
 		Messages: protoMsgs,
 	}), nil
 }
@@ -135,7 +135,7 @@ func (s *Server) ListSupportTicketMessages(
 
 	out := make([]*supportticketv1.AdminSupportTicketMessage, 0, len(messages))
 	for i := range messages {
-		out = append(out, toProtoAdminMessage(&messages[i]))
+		out = append(out, ToProtoAdminSupportTicketMessage(&messages[i]))
 	}
 
 	return connect.NewResponse(&supportticketv1.AdminListSupportTicketMessagesResponse{

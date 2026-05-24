@@ -3,8 +3,8 @@
 import React, { useRef, useState } from "react";
 import { Music, Upload } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
-import { uploadImage } from "@/lib/api/file";
+import type { Block } from "@/lib/viewModels/blockstore";
+import { uploadImage } from "@/lib/api/facade/file";
 import { cn, getErrorMessage } from "@/lib/utils";
 
 import { BlockChrome } from "../editor/BlockChrome";

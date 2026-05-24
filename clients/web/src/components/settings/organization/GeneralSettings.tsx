@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { updateOrg, deleteOrg } from "@/lib/api/org";
+import { updateOrg, deleteOrg } from "@/lib/api/facade/org";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useCurrentOrg, useAuthOrganizations, useAuthStore } from "@/stores/auth";
 import { toast } from "sonner";

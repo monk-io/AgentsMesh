@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import type { Invoice } from "@/lib/api/billing-types";
-import { listInvoicesConnect } from "@/lib/api/billingConnect";
+import type { Invoice } from "@/lib/viewModels/billing";
+import { listInvoicesConnect } from "@/lib/api/facade/billingConnect";
 import { readCurrentOrg } from "@/stores/auth";
 
 interface InvoiceHistoryProps {

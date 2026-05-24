@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api/api-types";
-import type { SSOConfig } from "@/lib/api/ssoTypes";
+import type { SSODiscoverConfig } from "@/lib/api/connect/ssoConnect";
 import {
   lightLogin,
   lightLdapAuth,
@@ -36,10 +36,10 @@ export default function LoginPage() {
   const [ldapLoading, setLdapLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [ssoConfigs, setSsoConfigs] = useState<SSOConfig[]>([]);
+  const [ssoConfigs, setSsoConfigs] = useState<SSODiscoverConfig[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const enforceSso = ssoConfigs.some((c) => c.enforce_sso);
+  const enforceSso = ssoConfigs.some((c) => c.enforceSso);
   const hasSSO = ssoConfigs.length > 0;
 
   const discoverRequestRef = useRef(0);

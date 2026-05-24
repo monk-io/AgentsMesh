@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { Block, BlockRef } from "@/lib/api/blockstoreTypes";
+import type { Block, BlockRef } from "@/lib/viewModels/blockstore";
 import {
   BLOCK_TYPE_AUDIO,
   BLOCK_TYPE_BOOKMARK,
@@ -31,7 +31,7 @@ import {
   BLOCK_TYPE_TOGGLE,
   BLOCK_TYPE_VIDEO,
   BLOCK_TYPE_VIEW,
-} from "@/lib/api/blockstoreTypes";
+} from "@/lib/viewModels/blockstore";
 import { useBlock, useNestChildren, useRefs } from "@/stores/blockstore";
 
 import { PageRenderer } from "./renderers/PageRenderer";

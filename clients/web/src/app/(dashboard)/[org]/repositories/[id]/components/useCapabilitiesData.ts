@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
-import type { InstalledSkill, InstalledMcpServer } from "@/lib/api/extensionTypes";
-import { listRepoSkills, updateSkill, uninstallSkill } from "@/lib/api/repoSkillExtension";
-import { listRepoMcpServers, updateMcpServer, uninstallMcpServer } from "@/lib/api/repoMcpExtension";
+import type { InstalledSkill, InstalledMcpServer } from "@/lib/viewModels/extension";
+import { listRepoSkills, updateSkill, uninstallSkill } from "@/lib/api/facade/repoSkillExtension";
+import { listRepoMcpServers, updateMcpServer, uninstallMcpServer } from "@/lib/api/facade/repoMcpExtension";
 import { useCurrentOrg } from "@/stores/auth";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 

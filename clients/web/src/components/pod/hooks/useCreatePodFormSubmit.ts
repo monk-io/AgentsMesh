@@ -1,5 +1,5 @@
 import type { PodData } from "@/lib/api";
-import { createPod } from "@/lib/api/podConnect";
+import { createPod } from "@/lib/api/facade/podConnect";
 import { readCurrentOrg } from "@/stores/auth";
 
 export interface CreatePodResult {

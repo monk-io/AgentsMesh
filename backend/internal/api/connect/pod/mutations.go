@@ -56,7 +56,7 @@ func (s *Server) CreatePod(
 		return nil, mapServiceError(err)
 	}
 
-	resp := &podv1.CreatePodResponse{Pod: toProtoPod(result.Pod)}
+	resp := &podv1.CreatePodResponse{Pod: ToProtoPod(result.Pod)}
 	if result.Warning != "" {
 		w := result.Warning
 		resp.Warning = &w

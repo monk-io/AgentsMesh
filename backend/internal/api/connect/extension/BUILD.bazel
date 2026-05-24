@@ -7,6 +7,7 @@ go_library(
         "market_convert.go",
         "repo_mcp.go",
         "repo_skill.go",
+        "repo_skill_upload.go",
         "skill_registry.go",
         "skill_registry_convert.go",
     ],

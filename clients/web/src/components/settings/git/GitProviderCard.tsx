@@ -1,12 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { RepositoryProviderData } from "@/lib/api/userRepositoryProviderTypes";
+import type { RepositoryProvider } from "@/lib/api/facade/userRepositoryProvider";
 import { Settings, Trash2, TestTube } from "lucide-react";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
 
 export interface GitProviderCardProps {
-  provider: RepositoryProviderData;
+  provider: RepositoryProvider;
   onEdit: () => void;
   onDelete: () => void;
   onTestConnection: () => void;
@@ -20,24 +20,24 @@ export function GitProviderCard({
   onTestConnection,
   t,
 }: GitProviderCardProps) {
-  const isDisabled = provider.is_active === false;
+  const isDisabled = provider.isActive === false;
   return (
     <div
       data-testid="git-provider-card"
-      data-provider-id={provider.id}
-      data-is-active={provider.is_active === false ? "false" : "true"}
+      data-provider-id={Number(provider.id)}
+      data-is-active={provider.isActive === false ? "false" : "true"}
       className={`flex items-center justify-between p-4 rounded-lg border ${
         isDisabled ? "opacity-60 bg-muted/30" : "bg-muted/50"
       }`}
     >
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center">
-          <GitProviderIcon provider={provider.provider_type} />
+          <GitProviderIcon provider={provider.providerType} />
         </div>
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium">{provider.name}</span>
-            {provider.is_default && (
+            {provider.isDefault && (
               <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
                 {t("settings.gitSettings.providers.default")}
               </span>
@@ -51,7 +51,7 @@ export function GitProviderCard({
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{provider.base_url}</p>
+          <p className="text-sm text-muted-foreground">{provider.baseUrl}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">

@@ -696,8 +696,9 @@ vi.mock('@/lib/wasm-core', () => {
       installCustomMcpServerConnect: fn().mockResolvedValue(new Uint8Array()),
       updateMcpServerConnect: fn().mockResolvedValue(new Uint8Array()),
       uninstallMcpServerConnect: fn().mockResolvedValue(new Uint8Array()),
-      // Multipart upload stays REST forever (Connect doesn't do multipart).
-      install_skill_from_upload: fn().mockResolvedValue('{}'),
+      // Skill upload (Presign + InstallFromUploaded) — Connect-RPC
+      presignSkillUploadConnect: fn().mockResolvedValue(new Uint8Array()),
+      installSkillFromUploadedFileConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getInvitationService: fn(() => ({
       list: fn().mockResolvedValue('{"invitations":[]}'),
@@ -783,12 +784,12 @@ vi.mock('@/lib/wasm-core', () => {
       list_provider_repositories: fn().mockResolvedValue('{"repositories":[]}'),
     })),
     getEnvBundleService: fn(() => ({
-      list: fn().mockResolvedValue('{"items":[]}'),
-      get: fn().mockResolvedValue('{}'),
-      create: fn().mockResolvedValue('{}'),
-      update: fn().mockResolvedValue('{}'),
-      delete: fn().mockResolvedValue(undefined),
-      set_primary: fn().mockResolvedValue('{}'),
+      listEnvBundlesConnect: fn().mockResolvedValue(new Uint8Array()),
+      getEnvBundleConnect: fn().mockResolvedValue(new Uint8Array()),
+      createEnvBundleConnect: fn().mockResolvedValue(new Uint8Array()),
+      updateEnvBundleConnect: fn().mockResolvedValue(new Uint8Array()),
+      deleteEnvBundleConnect: fn().mockResolvedValue(new Uint8Array()),
+      setPrimaryEnvBundleConnect: fn().mockResolvedValue(new Uint8Array()),
     })),
     getOrgApiService: fn(() => ({
       list: fn().mockResolvedValue('{"organizations":[]}'),

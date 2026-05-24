@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
-import { getRepository, deleteRepository } from "@/lib/api/repositoryConnect";
+import type { RepositoryData } from "@/lib/viewModels/repository";
+import { getRepository, deleteRepository } from "@/lib/api/connect/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";

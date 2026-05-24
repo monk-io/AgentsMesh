@@ -3,7 +3,7 @@
 // ListRunners require the user's bearer token.
 
 import { lightConnect } from "./api-fetch";
-import type { RunnerAuthStatus, RunnerData } from "@/lib/api/runnerTypes";
+import type { RunnerAuthStatus, RunnerData } from "@/lib/viewModels/runner";
 
 interface ConnectRunnerAuthStatus {
   status: string;

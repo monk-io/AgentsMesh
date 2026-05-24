@@ -42,7 +42,7 @@ describe("lightListOrganizations", () => {
   });
 
   it("returns the organizations array on 200", async () => {
-    const fetchSpy = vi.fn(async () =>
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           items: [
@@ -66,7 +66,7 @@ describe("lightListOrganizations", () => {
   });
 
   it("returns empty array when items field is missing", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
     const orgs = await lightListOrganizations();
@@ -74,7 +74,7 @@ describe("lightListOrganizations", () => {
   });
 
   it("throws ApiError on 401 unauthorized", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "UNAUTHORIZED" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -107,7 +107,7 @@ describe("lightCreateOrganization", () => {
   });
 
   it("POSTs and updates current_org_slug to the new org's slug", async () => {
-    const fetchSpy = vi.fn(async () =>
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({ id: 7, name: "Gamma", slug: "gamma-co" }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -128,7 +128,7 @@ describe("lightCreateOrganization", () => {
   });
 
   it("throws when 200 response has no organization payload", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
 
@@ -140,7 +140,7 @@ describe("lightCreateOrganization", () => {
   });
 
   it("propagates ApiError on 409 slug conflict", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "SLUG_TAKEN" }), {
         status: 409,
         headers: { "Content-Type": "application/json" },
@@ -174,7 +174,7 @@ describe("lightCreatePersonalOrganization", () => {
   });
 
   it("POSTs to the personal-org RPC with empty body and no slug", async () => {
-    const fetchSpy = vi.fn(async () =>
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           id: 1, name: "kudin-private's Workspace", slug: "kudin-private-workspace",
@@ -196,7 +196,7 @@ describe("lightCreatePersonalOrganization", () => {
   });
 
   it("throws when 200 response has no organization payload", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
     await expect(lightCreatePersonalOrganization()).rejects.toThrow(
@@ -205,7 +205,7 @@ describe("lightCreatePersonalOrganization", () => {
   });
 
   it("propagates ApiError on rate limit (429)", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "RATE_LIMITED" }), {
         status: 429,
         headers: { "Content-Type": "application/json" },

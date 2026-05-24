@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { createRepositoryProvider } from "@/lib/api/userRepositoryProvider";
+import { createRepositoryProvider } from "@/lib/api/facade/userRepositoryProvider";
 import { useTranslations } from "next-intl";
 import { ChevronLeft } from "lucide-react";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
@@ -49,10 +49,10 @@ export function AddProviderDialog({ onClose, onSuccess }: AddProviderDialogProps
 
     try {
       await createRepositoryProvider({
-        provider_type: providerType,
+        providerType,
         name,
-        base_url: baseUrl,
-        bot_token: botToken,
+        baseUrl,
+        botToken,
       });
       onSuccess();
     } catch (err) {

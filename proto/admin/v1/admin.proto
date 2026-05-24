@@ -40,7 +40,17 @@ syntax = "proto3";
 
 package proto.admin.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/admin/v1;adminv1";
+
+// Convert codegen target — emits admin_convert.amesh.go into the backend
+// connect handler tree so it can reach the admin / organization / user /
+// relay domains.
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/admin"
+  output_package: "adminconnect"
+};
 
 service AdminService {
   // Dashboard
@@ -136,89 +146,150 @@ message DashboardStats {
 // --- Common nested types ---
 
 message AdminUser {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/user.User"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string email = 2;
   string username = 3;
-  optional string name = 4;
-  optional string avatar_url = 5;
+  optional string name = 4 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string avatar_url = 5 [
+    (amesh.codegen.v1.field_rename) = "AvatarURL",
+    (amesh.codegen.v1.field_convert) = "string_ptr"
+  ];
   bool is_active = 6;
   bool is_system_admin = 7;
   bool is_email_verified = 8;
   // RFC 3339 timestamps; nullable last_login_at omitted when never logged in.
-  optional string last_login_at = 9;
-  string created_at = 10;
-  string updated_at = 11;
+  optional string last_login_at = 9 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
+  string created_at = 10 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 11 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 message AdminOrganization {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/organization.Organization"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string name = 2;
   string slug = 3;
-  optional string logo_url = 4;
+  optional string logo_url = 4 [
+    (amesh.codegen.v1.field_rename) = "LogoURL",
+    (amesh.codegen.v1.field_convert) = "string_ptr"
+  ];
   string subscription_plan = 5;
   string subscription_status = 6;
-  string created_at = 7;
-  string updated_at = 8;
+  string created_at = 7 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // AdminOrganizationMember mirrors the REST `memberResponse` shape (nested
 // user identity, role, joined_at). The embedded user is optional because
 // `Preload("User")` may fail to load for orphaned memberships.
 message AdminOrganizationMember {
-  int64 id = 1;
-  int64 user_id = 2;
-  int64 org_id = 3;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/organization.Member"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 user_id = 2 [(amesh.codegen.v1.field_rename) = "UserID"];
+  int64 org_id = 3 [(amesh.codegen.v1.field_rename) = "OrganizationID"];
   string role = 4;
-  string joined_at = 5;
-  optional AdminUserSummary user = 6;
+  string joined_at = 5 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  optional AdminUserSummary user = 6 [(amesh.codegen.v1.field_custom) = "userSummaryToProto"];
 }
 
 message AdminUserSummary {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/user.User"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string email = 2;
   string username = 3;
-  optional string name = 4;
-  optional string avatar_url = 5;
+  optional string name = 4 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string avatar_url = 5 [
+    (amesh.codegen.v1.field_rename) = "AvatarURL",
+    (amesh.codegen.v1.field_convert) = "string_ptr"
+  ];
 }
 
 message AdminRunner {
-  int64 id = 1;
-  int64 organization_id = 2;
-  string node_id = 3;
-  optional string description = 4;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/runner.Runner"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 organization_id = 2 [(amesh.codegen.v1.field_rename) = "OrganizationID"];
+  string node_id = 3 [(amesh.codegen.v1.field_rename) = "NodeID"];
+  // domain Description is plain string (zero = absent); proto is optional.
+  optional string description = 4 [(amesh.codegen.v1.field_custom) = "adminDescriptionToProto"];
   string status = 5;
   bool is_enabled = 6;
-  optional string runner_version = 7;
-  int32 current_pods = 8;
-  int32 max_concurrent_pods = 9;
-  repeated string available_agents = 10;
+  optional string runner_version = 7 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  int32 current_pods = 8 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_concurrent_pods = 9 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  repeated string available_agents = 10 [(amesh.codegen.v1.field_custom) = "adminStringSliceToProto"];
   // Free-form host metadata; JSON-serialized for binary parity with REST.
-  optional string host_info_json = 11;
-  optional string last_heartbeat = 12;
-  string created_at = 13;
-  string updated_at = 14;
-  // Optional embedded org summary (parity with runnerResponseWithOrg).
-  optional AdminOrganizationSummary organization = 15;
+  optional string host_info_json = 11 [
+    (amesh.codegen.v1.field_rename) = "HostInfo",
+    (amesh.codegen.v1.field_custom) = "adminHostInfoToProto"
+  ];
+  optional string last_heartbeat = 12 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
+  string created_at = 13 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 14 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  // Optional embedded org summary — composed externally by the call wrapper
+  // because Runner has no Organization preload.
+  optional AdminOrganizationSummary organization = 15 [(amesh.codegen.v1.field_skip) = true];
 }
 
 message AdminOrganizationSummary {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/organization.Organization"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string name = 2;
   string slug = 3;
 }
 
 message AdminAuditLog {
-  int64 id = 1;
-  int64 admin_user_id = 2;
-  string action = 3;
-  string target_type = 4;
-  int64 target_id = 5;
-  optional string old_data = 6;
-  optional string new_data = 7;
-  optional string ip_address = 8;
-  optional string user_agent = 9;
-  string created_at = 10;
-  optional AdminUserSummary admin_user = 11;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/admin.AuditLog"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 admin_user_id = 2 [(amesh.codegen.v1.field_rename) = "AdminUserID"];
+  // Domain stores typed AuditAction (string alias); custom helper casts.
+  string action = 3 [(amesh.codegen.v1.field_custom) = "auditActionToProto"];
+  // Domain stores typed TargetType (string alias); custom helper casts.
+  string target_type = 4 [(amesh.codegen.v1.field_custom) = "targetTypeToProto"];
+  int64 target_id = 5 [(amesh.codegen.v1.field_rename) = "TargetID"];
+  optional string old_data = 6 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string new_data = 7 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string ip_address = 8 [
+    (amesh.codegen.v1.field_rename) = "IPAddress",
+    (amesh.codegen.v1.field_convert) = "string_ptr"
+  ];
+  optional string user_agent = 9 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  string created_at = 10 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  optional AdminUserSummary admin_user = 11 [(amesh.codegen.v1.field_custom) = "userSummaryToProto"];
 }
 
 // --- Users ---
@@ -376,17 +447,29 @@ message ListAuditLogsResponse {
 // AdminRelay mirrors backend/internal/service/relay/RelayInfo. Field shape is
 // REST parity (`relay_info.go:11`) — JSON struct tags match the wire names.
 message AdminRelay {
-  string id = 1;
-  string url = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/service/relay.RelayInfo"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  string id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  string url = 2 [(amesh.codegen.v1.field_rename) = "URL"];
   string region = 3;
-  int32 capacity = 4;
-  int32 connections = 5;
-  double cpu_usage = 6;
+  int32 capacity = 4 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 connections = 5 [
+    (amesh.codegen.v1.field_rename) = "CurrentConnections",
+    (amesh.codegen.v1.field_convert) = "int_to_int32"
+  ];
+  double cpu_usage = 6 [(amesh.codegen.v1.field_rename) = "CPUUsage"];
   double memory_usage = 7;
   // RFC 3339 timestamp.
-  string last_heartbeat = 8;
+  string last_heartbeat = 8 [(amesh.codegen.v1.field_convert) = "rfc3339"];
   bool healthy = 9;
-  int32 avg_latency_ms = 10;
+  int32 avg_latency_ms = 10 [
+    (amesh.codegen.v1.field_rename) = "AvgLatencyMs",
+    (amesh.codegen.v1.field_convert) = "int_to_int32"
+  ];
   double latitude = 11;
   double longitude = 12;
 }

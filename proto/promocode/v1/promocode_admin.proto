@@ -17,7 +17,18 @@ syntax = "proto3";
 
 package proto.promocode.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/promocode/v1;promocodev1";
+
+// Convert codegen target — emits promocode_admin_convert.amesh.go into the
+// backend admin/promocode connect handler tree so it can reach
+// domain/promocode (which proto/gen/go packages cannot import under Go's
+// internal-package rule).
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/admin/promocode"
+  output_package: "promocodeadminconnect"
+};
 
 // ============================================================================
 // PromoCodeAdminService — platform-admin only. Mirrors REST routes at
@@ -39,22 +50,27 @@ service PromoCodeAdminService {
 // the admin REST handler exposes. Times are ISO-8601 strings per §8.
 // ----------------------------------------------------------------------------
 message PromoCode {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/promocode.PromoCode"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string code = 2;
   string name = 3;
   string description = 4;
-  string type = 5;
+  // promocode.PromoCodeType is a string newtype; codegen needs a custom cast.
+  string type = 5 [(amesh.codegen.v1.field_custom) = "promoTypeToProto"];
   string plan_name = 6;
-  int32 duration_months = 7;
-  optional int32 max_uses = 8;
-  int32 used_count = 9;
-  int32 max_uses_per_org = 10;
-  string starts_at = 11;
-  optional string expires_at = 12;
+  int32 duration_months = 7 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  optional int32 max_uses = 8 [(amesh.codegen.v1.field_convert) = "int_ptr_to_int32"];
+  int32 used_count = 9 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_uses_per_org = 10 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  string starts_at = 11 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  optional string expires_at = 12 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
   bool is_active = 13;
-  optional int64 created_by_id = 14;
-  string created_at = 15;
-  string updated_at = 16;
+  optional int64 created_by_id = 14 [(amesh.codegen.v1.field_rename) = "CreatedByID"];
+  string created_at = 15 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 16 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // RedemptionDetail mirrors admin.RedemptionWithDetails — embedded
@@ -62,19 +78,27 @@ message PromoCode {
 // (id + display name); admin UI doesn't read the nested object beyond
 // that, so we avoid wire-marshalling full entity messages.
 message RedemptionDetail {
-  int64 id = 1;
-  int64 promo_code_id = 2;
-  int64 organization_id = 3;
-  int64 user_id = 4;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/service/admin.RedemptionWithDetails"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 promo_code_id = 2 [(amesh.codegen.v1.field_rename) = "PromoCodeID"];
+  int64 organization_id = 3 [(amesh.codegen.v1.field_rename) = "OrganizationID"];
+  int64 user_id = 4 [(amesh.codegen.v1.field_rename) = "UserID"];
   string plan_name = 5;
-  int32 duration_months = 6;
-  string new_period_end = 7;
-  optional string ip_address = 8;
-  string created_at = 9;
-  optional string user_email = 10;
-  optional string user_username = 11;
-  optional string organization_name = 12;
-  optional string organization_slug = 13;
+  int32 duration_months = 6 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  string new_period_end = 7 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  optional string ip_address = 8 [(amesh.codegen.v1.field_rename) = "IPAddress"];
+  string created_at = 9 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  // Derived from embedded *user.User — populated by the alias wrapper after
+  // codegen runs (the domain struct has no flat user_email/user_username
+  // fields, so codegen skips them).
+  optional string user_email = 10 [(amesh.codegen.v1.field_skip) = true];
+  optional string user_username = 11 [(amesh.codegen.v1.field_skip) = true];
+  // Derived from embedded *organization.Organization (same pattern).
+  optional string organization_name = 12 [(amesh.codegen.v1.field_skip) = true];
+  optional string organization_slug = 13 [(amesh.codegen.v1.field_skip) = true];
 }
 
 // ----------------------------------------------------------------------------

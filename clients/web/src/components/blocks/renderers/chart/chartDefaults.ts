@@ -1,4 +1,4 @@
-import type { ChartSubType, JSONMap } from "@/lib/api/blockstoreTypes";
+import type { ChartSubType, JSONMap } from "@/lib/viewModels/blockstore";
 
 // Single source of truth for chart block seed data — the slash menu and any
 // other entry point that creates a chart must use these defaults so the shape

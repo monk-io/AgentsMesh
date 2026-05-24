@@ -34,7 +34,17 @@ syntax = "proto3";
 
 package proto.binding.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/binding/v1;bindingv1";
+
+// Convert codegen target — emits binding_convert.amesh.go into the backend
+// connect handler tree so it can reach the domain layer (which proto/gen/go
+// packages cannot import under Go's internal-package rule).
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/binding"
+  output_package: "bindingconnect"
+};
 
 service BindingService {
   rpc RequestBinding(RequestBindingRequest) returns (PodBinding);
@@ -50,25 +60,29 @@ service BindingService {
 }
 
 message PodBinding {
-  int64 id = 1;
-  int64 organization_id = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/channel.PodBinding"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 organization_id = 2 [(amesh.codegen.v1.field_rename) = "OrganizationID"];
   string initiator_pod = 3;
   string target_pod = 4;
   // pending / active / rejected / inactive / expired.
   string status = 5;
   // Scopes already granted to initiator on target. Subset of ValidBindingScopes.
-  repeated string granted_scopes = 6;
+  repeated string granted_scopes = 6 [(amesh.codegen.v1.field_convert) = "string_slice_cast"];
   // Scopes requested but not yet approved by target. Empty when fully granted.
-  repeated string pending_scopes = 7;
+  repeated string pending_scopes = 7 [(amesh.codegen.v1.field_convert) = "string_slice_cast"];
   // RFC 3339, nullable.
-  optional string requested_at = 8;
-  optional string responded_at = 9;
+  optional string requested_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
+  optional string responded_at = 9 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
   // Expiry only set for pending bindings (24h default).
-  optional string expires_at = 10;
+  optional string expires_at = 10 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
   // Populated when status = rejected.
-  optional string rejection_reason = 11;
-  string created_at = 12;
-  string updated_at = 13;
+  optional string rejection_reason = 11 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  string created_at = 12 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 13 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // --- Request creation ---

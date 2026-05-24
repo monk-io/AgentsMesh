@@ -86,7 +86,7 @@ func (s *Server) GetPod(
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("forbidden"))
 	}
 
-	return connect.NewResponse(toProtoPod(pod)), nil
+	return connect.NewResponse(ToProtoPod(pod)), nil
 }
 
 // ListPodsByTicket — REST analogue: GET /api/v1/organizations/:slug/tickets/:id/pods.

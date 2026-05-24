@@ -1,6 +1,6 @@
 "use client";
 
-import type { SubscriptionPlan, BillingCycle } from "@/lib/api/billing-types";
+import type { SubscriptionPlan, BillingCycle } from "@/lib/viewModels/billing";
 
 interface BillingCycleSelectorProps {
   plan: SubscriptionPlan;

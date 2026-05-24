@@ -33,7 +33,16 @@ syntax = "proto3";
 
 package proto.agent.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/agent/v1;agentv1";
+
+// Convert codegen target — emits agent_convert.amesh.go into the backend
+// connect handler tree so it can reach the domain layer.
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/agent"
+  output_package: "agentconnect"
+};
 
 // ============================================================================
 // AgentService — org-scoped agent catalog + custom agent CRUD
@@ -61,27 +70,34 @@ service UserAgentConfigService {
 // Agent entity — covers both builtin (domain/agent/Agent) and custom (CustomAgent)
 // ============================================================================
 
-// Agent mirrors backend/internal/domain/agent.Agent.
-// Builtin agents have is_builtin=true; custom agents have organization_id set
-// + is_builtin=false. The REST handler serializes both via the same JSON shape
-// (modulo organization_id), so we keep one proto message.
+// Agent mirrors backend/internal/domain/agent.Agent (builtin path).
+// Custom agents map to a different domain struct (CustomAgent); the conversion
+// for that path stays hand-written in convert.go because the field set differs
+// (no Executable / IsBuiltin / SupportedModes; organization_id mandatory).
 message Agent {
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/agent.Agent"
+  };
+
   string slug = 1;
   string name = 2;
-  optional string description = 3;
+  optional string description = 3 [(amesh.codegen.v1.field_convert) = "string_ptr"];
   string launch_command = 4;
-  optional string executable = 5;
-  optional string default_args = 6;
+  // domain field is `string` (zero value = absent); proto is optional. Custom
+  // helper handles the empty-string → nil pointer flip.
+  optional string executable = 5 [(amesh.codegen.v1.field_custom) = "executableToProto"];
+  optional string default_args = 6 [(amesh.codegen.v1.field_convert) = "string_ptr"];
   // Source of truth for CONFIG / ENV / CREDENTIAL / PROMPT declarations.
-  optional string agentfile_source = 7;
+  optional string agentfile_source = 7 [(amesh.codegen.v1.field_convert) = "string_ptr"];
   bool is_builtin = 8;
   bool is_active = 9;
   // CSV: "pty,acp" — REST emits this as a string today, kept verbatim.
   string supported_modes = 10;
-  string created_at = 11;
-  string updated_at = 12;
-  // organization_id is null for builtin agents.
-  optional int64 organization_id = 13;
+  string created_at = 11 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 12 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  // organization_id is null for builtin agents; CustomAgent path emits it
+  // via the hand-written converter.
+  optional int64 organization_id = 13 [(amesh.codegen.v1.field_skip) = true];
 }
 
 // AgentListResponse — §9 multi-field envelope (intentional deviation from §8).

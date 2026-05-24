@@ -34,7 +34,16 @@ syntax = "proto3";
 
 package proto.runner_api.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/runner_api/v1;runnerapiv1";
+
+// Convert codegen target — emits runner_convert.amesh.go into the backend
+// connect handler tree so it can reach domain/runner + service/runner.
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/runner"
+  output_package: "runnerconnect"
+};
 
 service RunnerService {
   // CRUD
@@ -79,31 +88,46 @@ service RunnerPublicService {
 // the wire and `google.protobuf.Struct` pulls prost-types into the wasm
 // graph (conventions §6 rationale applies to Struct too).
 message Runner {
-  int64 id = 1;
-  string node_id = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/runner.Runner"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  string node_id = 2 [(amesh.codegen.v1.field_rename) = "NodeID"];
   string description = 3;
   // online / offline / busy / maintenance
   string status = 4;
-  optional string last_heartbeat = 5;
-  int32 current_pods = 6;
-  int32 max_concurrent_pods = 7;
-  optional string runner_version = 8;
+  optional string last_heartbeat = 5 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
+  int32 current_pods = 6 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  int32 max_concurrent_pods = 7 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
+  optional string runner_version = 8 [(amesh.codegen.v1.field_convert) = "string_ptr"];
   bool is_enabled = 9;
   // organization / private — RBAC scope
   string visibility = 10;
-  optional int64 registered_by_user_id = 11;
+  optional int64 registered_by_user_id = 11 [(amesh.codegen.v1.field_rename) = "RegisteredByUserID"];
   // JSON-encoded host metadata: {os, arch, memory, cpu_cores, hostname, ...}
-  string host_info_json = 12;
-  repeated string available_agents = 13;
-  repeated string tags = 14;
-  string created_at = 15;
-  string updated_at = 16;
-  int64 organization_id = 17;
-  repeated AgentVersion agent_versions = 18;
+  string host_info_json = 12 [
+    (amesh.codegen.v1.field_rename) = "HostInfo",
+    (amesh.codegen.v1.field_custom) = "marshalHostInfo"
+  ];
+  repeated string available_agents = 13 [(amesh.codegen.v1.field_custom) = "stringSliceToProto"];
+  repeated string tags = 14 [(amesh.codegen.v1.field_custom) = "stringSliceToProto"];
+  string created_at = 15 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 16 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  int64 organization_id = 17 [(amesh.codegen.v1.field_rename) = "OrganizationID"];
+  repeated AgentVersion agent_versions = 18 [(amesh.codegen.v1.field_custom) = "agentVersionsToProto"];
 }
 
 // AgentVersion mirrors domain/runner.AgentVersion — installed agent runtime info.
 message AgentVersion {
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/runner.AgentVersion"
+    generate_to_proto: true
+    generate_from_proto: false
+  };
+
   string slug = 1;
   string version = 2;
   string path = 3;

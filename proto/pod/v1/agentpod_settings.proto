@@ -14,7 +14,16 @@ syntax = "proto3";
 
 package proto.pod.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/pod/v1;podv1";
+
+// Convert codegen target — emits agentpod_settings_convert.amesh.go into the
+// handler tree so converters can reach `backend/internal/domain/agentpod`.
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/agentpod_settings"
+  output_package: "agentpodsettingsconnect"
+};
 
 service AgentPodSettingsService {
   rpc GetSettings(GetSettingsRequest) returns (AgentPodSettings);
@@ -27,23 +36,31 @@ service AgentPodSettingsService {
 }
 
 message AgentPodSettings {
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod.UserAgentPodSettings"
+  };
+
   optional string default_agent_slug = 1;
   optional string default_model = 2;
   // default | accept-edits | full-auto
   optional string default_perm_mode = 3;
-  optional int32 terminal_font_size = 4;
+  optional int32 terminal_font_size = 4 [(amesh.codegen.v1.field_convert) = "int_ptr_to_int32"];
   optional string terminal_theme = 5;
 }
 
 message AIProvider {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod.UserAIProvider"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   // claude | gemini | codex | openai
   string provider_type = 2;
   string name = 3;
   bool is_default = 4;
   bool is_enabled = 5;
-  string created_at = 6;
-  string updated_at = 7;
+  string created_at = 6 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 7 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // --- Settings ---

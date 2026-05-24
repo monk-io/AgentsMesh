@@ -12,7 +12,7 @@ import {
   DeploymentInfoSchema,
 } from "@proto/billing/v1/billing_pb";
 
-import type { PublicPricingResponse, DeploymentInfo, Currency } from "@/lib/api/billing-types";
+import type { PublicPricingResponse, DeploymentInfo, Currency } from "@/lib/viewModels/billing";
 import { callPublicConnect } from "./public-connect";
 
 const SERVICE = "proto.billing.v1.BillingPublicService";

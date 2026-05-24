@@ -46,7 +46,9 @@ export class EventSubscriptionManager {
     if (!this.wasm) {
       this.wasm = getApiClient().create_events_manager();
     }
-    return this.wasm;
+    // Property writes don't narrow `this.wasm`'s union — the assignment
+    // above guarantees non-null at this point.
+    return this.wasm!;
   }
 
   private setConnectionState(state: ConnectionState): void {

@@ -5,9 +5,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { SkillMarketItem } from "@/lib/api";
-import { extensionApi } from "@/lib/api/extension";
-import { listMarketSkills } from "@/lib/api/marketExtension";
-import { installSkillFromMarket, installSkillFromGitHub } from "@/lib/api/repoSkillExtension";
+import { extensionApi } from "@/lib/api/facade/extension";
+import { listMarketSkills } from "@/lib/api/facade/marketExtension";
+import { installSkillFromMarket, installSkillFromGitHub } from "@/lib/api/facade/repoSkillExtension";
 import { useCurrentOrg } from "@/stores/auth";
 import type { InstalledSkill } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
@@ -107,11 +107,10 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
   const handleUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file) return;
+      if (!file || !orgSlug) return;
       setInstalling(true);
       try {
-        // Multipart upload stays REST (Connect doesn't handle multipart/form-data).
-        await extensionApi.installSkillFromUpload(repositoryId, file, scope);
+        await extensionApi.installSkillFromUpload(orgSlug, repositoryId, file, scope);
         toast.success(t("extensions.installed"));
         onInstalled();
       } catch (error) {
@@ -123,7 +122,7 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
         }
       }
     },
-    [repositoryId, scope, t, onInstalled]
+    [orgSlug, repositoryId, scope, t, onInstalled]
   );
 
   return (

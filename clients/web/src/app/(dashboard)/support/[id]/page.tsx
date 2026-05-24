@@ -14,9 +14,9 @@ import {
 import { MessageList } from "@/components/support/message-list";
 import {
   addSupportTicketMessage,
-} from "@/lib/api/support-ticket";
-import type { SupportTicketDetail } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketDetail } from "@/lib/api/supportTicketConnect";
+} from "@/lib/api/facade/support-ticket";
+import type { SupportTicketDetail } from "@/lib/api/connect/supportTicketConnect";
+import { getSupportTicketDetail } from "@/lib/api/connect/supportTicketConnect";
 
 export default function SupportTicketDetailPage() {
   const params = useParams();
@@ -158,7 +158,7 @@ export default function SupportTicketDetailPage() {
             <TicketCategoryBadge category={ticket.category} />
             <TicketPriorityBadge priority={ticket.priority} />
             <span className="text-xs text-muted-foreground">
-              #{ticket.id} · {new Date(ticket.created_at).toLocaleDateString()}
+              #{Number(ticket.id)} · {new Date(ticket.createdAt).toLocaleDateString()}
             </span>
           </div>
         </div>

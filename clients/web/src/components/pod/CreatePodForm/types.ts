@@ -1,4 +1,4 @@
-import type { PodData } from "@/lib/api/pod";
+import type { PodData } from "@/lib/api/facade/pod";
 
 export type PodCreationScenario = "workspace" | "ticket";
 

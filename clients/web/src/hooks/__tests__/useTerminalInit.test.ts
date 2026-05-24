@@ -30,7 +30,7 @@ vi.mock("@/lib/terminalScheduler", () => ({
   })),
 }));
 
-vi.mock("@/lib/api/file", () => ({
+vi.mock("@/lib/api/facade/file", () => ({
   uploadImage: vi.fn(),
 }));
 

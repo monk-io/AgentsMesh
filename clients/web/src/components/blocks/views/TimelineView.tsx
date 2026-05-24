@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 
-import type { Block, ViewSpec } from "@/lib/api/blockstoreTypes";
+import type { Block, ViewSpec } from "@/lib/viewModels/blockstore";
 
 import { ViewHeader } from "./ViewListFallback";
 import { SummaryBar } from "./SummaryBar";

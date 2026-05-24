@@ -2,8 +2,8 @@
 
 import React from "react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
-import { BLOCK_TYPE_PARAGRAPH } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
+import { BLOCK_TYPE_PARAGRAPH } from "@/lib/viewModels/blockstore";
 
 import { NestChildren } from "../BlockRenderer";
 import { BlockChrome } from "../editor/BlockChrome";

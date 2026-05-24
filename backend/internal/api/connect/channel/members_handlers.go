@@ -35,7 +35,8 @@ func (s *Server) ListChannelMembers(
 	}
 	items := make([]*channelv1.ChannelMember, 0, len(members))
 	for _, m := range members {
-		items = append(items, toProtoMember(m))
+		mm := m
+		items = append(items, ToProtoChannelMember(&mm))
 	}
 	return connect.NewResponse(&channelv1.ListChannelMembersResponse{
 		Items: items, Total: total, Limit: limit, Offset: offset,

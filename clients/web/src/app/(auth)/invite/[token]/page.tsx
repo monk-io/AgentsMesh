@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import type { InvitationInfo } from "@/lib/api/invitationTypes";
+import type { InvitationInfo } from "@/lib/api/connect/invitationConnect";
 import { ApiError } from "@/lib/api/api-types";
 import {
   lightFetchInvitation,
@@ -59,8 +59,8 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
     setAccepting(true);
     setError("");
     try {
-      await lightAcceptInvitation(resolvedParams.token, invitation.organization_slug);
-      router.push(getDefaultRoute(invitation.organization_slug));
+      await lightAcceptInvitation(resolvedParams.token, invitation.organizationSlug);
+      router.push(getDefaultRoute(invitation.organizationSlug));
     } catch (err: unknown) {
       setError(err instanceof ApiError && err.serverMessage
         ? err.serverMessage
@@ -109,7 +109,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
     );
   }
 
-  if (invitation?.is_expired) {
+  if (invitation?.isExpired) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-md space-y-6 text-center">
@@ -129,7 +129,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-foreground">Invitation Expired</h1>
             <p className="text-sm text-muted-foreground">
-              This invitation to join <strong>{invitation.organization_name}</strong> has expired.
+              This invitation to join <strong>{invitation.organizationName}</strong> has expired.
               Please ask the organization admin to send a new invitation.
             </p>
           </div>
@@ -161,9 +161,9 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
           <div className="text-center space-y-2">
             <h1 className="text-xl font-semibold text-foreground">You&apos;re invited to join</h1>
-            <p className="text-2xl font-bold text-primary">{invitation?.organization_name}</p>
+            <p className="text-2xl font-bold text-primary">{invitation?.organizationName}</p>
             <p className="text-sm text-muted-foreground">
-              {invitation?.inviter_name} has invited you to join as{" "}
+              {invitation?.inviterName} has invited you to join as{" "}
               <span className="font-medium capitalize">{invitation?.role}</span>
             </p>
           </div>
@@ -201,7 +201,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
         {invitation && (
           <p className="text-center text-xs text-muted-foreground">
-            This invitation expires on {new Date(invitation.expires_at).toLocaleDateString()}
+            This invitation expires on {new Date(invitation.expiresAt).toLocaleDateString()}
           </p>
         )}
       </div>

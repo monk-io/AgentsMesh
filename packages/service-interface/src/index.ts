@@ -301,7 +301,8 @@ export interface IExtensionService {
   install_mcp_from_market(repo_id: bigint, json: string): Promise<string>;
   install_skill_from_github(repo_id: bigint, json: string): Promise<string>;
   install_skill_from_market(repo_id: bigint, json: string): Promise<string>;
-  install_skill_from_upload(repo_id: bigint, file_data: Uint8Array, file_name: string, scope?: string | null): Promise<string>;
+  presignSkillUploadConnect(request: Uint8Array): Promise<Uint8Array>;
+  installSkillFromUploadedFileConnect(request: Uint8Array): Promise<Uint8Array>;
   list_market_mcp_servers(query?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   list_market_skills(query?: string | null, category?: string | null): Promise<string>;
   list_repo_mcp_servers(repo_id: bigint, scope?: string | null): Promise<string>;

@@ -10,10 +10,10 @@ import {
   getChannelUnreadCounts,
   markChannelRead,
   muteChannel as muteChannelConnect,
-} from "@/lib/api/channelConnect";
+} from "@/lib/api/facade/channelConnect";
 import { getCache, updateCache } from "./channelMessageTypes";
 import type { ChannelMessageState } from "./channelMessageTypes";
-import type { ChannelMessage } from "@/lib/api/channel";
+import type { ChannelMessage } from "@/lib/api/facade/channel";
 import {
   toWasmMessage,
   fromWasmMessage,

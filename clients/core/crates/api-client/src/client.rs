@@ -1,14 +1,21 @@
 use std::sync::Arc;
 
 use futures::lock::Mutex;
-use reqwest::{Client, Method};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use reqwest::Client;
 
 use crate::error::ApiError;
-use crate::request::RequestOptions;
 use crate::token_store::AuthTokenStore;
 
+/// Connect-RPC client. Owns the shared `reqwest::Client` + auth token store.
+///
+/// After R7 the surface is intentionally tiny: every business RPC goes through
+/// `connect_call()` (binary application/proto). Two protocol-外 escape hatches:
+///   - `put_raw_bytes` — S3 / MinIO presigned PUT (file + skill upload).
+///   - `current_org_slug` — exposes the cached slug to services that build
+///     proto request bodies (`org_slug` is always proto field 1).
+///
+/// Token refresh is also Connect-only — see `refresh.rs` (calls
+/// `/proto.auth.v1.AuthService/RefreshToken`).
 pub struct ApiClient {
     pub(crate) http: Client,
     pub(crate) base_url: String,
@@ -26,127 +33,16 @@ impl ApiClient {
         }
     }
 
-    pub fn org_path(&self, path: &str) -> String {
-        match self.auth_store.get_current_org_slug() {
-            Some(slug) => format!("/api/v1/orgs/{slug}{path}"),
-            None => format!("/api/v1{path}"),
-        }
-    }
-
-    /// Current org slug for Connect-RPC requests that carry `org_slug` in
-    /// the proto body. Services use this to build proto requests before
-    /// invoking `*_connect` (dual-track migration window).
+    /// Current org slug for Connect-RPC request bodies. Services use this to
+    /// populate `org_slug` (proto field 1) before invoking `*_connect`.
     pub fn current_org_slug(&self) -> String {
         self.auth_store.get_current_org_slug().unwrap_or_default()
     }
 
-    pub async fn get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T, ApiError> {
-        self.request(Method::GET, endpoint, RequestOptions::default())
-            .await
-    }
-
-    pub async fn get_resource<T: DeserializeOwned>(
-        &self, endpoint: &str, wrapper_key: &str,
-    ) -> Result<T, ApiError> {
-        let val: serde_json::Value = self.get(endpoint).await?;
-        let inner = val.get(wrapper_key).unwrap_or(&val);
-        serde_json::from_value(inner.clone()).map_err(ApiError::Json)
-    }
-
-    fn unwrap_resource<T: DeserializeOwned>(
-        val: serde_json::Value, wrapper_key: &str,
-    ) -> Result<T, ApiError> {
-        let inner = val.get(wrapper_key).unwrap_or(&val);
-        serde_json::from_value(inner.clone()).map_err(ApiError::Json)
-    }
-
-    pub async fn post_resource<T: DeserializeOwned>(
-        &self, endpoint: &str, body: &impl Serialize, wrapper_key: &str,
-    ) -> Result<T, ApiError> {
-        let val: serde_json::Value = self.post(endpoint, body).await?;
-        Self::unwrap_resource(val, wrapper_key)
-    }
-
-    pub async fn put_resource<T: DeserializeOwned>(
-        &self, endpoint: &str, body: &impl Serialize, wrapper_key: &str,
-    ) -> Result<T, ApiError> {
-        let val: serde_json::Value = self.put(endpoint, body).await?;
-        Self::unwrap_resource(val, wrapper_key)
-    }
-
-    pub async fn patch_resource<T: DeserializeOwned>(
-        &self, endpoint: &str, body: &impl Serialize, wrapper_key: &str,
-    ) -> Result<T, ApiError> {
-        let val: serde_json::Value = self.patch(endpoint, body).await?;
-        Self::unwrap_resource(val, wrapper_key)
-    }
-
-    pub async fn post<T: DeserializeOwned>(
-        &self,
-        endpoint: &str,
-        body: &impl Serialize,
-    ) -> Result<T, ApiError> {
-        let opts = RequestOptions {
-            body: Some(serde_json::to_value(body)?),
-            ..Default::default()
-        };
-        self.request(Method::POST, endpoint, opts).await
-    }
-
-    pub async fn put<T: DeserializeOwned>(
-        &self,
-        endpoint: &str,
-        body: &impl Serialize,
-    ) -> Result<T, ApiError> {
-        let opts = RequestOptions {
-            body: Some(serde_json::to_value(body)?),
-            ..Default::default()
-        };
-        self.request(Method::PUT, endpoint, opts).await
-    }
-
-    pub async fn delete<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T, ApiError> {
-        self.request(Method::DELETE, endpoint, RequestOptions::default())
-            .await
-    }
-
-    pub async fn patch<T: DeserializeOwned>(
-        &self,
-        endpoint: &str,
-        body: &impl Serialize,
-    ) -> Result<T, ApiError> {
-        let opts = RequestOptions {
-            body: Some(serde_json::to_value(body)?),
-            ..Default::default()
-        };
-        self.request(Method::PATCH, endpoint, opts).await
-    }
-
-    pub async fn public_get<T: DeserializeOwned>(&self, endpoint: &str) -> Result<T, ApiError> {
-        self.request_no_auth(Method::GET, endpoint, RequestOptions::default())
-            .await
-    }
-
-    pub async fn public_get_resource<T: DeserializeOwned>(
-        &self, endpoint: &str, wrapper_key: &str,
-    ) -> Result<T, ApiError> {
-        let val: serde_json::Value = self.public_get(endpoint).await?;
-        let inner = val.get(wrapper_key).unwrap_or(&val);
-        serde_json::from_value(inner.clone()).map_err(ApiError::Json)
-    }
-
-    pub async fn public_post<T: DeserializeOwned>(
-        &self,
-        endpoint: &str,
-        body: &impl Serialize,
-    ) -> Result<T, ApiError> {
-        let opts = RequestOptions {
-            body: Some(serde_json::to_value(body)?),
-            ..Default::default()
-        };
-        self.request_no_auth(Method::POST, endpoint, opts).await
-    }
-
+    /// Direct PUT of raw bytes — protocol-外 path used for S3 presigned
+    /// uploads (file attachments + skill packages). Connect doesn't carry
+    /// blob bodies, so renderer code calls this after first asking the
+    /// backend for a presigned URL via a Connect RPC.
     pub async fn put_raw_bytes(
         &self, url: &str, content_type: &str, body: Vec<u8>,
     ) -> Result<(), ApiError> {

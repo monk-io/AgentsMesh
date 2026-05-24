@@ -8,7 +8,7 @@ import {
   syncSkillRegistry,
   deleteSkillRegistry,
   togglePlatformRegistry,
-} from "@/lib/api/skillRegistry";
+} from "@/lib/api/facade/skillRegistry";
 import { useCurrentOrg } from "@/stores/auth";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { AgentData, RepositoryData, EnvBundleSummary } from "@/lib/api";
-import { getEnvBundleService } from "@/lib/wasm-core";
+import { listEnvBundles } from "@/lib/api/facade/envBundleConnect";
 import { usePodCreationStore } from "@/stores/podCreation";
 
 /**
@@ -77,27 +77,27 @@ export function useEnvBundles(selectedAgent: string | null) {
     const load = async () => {
       setLoadingBundles(true);
       try {
-        const svc = getEnvBundleService();
         // Load both kinds in parallel. Failure of one shouldn't take out
         // the other (credential may be empty while runtime has entries).
         const [credRes, runtimeRes] = await Promise.all([
-          svc.list("credential", selectedAgent).then((j: string) => JSON.parse(j)).catch(() => ({ items: [] })),
-          svc.list("runtime", selectedAgent).then((j: string) => JSON.parse(j)).catch(() => ({ items: [] })),
+          listEnvBundles({ kind: "credential", agentSlug: selectedAgent }).catch(() => ({ items: [] })),
+          listEnvBundles({ kind: "runtime", agentSlug: selectedAgent }).catch(() => ({ items: [] })),
         ]);
         const mapBundle = (b: {
-          id: number;
-          agent_slug?: string | null;
+          id: bigint;
+          agentSlug?: string;
           name: string;
           kind: string;
-          kind_primary: boolean;
-          configured_fields?: string[];
+          kindPrimary: boolean;
+          configuredFields: string[];
         }): EnvBundleSummary => ({
-          id: b.id,
+          id: Number(b.id),
           name: b.name,
-          agent_slug: b.agent_slug ?? selectedAgent,
+          agent_slug: b.agentSlug ?? selectedAgent,
           kind: b.kind,
-          kind_primary: b.kind_primary,
-          configured_fields: b.configured_fields,
+          kind_primary: b.kindPrimary,
+          configured_fields:
+            b.configuredFields.length > 0 ? b.configuredFields : undefined,
         });
         const credBundles: EnvBundleSummary[] = (credRes.items ?? []).map(mapBundle);
         const runtimeBundles: EnvBundleSummary[] = (runtimeRes.items ?? []).map(mapBundle);

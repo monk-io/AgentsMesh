@@ -36,7 +36,7 @@ func (s *Server) DisableUser(
 		admin.AuditActionUserDisable, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }
 
 func (s *Server) EnableUser(
@@ -59,7 +59,7 @@ func (s *Server) EnableUser(
 		admin.AuditActionUserEnable, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }
 
 func (s *Server) GrantAdmin(
@@ -82,7 +82,7 @@ func (s *Server) GrantAdmin(
 		admin.AuditActionUserGrantAdmin, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }
 
 func (s *Server) RevokeAdmin(
@@ -105,7 +105,7 @@ func (s *Server) RevokeAdmin(
 		admin.AuditActionUserRevokeAdmin, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }
 
 func (s *Server) VerifyUserEmail(
@@ -128,7 +128,7 @@ func (s *Server) VerifyUserEmail(
 		admin.AuditActionUserVerifyEmail, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }
 
 func (s *Server) UnverifyUserEmail(
@@ -151,5 +151,5 @@ func (s *Server) UnverifyUserEmail(
 		admin.AuditActionUserUnverifyEmail, admin.TargetTypeUser, userID,
 		oldUser, u, req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminUser(u)), nil
+	return connect.NewResponse(ToProtoAdminUser(u)), nil
 }

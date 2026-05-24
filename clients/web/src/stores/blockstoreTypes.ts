@@ -1,4 +1,4 @@
-import type { Block, BlockRef, Workspace } from "@/lib/api/blockstoreTypes";
+import type { Block, BlockRef, Workspace } from "@/lib/viewModels/blockstore";
 
 // UI-only state. All block/ref/workspace data lives in Rust BlockstoreService
 // and is read through selectors; this store only tracks transient UI signals.

@@ -106,7 +106,7 @@ test("image block stores uploaded asset URL end-to-end", async ({
     orgSlug,
     filename: "probe.png",
     contentType: "image/png",
-    size: 1024n,
+    size: BigInt(1024),
   }) as { putUrl: string; getUrl: string };
   expect(presigned.putUrl).toBeTruthy();
   expect(presigned.getUrl).toBeTruthy();

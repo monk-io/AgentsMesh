@@ -1,6 +1,6 @@
 import type React from "react";
 
-import type { ChartSubType, JSONMap } from "@/lib/api/blockstoreTypes";
+import type { ChartSubType, JSONMap } from "@/lib/viewModels/blockstore";
 
 export interface ChartSeries {
   name?: string;

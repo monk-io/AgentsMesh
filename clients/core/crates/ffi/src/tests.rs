@@ -227,52 +227,6 @@ fn relay_placeholder_returns_expected() {
     assert_eq!(core.relay_placeholder(), "relay integration pending");
 }
 
-// ── api_ffi: api_org_path ──
-
-#[test]
-fn api_org_path_without_org() {
-    let core = make_core();
-    let path = core.api_org_path("/pods".into());
-    assert!(path.contains("/pods"));
-}
-
-// api_org_path_with_org removed — depended on `restore_session()` to seed an
-// authenticated state from a stored "agentsmesh-auth" blob. With bootstrap
-// as the sole hydrate path, that scenario lives in async integration tests
-// (bootstrap_tests.rs) rather than the synchronous ffi unit tests.
-
-// ── api_ffi: invalid JSON body triggers CoreError::InvalidJson ──
-
-#[tokio::test]
-async fn api_post_invalid_body_returns_error() {
-    let core = make_core();
-    let result = core.api_post("/endpoint".into(), "not json".into()).await;
-    match result {
-        Err(CoreError::InvalidJson { .. }) => {}
-        other => panic!("expected InvalidJson error from bad JSON body, got {other:?}"),
-    }
-}
-
-#[tokio::test]
-async fn api_put_invalid_body_returns_error() {
-    let core = make_core();
-    let result = core.api_put("/endpoint".into(), "{bad".into()).await;
-    match result {
-        Err(CoreError::InvalidJson { .. }) => {}
-        other => panic!("expected InvalidJson error from bad JSON body, got {other:?}"),
-    }
-}
-
-#[tokio::test]
-async fn api_patch_invalid_body_returns_error() {
-    let core = make_core();
-    let result = core.api_patch("/endpoint".into(), "???".into()).await;
-    match result {
-        Err(CoreError::InvalidJson { .. }) => {}
-        other => panic!("expected InvalidJson error from bad JSON body, got {other:?}"),
-    }
-}
-
 // ── auth_ffi: switch_org error path ──
 
 #[test]

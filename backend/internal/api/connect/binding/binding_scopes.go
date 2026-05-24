@@ -49,7 +49,7 @@ func (s *Server) RequestScopes(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoBinding(binding)), nil
+	return connect.NewResponse(ToProtoPodBinding(binding)), nil
 }
 
 func (s *Server) ApproveScopes(
@@ -87,5 +87,5 @@ func (s *Server) ApproveScopes(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoBinding(binding)), nil
+	return connect.NewResponse(ToProtoPodBinding(binding)), nil
 }

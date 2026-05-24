@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import {
-  RepositoryProviderData,
-  RepositoryData,
-} from "@/lib/api";
-import type { ProviderRepositoryData } from "@/lib/api/userRepositoryProviderTypes";
+import { RepositoryData } from "@/lib/api";
+import type { RepositoryProviderData, ProviderRepositoryData } from "@/lib/viewModels/repositoryProvider";
 import { getRepositoryService, getUserCredentialService } from "@/lib/wasm-core";
 import type { ImportWizardState, ImportWizardActions, ImportWizardStep } from "./types";
 

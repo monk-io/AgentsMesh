@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { SeatUsage } from "@/lib/api/billing-types";
-import { getSeatUsageConnect, purchaseSeatsConnect } from "@/lib/api/billingConnect";
+import type { SeatUsage } from "@/lib/viewModels/billing";
+import { getSeatUsageConnect, purchaseSeatsConnect } from "@/lib/api/facade/billingConnect";
 import { readCurrentOrg } from "@/stores/auth";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 

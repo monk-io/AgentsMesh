@@ -2,17 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/test-utils'
 import { TicketDetail } from '../TicketDetail'
 import { getApiClient } from '@/lib/wasm-core'
-import * as ticketRelations from '@/lib/api/ticketRelations'
-import * as org from '@/lib/api/org'
+import * as ticketRelations from '@/lib/api/facade/ticketRelations'
+import * as org from '@/lib/api/facade/org'
 
-vi.mock('@/lib/api/ticketRelations', () => ({
+vi.mock('@/lib/api/facade/ticketRelations', () => ({
   listRelations: vi.fn(),
   listCommits: vi.fn(),
   listComments: vi.fn(),
   listMergeRequests: vi.fn(),
 }))
 
-vi.mock('@/lib/api/org', () => ({
+vi.mock('@/lib/api/facade/org', () => ({
   listMembers: vi.fn(),
 }))
 

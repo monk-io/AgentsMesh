@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { useMemo } from "react";
 import { getBlockstoreService } from "@/lib/wasm-core";
-import { blockstoreApi } from "@/lib/api/blockstoreApi";
-import type { Block, BlockRef, Workspace } from "@/lib/api/blockstoreTypes";
+import { blockstoreApi } from "@/lib/api/facade/blockstoreApi";
+import type { Block, BlockRef, Workspace } from "@/lib/viewModels/blockstore";
 import type {
   BlockstoreState,
   BlocksMap,
@@ -183,7 +183,7 @@ export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
       // pass a BigInt — Number would throw "Cannot convert 0 to a BigInt"
       // and wedge DocumentView at "Loading workspace…".
       if (!(workspaceID in readLastOpIds())) {
-        svc().set_last_op_id(workspaceID, 0n);
+        svc().set_last_op_id(workspaceID, BigInt(0));
       }
       bump();
     },

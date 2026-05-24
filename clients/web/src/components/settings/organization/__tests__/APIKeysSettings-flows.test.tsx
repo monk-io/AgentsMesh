@@ -8,16 +8,22 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
+import type { ApiKey } from "@/lib/api/facade/apikey";
+import { create } from "@bufbuild/protobuf";
+import { ApiKeySchema } from "@proto/apikey/v1/api_key_pb";
 
-// See APIKeysSettings.test.tsx for why we mock the wrapper layer. vi.hoisted
-// lifts the mock fns past vi.mock's hoisting (without it the factory would
-// capture `undefined`).
+interface UpdateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  isEnabled?: boolean;
+}
+
 const { mockListApiKeys, mockCreateApiKey } = vi.hoisted(() => ({
   mockListApiKeys: vi.fn(),
   mockCreateApiKey: vi.fn(),
 }));
-vi.mock("@/lib/api/apikey", () => ({
+vi.mock("@/lib/api/facade/apikey", () => ({
   listApiKeys: mockListApiKeys,
   createApiKey: mockCreateApiKey,
   updateApiKey: vi.fn(),
@@ -52,9 +58,9 @@ vi.mock("../apikeys", () => ({
     onEdit,
     onRevoke,
   }: {
-    apiKey: APIKeyData;
-    onEdit: (key: APIKeyData) => void;
-    onRevoke: (id: number) => void;
+    apiKey: ApiKey;
+    onEdit: (key: ApiKey) => void;
+    onRevoke: (id: bigint) => void;
     t: unknown;
   }) => (
     <div data-testid={`api-key-card-${apiKey.id}`}>
@@ -132,10 +138,10 @@ vi.mock("../apikeys", () => ({
     onOpenChange,
     onSave,
   }: {
-    apiKey: APIKeyData;
+    apiKey: ApiKey;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (id: number, data: UpdateAPIKeyRequest) => Promise<void>;
+    onSave: (id: bigint, data: UpdateInput) => Promise<void>;
     t: unknown;
   }) => {
     if (!open) return null;
@@ -169,29 +175,29 @@ async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   return result!;
 }
 
-const sampleKeys: APIKeyData[] = [
-  {
-    id: 1,
-    organization_id: 10,
+const sampleKeys: ApiKey[] = [
+  create(ApiKeySchema, {
+    id: BigInt(1),
+    organizationId: BigInt(10),
     name: "CI/CD Key",
-    key_prefix: "am_ci",
+    keyPrefix: "am_ci",
     scopes: ["pods:read", "pods:write"],
-    is_enabled: true,
-    created_by: 1,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 2,
-    organization_id: 10,
+    isEnabled: true,
+    createdBy: BigInt(1),
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  }),
+  create(ApiKeySchema, {
+    id: BigInt(2),
+    organizationId: BigInt(10),
     name: "Monitoring Key",
-    key_prefix: "am_mon",
+    keyPrefix: "am_mon",
     scopes: ["tickets:read"],
-    is_enabled: false,
-    created_by: 1,
-    created_at: "2024-02-01T00:00:00Z",
-    updated_at: "2024-02-01T00:00:00Z",
-  },
+    isEnabled: false,
+    createdBy: BigInt(1),
+    createdAt: "2024-02-01T00:00:00Z",
+    updatedAt: "2024-02-01T00:00:00Z",
+  }),
 ];
 
 describe("APIKeysSettings - flows", () => {
@@ -237,12 +243,12 @@ describe("APIKeysSettings - flows", () => {
 
     it("should show secret dialog after successful creation", async () => {
       vi.mocked(mockCreateApiKey).mockResolvedValue({
-        api_key: {
-          id: 3, organization_id: 10, name: "New Key", key_prefix: "am_new",
-          scopes: [], is_enabled: true, created_by: 1,
-          created_at: "2024-03-01T00:00:00Z", updated_at: "2024-03-01T00:00:00Z",
-        },
-        raw_key: "am_new_secret123",
+        apiKey: create(ApiKeySchema, {
+          id: BigInt(3), organizationId: BigInt(10), name: "New Key", keyPrefix: "am_new",
+          scopes: [], isEnabled: true, createdBy: BigInt(1),
+          createdAt: "2024-03-01T00:00:00Z", updatedAt: "2024-03-01T00:00:00Z",
+        }),
+        rawKey: "am_new_secret123",
       });
 
       await renderAndWaitForLoad();
@@ -265,12 +271,12 @@ describe("APIKeysSettings - flows", () => {
 
     it("should close secret dialog when done is clicked", async () => {
       vi.mocked(mockCreateApiKey).mockResolvedValue({
-        api_key: {
-          id: 3, organization_id: 10, name: "New Key", key_prefix: "am_new",
-          scopes: [], is_enabled: true, created_by: 1,
-          created_at: "2024-03-01T00:00:00Z", updated_at: "2024-03-01T00:00:00Z",
-        },
-        raw_key: "am_new_secret123",
+        apiKey: create(ApiKeySchema, {
+          id: BigInt(3), organizationId: BigInt(10), name: "New Key", keyPrefix: "am_new",
+          scopes: [], isEnabled: true, createdBy: BigInt(1),
+          createdAt: "2024-03-01T00:00:00Z", updatedAt: "2024-03-01T00:00:00Z",
+        }),
+        rawKey: "am_new_secret123",
       });
 
       await renderAndWaitForLoad();
@@ -298,12 +304,12 @@ describe("APIKeysSettings - flows", () => {
 
     it("should refresh key list after creation", async () => {
       vi.mocked(mockCreateApiKey).mockResolvedValue({
-        api_key: {
-          id: 3, organization_id: 10, name: "New Key", key_prefix: "am_new",
-          scopes: [], is_enabled: true, created_by: 1,
-          created_at: "2024-03-01T00:00:00Z", updated_at: "2024-03-01T00:00:00Z",
-        },
-        raw_key: "am_new_secret123",
+        apiKey: create(ApiKeySchema, {
+          id: BigInt(3), organizationId: BigInt(10), name: "New Key", keyPrefix: "am_new",
+          scopes: [], isEnabled: true, createdBy: BigInt(1),
+          createdAt: "2024-03-01T00:00:00Z", updatedAt: "2024-03-01T00:00:00Z",
+        }),
+        rawKey: "am_new_secret123",
       });
 
       await renderAndWaitForLoad();

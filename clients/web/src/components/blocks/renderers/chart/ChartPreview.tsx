@@ -4,7 +4,7 @@ import React from "react";
 import { useTheme } from "next-themes";
 import { ResponsiveContainer } from "recharts";
 
-import type { JSONMap } from "@/lib/api/blockstoreTypes";
+import type { JSONMap } from "@/lib/viewModels/blockstore";
 
 import {
   AreaVariant,

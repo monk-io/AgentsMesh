@@ -27,7 +27,7 @@ describe("credentialForms registry", () => {
     expect(spec.allowCustomEnv).toBe(true);
     const envKeys = spec.fields
       .filter((f) => f.kind !== "oneof")
-      .map((f) => (f.kind === "oneof" ? "" : f.envKey));
+      .map((f) => ("envKey" in f ? f.envKey : ""));
     expect(envKeys).toEqual([
       "ANTHROPIC_API_KEY",
       "OPENAI_API_KEY",

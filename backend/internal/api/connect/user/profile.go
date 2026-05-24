@@ -21,7 +21,7 @@ func (s *Server) GetMe(
 	if err != nil {
 		return nil, mapUserServiceError(err)
 	}
-	return connect.NewResponse(toProtoUser(u)), nil
+	return connect.NewResponse(ToProtoUser(u)), nil
 }
 
 // UpdateMe — REST analogue: PUT /api/v1/users/me.
@@ -48,7 +48,7 @@ func (s *Server) UpdateMe(
 	if err != nil {
 		return nil, mapUserServiceError(err)
 	}
-	return connect.NewResponse(toProtoUser(u)), nil
+	return connect.NewResponse(ToProtoUser(u)), nil
 }
 
 // ChangePassword — REST analogue: POST /api/v1/users/me/password.

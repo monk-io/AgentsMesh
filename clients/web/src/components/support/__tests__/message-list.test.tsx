@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@/test/test-utils";
 import { MessageList } from "../message-list";
-import type { SupportTicketMessage } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketAttachmentUrl } from "@/lib/api/supportTicketConnect";
+import type { SupportTicketMessage } from "@/lib/api/facade/supportTicketConnect";
+import { getSupportTicketAttachmentUrl } from "@/lib/api/facade/supportTicketConnect";
 
-vi.mock("@/lib/api/supportTicketConnect", () => ({
+vi.mock("@/lib/api/facade/supportTicketConnect", () => ({
   getSupportTicketAttachmentUrl: vi.fn(),
 }));
 
@@ -16,53 +16,69 @@ Object.defineProperty(window, "open", {
 });
 
 const baseMessage: SupportTicketMessage = {
-  id: 1,
-  ticket_id: 10,
-  user_id: 100,
+  $typeName: "proto.support_ticket.v1.SupportTicketMessage",
+  id: BigInt(1),
+  ticketId: BigInt(10),
+  userId: BigInt(100),
   content: "Hello, I need help with my account.",
-  is_admin_reply: false,
-  created_at: new Date().toISOString(),
-  user: { id: 100, name: "John Doe", email: "john@example.com" },
+  isAdminReply: false,
+  createdAt: new Date().toISOString(),
+  user: {
+    $typeName: "proto.support_ticket.v1.SupportTicketUser",
+    id: BigInt(100), name: "John Doe", email: "john@example.com", avatarUrl: "",
+  },
+  attachments: [],
 };
 
 const adminMessage: SupportTicketMessage = {
-  id: 2,
-  ticket_id: 10,
-  user_id: 200,
+  $typeName: "proto.support_ticket.v1.SupportTicketMessage",
+  id: BigInt(2),
+  ticketId: BigInt(10),
+  userId: BigInt(200),
   content: "Sure, let me look into that.",
-  is_admin_reply: true,
-  created_at: new Date().toISOString(),
-  user: { id: 200, name: "Admin User", email: "admin@example.com" },
+  isAdminReply: true,
+  createdAt: new Date().toISOString(),
+  user: {
+    $typeName: "proto.support_ticket.v1.SupportTicketUser",
+    id: BigInt(200), name: "Admin User", email: "admin@example.com", avatarUrl: "",
+  },
+  attachments: [],
 };
 
 const messageWithAttachments: SupportTicketMessage = {
-  id: 3,
-  ticket_id: 10,
-  user_id: 100,
+  $typeName: "proto.support_ticket.v1.SupportTicketMessage",
+  id: BigInt(3),
+  ticketId: BigInt(10),
+  userId: BigInt(100),
   content: "Here are the screenshots",
-  is_admin_reply: false,
-  created_at: new Date().toISOString(),
-  user: { id: 100, name: "John Doe", email: "john@example.com" },
+  isAdminReply: false,
+  createdAt: new Date().toISOString(),
+  user: {
+    $typeName: "proto.support_ticket.v1.SupportTicketUser",
+    id: BigInt(100), name: "John Doe", email: "john@example.com", avatarUrl: "",
+  },
   attachments: [
     {
-      id: 101,
-      ticket_id: 10,
-      message_id: 3,
-      uploader_id: 100,
-      original_name: "screenshot.png",
-      mime_type: "image/png",
-      size: 204800,
-      created_at: new Date().toISOString(),
+      $typeName: "proto.support_ticket.v1.SupportTicketAttachment",
+      id: BigInt(101),
+      ticketId: BigInt(10),
+      messageId: BigInt(3),
+      uploaderId: BigInt(100),
+      originalName: "screenshot.png",
+      mimeType: "image/png",
+      size: BigInt(204800),
+      createdAt: new Date().toISOString(),
     },
     {
-      id: 102,
-      ticket_id: 10,
-      message_id: 3,
-      uploader_id: 100,
-      original_name: "log.txt",
-      mime_type: "text/plain",
-      size: 512,
-      created_at: new Date().toISOString(),
+      $typeName: "proto.support_ticket.v1.SupportTicketAttachment",
+      id: BigInt(102),
+      ticketId: BigInt(10),
+      messageId: BigInt(3),
+      uploaderId: BigInt(100),
+      originalName: "log.txt",
+      mimeType: "text/plain",
+      size: BigInt(512),
+      createdAt: new Date().toISOString(),
     },
   ],
 };
@@ -133,7 +149,10 @@ describe("MessageBubble (via MessageList)", () => {
   it("shows user email when name is not available", () => {
     const msgWithEmailOnly: SupportTicketMessage = {
       ...baseMessage,
-      user: { id: 100, name: "", email: "john@example.com" },
+      user: {
+        $typeName: "proto.support_ticket.v1.SupportTicketUser",
+        id: BigInt(100), name: "", email: "john@example.com", avatarUrl: "",
+      },
     };
     render(<MessageList messages={[msgWithEmailOnly]} />);
     expect(screen.getByText("john@example.com")).toBeInTheDocument();

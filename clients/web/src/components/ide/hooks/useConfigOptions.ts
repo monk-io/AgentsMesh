@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getAgentConfigSchema, getUserAgentConfig } from "@/lib/api/agentConnect";
+import { getAgentConfigSchema, getUserAgentConfig } from "@/lib/api/facade/agentConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import type { ConfigField } from "@/lib/api";
 

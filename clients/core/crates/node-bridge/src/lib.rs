@@ -93,56 +93,6 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn api_get(&self, endpoint: String) -> napi::Result<String> {
-        let v: serde_json::Value = self.client.get(&endpoint).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_post(&self, endpoint: String, body: String) -> napi::Result<String> {
-        let payload: serde_json::Value = if body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::from_str(&body).map_err(err)?
-        };
-        let v: serde_json::Value = self.client.post(&endpoint, &payload).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_put(&self, endpoint: String, body: String) -> napi::Result<String> {
-        let payload: serde_json::Value = if body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::from_str(&body).map_err(err)?
-        };
-        let v: serde_json::Value = self.client.put(&endpoint, &payload).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_patch(&self, endpoint: String, body: String) -> napi::Result<String> {
-        let payload: serde_json::Value = if body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::from_str(&body).map_err(err)?
-        };
-        let v: serde_json::Value = self.client.patch(&endpoint, &payload).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_delete(&self, endpoint: String) -> napi::Result<String> {
-        let v: serde_json::Value = self.client.delete(&endpoint).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub fn api_org_path(&self, path: String) -> String {
-        self.client.org_path(&path)
-    }
-
-    #[napi]
     pub async fn auth_login(&self, email: String, password: String) -> napi::Result<String> {
         let session = self.auth.login(&email, &password).await.map_err(err)?;
         serde_json::to_string(&session).map_err(err)

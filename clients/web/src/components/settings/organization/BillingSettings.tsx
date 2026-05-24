@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckoutFlow, CancelSubscriptionDialog, SeatManagement, BillingCycleSwitch } from "@/components/billing";
-import type { BillingCycle } from "@/lib/api/billing-types";
+import type { BillingCycle } from "@/lib/viewModels/billing";
 import type { TranslationFn } from "./GeneralSettings";
 import {
   BillingLoadingSkeleton,

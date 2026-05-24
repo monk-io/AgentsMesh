@@ -246,7 +246,10 @@ async function installApiProxy(target: BrowserContext | Page): Promise<void> {
       // producing "cannot parse invalid wire-format data" 400s on the
       // backend and a stuck "Loading workspace…" in the UI.
       const isReadOnly = ["GET", "HEAD"].includes(orig.method());
-      const body = isReadOnly ? undefined : (orig.postDataBuffer() ?? undefined);
+      const rawBody = isReadOnly ? undefined : (orig.postDataBuffer() ?? undefined);
+      // Buffer<ArrayBufferLike> is not assignable to fetch BodyInit under TS5+;
+      // wrap as Uint8Array (concrete ArrayBuffer-backed) to satisfy the overload.
+      const body = rawBody ? new Uint8Array(rawBody) : undefined;
       const res = await fetch(upstream, {
         method: orig.method(),
         headers,

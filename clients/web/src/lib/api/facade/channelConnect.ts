@@ -1,0 +1,37 @@
+// Facade re-export of the channel Connect-RPC adapter. Business code imports
+// from here (or from the `@/lib/api` barrel) so the wire-shape layer stays
+// internal to the facade boundary. Tests mock this path.
+
+export {
+  channelFromProto,
+  messageFromProto,
+  listChannels,
+  getChannel,
+  createChannel,
+  updateChannel,
+  archiveChannel,
+  unarchiveChannel,
+  getChannelDocument,
+  updateChannelDocument,
+  listChannelMessages,
+  searchChannelMessages,
+  sendChannelMessage,
+  editChannelMessage,
+  deleteChannelMessage,
+  markChannelRead,
+  getChannelUnreadCounts,
+  muteChannel,
+  listChannelMembers,
+  joinChannel,
+  leaveChannel,
+  inviteChannelMembers,
+  removeChannelMember,
+  listChannelPods,
+  joinChannelPod,
+  leaveChannelPod,
+  type ChannelData,
+  type ChannelMessage,
+  type ChannelMemberData,
+  type ChannelPodSummary,
+  type SendChannelMessagePayload,
+} from "../connect/channelConnect";

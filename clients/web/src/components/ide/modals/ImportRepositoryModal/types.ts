@@ -1,5 +1,5 @@
-import type { RepositoryProviderData, RepositoryData } from "@/lib/api";
-import type { ProviderRepositoryData } from "@/lib/api/userRepositoryProviderTypes";
+import type { RepositoryData } from "@/lib/api";
+import type { RepositoryProviderData, ProviderRepositoryData } from "@/lib/viewModels/repositoryProvider";
 
 export type ImportWizardStep = "source" | "browse" | "manual" | "confirm";
 

@@ -8,7 +8,7 @@ import {
   registerRepositoryWebhook,
   deleteRepositoryWebhook,
   markRepositoryWebhookConfigured,
-} from "@/lib/api/repositoryConnect";
+} from "@/lib/api/facade/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import { WebhookState, WebhookSettingsState, WebhookSettingsActions } from "./types";
 

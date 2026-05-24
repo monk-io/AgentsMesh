@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PromoCodeInput } from './PromoCodeInput'
-import * as promocodeConnect from '@/lib/api/promocodeConnect'
+import * as promocodeConnect from '@/lib/api/facade/promocodeConnect'
 
 const mockT = (key: string) => {
   const translations: Record<string, string> = {
@@ -26,7 +26,7 @@ const mockT = (key: string) => {
   return translations[key] || key
 }
 
-vi.mock('@/lib/api/promocodeConnect', () => ({
+vi.mock('@/lib/api/facade/promocodeConnect', () => ({
   validatePromoCode: vi.fn(),
   redeemPromoCode: vi.fn(),
   getRedemptionHistory: vi.fn(),
@@ -60,8 +60,9 @@ describe('PromoCodeInput', () => {
 
   it('validates promo code successfully', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
 
     const onValidate = vi.fn()
@@ -78,14 +79,16 @@ describe('PromoCodeInput', () => {
     expect(screen.getByText(/Duration: 3 months/)).toBeInTheDocument()
     expect(promocodeConnect.validatePromoCode).toHaveBeenCalledWith(ORG_SLUG, 'TEST123')
     expect(onValidate).toHaveBeenCalledWith({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
   })
 
   it('shows error for invalid promo code', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: false, code: 'INVALID', message_code: 'promo_code_not_found',
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: false, code: 'INVALID', messageCode: 'promo_code_not_found',
     })
 
     render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
@@ -113,11 +116,13 @@ describe('PromoCodeInput', () => {
 
   it('redeems promo code after validation', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
     vi.mocked(promocodeConnect.redeemPromoCode).mockResolvedValue({
-      success: true, plan_name: 'pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.RedeemPromoCodeResponse",
+      success: true, planName: 'pro', durationMonths: 3,
     })
 
     const onRedeemSuccess = vi.fn()
@@ -135,7 +140,8 @@ describe('PromoCodeInput', () => {
 
     await waitFor(() => {
       expect(onRedeemSuccess).toHaveBeenCalledWith({
-        success: true, plan_name: 'pro', duration_months: 3,
+        $typeName: "proto.promocode.v1.RedeemPromoCodeResponse",
+        success: true, planName: 'pro', durationMonths: 3,
       })
     })
     expect(promocodeConnect.redeemPromoCode).toHaveBeenCalledWith(ORG_SLUG, 'TEST123')
@@ -144,8 +150,9 @@ describe('PromoCodeInput', () => {
 
   it('shows error on redeem failure', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
     vi.mocked(promocodeConnect.redeemPromoCode).mockRejectedValue(new Error('Redeem failed'))
 
@@ -167,11 +174,13 @@ describe('PromoCodeInput', () => {
 
   it('surfaces message_code from a non-success redeem response', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
     vi.mocked(promocodeConnect.redeemPromoCode).mockResolvedValue({
-      success: false, message_code: 'promo_code_not_owner',
+      $typeName: "proto.promocode.v1.RedeemPromoCodeResponse",
+      success: false, messageCode: 'promo_code_not_owner',
     })
 
     render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
@@ -198,8 +207,9 @@ describe('PromoCodeInput', () => {
 
   it('handles Enter key to validate', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
 
     render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)
@@ -214,8 +224,9 @@ describe('PromoCodeInput', () => {
 
   it('clears validation when code changes', async () => {
     vi.mocked(promocodeConnect.validatePromoCode).mockResolvedValue({
-      valid: true, code: 'TEST123', plan_name: 'pro',
-      plan_display_name: 'Pro', duration_months: 3,
+      $typeName: "proto.promocode.v1.ValidatePromoCodeResponse",
+      valid: true, code: 'TEST123', planName: 'pro',
+      planDisplayName: 'Pro', durationMonths: 3,
     })
 
     render(<PromoCodeInput orgSlug={ORG_SLUG} t={mockT} />)

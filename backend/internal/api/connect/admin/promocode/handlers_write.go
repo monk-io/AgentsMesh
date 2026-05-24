@@ -65,7 +65,7 @@ func (s *Server) CreatePromoCode(
 	if err := s.svc.CreatePromoCode(ctx, code, adminID); err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoPromoCode(code)), nil
+	return connect.NewResponse(ToProtoPromoCode(code)), nil
 }
 
 func (s *Server) UpdatePromoCode(
@@ -107,7 +107,7 @@ func (s *Server) UpdatePromoCode(
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return connect.NewResponse(toProtoPromoCode(code)), nil
+	return connect.NewResponse(ToProtoPromoCode(code)), nil
 }
 
 func (s *Server) ActivatePromoCode(

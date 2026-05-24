@@ -4,8 +4,8 @@ import {
   AgentData,
   RepositoryData,
 } from "@/lib/api";
-import { listRunners } from "@/lib/api/runnerConnect";
-import { listAgents } from "@/lib/api/agentConnect";
+import { listRunners } from "@/lib/api/facade/runnerConnect";
+import { listAgents } from "@/lib/api/facade/agentConnect";
 import { readCurrentOrg } from "@/stores/auth";
 import { useRepositories, useRepositoryStore } from "@/stores/repository";
 

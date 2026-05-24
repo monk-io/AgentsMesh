@@ -22,6 +22,7 @@ import (
 	bindingconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/binding"
 	blockstoreconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/blockstore"
 	channelconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/channel"
+	envbundleconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/env_bundle"
 	extensionconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/extension"
 	fileconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/file"
 	grantconnect "github.com/anthropics/agentsmesh/backend/internal/api/connect/grant"
@@ -139,6 +140,9 @@ func mountConnectServices(mux *http.ServeMux, svc *serviceContainer, rest *v1.Se
 	agentconnect.Mount(mux, agentconnect.NewServer(
 		svc.agentSvc, svc.envBundle, svc.userConfig, svc.org,
 	), opts...)
+	if svc.envBundle != nil {
+		envbundleconnect.Mount(mux, envbundleconnect.NewServer(svc.envBundle), opts...)
+	}
 	mountBillingService(mux, svc, opts)
 	mountInvitationService(mux, svc, opts)
 	promocodeconnect.Mount(mux, promocodeconnect.NewServer(svc.promoCode, svc.org), opts...)

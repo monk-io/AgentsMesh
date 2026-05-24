@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import type { RepositoryData } from "@/lib/viewModels/repository";
 import { useWebhookState } from "./useWebhookState";
 import { WebhookStatusBadge } from "./WebhookStatusBadge";
 import { WebhookRegisteredView } from "./WebhookRegisteredView";

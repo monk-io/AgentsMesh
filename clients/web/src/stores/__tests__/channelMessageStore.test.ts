@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
   muteChannel: vi.fn(),
 }));
 
-vi.mock("@/lib/api/channelConnect", () => ({
+vi.mock("@/lib/api/facade/channelConnect", () => ({
   listChannelMessages: mocks.listChannelMessages,
   sendChannelMessage: mocks.sendChannelMessage,
   editChannelMessage: mocks.editChannelMessage,
@@ -34,8 +34,8 @@ vi.mock("@/lib/api/channelConnect", () => ({
 
 import { useChannelMessageStore, EMPTY_CACHE, readMessages } from "../channelMessageStore";
 import { getChannelService } from "@/lib/wasm-core";
-import type { ChannelMessage } from "@/lib/api/channel";
-import type { MessageSendPayload, MessageEditPayload } from "@/lib/api/channel-message-types";
+import type { ChannelMessage } from "@/lib/api/facade/channel";
+import type { MessageSendPayload, MessageEditPayload } from "@/lib/viewModels/channelMessage";
 
 function svc(): ReturnType<typeof getChannelService> {
   return getChannelService();

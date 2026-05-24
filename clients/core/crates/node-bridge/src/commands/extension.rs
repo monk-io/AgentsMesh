@@ -70,6 +70,18 @@ impl AppState {
     }
 
     #[napi]
+    pub async fn extension_presign_skill_upload_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.extension.lock().await;
+        svc.presign_skill_upload_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
+    pub async fn extension_install_skill_from_uploaded_file_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
+        let svc = self.extension.lock().await;
+        svc.install_skill_from_uploaded_file_connect(&request).await.map_err(err)
+    }
+
+    #[napi]
     pub async fn extension_update_skill_connect(&self, request: Vec<u8>) -> napi::Result<Vec<u8>> {
         let svc = self.extension.lock().await;
         svc.update_skill_connect(&request).await.map_err(err)
@@ -110,11 +122,4 @@ impl AppState {
         let svc = self.extension.lock().await;
         svc.uninstall_mcp_server_connect(&request).await.map_err(err)
     }
-
-    #[napi]
-    pub async fn extension_install_skill_from_upload(&self, repo_id: i64, file_data: Vec<u8>, file_name: String, scope: Option<String>) -> napi::Result<String> {
-        let svc = self.extension.lock().await;
-            svc.install_skill_from_upload(repo_id, file_data, &file_name, scope).await.map_err(err)
-    }
-
 }

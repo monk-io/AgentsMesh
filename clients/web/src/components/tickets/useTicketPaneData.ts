@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getTicket as getTicketConnect } from "@/lib/api/ticketConnect";
+import { getTicket as getTicketConnect } from "@/lib/api/facade/ticketConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import { useTicketStore, useTickets, Ticket, TicketStatus } from "@/stores/ticket";
 

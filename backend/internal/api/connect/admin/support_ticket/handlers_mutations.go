@@ -43,7 +43,7 @@ func (s *Server) ReplySupportTicket(
 		nil, map[string]any{"content": content},
 		req.Peer().Addr, req.Header().Get("User-Agent"))
 
-	return connect.NewResponse(toProtoAdminMessage(msg)), nil
+	return connect.NewResponse(ToProtoAdminSupportTicketMessage(msg)), nil
 }
 
 // UpdateSupportTicketStatus mirrors REST's UpdateStatus

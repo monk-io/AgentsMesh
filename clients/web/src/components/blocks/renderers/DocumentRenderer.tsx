@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 
-import type { Block, JSONMap } from "@/lib/api/blockstoreTypes";
-import { BLOCK_TYPE_DOCUMENT } from "@/lib/api/blockstoreTypes";
+import type { Block, JSONMap } from "@/lib/viewModels/blockstore";
+import { BLOCK_TYPE_DOCUMENT } from "@/lib/viewModels/blockstore";
 import { BlockEditor } from "@/components/ui/block-editor";
 
 import { BlockChrome } from "../editor/BlockChrome";

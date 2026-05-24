@@ -4,7 +4,7 @@ import {
   getAgentConfigSchema,
   getUserAgentConfig,
   setUserAgentConfig,
-} from "@/lib/api/agentConnect";
+} from "@/lib/api/facade/agentConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import type { AgentConfigMessages } from "./useAgentConfigMessages";
 

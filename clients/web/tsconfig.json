@@ -23,7 +23,10 @@
       "@proto/*": [
         "../../node_modules/@agentsmesh/proto/*",
         "../../proto/gen/ts/*"
-      ]
+      ],
+      "@agentsmesh/service-runtime": ["../../packages/service-runtime/src/index.ts"],
+      "@agentsmesh/service-interface": ["../../packages/service-interface/src/index.ts"],
+      "@agentsmesh/electron-adapter": ["../../packages/electron-adapter/src/index.ts"]
     }
   },
   "include": [

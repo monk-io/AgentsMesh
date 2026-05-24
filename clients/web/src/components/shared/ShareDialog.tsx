@@ -9,7 +9,7 @@ import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { organizationApi } from "@/lib/api";
-import { listGrants, createGrant, deleteGrant } from "@/lib/api/grantConnect";
+import { listGrants, createGrant, deleteGrant } from "@/lib/api/facade/grantConnect";
 import type { ResourceGrant, OrganizationMember } from "@/lib/api";
 
 interface ShareDialogProps {
@@ -57,7 +57,7 @@ export function ShareDialog({ open, onOpenChange, resourceType, resourceId }: Sh
 
   const grantedUserIds = new Set(grants.map((g) => g.user_id));
   const availableMembers = members.filter(
-    (m) => m.user_id !== currentUser?.id && !grantedUserIds.has(m.user_id)
+    (m) => Number(m.userId) !== currentUser?.id && !grantedUserIds.has(Number(m.userId))
   );
 
   const handleShare = async () => {
@@ -110,11 +110,14 @@ export function ShareDialog({ open, onOpenChange, resourceType, resourceId }: Sh
                   className="w-full border border-border rounded px-3 py-2 bg-background text-sm"
                 >
                   <option value="">{t("share.selectUserPlaceholder")}</option>
-                  {availableMembers.map((m) => (
-                    <option key={m.user_id} value={m.user_id}>
+                  {availableMembers.map((m) => {
+                    const userId = Number(m.userId);
+                    return (
+                    <option key={userId} value={userId}>
                       {m.user?.name || m.user?.username || m.user?.email}
                     </option>
-                  ))}
+                  );
+                  })}
                 </select>
               </FormField>
               <Button onClick={handleShare} disabled={sharing || !selectedUserId} className="w-full" size="sm">

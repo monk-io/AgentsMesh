@@ -10,8 +10,7 @@ import { clearAuthRateLimit } from "../../helpers/redis";
  * empty list, and unknown-bundle names still create the Loop (eval is warn-only
  * at run-time).
  *
- * EnvBundle CRUD is still REST (`/api/v1/users/env-bundles`); Loop CRUD has
- * fully migrated to Connect-RPC (`proto.loop.v1.LoopService/*`).
+ * Both Loop CRUD and EnvBundle CRUD live on Connect-RPC (R6 completion).
  *
  * Pod-level KV injection is left to higher-tier integration tests since it
  * requires a Pod to actually launch and read its env.
@@ -28,17 +27,17 @@ test.describe("Loop ↔ EnvBundle binding", () => {
     const bundleBName = `e2e-loop-B-${ts}`;
 
     const createBundle = async (name: string) =>
-      api.post(`/api/v1/users/env-bundles`, {
-        agent_slug: "claude-code",
+      cc.envBundle.createEnvBundle({
+        agentSlug: "claude-code",
         name,
         kind: "credential",
         data: { ANTHROPIC_API_KEY: "sk-test-e2e" },
-      });
+      }) as Promise<{ id: bigint }>;
 
-    const bundleAId = (await (await createBundle(bundleAName)).json()).bundle?.id;
-    const bundleBId = (await (await createBundle(bundleBName)).json()).bundle?.id;
-    expect(bundleAId).toBeTruthy();
-    expect(bundleBId).toBeTruthy();
+    const bundleA = await createBundle(bundleAName);
+    const bundleB = await createBundle(bundleBName);
+    expect(bundleA.id).toBeTruthy();
+    expect(bundleB.id).toBeTruthy();
 
     let slug: string | undefined;
     try {
@@ -63,8 +62,8 @@ test.describe("Loop ↔ EnvBundle binding", () => {
       if (slug) {
         await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: slug }).catch(() => null);
       }
-      await api.delete(`/api/v1/users/env-bundles/${bundleAId}`);
-      await api.delete(`/api/v1/users/env-bundles/${bundleBId}`);
+      await cc.envBundle.deleteEnvBundle({ id: bundleA.id }).catch(() => null);
+      await cc.envBundle.deleteEnvBundle({ id: bundleB.id }).catch(() => null);
     }
   });
 
@@ -73,14 +72,13 @@ test.describe("Loop ↔ EnvBundle binding", () => {
     const ts = Date.now();
     const bundleName = `e2e-clear-${ts}`;
 
-    const bundleRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const bundle = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: bundleName,
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-test-e2e-clear" },
-    });
-    expect([200, 201]).toContain(bundleRes.status);
-    const bundleId = (await bundleRes.json()).bundle?.id;
+    }) as { id: bigint };
+    expect(bundle.id).toBeTruthy();
 
     let slug: string | undefined;
     try {
@@ -111,7 +109,7 @@ test.describe("Loop ↔ EnvBundle binding", () => {
       if (slug) {
         await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: slug }).catch(() => null);
       }
-      await api.delete(`/api/v1/users/env-bundles/${bundleId}`);
+      await cc.envBundle.deleteEnvBundle({ id: bundle.id }).catch(() => null);
     }
   });
 

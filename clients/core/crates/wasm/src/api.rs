@@ -18,81 +18,9 @@ impl WasmApiClient {
         Self { client, base_url }
     }
 
-    pub fn org_path(&self, path: &str) -> String {
-        self.client.org_path(path)
-    }
-
     #[wasm_bindgen(getter)]
     pub fn base_url(&self) -> String {
         self.base_url.clone()
-    }
-
-    pub async fn get(&self, endpoint: String) -> Result<String, String> {
-        self.client
-            .get::<serde_json::Value>(&endpoint)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn post(&self, endpoint: String, body: String) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .post::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn put(&self, endpoint: String, body: String) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .put::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn delete(&self, endpoint: String) -> Result<String, String> {
-        self.client
-            .delete::<serde_json::Value>(&endpoint)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn patch(&self, endpoint: String, body: String) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .patch::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn public_get(&self, endpoint: String) -> Result<String, String> {
-        self.client
-            .public_get::<serde_json::Value>(&endpoint)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn public_post(
-        &self,
-        endpoint: String,
-        body: String,
-    ) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .public_post::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
     }
 
     pub fn create_pod_service(&self) -> crate::service_pod::WasmPodService {

@@ -38,7 +38,17 @@ syntax = "proto3";
 
 package proto.user.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/user/v1;userv1";
+
+// Convert codegen target — emits user_convert.amesh.go into the backend
+// connect handler tree so it can reach the domain layer (which proto/gen/go
+// packages cannot import under Go's internal-package rule).
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/user"
+  output_package: "userconnect"
+};
 
 service UserService {
   // /me — current user profile.
@@ -65,19 +75,26 @@ service UserService {
 // /me response but the field is always available server-side and the
 // admin console reads it; including it here closes a known drift.
 message User {
-  int64 id = 1;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/user.User"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
   string email = 2;
   string username = 3;
-  optional string name = 4;
-  optional string avatar_url = 5;
+  optional string name = 4 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string avatar_url = 5 [
+    (amesh.codegen.v1.field_rename) = "AvatarURL",
+    (amesh.codegen.v1.field_convert) = "string_ptr"
+  ];
   bool is_active = 6;
   bool is_system_admin = 7;
   bool is_email_verified = 8;
-  optional string last_login_at = 9;
+  optional string last_login_at = 9 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
   // NULL means use Runner local credential (default behavior).
-  optional int64 default_git_credential_id = 10;
-  string created_at = 11;
-  string updated_at = 12;
+  optional int64 default_git_credential_id = 10 [(amesh.codegen.v1.field_rename) = "DefaultGitCredentialID"];
+  string created_at = 11 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 12 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // Identity mirrors backend/internal/domain/user/Identity.
@@ -85,20 +102,28 @@ message User {
 // SENSITIVE fields intentionally omitted: access_token_encrypted,
 // refresh_token_encrypted.
 message Identity {
-  int64 id = 1;
-  int64 user_id = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/user.Identity"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  int64 user_id = 2 [(amesh.codegen.v1.field_rename) = "UserID"];
   // github / google / gitlab / gitee
   string provider = 3;
-  string provider_user_id = 4;
-  optional string provider_username = 5;
-  optional string token_expires_at = 6;
-  string created_at = 7;
-  string updated_at = 8;
+  string provider_user_id = 4 [(amesh.codegen.v1.field_rename) = "ProviderUserID"];
+  optional string provider_username = 5 [(amesh.codegen.v1.field_convert) = "string_ptr"];
+  optional string token_expires_at = 6 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
+  string created_at = 7 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 // UserSummary is the search-result shape (subset of User).
 // Mirrors clients/web/src/lib/api/user.ts UserSummary — non-sensitive
 // public-facing user info exposed by /search.
+//
+// No go_domain annotation: this is a wire-only summary type with no domain
+// counterpart (synthesised from User in the convert wrapper). Codegen skips
+// messages without go_domain — toProtoUserSummary stays handwritten.
 message UserSummary {
   int64 id = 1;
   string email = 2;

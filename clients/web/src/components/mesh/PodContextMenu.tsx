@@ -16,7 +16,7 @@ import {
   useConfirmDialog,
 } from "@/components/ui/confirm-dialog";
 import { RenameDialog } from "@/components/shared/RenameDialog";
-import { terminatePod } from "@/lib/api/podConnect";
+import { terminatePod } from "@/lib/api/facade/podConnect";
 import type { MeshNode } from "@/stores/mesh";
 import { useMeshStore } from "@/stores/mesh";
 import { usePodStore } from "@/stores/pod";

@@ -82,6 +82,20 @@ test.describe("IPC · extension", () => {
     expect(result).toBeDefined();
   });
 
+  test("extension_presign_skill_upload_connect", async ({ sharedPage }) => {
+    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
+    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
+    const result = await invokeIpc(sharedPage, "extension_presign_skill_upload_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
+    expect(result).toBeDefined();
+  });
+
+  test("extension_install_skill_from_uploaded_file_connect", async ({ sharedPage }) => {
+    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
+    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
+    const result = await invokeIpc(sharedPage, "extension_install_skill_from_uploaded_file_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
+    expect(result).toBeDefined();
+  });
+
   test("extension_update_skill_connect", async ({ sharedPage }) => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
@@ -128,13 +142,6 @@ test.describe("IPC · extension", () => {
     // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
     // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
     const result = await invokeIpc(sharedPage, "extension_uninstall_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
-  });
-
-  test("extension_install_skill_from_upload", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_install_skill_from_upload", 0, [], "", "").catch((err: Error) => ({ __ipcError: err.message }));
     expect(result).toBeDefined();
   });
 });

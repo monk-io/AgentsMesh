@@ -7,7 +7,7 @@ import {
   type Block,
   type BlockTypeSpec,
   type ColumnSpec,
-} from "@/lib/api/blockstoreTypes";
+} from "@/lib/viewModels/blockstore";
 import { useBlocks, useBlockstoreStore } from "@/stores/blockstore";
 
 // useBlockTypeSpecs hydrates the workspace's full type registry by scanning

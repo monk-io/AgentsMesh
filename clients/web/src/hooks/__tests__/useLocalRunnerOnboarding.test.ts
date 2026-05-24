@@ -96,7 +96,7 @@ vi.mock("@/stores/auth", () => ({
   useCurrentOrg: () => ({ slug: "test-org" }),
 }));
 
-vi.mock("@/lib/api/runnerConnect", () => ({
+vi.mock("@/lib/api/facade/runnerConnect", () => ({
   createRunnerToken: vi.fn(async () => createTokenResp ?? { token: "tok-xyz", id: 1 }),
 }));
 

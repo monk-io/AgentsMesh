@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { validatePromoCode, redeemPromoCode } from "@/lib/api/promocodeConnect";
+import { validatePromoCode, redeemPromoCode } from "@/lib/api/facade/promocodeConnect";
 import type { ValidatePromoCodeResponse, RedeemPromoCodeResponse } from "@/lib/api";
 import { CheckCircle, XCircle, Loader2, Gift } from "lucide-react";
 
@@ -43,7 +43,7 @@ export function PromoCodeInput({
     try {
       const response = await validatePromoCode(orgSlug, code);
       if (!response.valid) {
-        setError(t(`errors.${response.message_code}`) || t("invalid"));
+        setError(t(`errors.${response.messageCode}`) || t("invalid"));
         return;
       }
       setValidated(response);
@@ -67,7 +67,7 @@ export function PromoCodeInput({
     try {
       const response = await redeemPromoCode(orgSlug, code);
       if (!response.success) {
-        setError(t(`errors.${response.message_code}`) || t("redeemError"));
+        setError(t(`errors.${response.messageCode}`) || t("redeemError"));
         return;
       }
       onRedeemSuccess?.(response);
@@ -141,7 +141,7 @@ export function PromoCodeInput({
             <span className="font-medium">{t("valid")}</span>
           </div>
           <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-            {t("plan")}: {validated.plan_display_name} · {t("duration")}: {validated.duration_months} {t("months")}
+            {t("plan")}: {validated.planDisplayName} · {t("duration")}: {validated.durationMonths} {t("months")}
           </p>
           <p className="text-xs text-green-600 dark:text-green-400 mt-1">
             {t("confirmRedeem")}

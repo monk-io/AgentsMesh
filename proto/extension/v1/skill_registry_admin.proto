@@ -24,7 +24,18 @@ syntax = "proto3";
 
 package proto.extension.v1;
 
+import "codegen/v1/options.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/extension/v1;extensionv1";
+
+// Convert codegen target — emits skill_registry_admin_convert.amesh.go into the
+// backend admin/skill_registry connect handler tree so it can reach
+// domain/extension (which proto/gen/go packages cannot import under Go's
+// internal-package rule).
+option (amesh.codegen.v1.convert_target) = {
+  output_dir: "backend/internal/api/connect/admin/skill_registry"
+  output_package: "skillregistryadminconnect"
+};
 
 service SkillRegistryAdminService {
   rpc ListSkillRegistries(ListAdminSkillRegistriesRequest) returns (ListAdminSkillRegistriesResponse);
@@ -38,27 +49,31 @@ service SkillRegistryAdminService {
 // pulling the org surface. organization_id is intentionally absent: every entry
 // is platform-level (OrganizationID = nil on the wire).
 message AdminSkillRegistry {
-  int64 id = 1;
-  string repository_url = 2;
+  option (amesh.codegen.v1.go_domain) = {
+    type: "github.com/anthropics/agentsmesh/backend/internal/domain/extension.SkillRegistry"
+  };
+
+  int64 id = 1 [(amesh.codegen.v1.field_rename) = "ID"];
+  string repository_url = 2 [(amesh.codegen.v1.field_rename) = "RepositoryURL"];
   string branch = 3;
   // auto / collection / single — user-declared source flavor.
   string source_type = 4;
   // collection / single — detected by importer, may differ from source_type.
-  optional string detected_type = 5;
+  optional string detected_type = 5 [(amesh.codegen.v1.field_custom) = "detectedTypeToProto"];
   // Agent whitelist, e.g. ["claude-code", "codex"]. Empty = all agents.
-  repeated string compatible_agents = 6;
+  repeated string compatible_agents = 6 [(amesh.codegen.v1.field_custom) = "compatibleAgentsToProto"];
   // none / github_pat / gitlab_pat / ssh_key.
   string auth_type = 7;
   // RFC 3339, nullable before first sync.
-  optional string last_synced_at = 8;
-  optional string last_commit_sha = 9;
+  optional string last_synced_at = 8 [(amesh.codegen.v1.field_convert) = "rfc3339_ptr"];
+  optional string last_commit_sha = 9 [(amesh.codegen.v1.field_custom) = "lastCommitShaToProto"];
   // pending / syncing / success / failed.
   string sync_status = 10;
-  optional string sync_error = 11;
-  int32 skill_count = 12;
+  optional string sync_error = 11 [(amesh.codegen.v1.field_custom) = "syncErrorToProto"];
+  int32 skill_count = 12 [(amesh.codegen.v1.field_convert) = "int_to_int32"];
   bool is_active = 13;
-  string created_at = 14;
-  string updated_at = 15;
+  string created_at = 14 [(amesh.codegen.v1.field_convert) = "rfc3339"];
+  string updated_at = 15 [(amesh.codegen.v1.field_convert) = "rfc3339"];
 }
 
 message ListAdminSkillRegistriesRequest {}

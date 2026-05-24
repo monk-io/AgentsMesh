@@ -3,7 +3,7 @@
 import React from "react";
 import { AtSign } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 
 import { BlockChrome } from "../editor/BlockChrome";
 import { UserPicker } from "../editor/UserPicker";
@@ -75,7 +75,7 @@ function ChangeButton({
   onChange,
 }: {
   value: number;
-  onChange: (next: import("@/lib/api/user").UserSummary | null) => void;
+  onChange: (next: import("@/lib/api/facade/user").UserSummary | null) => void;
 }) {
   return (
     <span className="ml-1">

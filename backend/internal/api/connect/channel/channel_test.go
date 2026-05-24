@@ -113,7 +113,7 @@ func TestToProtoChannel_AllFieldsPopulated(t *testing.T) {
 		CreatedAt:       created,
 		UpdatedAt:       updated,
 	}
-	got := toProtoChannel(c)
+	got := ToProtoChannel(c)
 	require.NotNil(t, got)
 	assert.Equal(t, int64(42), got.GetId())
 	assert.Equal(t, "general", got.GetName())
@@ -132,7 +132,7 @@ func TestToProtoChannel_OptionalsAbsent(t *testing.T) {
 		CreatedAt:  mustParseTime(t, "2026-05-12T00:00:00Z"),
 		UpdatedAt:  mustParseTime(t, "2026-05-12T00:00:00Z"),
 	}
-	got := toProtoChannel(c)
+	got := ToProtoChannel(c)
 	require.NotNil(t, got)
 	assert.Nil(t, got.Description)
 	assert.Nil(t, got.Document)
@@ -141,7 +141,7 @@ func TestToProtoChannel_OptionalsAbsent(t *testing.T) {
 }
 
 func TestToProtoChannel_NilInput(t *testing.T) {
-	assert.Nil(t, toProtoChannel(nil))
+	assert.Nil(t, ToProtoChannel(nil))
 }
 
 func TestToProtoMessage_ContentSerialized(t *testing.T) {
@@ -154,7 +154,7 @@ func TestToProtoMessage_ContentSerialized(t *testing.T) {
 		Content:      &channeldomain.MessageContent{SchemaVersion: 1, Kind: "ast"},
 		CreatedAt:    mustParseTime(t, "2026-05-12T00:00:00Z"),
 	}
-	got := toProtoMessage(m)
+	got := ToProtoChannelMessage(m)
 	require.NotNil(t, got.ContentJson, "content_json must serialize when content is set")
 	assert.Contains(t, got.GetContentJson(), `"schema_version":1`)
 	require.NotNil(t, got.MentionsJson, "mentions_json must serialize (empty map) to disambiguate from missing")

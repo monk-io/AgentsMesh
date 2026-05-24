@@ -42,7 +42,7 @@ func (s *Server) ListBindings(
 
 	items := make([]*bindingv1.PodBinding, 0, len(bindings))
 	for _, b := range bindings {
-		items = append(items, toProtoBinding(b))
+		items = append(items, ToProtoPodBinding(b))
 	}
 	return connect.NewResponse(&bindingv1.ListBindingsResponse{
 		Items: items,
@@ -70,7 +70,7 @@ func (s *Server) GetPendingBindings(
 	}
 	items := make([]*bindingv1.PodBinding, 0, len(pending))
 	for _, b := range pending {
-		items = append(items, toProtoBinding(b))
+		items = append(items, ToProtoPodBinding(b))
 	}
 	return connect.NewResponse(&bindingv1.ListBindingsResponse{
 		Items: items,
@@ -137,7 +137,7 @@ func (s *Server) CheckBinding(
 			)
 		}
 		if binding != nil {
-			resp.Binding = toProtoBinding(binding)
+			resp.Binding = ToProtoPodBinding(binding)
 		}
 	}
 	return connect.NewResponse(resp), nil

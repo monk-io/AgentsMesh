@@ -8,7 +8,7 @@ import {
 } from "@dnd-kit/core";
 import { TicketCard } from "./TicketCard";
 import { Ticket, TicketStatus, ColumnPagination } from "@/stores/ticket";
-import type { BoardColumn } from "@/lib/api/ticketTypes";
+import type { BoardColumn } from "@/lib/viewModels/ticket";
 import { useTranslations } from "next-intl";
 import { useTicketPrefetch } from "@/hooks/useTicketPrefetch";
 import { useColumnInfiniteScroll } from "@/hooks/useColumnInfiniteScroll";

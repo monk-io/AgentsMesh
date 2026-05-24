@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
-import type { PublicPricingResponse, Currency } from "@/lib/api/billing-types";
+import type { PublicPricingResponse, Currency } from "@/lib/viewModels/billing";
 import { fetchPublicPricing } from "@/lib/public-api";
 
 type BillingCycle = "monthly" | "yearly";

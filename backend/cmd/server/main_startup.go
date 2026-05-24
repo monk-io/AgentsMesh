@@ -160,7 +160,6 @@ func buildServicesContainer(
 		User:               services.user,
 		Org:                services.org,
 		AgentSvc:           services.agentSvc,
-		EnvBundle:          services.envBundle,
 		UserConfig:         services.userConfig,
 		Repository:         services.repository,
 		Webhook:            services.webhook,

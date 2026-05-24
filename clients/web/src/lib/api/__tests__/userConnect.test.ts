@@ -20,7 +20,7 @@ import {
   fromProtoIdentity,
   fromProtoUser,
   fromProtoUserSummary,
-} from "../userConnect";
+} from "../connect/userConnect";
 
 describe("fromProtoUser", () => {
   it("converts a full User proto to snake_case shape", () => {
