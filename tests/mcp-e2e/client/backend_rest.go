@@ -40,12 +40,55 @@ type LoginResponse struct {
 }
 
 func (r *REST) Login(ctx context.Context, email, password string) (*LoginResponse, error) {
-	var out LoginResponse
+	// REST /auth/login was deleted by R5 in favour of the Connect-RPC
+	// AuthService.Login procedure. The MCP e2e client owns one REST→Connect
+	// shim here (rather than rewriting every test against a typed Connect
+	// client) because Login is auth bootstrap — every other call still
+	// passes through the existing REST surface (`/orgs/:slug/...`).
+	//
+	// Connect-RPC binary procedure URL: /proto.auth.v1.AuthService/Login.
+	// Wire format: JSON request, JSON response (Connect's
+	// `application/json` profile — same as REST but with Connect-Protocol-Version
+	// + the procedure-prefixed URL).
+	var out struct {
+		Token        string `json:"token"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresIn    int64  `json:"expiresIn"`
+	}
 	body := map[string]string{"email": email, "password": password}
-	if err := r.do(ctx, http.MethodPost, "/auth/login", body, &out); err != nil {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		r.baseURL+"/proto.auth.v1.AuthService/Login", nil)
+	if err != nil {
 		return nil, err
 	}
-	return &out, nil
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	req.Body = io.NopCloser(bytes.NewReader(buf))
+	req.ContentLength = int64(len(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Connect-Protocol-Version", "1")
+	resp, err := r.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("connect login: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode/100 != 2 {
+		return nil, fmt.Errorf("connect login -> %d: %s", resp.StatusCode, string(raw))
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("decode login: %w (body=%s)", err, string(raw))
+	}
+	return &LoginResponse{
+		Token:        out.Token,
+		RefreshToken: out.RefreshToken,
+		ExpiresIn:    out.ExpiresIn,
+	}, nil
 }
 
 type Runner struct {
