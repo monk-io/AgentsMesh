@@ -1,5 +1,5 @@
 import type { CompletionContext, CompletionResult, Completion } from "@codemirror/autocomplete";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField } from "@/lib/viewModels/agent";
 import {
   MODE_VALUES, GIT_CREDENTIAL_VALUES, PROMPT_POSITION_VALUES,
   buildFieldCompletions, buildValueCompletions,

@@ -3,8 +3,8 @@ import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore, useCurrentUser, useIsAuthenticated } from "@/stores/auth";
-import { invitationApi, InvitationInfo } from "@/lib/api/invitation";
-import { organizationApi } from "@/lib/api/organization";
+import { invitationApi, InvitationInfo } from "@/lib/api/facade/invitation";
+import { organizationApi } from "@/lib/api/facade/organization";
 import { Logo } from "@/components/common";
 
 export function InvitePage() {

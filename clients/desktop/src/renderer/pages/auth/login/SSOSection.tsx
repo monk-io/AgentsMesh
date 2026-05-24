@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getSSOAuthURL } from "@/lib/api/sso";
-import type { SSOConfig } from "@/lib/api/sso";
+import { getSSOAuthURL } from "@/lib/api/facade/sso";
+import type { SSOConfig } from "@/lib/api/facade/sso";
 import { useTranslations } from "next-intl";
 
 interface SSOSectionProps {

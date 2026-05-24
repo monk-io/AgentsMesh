@@ -7,8 +7,8 @@ import {
   useAuthStore, useCurrentUser,
 } from "@/stores/auth";
 import { ApiError } from "@/lib/api/api-types";
-import { ssoApi } from "@/lib/api/sso";
-import type { SSOConfig } from "@/lib/api/sso";
+import { ssoApi } from "@/lib/api/facade/sso";
+import type { SSOConfig } from "@/lib/api/facade/sso";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/common";
 import { OAuthButtons } from "./OAuthButtons";

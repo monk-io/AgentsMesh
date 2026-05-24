@@ -1,5 +1,5 @@
 import type { Completion } from "@codemirror/autocomplete";
-import type { ConfigField } from "@/lib/api/agent";
+import type { ConfigField } from "@/lib/viewModels/agent";
 import type { AgentfileCompletionContext } from "./autocomplete";
 
 export const MODE_VALUES: Completion[] = [

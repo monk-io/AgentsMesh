@@ -8,7 +8,7 @@ import { BlocksDocHeader } from "@/components/blocks/BlocksDocHeader";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import { getErrorMessage } from "@/lib/utils";
 import { blockstoreApi } from "@/lib/api/facade/blockstoreApi";
-import type { Workspace } from "@/lib/api/blockstoreTypes";
+import type { Workspace } from "@/lib/viewModels/blockstore";
 import { useBlockstoreStore, useBlocks } from "@/stores/blockstore";
 import "@/stores/blockstoreSubscribe";
 
