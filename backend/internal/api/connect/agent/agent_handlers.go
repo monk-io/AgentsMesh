@@ -155,7 +155,7 @@ func buildCreateRequest(
 		}
 	} else if launchCommand == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			errors.New("Either agentfile_source or launch_command is required"))
+			errors.New("either agentfile_source or launch_command is required"))
 	}
 	out.LaunchCommand = launchCommand
 	return out, nil

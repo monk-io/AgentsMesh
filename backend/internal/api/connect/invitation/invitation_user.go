@@ -23,7 +23,7 @@ func (s *Server) AcceptInvitation(
 	}
 	if req.Msg.GetToken() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			invitationErrEmptyToken)
+			errInvitationEmptyToken)
 	}
 	result, err := s.invitationSvc.Accept(ctx, req.Msg.GetToken(), userID)
 	if err != nil {

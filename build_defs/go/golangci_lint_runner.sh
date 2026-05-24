@@ -95,8 +95,12 @@ export GOWORK=off
 # We materialize EVERY go_proto_library target (not just runner) because
 # the backend connect handlers reference 30+ proto packages — missing
 # any one trips the lint typecheck with `no required module provides package`.
-bazel build --noshow_progress //proto/... >/dev/null 2>&1 || {
-    echo "ERROR: failed to bazel build //proto/... — proto stubs unavailable for lint." >&2
+#
+# Also build //backend/internal/api/connect/... so the amesh_proto_convert
+# Bazel rule fires + produces `*_convert.amesh.go` outputs in bazel-bin
+# (the materialization loop below copies them to source tree).
+bazel build --noshow_progress //proto/... //backend/internal/api/connect/... >/dev/null 2>&1 || {
+    echo "ERROR: failed to bazel build //proto/... //backend/internal/api/connect/... — codegen stubs unavailable for lint." >&2
     exit 1
 }
 bazel_out="$(bazel info output_path 2>/dev/null)"

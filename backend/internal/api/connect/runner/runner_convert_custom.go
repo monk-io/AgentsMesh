@@ -119,30 +119,30 @@ func toProtoLogEntry(e *runnerlog.LogEntry) *runnerapiv1.RunnerLog {
 		return nil
 	}
 	out := &runnerapiv1.RunnerLog{
-		Id:            e.RunnerLog.ID,
-		RunnerId:      e.RunnerLog.RunnerID,
-		RequestId:     e.RunnerLog.RequestID,
-		Status:        e.RunnerLog.Status,
-		SizeBytes:     e.RunnerLog.SizeBytes,
-		RequestedById: e.RunnerLog.RequestedByID,
+		Id:            e.ID,
+		RunnerId:      e.RunnerID,
+		RequestId:     e.RequestID,
+		Status:        e.Status,
+		SizeBytes:     e.SizeBytes,
+		RequestedById: e.RequestedByID,
 	}
-	if e.RunnerLog.StorageKey != "" {
-		v := e.RunnerLog.StorageKey
+	if e.StorageKey != "" {
+		v := e.StorageKey
 		out.StorageKey = &v
 	}
-	if e.RunnerLog.ErrorMessage != "" {
-		v := e.RunnerLog.ErrorMessage
+	if e.ErrorMessage != "" {
+		v := e.ErrorMessage
 		out.ErrorMessage = &v
 	}
 	if e.DownloadURL != "" {
 		v := e.DownloadURL
 		out.DownloadUrl = &v
 	}
-	if !e.RunnerLog.CreatedAt.IsZero() {
-		v := protoconv.RFC3339(e.RunnerLog.CreatedAt)
+	if !e.CreatedAt.IsZero() {
+		v := protoconv.RFC3339(e.CreatedAt)
 		out.CreatedAt = &v
 	}
-	out.CompletedAt = protoconv.RFC3339Ptr(e.RunnerLog.CompletedAt)
+	out.CompletedAt = protoconv.RFC3339Ptr(e.CompletedAt)
 	return out
 }
 

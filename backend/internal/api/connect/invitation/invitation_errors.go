@@ -11,10 +11,10 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 )
 
-// invitationErrEmptyToken is the sentinel returned for blank-token requests
+// errInvitationEmptyToken is the sentinel returned for blank-token requests
 // before any service call. Caller side is auth-required (AcceptInvitation),
 // so this surfaces as CodeInvalidArgument, not CodeNotFound.
-var invitationErrEmptyToken = errors.New("token is required")
+var errInvitationEmptyToken = errors.New("token is required")
 
 // requireAdmin enforces admin/owner role for org-scoped write operations.
 // Mirrors REST `if tc.UserRole != organization.RoleOwner && tc.UserRole !=

@@ -7,13 +7,6 @@ import (
 	loopv1 "github.com/anthropics/agentsmesh/proto/gen/go/loop/v1"
 )
 
-func optStrDeref(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
 func optStrPtr(p *string) *string {
 	if p == nil || *p == "" {
 		return nil

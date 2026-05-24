@@ -99,7 +99,7 @@ func (s *Server) SendChannelMessage(
 		return nil, err
 	}
 	if ch.IsArchived {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("Cannot send messages to archived channel"))
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("cannot send messages to archived channel"))
 	}
 	content, err := resolveSendContent(req.Msg)
 	if err != nil {

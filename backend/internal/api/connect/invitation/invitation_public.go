@@ -21,7 +21,7 @@ func (p *PublicServer) GetInvitationByToken(
 ) (*connect.Response[invitationv1.InvitationInfo], error) {
 	if req.Msg.GetToken() == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument,
-			invitationErrEmptyToken)
+			errInvitationEmptyToken)
 	}
 	info, err := p.invitationSvc.GetInvitationInfo(ctx, req.Msg.GetToken())
 	if err != nil {
