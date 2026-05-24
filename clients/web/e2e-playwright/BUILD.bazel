@@ -35,6 +35,11 @@ playwright_test(
         # package.json), so node resolves up the tree to
         # `<runfiles>/_main/node_modules/`.
         "//:node_modules/@playwright/test",
+        # helpers/connect-client.ts uses @bufbuild/protobuf to build the
+        # typed binary Connect client. CI's hermetic Bazel sandbox doesn't
+        # inherit the workspace symlink that macOS gives free — must declare
+        # explicitly or runfiles miss it (Cannot find module @bufbuild/protobuf).
+        "//:node_modules/@bufbuild/protobuf",
         # Generated TS proto messages — helpers/connect-client.ts imports
         # them through a relative path (`../../../../proto/gen/ts/...`),
         # so the .ts files must be staged in runfiles. copy_to_bin gives

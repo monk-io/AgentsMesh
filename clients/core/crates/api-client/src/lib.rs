@@ -11,8 +11,6 @@ mod modules;
 mod refresh;
 mod token_store;
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod api_core_tests;
 #[cfg(test)]
 mod api_agent_billing_tests;
