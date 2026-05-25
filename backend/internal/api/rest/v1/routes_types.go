@@ -13,7 +13,6 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/channel"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
-	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
 	"github.com/anthropics/agentsmesh/backend/internal/service/geo"
 	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
 	"github.com/anthropics/agentsmesh/backend/internal/service/invitation"
@@ -61,7 +60,6 @@ type Services struct {
 	EventBus           *eventbus.EventBus               // Event bus for real-time events
 	Email              email.Service                    // Email service
 	Invitation         *invitation.Service              // Organization invitations
-	File               *fileservice.Service             // File storage service
 	PromoCode          *promocode.Service               // Promo code management
 	APIKey             *apikeyservice.Service           // API key management for third-party access
 	APIKeyAdapter      *apikeyservice.MiddlewareAdapter // API key middleware adapter

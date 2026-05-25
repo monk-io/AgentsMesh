@@ -2,9 +2,9 @@ package meshconnect
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	meshv1 "github.com/anthropics/agentsmesh/proto/gen/go/mesh/v1"
 )
 
@@ -40,7 +40,7 @@ func toProtoMeshMessage(m *agent.AgentMessage) *meshv1.MeshMessage {
 	out.ReplyToId = m.ParentMessageID
 	isRead := m.IsRead()
 	out.IsRead = &isRead
-	createdAt := m.CreatedAt.UTC().Format(time.RFC3339)
+	createdAt := protoconv.RFC3339(m.CreatedAt)
 	out.CreatedAt = &createdAt
 	return out
 }
@@ -68,7 +68,7 @@ func toProtoDeadLetter(e *agent.DeadLetterEntry) *meshv1.MeshDeadLetterEntry {
 		r := e.Reason
 		out.Error = &r
 	}
-	createdAt := e.CreatedAt.UTC().Format(time.RFC3339)
+	createdAt := protoconv.RFC3339(e.CreatedAt)
 	out.CreatedAt = &createdAt
 	return out
 }

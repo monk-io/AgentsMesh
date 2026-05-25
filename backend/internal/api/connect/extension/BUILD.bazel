@@ -18,6 +18,7 @@ go_library(
         "//backend/internal/domain/extension",
         "//backend/internal/middleware",
         "//backend/internal/service/extension",
+        "//backend/pkg/protoconv",
         "//proto/extension/v1:extension_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

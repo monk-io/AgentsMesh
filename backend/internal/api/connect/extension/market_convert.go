@@ -2,9 +2,9 @@ package extensionconnect
 
 import (
 	"encoding/json"
-	"time"
 
 	extdom "github.com/anthropics/agentsmesh/backend/internal/domain/extension"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	extensionv1 "github.com/anthropics/agentsmesh/proto/gen/go/extension/v1"
 )
 
@@ -30,8 +30,8 @@ func toProtoSkillMarketItem(m *extdom.SkillMarketItem) *extensionv1.SkillMarketI
 		PackageSize:   m.PackageSize,
 		Version:       int32(m.Version),
 		IsActive:      m.IsActive,
-		CreatedAt:     m.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:     m.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:     protoconv.RFC3339(m.CreatedAt),
+		UpdatedAt:     protoconv.RFC3339(m.UpdatedAt),
 	}
 	if filter := m.GetAgentFilter(); len(filter) > 0 {
 		out.AgentFilter = filter
@@ -64,8 +64,8 @@ func toProtoMcpMarketItem(m *extdom.McpMarketItem) *extensionv1.McpMarketItem {
 		Version:            m.Version,
 		RepositoryUrl:      m.RepositoryURL,
 		RegistryMeta:       jsonRawString(m.RegistryMeta, "{}"),
-		CreatedAt:          m.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:          m.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:          protoconv.RFC3339(m.CreatedAt),
+		UpdatedAt:          protoconv.RFC3339(m.UpdatedAt),
 	}
 	if filter := m.GetAgentFilter(); len(filter) > 0 {
 		out.AgentFilter = filter
@@ -86,8 +86,7 @@ func toProtoMcpMarketItem(m *extdom.McpMarketItem) *extensionv1.McpMarketItem {
 		}
 	}
 	if m.LastSyncedAt != nil {
-		s := m.LastSyncedAt.UTC().Format(time.RFC3339)
-		out.LastSyncedAt = &s
+		out.LastSyncedAt = protoconv.RFC3339Ptr(m.LastSyncedAt)
 	}
 	return out
 }
@@ -110,8 +109,8 @@ func toProtoInstalledSkill(s *extdom.InstalledSkill) *extensionv1.InstalledSkill
 		StorageKey:     s.StorageKey,
 		PackageSize:    s.PackageSize,
 		IsEnabled:      s.IsEnabled,
-		CreatedAt:      s.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      s.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(s.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(s.UpdatedAt),
 	}
 	if s.MarketItemID != nil {
 		out.MarketItemId = s.MarketItemID
@@ -147,8 +146,8 @@ func toProtoInstalledMcpServer(s *extdom.InstalledMcpServer) *extensionv1.Instal
 		HttpHeaders:    jsonRawString(s.HttpHeaders, "{}"),
 		EnvVars:        jsonRawString(s.EnvVars, "{}"),
 		IsEnabled:      s.IsEnabled,
-		CreatedAt:      s.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      s.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(s.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(s.UpdatedAt),
 	}
 	if s.MarketItemID != nil {
 		out.MarketItemId = s.MarketItemID

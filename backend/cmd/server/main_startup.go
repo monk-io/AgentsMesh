@@ -176,7 +176,6 @@ func buildServicesContainer(
 		Hub:                hub,
 		EventBus:           eventBus,
 		Invitation:         services.invitation,
-		File:               services.file,
 		PromoCode:          services.promoCode,
 		AgentPodSettings:   services.agentpodSettings,
 		AgentPodAIProvider: services.agentpodAIProvider,

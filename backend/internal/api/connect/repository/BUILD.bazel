@@ -22,6 +22,7 @@ go_library(
         "//backend/internal/service/grant",
         "//backend/internal/service/repository",
         "//backend/pkg/policy",
+        "//backend/pkg/protoconv",
         "//proto/repository/v1:repository_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

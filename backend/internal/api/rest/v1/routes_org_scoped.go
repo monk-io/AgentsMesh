@@ -7,5 +7,4 @@ import (
 func RegisterOrgScopedRoutes(rg *gin.RouterGroup, svc *Services) {
 	registerRunnerRoutes(rg, svc)
 	registerBillingRoutes(rg, svc)
-	registerFileRoutes(rg, svc)
 }

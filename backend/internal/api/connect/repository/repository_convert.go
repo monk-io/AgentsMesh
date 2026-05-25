@@ -1,10 +1,9 @@
 package repositoryconnect
 
 import (
-	"time"
-
 	"github.com/anthropics/agentsmesh/backend/internal/domain/gitprovider"
 	"github.com/anthropics/agentsmesh/backend/internal/service/repository"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	repositoryv1 "github.com/anthropics/agentsmesh/proto/gen/go/repository/v1"
 )
 
@@ -33,8 +32,8 @@ func toProtoRepository(r *gitprovider.Repository) *repositoryv1.Repository {
 		DefaultBranch:   r.DefaultBranch,
 		Visibility:      r.Visibility,
 		IsActive:        r.IsActive,
-		CreatedAt:       r.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:       r.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:       protoconv.RFC3339(r.CreatedAt),
+		UpdatedAt:       protoconv.RFC3339(r.UpdatedAt),
 	}
 	if r.TicketPrefix != nil {
 		out.TicketPrefix = r.TicketPrefix

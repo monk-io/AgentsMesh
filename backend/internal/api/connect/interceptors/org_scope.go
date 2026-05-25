@@ -37,6 +37,11 @@ type OrgScopedRequest interface {
 //   * caller not a member          → CodePermissionDenied
 //   * internal membership lookup   → CodeInternal
 //
+// All returned errors are pre-wrapped with `connect.NewError` — callers MUST
+// pass them through with `return nil, err` (no further mapping). This is why
+// handler call sites look identical across all 30+ services and why
+// `// err already wrapped` comments would be redundant noise.
+//
 // Callers pass `req.Msg` (which is `*T` for protoc-gen-go-emitted message
 // types) directly. We avoid `*connect.Request[T]` in the signature because
 // Go generics can't reach through that pointer-of-T to constrain `*T`.
