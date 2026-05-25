@@ -6,6 +6,7 @@ go_library(
     srcs = [
         "cmd_migrate.go",
         "connect_init.go",
+        "connect_mount.go",
         "embedder_select.go",
         "eventbus_autopilot.go",
         "eventbus_loop.go",

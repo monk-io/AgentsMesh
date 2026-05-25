@@ -10,8 +10,10 @@ amesh_proto_convert(
 go_library(
     name = "runner",
     srcs = [
-        "handlers.go",
         "handlers_auth.go",
+        "handlers_crud.go",
+        "handlers_ops.go",
+        "handlers_tokens.go",
         "runner_convert_custom.go",
         "server.go",
         ":runner_convert_amesh",

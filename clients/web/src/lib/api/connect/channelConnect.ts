@@ -1,4 +1,10 @@
-// Connect-RPC adapter for proto.channel.v1.ChannelService.
+// Connect-RPC adapter for proto.channel.v1.ChannelService — channel CRUD +
+// document state + shared field mappers.
+//
+// Message ops live in `channelMessageConnect.ts`; member + pod ops in
+// `channelMembersConnect.ts`. The proto wire layer is hidden behind the
+// `facade/channelConnect.ts` re-export; business callers MUST NOT import
+// from this file directly (enforced by no-restricted-imports).
 //
 // Encodes requests via @bufbuild/protobuf .toBinary(), passes the Uint8Array
 // to the wasm bridge (binary in / binary out — conventions §2.5), and
@@ -7,14 +13,9 @@
 // Returns the existing web ChannelData / ChannelMessage shapes (snake_case +
 // number) so call sites don't have to change. The proto types are camelCase
 // + BigInt; the adapter does the mapping.
-//
-// content / mentions ride as opaque JSON strings on the proto wire
-// (`content_json` / `mentions_json`). The adapter parses them back into the
-// rich AST so call-site signatures match the legacy REST DTO.
 
 import {
   ChannelSchema,
-  ChannelMessageSchema,
   ListChannelsRequestSchema,
   ListChannelsResponseSchema,
   GetChannelRequestSchema,
@@ -28,52 +29,17 @@ import {
   GetChannelDocumentResponseSchema,
   UpdateChannelDocumentRequestSchema,
   UpdateChannelDocumentResponseSchema,
-  ListChannelMessagesRequestSchema,
-  ListChannelMessagesResponseSchema,
-  SearchChannelMessagesRequestSchema,
-  SearchChannelMessagesResponseSchema,
-  SendChannelMessageRequestSchema,
-  EditChannelMessageRequestSchema,
-  DeleteChannelMessageRequestSchema,
-  DeleteChannelMessageResponseSchema,
-  MarkChannelReadRequestSchema,
-  MarkChannelReadResponseSchema,
-  GetChannelUnreadCountsRequestSchema,
-  GetChannelUnreadCountsResponseSchema,
-  MuteChannelRequestSchema,
-  MuteChannelResponseSchema,
-  ListChannelMembersRequestSchema,
-  ListChannelMembersResponseSchema,
-  JoinChannelRequestSchema,
-  JoinChannelResponseSchema,
-  LeaveChannelRequestSchema,
-  LeaveChannelResponseSchema,
-  InviteChannelMembersRequestSchema,
-  InviteChannelMembersResponseSchema,
-  RemoveChannelMemberRequestSchema,
-  RemoveChannelMemberResponseSchema,
-  ListChannelPodsRequestSchema,
-  ListChannelPodsResponseSchema,
-  JoinChannelPodRequestSchema,
-  JoinChannelPodResponseSchema,
-  LeaveChannelPodRequestSchema,
-  LeaveChannelPodResponseSchema,
   type Channel as ProtoChannel,
   type ChannelMessage as ProtoChannelMessage,
-  type ChannelMember as ProtoChannelMember,
-  type ChannelPod as ProtoChannelPod,
 } from "@proto/channel/v1/channel_pb";
 import { create, toBinary, fromBinary } from "@bufbuild/protobuf";
 import { getChannelService } from "@/lib/wasm-core";
 import type { ChannelData, ChannelMessage } from "../facade/channel";
 import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
 
-export type {
-  ChannelData,
-  ChannelMessage,
-} from "../facade/channel";
+export type { ChannelData, ChannelMessage } from "../facade/channel";
 
-// ---------------- Field mappers ----------------
+// ---------------- Field mappers (shared across split files) ----------------
 
 export function channelFromProto(c: ProtoChannel): ChannelData {
   return {
@@ -97,6 +63,7 @@ export function channelFromProto(c: ProtoChannel): ChannelData {
   };
 }
 
+// Exported for use by channelMessageConnect.ts.
 export function messageFromProto(m: ProtoChannelMessage): ChannelMessage {
   let content: MessageContent | undefined;
   let mentions: MessageMentions | undefined;
@@ -134,42 +101,6 @@ export function messageFromProto(m: ProtoChannelMessage): ChannelMessage {
           agent: m.senderPodInfo.agent ? { name: m.senderPodInfo.agent.name } : undefined,
         }
       : undefined,
-  };
-}
-
-export interface ChannelMemberData {
-  channel_id: number;
-  user_id: number;
-  role: string;
-  is_muted: boolean;
-  joined_at: string;
-}
-
-function memberFromProto(m: ProtoChannelMember): ChannelMemberData {
-  return {
-    channel_id: Number(m.channelId),
-    user_id: Number(m.userId),
-    role: m.role,
-    is_muted: m.isMuted,
-    joined_at: m.joinedAt,
-  };
-}
-
-export interface ChannelPodSummary {
-  id: number;
-  pod_key: string;
-  alias?: string;
-  status: string;
-  agent_status: string;
-}
-
-function podFromProto(p: ProtoChannelPod): ChannelPodSummary {
-  return {
-    id: Number(p.id),
-    pod_key: p.podKey,
-    alias: p.alias,
-    status: p.status,
-    agent_status: p.agentStatus,
   };
 }
 
@@ -274,206 +205,4 @@ export async function updateChannelDocument(orgSlug: string, id: number, documen
   const bytes = toBinary(UpdateChannelDocumentRequestSchema, req);
   const respBytes = await getChannelService().updateChannelDocumentConnect(bytes);
   return fromBinary(UpdateChannelDocumentResponseSchema, new Uint8Array(respBytes)).document;
-}
-
-// ---------------- Messages ----------------
-
-export async function listChannelMessages(
-  orgSlug: string, channelId: number,
-  opts: { beforeId?: number; limit?: number } = {},
-): Promise<{ items: ChannelMessage[]; has_more: boolean }> {
-  const req = create(ListChannelMessagesRequestSchema, {
-    orgSlug, channelId: BigInt(channelId),
-    beforeId: opts.beforeId !== undefined ? BigInt(opts.beforeId) : undefined,
-    limit: opts.limit,
-  });
-  const bytes = toBinary(ListChannelMessagesRequestSchema, req);
-  const respBytes = await getChannelService().listChannelMessagesConnect(bytes);
-  const resp = fromBinary(ListChannelMessagesResponseSchema, new Uint8Array(respBytes));
-  return { items: resp.items.map(messageFromProto), has_more: resp.hasMore };
-}
-
-export async function searchChannelMessages(
-  orgSlug: string, channelId: number, query: string, limit?: number,
-): Promise<ChannelMessage[]> {
-  const req = create(SearchChannelMessagesRequestSchema, {
-    orgSlug, channelId: BigInt(channelId), query, limit,
-  });
-  const bytes = toBinary(SearchChannelMessagesRequestSchema, req);
-  const respBytes = await getChannelService().searchChannelMessagesConnect(bytes);
-  const resp = fromBinary(SearchChannelMessagesResponseSchema, new Uint8Array(respBytes));
-  return resp.items.map(messageFromProto);
-}
-
-export interface SendChannelMessagePayload {
-  source?: string;
-  mentions?: Record<string, { entity_type: string; entity_key: string }>;
-  content?: MessageContent;
-  attachment_key?: string;
-  pod_key?: string;
-  reply_to?: number;
-}
-
-export async function sendChannelMessage(
-  orgSlug: string, channelId: number, payload: SendChannelMessagePayload,
-): Promise<ChannelMessage> {
-  const protoMentions: Record<string, { entityType: string; entityKey: string }> = {};
-  for (const [k, v] of Object.entries(payload.mentions ?? {})) {
-    protoMentions[k] = { entityType: v.entity_type, entityKey: v.entity_key };
-  }
-  const req = create(SendChannelMessageRequestSchema, {
-    orgSlug, channelId: BigInt(channelId),
-    source: payload.source,
-    mentions: protoMentions,
-    contentJson: payload.content ? JSON.stringify(payload.content) : undefined,
-    attachmentKey: payload.attachment_key,
-    podKey: payload.pod_key,
-    replyTo: payload.reply_to !== undefined ? BigInt(payload.reply_to) : undefined,
-  });
-  const bytes = toBinary(SendChannelMessageRequestSchema, req);
-  const respBytes = await getChannelService().sendChannelMessageConnect(bytes);
-  return messageFromProto(fromBinary(ChannelMessageSchema, new Uint8Array(respBytes)));
-}
-
-export async function editChannelMessage(
-  orgSlug: string, channelId: number, messageId: number,
-  payload: Omit<SendChannelMessagePayload, "pod_key" | "reply_to">,
-): Promise<ChannelMessage> {
-  const protoMentions: Record<string, { entityType: string; entityKey: string }> = {};
-  for (const [k, v] of Object.entries(payload.mentions ?? {})) {
-    protoMentions[k] = { entityType: v.entity_type, entityKey: v.entity_key };
-  }
-  const req = create(EditChannelMessageRequestSchema, {
-    orgSlug, channelId: BigInt(channelId), messageId: BigInt(messageId),
-    source: payload.source,
-    mentions: protoMentions,
-    contentJson: payload.content ? JSON.stringify(payload.content) : undefined,
-    attachmentKey: payload.attachment_key,
-  });
-  const bytes = toBinary(EditChannelMessageRequestSchema, req);
-  const respBytes = await getChannelService().editChannelMessageConnect(bytes);
-  return messageFromProto(fromBinary(ChannelMessageSchema, new Uint8Array(respBytes)));
-}
-
-export async function deleteChannelMessage(
-  orgSlug: string, channelId: number, messageId: number,
-): Promise<void> {
-  const req = create(DeleteChannelMessageRequestSchema, {
-    orgSlug, channelId: BigInt(channelId), messageId: BigInt(messageId),
-  });
-  const bytes = toBinary(DeleteChannelMessageRequestSchema, req);
-  const respBytes = await getChannelService().deleteChannelMessageConnect(bytes);
-  fromBinary(DeleteChannelMessageResponseSchema, new Uint8Array(respBytes));
-}
-
-// ---------------- Read state ----------------
-
-export async function markChannelRead(
-  orgSlug: string, channelId: number, messageId: number,
-): Promise<void> {
-  const req = create(MarkChannelReadRequestSchema, {
-    orgSlug, channelId: BigInt(channelId), messageId: BigInt(messageId),
-  });
-  const bytes = toBinary(MarkChannelReadRequestSchema, req);
-  const respBytes = await getChannelService().markChannelReadConnect(bytes);
-  fromBinary(MarkChannelReadResponseSchema, new Uint8Array(respBytes));
-}
-
-export async function getChannelUnreadCounts(orgSlug: string): Promise<Record<string, number>> {
-  const req = create(GetChannelUnreadCountsRequestSchema, { orgSlug });
-  const bytes = toBinary(GetChannelUnreadCountsRequestSchema, req);
-  const respBytes = await getChannelService().getChannelUnreadCountsConnect(bytes);
-  const resp = fromBinary(GetChannelUnreadCountsResponseSchema, new Uint8Array(respBytes));
-  const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(resp.unread)) {
-    out[k] = Number(v);
-  }
-  return out;
-}
-
-export async function muteChannel(orgSlug: string, id: number, muted: boolean): Promise<void> {
-  const req = create(MuteChannelRequestSchema, { orgSlug, id: BigInt(id), muted });
-  const bytes = toBinary(MuteChannelRequestSchema, req);
-  const respBytes = await getChannelService().muteChannelConnect(bytes);
-  fromBinary(MuteChannelResponseSchema, new Uint8Array(respBytes));
-}
-
-// ---------------- Members ----------------
-
-export async function listChannelMembers(
-  orgSlug: string, id: number, opts: { limit?: number; offset?: number } = {},
-): Promise<{ members: ChannelMemberData[]; total: number }> {
-  const req = create(ListChannelMembersRequestSchema, {
-    orgSlug, id: BigInt(id), limit: opts.limit, offset: opts.offset,
-  });
-  const bytes = toBinary(ListChannelMembersRequestSchema, req);
-  const respBytes = await getChannelService().listChannelMembersConnect(bytes);
-  const resp = fromBinary(ListChannelMembersResponseSchema, new Uint8Array(respBytes));
-  return { members: resp.items.map(memberFromProto), total: Number(resp.total) };
-}
-
-export async function joinChannel(orgSlug: string, id: number): Promise<void> {
-  const req = create(JoinChannelRequestSchema, { orgSlug, id: BigInt(id) });
-  const bytes = toBinary(JoinChannelRequestSchema, req);
-  const respBytes = await getChannelService().joinChannelConnect(bytes);
-  fromBinary(JoinChannelResponseSchema, new Uint8Array(respBytes));
-}
-
-export async function leaveChannel(orgSlug: string, id: number): Promise<void> {
-  const req = create(LeaveChannelRequestSchema, { orgSlug, id: BigInt(id) });
-  const bytes = toBinary(LeaveChannelRequestSchema, req);
-  const respBytes = await getChannelService().leaveChannelConnect(bytes);
-  fromBinary(LeaveChannelResponseSchema, new Uint8Array(respBytes));
-}
-
-export async function inviteChannelMembers(
-  orgSlug: string, id: number, userIds: number[],
-): Promise<void> {
-  const req = create(InviteChannelMembersRequestSchema, {
-    orgSlug, id: BigInt(id), userIds: userIds.map((n) => BigInt(n)),
-  });
-  const bytes = toBinary(InviteChannelMembersRequestSchema, req);
-  const respBytes = await getChannelService().inviteChannelMembersConnect(bytes);
-  fromBinary(InviteChannelMembersResponseSchema, new Uint8Array(respBytes));
-}
-
-export async function removeChannelMember(
-  orgSlug: string, id: number, userId: number,
-): Promise<void> {
-  const req = create(RemoveChannelMemberRequestSchema, {
-    orgSlug, id: BigInt(id), userId: BigInt(userId),
-  });
-  const bytes = toBinary(RemoveChannelMemberRequestSchema, req);
-  const respBytes = await getChannelService().removeChannelMemberConnect(bytes);
-  fromBinary(RemoveChannelMemberResponseSchema, new Uint8Array(respBytes));
-}
-
-// ---------------- Channel pods ----------------
-
-export async function listChannelPods(
-  orgSlug: string, id: number,
-): Promise<{ pods: ChannelPodSummary[]; total: number }> {
-  const req = create(ListChannelPodsRequestSchema, { orgSlug, id: BigInt(id) });
-  const bytes = toBinary(ListChannelPodsRequestSchema, req);
-  const respBytes = await getChannelService().listChannelPodsConnect(bytes);
-  const resp = fromBinary(ListChannelPodsResponseSchema, new Uint8Array(respBytes));
-  return { pods: resp.items.map(podFromProto), total: Number(resp.total) };
-}
-
-export async function joinChannelPod(
-  orgSlug: string, id: number, podKey: string,
-): Promise<void> {
-  const req = create(JoinChannelPodRequestSchema, { orgSlug, id: BigInt(id), podKey });
-  const bytes = toBinary(JoinChannelPodRequestSchema, req);
-  const respBytes = await getChannelService().joinChannelPodConnect(bytes);
-  fromBinary(JoinChannelPodResponseSchema, new Uint8Array(respBytes));
-}
-
-export async function leaveChannelPod(
-  orgSlug: string, id: number, podKey: string,
-): Promise<void> {
-  const req = create(LeaveChannelPodRequestSchema, { orgSlug, id: BigInt(id), podKey });
-  const bytes = toBinary(LeaveChannelPodRequestSchema, req);
-  const respBytes = await getChannelService().leaveChannelPodConnect(bytes);
-  fromBinary(LeaveChannelPodResponseSchema, new Uint8Array(respBytes));
 }

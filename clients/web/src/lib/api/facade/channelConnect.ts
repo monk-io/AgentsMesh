@@ -1,6 +1,9 @@
 // Facade re-export of the channel Connect-RPC adapter. Business code imports
 // from here (or from the `@/lib/api` barrel) so the wire-shape layer stays
 // internal to the facade boundary. Tests mock this path.
+//
+// The wire layer was split into 3 SRP-aligned files (CRUD / messages /
+// members) — this facade unifies them so callers see one surface.
 
 export {
   channelFromProto,
@@ -13,6 +16,11 @@ export {
   unarchiveChannel,
   getChannelDocument,
   updateChannelDocument,
+  type ChannelData,
+  type ChannelMessage,
+} from "../connect/channelConnect";
+
+export {
   listChannelMessages,
   searchChannelMessages,
   sendChannelMessage,
@@ -21,6 +29,10 @@ export {
   markChannelRead,
   getChannelUnreadCounts,
   muteChannel,
+  type SendChannelMessagePayload,
+} from "../connect/channelMessageConnect";
+
+export {
   listChannelMembers,
   joinChannel,
   leaveChannel,
@@ -29,9 +41,6 @@ export {
   listChannelPods,
   joinChannelPod,
   leaveChannelPod,
-  type ChannelData,
-  type ChannelMessage,
   type ChannelMemberData,
   type ChannelPodSummary,
-  type SendChannelMessagePayload,
-} from "../connect/channelConnect";
+} from "../connect/channelMembersConnect";

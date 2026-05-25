@@ -1,37 +1,26 @@
-// Connect-RPC adapter for proto.ticket.v1.TicketService.
+// Connect-RPC adapter for proto.ticket.v1.TicketService — ticket CRUD +
+// board + assignees + shared wire converters.
+//
+// Label ops live in `ticketLabelConnect.ts`. The wire layer is hidden
+// behind `facade/ticketConnect.ts`.
 //
 // Encodes requests via @bufbuild/protobuf .toBinary(), passes the Uint8Array
 // to the wasm bridge (binary in / binary out per conventions §2.5), decodes
 // responses via .fromBinary(). No JSON intermediate.
-//
-// Returns the existing snake_case web shapes (TicketData, Label, BoardColumn)
-// so call sites don't have to flip off camelCase + BigInt — same dual-track
-// pattern as podConnect.ts and repositoryConnect.ts during the migration
-// window. The 18 getTicketService() call sites can migrate one-at-a-time
-// with `ticketConnect.*` swaps; the legacy methods on WasmTicketService stay
-// available until the sweep is done.
 
 import {
   AddAssigneeRequestSchema,
-  AddLabelRequestSchema,
   BoardSchema,
-  CreateLabelRequestSchema,
   CreateTicketRequestSchema,
-  DeleteLabelRequestSchema,
   DeleteTicketRequestSchema,
   GetActiveTicketsRequestSchema,
   GetBoardRequestSchema,
   GetSubTicketsRequestSchema,
   GetTicketRequestSchema,
-  LabelSchema,
-  ListLabelsRequestSchema,
-  ListLabelsResponseSchema,
   ListTicketsRequestSchema,
   ListTicketsResponseSchema,
   RemoveAssigneeRequestSchema,
-  RemoveLabelRequestSchema,
   TicketSchema,
-  UpdateLabelRequestSchema,
   UpdateTicketRequestSchema,
   UpdateTicketStatusRequestSchema,
   type Label as ProtoLabel,
@@ -47,6 +36,7 @@ import type {
 } from "@/lib/viewModels/ticket";
 
 // ============== Wire conversion (proto -> snake_case web shape) ==============
+// Exported for cross-file use by ticketLabelConnect.
 
 export function fromProtoTicket(t: ProtoTicket): TicketData {
   return {
@@ -287,84 +277,4 @@ export async function removeAssignee(
   await getTicketService().remove_assignee_connect(
     toBinary(RemoveAssigneeRequestSchema, req),
   );
-}
-
-// ============== Labels ==============
-
-export async function listLabels(
-  orgSlug: string,
-  opts: { repository_id?: number } = {},
-): Promise<Array<{ id: number; name: string; color: string }>> {
-  const req = create(ListLabelsRequestSchema, {
-    orgSlug,
-    repositoryId: opts.repository_id !== undefined ? BigInt(opts.repository_id) : undefined,
-  });
-  const bytes = toBinary(ListLabelsRequestSchema, req);
-  const respBytes = await getTicketService().list_labels_connect(bytes);
-  const resp = fromBinary(ListLabelsResponseSchema, new Uint8Array(respBytes));
-  return resp.items.map(fromProtoLabel);
-}
-
-export async function createLabel(
-  orgSlug: string,
-  name: string,
-  color: string,
-  opts: { repository_id?: number } = {},
-): Promise<{ id: number; name: string; color: string }> {
-  const req = create(CreateLabelRequestSchema, {
-    orgSlug,
-    name,
-    color,
-    repositoryId: opts.repository_id !== undefined ? BigInt(opts.repository_id) : undefined,
-  });
-  const bytes = toBinary(CreateLabelRequestSchema, req);
-  const respBytes = await getTicketService().create_label_connect(bytes);
-  return fromProtoLabel(fromBinary(LabelSchema, new Uint8Array(respBytes)));
-}
-
-export async function updateLabel(
-  orgSlug: string,
-  id: number,
-  patch: { name?: string; color?: string },
-): Promise<{ id: number; name: string; color: string }> {
-  const req = create(UpdateLabelRequestSchema, {
-    orgSlug,
-    id: BigInt(id),
-    name: patch.name,
-    color: patch.color,
-  });
-  const bytes = toBinary(UpdateLabelRequestSchema, req);
-  const respBytes = await getTicketService().update_label_connect(bytes);
-  return fromProtoLabel(fromBinary(LabelSchema, new Uint8Array(respBytes)));
-}
-
-export async function deleteLabel(orgSlug: string, id: number): Promise<void> {
-  const req = create(DeleteLabelRequestSchema, { orgSlug, id: BigInt(id) });
-  await getTicketService().delete_label_connect(toBinary(DeleteLabelRequestSchema, req));
-}
-
-export async function addLabel(
-  orgSlug: string,
-  ticketSlug: string,
-  labelId: number,
-): Promise<void> {
-  const req = create(AddLabelRequestSchema, {
-    orgSlug,
-    ticketSlug,
-    labelId: BigInt(labelId),
-  });
-  await getTicketService().add_label_connect(toBinary(AddLabelRequestSchema, req));
-}
-
-export async function removeLabel(
-  orgSlug: string,
-  ticketSlug: string,
-  labelId: number,
-): Promise<void> {
-  const req = create(RemoveLabelRequestSchema, {
-    orgSlug,
-    ticketSlug,
-    labelId: BigInt(labelId),
-  });
-  await getTicketService().remove_label_connect(toBinary(RemoveLabelRequestSchema, req));
 }
