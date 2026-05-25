@@ -23,7 +23,7 @@ import {
   updateSubscriptionConnect,
   upgradeSubscriptionConnect,
   type CreateCheckoutInput,
-} from "../connect/billingConnect";
+} from "./billingConnect";
 
 export type {
   SubscriptionPlan, PlanPrice, PlanWithPrice, UsageOverview, BillingOverview,

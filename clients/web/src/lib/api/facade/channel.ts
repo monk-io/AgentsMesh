@@ -12,7 +12,7 @@ import {
   inviteChannelMembers as inviteChannelMembersConnect,
   removeChannelMember as removeChannelMemberConnect,
   listChannelMembers as listChannelMembersConnect,
-} from "../connect/channelConnect";
+} from "./channelConnect";
 
 export type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
 export type { InlineElement, Block } from "@/lib/viewModels/channelMessage";
