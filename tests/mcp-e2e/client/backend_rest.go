@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -50,23 +51,28 @@ func (r *REST) Login(ctx context.Context, email, password string) (*LoginRespons
 	// Wire format: JSON request, JSON response (Connect's
 	// `application/json` profile — same as REST but with Connect-Protocol-Version
 	// + the procedure-prefixed URL).
+	//
+	// Important: r.baseURL ends with `/api/v1` (set by fixture/env.go) which
+	// is the REST namespace. Connect handlers mount at the bare `/proto.*`
+	// prefix in backend/cmd/server/connect_init.go — strip the `/api/v1`
+	// suffix here before forming the Connect URL.
+	connectBase := strings.TrimSuffix(r.baseURL, "/api/v1")
 	var out struct {
 		Token        string `json:"token"`
 		RefreshToken string `json:"refreshToken"`
 		ExpiresIn    int64  `json:"expiresIn"`
 	}
 	body := map[string]string{"email": email, "password": password}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		r.baseURL+"/proto.auth.v1.AuthService/Login", nil)
-	if err != nil {
-		return nil, err
-	}
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	req.Body = io.NopCloser(bytes.NewReader(buf))
-	req.ContentLength = int64(len(buf))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		connectBase+"/proto.auth.v1.AuthService/Login",
+		bytes.NewReader(buf))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Connect-Protocol-Version", "1")
 	resp, err := r.hc.Do(req)
