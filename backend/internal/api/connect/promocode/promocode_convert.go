@@ -1,10 +1,9 @@
 package promocodeconnect
 
 import (
-	"time"
-
 	promocodedomain "github.com/anthropics/agentsmesh/backend/internal/domain/promocode"
 	promocodesvc "github.com/anthropics/agentsmesh/backend/internal/service/promocode"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	promocodev1 "github.com/anthropics/agentsmesh/proto/gen/go/promocode/v1"
 )
 
@@ -30,8 +29,7 @@ func toProtoValidateResponse(r *promocodesvc.ValidateResponse) *promocodev1.Vali
 		out.DurationMonths = &v
 	}
 	if r.ExpiresAt != nil {
-		v := r.ExpiresAt.UTC().Format(time.RFC3339)
-		out.ExpiresAt = &v
+		out.ExpiresAt = protoconv.RFC3339Ptr(r.ExpiresAt)
 	}
 	if r.MessageCode != "" {
 		v := r.MessageCode
@@ -58,7 +56,7 @@ func toProtoRedeemResponse(r *promocodesvc.RedeemResponse) *promocodev1.RedeemPr
 		out.DurationMonths = &v
 	}
 	if !r.NewPeriodEnd.IsZero() {
-		v := r.NewPeriodEnd.UTC().Format(time.RFC3339)
+		v := protoconv.RFC3339(r.NewPeriodEnd)
 		out.NewPeriodEnd = &v
 	}
 	if r.MessageCode != "" {
@@ -82,16 +80,15 @@ func toProtoRedemption(r *promocodedomain.Redemption) *promocodev1.Redemption {
 		UserId:         r.UserID,
 		PlanName:       r.PlanName,
 		DurationMonths: int32(r.DurationMonths),
-		NewPeriodEnd:   r.NewPeriodEnd.UTC().Format(time.RFC3339),
-		CreatedAt:      r.CreatedAt.UTC().Format(time.RFC3339),
+		NewPeriodEnd:   protoconv.RFC3339(r.NewPeriodEnd),
+		CreatedAt:      protoconv.RFC3339(r.CreatedAt),
 	}
 	if r.PreviousPlanName != nil {
 		v := *r.PreviousPlanName
 		out.PreviousPlanName = &v
 	}
 	if r.PreviousPeriodEnd != nil {
-		v := r.PreviousPeriodEnd.UTC().Format(time.RFC3339)
-		out.PreviousPeriodEnd = &v
+		out.PreviousPeriodEnd = protoconv.RFC3339Ptr(r.PreviousPeriodEnd)
 	}
 	if r.IPAddress != nil {
 		v := *r.IPAddress

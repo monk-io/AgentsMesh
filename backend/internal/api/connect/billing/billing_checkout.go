@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
@@ -16,6 +15,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
 	"github.com/anthropics/agentsmesh/backend/internal/service/payment"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	billingv1 "github.com/anthropics/agentsmesh/proto/gen/go/billing/v1"
 )
 
@@ -210,7 +210,7 @@ func (s *Server) createCheckoutSession(
 		OrderNo:    orderNo,
 		SessionId:  resp.SessionID,
 		SessionUrl: resp.SessionURL,
-		ExpiresAt:  resp.ExpiresAt.UTC().Format(time.RFC3339),
+		ExpiresAt:  protoconv.RFC3339(resp.ExpiresAt),
 		Provider:   providerName,
 	}
 	if resp.QRCodeURL != "" {

@@ -16,6 +16,7 @@ go_library(
         "//backend/internal/domain/loop",
         "//backend/internal/middleware",
         "//backend/internal/service/loop",
+        "//backend/pkg/protoconv",
         "//proto/loop/v1:loop_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

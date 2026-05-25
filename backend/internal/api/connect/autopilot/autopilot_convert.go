@@ -1,9 +1,8 @@
 package autopilotconnect
 
 import (
-	"time"
-
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	apv1 "github.com/anthropics/agentsmesh/proto/gen/go/autopilot/v1"
 )
 
@@ -23,18 +22,16 @@ func toProtoController(c *agentpod.AutopilotController) *apv1.AutopilotControlle
 		},
 		UserTakeover: c.UserTakeover,
 		Prompt:       c.Prompt,
-		CreatedAt:    c.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:    protoconv.RFC3339(c.CreatedAt),
 	}
 	if c.CircuitBreakerReason != nil {
 		out.CircuitBreaker.Reason = *c.CircuitBreakerReason
 	}
 	if c.StartedAt != nil {
-		v := c.StartedAt.UTC().Format(time.RFC3339)
-		out.StartedAt = &v
+		out.StartedAt = protoconv.RFC3339Ptr(c.StartedAt)
 	}
 	if c.LastIterationAt != nil {
-		v := c.LastIterationAt.UTC().Format(time.RFC3339)
-		out.LastIterationAt = &v
+		out.LastIterationAt = protoconv.RFC3339Ptr(c.LastIterationAt)
 	}
 	return out
 }
@@ -53,7 +50,7 @@ func toProtoIteration(it *agentpod.AutopilotIteration) *apv1.AutopilotIteration 
 	}
 	// AutopilotIteration has CreatedAt only; render it as started_at to
 	// match the renderer-facing shape.
-	v := it.CreatedAt.UTC().Format(time.RFC3339)
+	v := protoconv.RFC3339(it.CreatedAt)
 	out.StartedAt = &v
 	return out
 }

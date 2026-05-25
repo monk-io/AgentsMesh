@@ -16,6 +16,7 @@ go_library(
         "//backend/internal/domain/apikey",
         "//backend/internal/middleware",
         "//backend/internal/service/apikey",
+        "//backend/pkg/protoconv",
         "//proto/apikey/v1:apikey_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

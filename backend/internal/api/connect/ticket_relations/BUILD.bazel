@@ -17,6 +17,7 @@ go_library(
         "//backend/internal/domain/ticket",
         "//backend/internal/middleware",
         "//backend/internal/service/ticket",
+        "//backend/pkg/protoconv",
         "//proto/ticket_relations/v1:ticket_relations_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

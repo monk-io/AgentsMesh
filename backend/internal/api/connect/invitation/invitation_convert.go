@@ -1,10 +1,9 @@
 package invitationconnect
 
 import (
-	"time"
-
 	invitationdomain "github.com/anthropics/agentsmesh/backend/internal/domain/invitation"
 	invitationsvc "github.com/anthropics/agentsmesh/backend/internal/service/invitation"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	invitationv1 "github.com/anthropics/agentsmesh/proto/gen/go/invitation/v1"
 )
 
@@ -21,13 +20,12 @@ func toProtoInvitation(inv *invitationdomain.Invitation) *invitationv1.Invitatio
 		Email:          inv.Email,
 		Role:           inv.Role,
 		InvitedBy:      inv.InvitedBy,
-		ExpiresAt:      inv.ExpiresAt.UTC().Format(time.RFC3339),
-		CreatedAt:      inv.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      inv.UpdatedAt.UTC().Format(time.RFC3339),
+		ExpiresAt:      protoconv.RFC3339(inv.ExpiresAt),
+		CreatedAt:      protoconv.RFC3339(inv.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(inv.UpdatedAt),
 	}
 	if inv.AcceptedAt != nil {
-		v := inv.AcceptedAt.UTC().Format(time.RFC3339)
-		out.AcceptedAt = &v
+		out.AcceptedAt = protoconv.RFC3339Ptr(inv.AcceptedAt)
 	}
 	return out
 }
@@ -46,7 +44,7 @@ func toProtoInvitationInfo(info *invitationsvc.InvitationInfo) *invitationv1.Inv
 		OrganizationName:  info.OrgName,
 		OrganizationSlug:  info.OrgSlug,
 		InviterName:       info.InviterName,
-		ExpiresAt:         info.ExpiresAt.UTC().Format(time.RFC3339),
+		ExpiresAt:         protoconv.RFC3339(info.ExpiresAt),
 		IsExpired:         info.IsExpired,
 	}
 }

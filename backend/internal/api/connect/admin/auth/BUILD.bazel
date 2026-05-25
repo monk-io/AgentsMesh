@@ -11,6 +11,7 @@ go_library(
         "//backend/internal/domain/user",
         "//backend/internal/infra/database",
         "//backend/internal/service/auth",
+        "//backend/pkg/protoconv",
         "//proto/admin/v1:admin_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

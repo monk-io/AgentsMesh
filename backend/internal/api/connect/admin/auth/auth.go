@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	"connectrpc.com/connect"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/domain/user"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	authsvc "github.com/anthropics/agentsmesh/backend/internal/service/auth"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	adminv1 "github.com/anthropics/agentsmesh/proto/gen/go/admin/v1"
 )
 
@@ -120,8 +120,8 @@ func toProtoAdminUser(u *user.User) *adminv1.AdminUser {
 		IsActive:        u.IsActive,
 		IsSystemAdmin:   u.IsSystemAdmin,
 		IsEmailVerified: u.IsEmailVerified,
-		CreatedAt:       u.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:       u.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:       protoconv.RFC3339(u.CreatedAt),
+		UpdatedAt:       protoconv.RFC3339(u.UpdatedAt),
 	}
 	if u.Name != nil {
 		v := *u.Name
@@ -132,8 +132,7 @@ func toProtoAdminUser(u *user.User) *adminv1.AdminUser {
 		out.AvatarUrl = &v
 	}
 	if u.LastLoginAt != nil {
-		v := u.LastLoginAt.UTC().Format(time.RFC3339)
-		out.LastLoginAt = &v
+		out.LastLoginAt = protoconv.RFC3339Ptr(u.LastLoginAt)
 	}
 	return out
 }

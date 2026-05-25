@@ -1,10 +1,9 @@
 package billingconnect
 
 import (
-	"time"
-
 	billingdomain "github.com/anthropics/agentsmesh/backend/internal/domain/billing"
 	billingsvc "github.com/anthropics/agentsmesh/backend/internal/service/billing"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	billingv1 "github.com/anthropics/agentsmesh/proto/gen/go/billing/v1"
 )
 
@@ -28,7 +27,7 @@ func toProtoPlan(p *billingdomain.SubscriptionPlan) *billingv1.SubscriptionPlan 
 		MaxConcurrentPods:   int32(p.MaxConcurrentPods),
 		MaxRepositories:     int32(p.MaxRepositories),
 		IsActive:            p.IsActive,
-		CreatedAt:           p.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:           protoconv.RFC3339(p.CreatedAt),
 	}
 }
 
@@ -45,13 +44,13 @@ func toProtoSubscription(s *billingdomain.Subscription) *billingv1.Subscription 
 		PlanId:             s.PlanID,
 		Status:             s.Status,
 		BillingCycle:       s.BillingCycle,
-		CurrentPeriodStart: s.CurrentPeriodStart.UTC().Format(time.RFC3339),
-		CurrentPeriodEnd:   s.CurrentPeriodEnd.UTC().Format(time.RFC3339),
+		CurrentPeriodStart: protoconv.RFC3339(s.CurrentPeriodStart),
+		CurrentPeriodEnd:   protoconv.RFC3339(s.CurrentPeriodEnd),
 		AutoRenew:          s.AutoRenew,
 		SeatCount:          int32(s.SeatCount),
 		CancelAtPeriodEnd:  s.CancelAtPeriodEnd,
-		CreatedAt:          s.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:          s.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:          protoconv.RFC3339(s.CreatedAt),
+		UpdatedAt:          protoconv.RFC3339(s.UpdatedAt),
 	}
 	if s.Plan != nil {
 		out.Plan = toProtoPlan(s.Plan)
@@ -65,12 +64,10 @@ func toProtoSubscription(s *billingdomain.Subscription) *billingv1.Subscription 
 	out.DowngradeToPlan = copyStringPtr(s.DowngradeToPlan)
 	out.NextBillingCycle = copyStringPtr(s.NextBillingCycle)
 	if s.CanceledAt != nil {
-		v := s.CanceledAt.UTC().Format(time.RFC3339)
-		out.CanceledAt = &v
+		out.CanceledAt = protoconv.RFC3339Ptr(s.CanceledAt)
 	}
 	if s.FrozenAt != nil {
-		v := s.FrozenAt.UTC().Format(time.RFC3339)
-		out.FrozenAt = &v
+		out.FrozenAt = protoconv.RFC3339Ptr(s.FrozenAt)
 	}
 	return out
 }
@@ -83,8 +80,8 @@ func toProtoOverview(o *billingsvc.BillingOverview) *billingv1.BillingOverview {
 		Plan:               toProtoPlan(o.Plan),
 		Status:             o.Status,
 		BillingCycle:       o.BillingCycle,
-		CurrentPeriodStart: o.CurrentPeriodStart.UTC().Format(time.RFC3339),
-		CurrentPeriodEnd:   o.CurrentPeriodEnd.UTC().Format(time.RFC3339),
+		CurrentPeriodStart: protoconv.RFC3339(o.CurrentPeriodStart),
+		CurrentPeriodEnd:   protoconv.RFC3339(o.CurrentPeriodEnd),
 		CancelAtPeriodEnd:  o.CancelAtPeriodEnd,
 		Usage:              toProtoUsage(&o.Usage),
 	}
@@ -146,23 +143,20 @@ func toProtoInvoice(i *billingdomain.Invoice) *billingv1.Invoice {
 		Subtotal:       i.Subtotal,
 		TaxAmount:      i.TaxAmount,
 		Total:          i.Total,
-		PeriodStart:    i.PeriodStart.UTC().Format(time.RFC3339),
-		PeriodEnd:      i.PeriodEnd.UTC().Format(time.RFC3339),
+		PeriodStart:    protoconv.RFC3339(i.PeriodStart),
+		PeriodEnd:      protoconv.RFC3339(i.PeriodEnd),
 		PdfUrl:         copyStringPtr(i.PDFURL),
-		CreatedAt:      i.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      i.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(i.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(i.UpdatedAt),
 	}
 	if i.IssuedAt != nil {
-		v := i.IssuedAt.UTC().Format(time.RFC3339)
-		out.IssuedAt = &v
+		out.IssuedAt = protoconv.RFC3339Ptr(i.IssuedAt)
 	}
 	if i.DueAt != nil {
-		v := i.DueAt.UTC().Format(time.RFC3339)
-		out.DueAt = &v
+		out.DueAt = protoconv.RFC3339Ptr(i.DueAt)
 	}
 	if i.PaidAt != nil {
-		v := i.PaidAt.UTC().Format(time.RFC3339)
-		out.PaidAt = &v
+		out.PaidAt = protoconv.RFC3339Ptr(i.PaidAt)
 	}
 	return out
 }
@@ -177,11 +171,10 @@ func toProtoCheckoutStatus(o *billingdomain.PaymentOrder) *billingv1.CheckoutSta
 		OrderType: o.OrderType,
 		Amount:    o.ActualAmount,
 		Currency:  o.Currency,
-		CreatedAt: o.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: protoconv.RFC3339(o.CreatedAt),
 	}
 	if o.PaidAt != nil {
-		v := o.PaidAt.UTC().Format(time.RFC3339)
-		out.PaidAt = &v
+		out.PaidAt = protoconv.RFC3339Ptr(o.PaidAt)
 	}
 	return out
 }

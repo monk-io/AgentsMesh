@@ -20,6 +20,7 @@ go_library(
         "//backend/internal/service/invitation",
         "//backend/internal/service/organization",
         "//backend/internal/service/user",
+        "//backend/pkg/protoconv",
         "//proto/invitation/v1:invitation_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

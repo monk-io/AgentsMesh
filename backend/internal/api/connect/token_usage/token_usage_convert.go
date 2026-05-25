@@ -1,9 +1,8 @@
 package tokenusageconnect
 
 import (
-	"time"
-
 	"github.com/anthropics/agentsmesh/backend/internal/domain/tokenusage"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	tuv1 "github.com/anthropics/agentsmesh/proto/gen/go/token_usage/v1"
 )
 
@@ -24,7 +23,7 @@ func toProtoTimeSeries(in []tokenusage.TimeSeriesPoint) []*tuv1.TimeSeriesPoint 
 	out := make([]*tuv1.TimeSeriesPoint, 0, len(in))
 	for _, p := range in {
 		out = append(out, &tuv1.TimeSeriesPoint{
-			Period:              p.Period.UTC().Format(time.RFC3339),
+			Period:              protoconv.RFC3339(p.Period),
 			InputTokens:         p.InputTokens,
 			OutputTokens:        p.OutputTokens,
 			CacheCreationTokens: p.CacheCreationTokens,

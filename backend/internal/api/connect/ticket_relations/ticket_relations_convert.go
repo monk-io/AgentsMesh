@@ -1,9 +1,8 @@
 package ticketrelationsconnect
 
 import (
-	"time"
-
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	ticketrelationsv1 "github.com/anthropics/agentsmesh/proto/gen/go/ticket_relations/v1"
 )
 
@@ -21,7 +20,7 @@ func toProtoRelation(r *ticket.Relation) *ticketrelationsv1.Relation {
 		SourceTicketId: r.SourceTicketID,
 		TargetTicketId: r.TargetTicketID,
 		RelationType:   r.RelationType,
-		CreatedAt:      r.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(r.CreatedAt),
 	}
 	if r.SourceTicket != nil {
 		out.SourceTicket = &ticketrelationsv1.RelatedTicketSummary{
@@ -61,12 +60,11 @@ func toProtoMergeRequest(mr *ticket.MergeRequest) *ticketrelationsv1.MergeReques
 		PodId:          mr.PodID,
 		MergeCommitSha: mr.MergeCommitSHA,
 		MergedById:     mr.MergedByID,
-		CreatedAt:      mr.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      mr.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(mr.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(mr.UpdatedAt),
 	}
 	if mr.MergedAt != nil {
-		s := mr.MergedAt.UTC().Format(time.RFC3339)
-		out.MergedAt = &s
+		out.MergedAt = protoconv.RFC3339Ptr(mr.MergedAt)
 	}
 	return out
 }
@@ -86,11 +84,10 @@ func toProtoCommit(c *ticket.Commit) *ticketrelationsv1.Commit {
 		CommitUrl:      c.CommitURL,
 		AuthorName:     c.AuthorName,
 		AuthorEmail:    c.AuthorEmail,
-		CreatedAt:      c.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(c.CreatedAt),
 	}
 	if c.CommittedAt != nil {
-		s := c.CommittedAt.UTC().Format(time.RFC3339)
-		out.CommittedAt = &s
+		out.CommittedAt = protoconv.RFC3339Ptr(c.CommittedAt)
 	}
 	return out
 }
@@ -106,8 +103,8 @@ func toProtoComment(c *ticket.Comment) *ticketrelationsv1.Comment {
 		Content:   c.Content,
 		ParentId:  c.ParentID,
 		Mentions:  toProtoMentions(c.Mentions),
-		CreatedAt: c.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: c.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: protoconv.RFC3339(c.CreatedAt),
+		UpdatedAt: protoconv.RFC3339(c.UpdatedAt),
 	}
 	if c.User != nil {
 		out.User = toProtoCommentUser(c.User)

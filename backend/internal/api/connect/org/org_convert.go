@@ -1,9 +1,8 @@
 package orgconnect
 
 import (
-	"time"
-
 	orgdomain "github.com/anthropics/agentsmesh/backend/internal/domain/organization"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	orgv1 "github.com/anthropics/agentsmesh/proto/gen/go/org/v1"
 )
 
@@ -24,8 +23,8 @@ func toProtoOrganization(o *orgdomain.Organization) *orgv1.Organization {
 		Slug:               o.Slug,
 		SubscriptionPlan:   o.SubscriptionPlan,
 		SubscriptionStatus: o.SubscriptionStatus,
-		CreatedAt:          o.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:          o.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:          protoconv.RFC3339(o.CreatedAt),
+		UpdatedAt:          protoconv.RFC3339(o.UpdatedAt),
 	}
 	if o.LogoURL != nil && *o.LogoURL != "" {
 		v := *o.LogoURL
@@ -50,7 +49,7 @@ func toProtoMember(m *orgdomain.Member) *orgv1.OrganizationMember {
 		OrganizationId: m.OrganizationID,
 		UserId:         m.UserID,
 		Role:           m.Role,
-		JoinedAt:       m.JoinedAt.UTC().Format(time.RFC3339),
+		JoinedAt:       protoconv.RFC3339(m.JoinedAt),
 	}
 	if m.User != nil {
 		mu := &orgv1.MemberUser{

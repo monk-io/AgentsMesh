@@ -14,6 +14,7 @@ go_library(
         "//backend/internal/domain/promocode",
         "//backend/internal/middleware",
         "//backend/internal/service/promocode",
+        "//backend/pkg/protoconv",
         "//proto/promocode/v1:promocode_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

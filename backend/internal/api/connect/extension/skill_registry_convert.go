@@ -2,9 +2,9 @@ package extensionconnect
 
 import (
 	"encoding/json"
-	"time"
 
 	extdom "github.com/anthropics/agentsmesh/backend/internal/domain/extension"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	extensionv1 "github.com/anthropics/agentsmesh/proto/gen/go/extension/v1"
 )
 
@@ -29,8 +29,8 @@ func toProtoSkillRegistry(r *extdom.SkillRegistry) *extensionv1.SkillRegistry {
 		SyncStatus:    r.SyncStatus,
 		SkillCount:    int32(r.SkillCount),
 		IsActive:      r.IsActive,
-		CreatedAt:     r.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:     r.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:     protoconv.RFC3339(r.CreatedAt),
+		UpdatedAt:     protoconv.RFC3339(r.UpdatedAt),
 	}
 	if r.OrganizationID != nil {
 		out.OrganizationId = r.OrganizationID
@@ -40,8 +40,7 @@ func toProtoSkillRegistry(r *extdom.SkillRegistry) *extensionv1.SkillRegistry {
 		out.DetectedType = &dt
 	}
 	if r.LastSyncedAt != nil {
-		s := r.LastSyncedAt.UTC().Format(time.RFC3339)
-		out.LastSyncedAt = &s
+		out.LastSyncedAt = protoconv.RFC3339Ptr(r.LastSyncedAt)
 	}
 	if r.LastCommitSha != "" {
 		s := r.LastCommitSha
@@ -77,7 +76,7 @@ func toProtoSkillRegistryOverride(o *extdom.SkillRegistryOverride) *extensionv1.
 		OrganizationId: o.OrganizationID,
 		RegistryId:     o.RegistryID,
 		IsDisabled:     o.IsDisabled,
-		CreatedAt:      o.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      o.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(o.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(o.UpdatedAt),
 	}
 }

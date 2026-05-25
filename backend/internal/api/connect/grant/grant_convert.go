@@ -1,9 +1,8 @@
 package grantconnect
 
 import (
-	"time"
-
 	grantdom "github.com/anthropics/agentsmesh/backend/internal/domain/grant"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	grantv1 "github.com/anthropics/agentsmesh/proto/gen/go/grant/v1"
 )
 
@@ -20,7 +19,7 @@ func toProtoGrant(g *grantdom.ResourceGrant) *grantv1.ResourceGrant {
 		ResourceId:   g.ResourceID,
 		UserId:       g.UserID,
 		GrantedBy:    g.GrantedBy,
-		CreatedAt:    g.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:    protoconv.RFC3339(g.CreatedAt),
 	}
 	if g.User != nil {
 		out.User = &grantv1.ResourceGrantUser{

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	loopDomain "github.com/anthropics/agentsmesh/backend/internal/domain/loop"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	loopv1 "github.com/anthropics/agentsmesh/proto/gen/go/loop/v1"
 )
 
@@ -16,11 +17,7 @@ func optStrPtr(p *string) *string {
 }
 
 func optTimePtr(t *time.Time) *string {
-	if t == nil {
-		return nil
-	}
-	v := t.UTC().Format(time.RFC3339)
-	return &v
+	return protoconv.RFC3339Ptr(t)
 }
 
 func rawJSONString(b []byte) string {
@@ -66,8 +63,8 @@ func toProtoLoop(l *loopDomain.Loop) *loopv1.Loop {
 		ActiveRunCount:      int64(l.ActiveRunCount),
 		AvgDurationSec:      l.AvgDurationSec,
 		LastRunAt:           optTimePtr(l.LastRunAt),
-		CreatedAt:           l.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:           l.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:           protoconv.RFC3339(l.CreatedAt),
+		UpdatedAt:           protoconv.RFC3339(l.UpdatedAt),
 		UsedEnvBundles:      []string(l.UsedEnvBundles),
 	}
 	return out
@@ -86,7 +83,7 @@ func toProtoLoopRun(r *loopDomain.LoopRun) *loopv1.LoopRun {
 		StartedAt:    optTimePtr(r.StartedAt),
 		CompletedAt:  optTimePtr(r.FinishedAt),
 		ErrorMessage: optStrPtr(r.ErrorMessage),
-		CreatedAt:    r.CreatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:    protoconv.RFC3339(r.CreatedAt),
 	}
 	return out
 }

@@ -3,12 +3,12 @@ package adminconnect
 import (
 	"context"
 	"errors"
-	"time"
 
 	"connectrpc.com/connect"
 
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agent"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	adminv1 "github.com/anthropics/agentsmesh/proto/gen/go/admin/v1"
 )
 
@@ -93,12 +93,11 @@ func toProtoDeadLetter(e *agent.DeadLetterEntry) *adminv1.DeadLetterEntry {
 		OriginalMessageId: e.OriginalMessageID,
 		Reason:            e.Reason,
 		FinalAttempt:      int32(e.FinalAttempt),
-		MovedAt:           e.MovedAt.UTC().Format(time.RFC3339),
-		CreatedAt:         e.CreatedAt.UTC().Format(time.RFC3339),
+		MovedAt:           protoconv.RFC3339(e.MovedAt),
+		CreatedAt:         protoconv.RFC3339(e.CreatedAt),
 	}
 	if e.ReplayedAt != nil {
-		s := e.ReplayedAt.UTC().Format(time.RFC3339)
-		out.ReplayedAt = &s
+		out.ReplayedAt = protoconv.RFC3339Ptr(e.ReplayedAt)
 	}
 	if e.ReplayResult != nil {
 		out.ReplayResult = e.ReplayResult
@@ -121,27 +120,23 @@ func toProtoAgentMessage(m *agent.AgentMessage) *adminv1.AgentMessage {
 		Status:           m.Status,
 		DeliveryAttempts: int32(m.DeliveryAttempts),
 		MaxRetries:       int32(m.MaxRetries),
-		CreatedAt:        m.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:        m.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:        protoconv.RFC3339(m.CreatedAt),
+		UpdatedAt:        protoconv.RFC3339(m.UpdatedAt),
 	}
 	if m.LastDeliveryAttempt != nil {
-		s := m.LastDeliveryAttempt.UTC().Format(time.RFC3339)
-		out.LastDeliveryAttempt = &s
+		out.LastDeliveryAttempt = protoconv.RFC3339Ptr(m.LastDeliveryAttempt)
 	}
 	if m.NextRetryAt != nil {
-		s := m.NextRetryAt.UTC().Format(time.RFC3339)
-		out.NextRetryAt = &s
+		out.NextRetryAt = protoconv.RFC3339Ptr(m.NextRetryAt)
 	}
 	if m.DeliveryError != nil {
 		out.DeliveryError = m.DeliveryError
 	}
 	if m.DeliveredAt != nil {
-		s := m.DeliveredAt.UTC().Format(time.RFC3339)
-		out.DeliveredAt = &s
+		out.DeliveredAt = protoconv.RFC3339Ptr(m.DeliveredAt)
 	}
 	if m.ReadAt != nil {
-		s := m.ReadAt.UTC().Format(time.RFC3339)
-		out.ReadAt = &s
+		out.ReadAt = protoconv.RFC3339Ptr(m.ReadAt)
 	}
 	if m.ParentMessageID != nil {
 		out.ParentMessageId = m.ParentMessageID

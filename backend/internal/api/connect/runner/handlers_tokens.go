@@ -3,13 +3,13 @@ package runnerconnect
 import (
 	"context"
 	"errors"
-	"time"
 
 	"connectrpc.com/connect"
 
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	runner "github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	runnerapiv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner_api/v1"
 )
 
@@ -59,7 +59,7 @@ func (s *Server) CreateRunnerToken(
 	}
 
 	token := gen.Token
-	expiresAt := gen.ExpiresAt.UTC().Format(time.RFC3339)
+	expiresAt := protoconv.RFC3339(gen.ExpiresAt)
 	out := &runnerapiv1.RunnerToken{
 		Id:        gen.ID,
 		Token:     &token,

@@ -1,9 +1,8 @@
 package apikeyconnect
 
 import (
-	"time"
-
 	apikeydomain "github.com/anthropics/agentsmesh/backend/internal/domain/apikey"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	apikeyv1 "github.com/anthropics/agentsmesh/proto/gen/go/apikey/v1"
 )
 
@@ -26,20 +25,18 @@ func toProtoApiKey(k *apikeydomain.APIKey) *apikeyv1.ApiKey {
 		Scopes:         k.Scopes.ToStrings(),
 		IsEnabled:      k.IsEnabled,
 		CreatedBy:      k.CreatedBy,
-		CreatedAt:      k.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      k.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt:      protoconv.RFC3339(k.CreatedAt),
+		UpdatedAt:      protoconv.RFC3339(k.UpdatedAt),
 	}
 	if k.Description != nil {
 		d := *k.Description
 		out.Description = &d
 	}
 	if k.ExpiresAt != nil {
-		s := k.ExpiresAt.UTC().Format(time.RFC3339)
-		out.ExpiresAt = &s
+		out.ExpiresAt = protoconv.RFC3339Ptr(k.ExpiresAt)
 	}
 	if k.LastUsedAt != nil {
-		s := k.LastUsedAt.UTC().Format(time.RFC3339)
-		out.LastUsedAt = &s
+		out.LastUsedAt = protoconv.RFC3339Ptr(k.LastUsedAt)
 	}
 	return out
 }

@@ -1,9 +1,8 @@
 package ticketconnect
 
 import (
-	"time"
-
 	domainticket "github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
+	"github.com/anthropics/agentsmesh/backend/pkg/protoconv"
 	ticketv1 "github.com/anthropics/agentsmesh/proto/gen/go/ticket/v1"
 )
 
@@ -22,8 +21,8 @@ func toProtoTicket(t *domainticket.Ticket) *ticketv1.Ticket {
 		Title:     t.Title,
 		Status:    t.Status,
 		Priority:  t.Priority,
-		CreatedAt: t.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt: t.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: protoconv.RFC3339(t.CreatedAt),
+		UpdatedAt: protoconv.RFC3339(t.UpdatedAt),
 	}
 	if t.Content != nil {
 		out.Content = t.Content
@@ -36,16 +35,13 @@ func toProtoTicket(t *domainticket.Ticket) *ticketv1.Ticket {
 		out.Estimate = &e
 	}
 	if t.DueDate != nil {
-		s := t.DueDate.UTC().Format(time.RFC3339)
-		out.DueDate = &s
+		out.DueDate = protoconv.RFC3339Ptr(t.DueDate)
 	}
 	if t.StartedAt != nil {
-		s := t.StartedAt.UTC().Format(time.RFC3339)
-		out.StartedAt = &s
+		out.StartedAt = protoconv.RFC3339Ptr(t.StartedAt)
 	}
 	if t.CompletedAt != nil {
-		s := t.CompletedAt.UTC().Format(time.RFC3339)
-		out.CompletedAt = &s
+		out.CompletedAt = protoconv.RFC3339Ptr(t.CompletedAt)
 	}
 	if t.RepositoryID != nil {
 		out.RepositoryId = t.RepositoryID
