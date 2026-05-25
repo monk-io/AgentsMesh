@@ -104,33 +104,51 @@ func (r *REST) Login(ctx context.Context, email, password string) (*LoginRespons
 
 type Runner struct {
 	ID     int64  `json:"id"`
-	NodeID string `json:"node_id"`
+	NodeID string `json:"nodeId"`
 	Status string `json:"status"`
 }
 
-type listRunnersResponse struct {
-	Runners []Runner `json:"runners"`
-	// Some endpoints return the slice directly; we also tolerate that.
-}
-
-// ListRunners returns the runners attached to an org. Backend wraps the slice
-// in {runners: [...]} on this route; we tolerate either shape so future schema
-// tweaks don't break this client.
+// ListRunners returns the runners attached to an org. R5 retired the REST
+// `/orgs/<slug>/runners` route in favour of the Connect-RPC
+// proto.runner_api.v1.RunnerService.ListRunners procedure. Wire shape:
+// `{items, total, limit, offset, latestRunnerVersion}` — we only read
+// items so the envelope fields are ignored.
 func (r *REST) ListRunners(ctx context.Context, orgSlug string) ([]Runner, error) {
-	path := fmt.Sprintf("/orgs/%s/runners", orgSlug)
-	raw, err := r.doRaw(ctx, http.MethodGet, path, nil)
+	connectBase := strings.TrimSuffix(r.baseURL, "/api/v1")
+	body, err := json.Marshal(map[string]string{"orgSlug": orgSlug})
 	if err != nil {
 		return nil, err
 	}
-	var wrapped listRunnersResponse
-	if err := json.Unmarshal(raw, &wrapped); err == nil && len(wrapped.Runners) > 0 {
-		return wrapped.Runners, nil
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		connectBase+"/proto.runner_api.v1.RunnerService/ListRunners",
+		bytes.NewReader(body))
+	if err != nil {
+		return nil, err
 	}
-	var direct []Runner
-	if err := json.Unmarshal(raw, &direct); err == nil {
-		return direct, nil
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Connect-Protocol-Version", "1")
+	if r.token != "" {
+		req.Header.Set("Authorization", "Bearer "+r.token)
 	}
-	return wrapped.Runners, nil
+	resp, err := r.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("connect list_runners: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode/100 != 2 {
+		return nil, fmt.Errorf("connect list_runners -> %d: %s", resp.StatusCode, string(raw))
+	}
+	var out struct {
+		Items []Runner `json:"items"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("decode list_runners: %w (body=%s)", err, string(raw))
+	}
+	return out.Items, nil
 }
 
 type CreatePodRequest struct {
