@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -57,10 +58,13 @@ func (r *REST) Login(ctx context.Context, email, password string) (*LoginRespons
 	// prefix in backend/cmd/server/connect_init.go — strip the `/api/v1`
 	// suffix here before forming the Connect URL.
 	connectBase := strings.TrimSuffix(r.baseURL, "/api/v1")
+	// Connect-RPC's JSON profile serialises int64 as a JSON string to avoid
+	// 53-bit float precision loss in browser callers. expiresIn comes back
+	// as `"86400"`, not 86400 — decode as string then parse.
 	var out struct {
 		Token        string `json:"token"`
 		RefreshToken string `json:"refreshToken"`
-		ExpiresIn    int64  `json:"expiresIn"`
+		ExpiresIn    string `json:"expiresIn"`
 	}
 	body := map[string]string{"email": email, "password": password}
 	buf, err := json.Marshal(body)
@@ -90,10 +94,11 @@ func (r *REST) Login(ctx context.Context, email, password string) (*LoginRespons
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return nil, fmt.Errorf("decode login: %w (body=%s)", err, string(raw))
 	}
+	expiresIn, _ := strconv.ParseInt(out.ExpiresIn, 10, 64)
 	return &LoginResponse{
 		Token:        out.Token,
 		RefreshToken: out.RefreshToken,
-		ExpiresIn:    out.ExpiresIn,
+		ExpiresIn:    expiresIn,
 	}, nil
 }
 
