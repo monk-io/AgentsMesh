@@ -2,8 +2,8 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/stores/auth";
-import { userApi, organizationApi } from "@/lib/api";
+import { useAuthStore, readOrganizations } from "@/stores/auth";
+import { userApi } from "@/lib/api";
 import { Logo } from "@/components/common";
 
 function OAuthCallbackContent() {
@@ -12,7 +12,7 @@ function OAuthCallbackContent() {
   const token = searchParams.get("token");
   const refreshToken = searchParams.get("refresh_token");
   const error = searchParams.get("error");
-  const { setAuth, setOrganizations } = useAuthStore();
+  const { setAuth, fetchOrganizations } = useAuthStore();
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -44,12 +44,23 @@ function OAuthCallbackContent() {
         const user = userResponse.user;
         await setAuth(token, user, refreshToken || undefined);
 
-        const orgsResponse = await organizationApi.list();
-        if (orgsResponse.organizations && orgsResponse.organizations.length > 0) {
-          await setOrganizations(orgsResponse.organizations);
+        // Use the SAME path as password login (stores/auth.ts:login() does
+        // await mgr().fetch_organizations()). The Rust auth manager fetches
+        // ListMyOrgs through its own ApiClient AND writes the result into
+        // its state atomically — no TS↔Rust JSON round-trip.
+        //
+        // The previous code path (organizationApi.list() then setOrganizations)
+        // round-tripped the orgs back through `mgr().set_organizations(JSON)`,
+        // whose IPC failure was silently swallowed by an empty catch in
+        // stores/auth.ts. On desktop electron this manifested as a
+        // successful-looking login that landed on the workspace with
+        // "暂无组织" — every scoped feature broke.
+        await fetchOrganizations();
+        const orgs = readOrganizations();
+        if (orgs.length > 0) {
           setStatus("success");
           setTimeout(() => {
-            router.push(`/${orgsResponse.organizations[0].slug}/workspace`);
+            router.push(`/${orgs[0].slug}/workspace`);
           }, 1500);
         } else {
           setStatus("success");
@@ -69,7 +80,7 @@ function OAuthCallbackContent() {
     };
 
     handleCallback();
-  }, [token, refreshToken, error, setAuth, setOrganizations, router]);
+  }, [token, refreshToken, error, setAuth, fetchOrganizations, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
