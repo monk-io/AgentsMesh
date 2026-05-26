@@ -1,0 +1,94 @@
+// Default-deny console monitor. Every `console.error` and every
+// `page.on("pageerror", ...)` (= uncaught exception in renderer) becomes
+// a teardown failure unless a spec has explicitly opted out via
+// `monitor.allow(/regex/)`. Replaces the old `assertNoWasmErrors`
+// allow-list mechanism (7 hard-coded patterns, only 4 specs used it).
+//
+// Why default-deny: the WASM bridge regression that motivated this PR
+// (R6 store calling a deleted `set_pods` method → TypeError → silent
+// catch in zustand → empty sidebar) produced a `console.error` every
+// time, but no e2e caught it because the workspace spec never read the
+// console. With default-deny + automatic fixture attach (see
+// fixtures/index.ts), forgetting to wire the monitor is impossible.
+//
+// Specs should narrowly allow legitimate noise (third-party SDKs that
+// spam errors on dev backends, etc.) and **never** silence "missing
+// field" / "is not valid JSON" / "TypeError" — those are exactly the
+// signals this exists to catch.
+
+import { expect, type ConsoleMessage, type Page } from "@playwright/test";
+
+export interface ConsoleMonitor {
+  /** Allow any message matching `pattern`. Multiple patterns OR together. */
+  allow(pattern: RegExp): void;
+  /** Snapshot of currently-recorded offending entries (for ad-hoc debug). */
+  errors(): ReadonlyArray<string>;
+  /** Throw if any non-allowed error has been collected. Called in teardown. */
+  assertClean(): void;
+  /** Detach Playwright listeners — fixtures call this after `assertClean`. */
+  dispose(): void;
+}
+
+/**
+ * wasm-bindgen's RefCell-style borrow check throws this exact string when
+ * `&mut self` and `&self` calls overlap on the same WASM object. The ACP
+ * session manager regression (render-time wasm read racing relay-driven
+ * mutators) surfaced as exactly this message. Kept as a standalone assert
+ * because some specs want it to fail loudly the moment it appears, not at
+ * teardown, so the trace snapshot lines up with the offending action.
+ */
+export function assertNoWasmRecursiveBorrow(errors: ReadonlyArray<string>): void {
+  const offenders = errors.filter((e) =>
+    e.includes("recursive use of an object detected"),
+  );
+  expect(
+    offenders,
+    `wasm borrow conflict regressed:\n${offenders.join("\n")}`,
+  ).toHaveLength(0);
+}
+
+export function createConsoleMonitor(page: Page): ConsoleMonitor {
+  const errors: string[] = [];
+  const allowPatterns: RegExp[] = [];
+
+  const onConsole = (msg: ConsoleMessage) => {
+    if (msg.type() !== "error") return;
+    errors.push(formatConsoleMessage(msg));
+  };
+  const onPageError = (err: Error) => {
+    errors.push(`[pageerror] ${err.message}\n${err.stack ?? ""}`);
+  };
+
+  page.on("console", onConsole);
+  page.on("pageerror", onPageError);
+
+  return {
+    allow(pattern) {
+      allowPatterns.push(pattern);
+    },
+    errors() {
+      return errors.slice();
+    },
+    assertClean() {
+      const offenders = errors.filter((e) => !allowPatterns.some((p) => p.test(e)));
+      if (offenders.length === 0) return;
+      const summary = offenders.map((e, i) => `  [${i + 1}] ${e}`).join("\n");
+      throw new Error(
+        `console-monitor: ${offenders.length} unallowed console.error/pageerror entries:\n${summary}\n\n` +
+          `If any of these are expected for this spec, narrow them with monitor.allow(/regex/). ` +
+          `Do NOT broaden a pattern to mask "missing field" / "is not valid JSON" / "TypeError" — ` +
+          `those exist to catch wasm bridge / proto drift regressions.`,
+      );
+    },
+    dispose() {
+      page.off("console", onConsole);
+      page.off("pageerror", onPageError);
+    },
+  };
+}
+
+function formatConsoleMessage(msg: ConsoleMessage): string {
+  const loc = msg.location();
+  const where = loc.url ? ` (${loc.url}:${loc.lineNumber}:${loc.columnNumber})` : "";
+  return `[console.error]${where} ${msg.text()}`;
+}

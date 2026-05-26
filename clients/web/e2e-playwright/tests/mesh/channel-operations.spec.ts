@@ -2,7 +2,6 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
 
 test.describe("Channel Operations", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
@@ -25,7 +24,6 @@ test.describe("Channel Operations", () => {
     }
     expect(items.length).toBeGreaterThan(0);
 
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/channels`);
     await page.waitForLoadState("load");
 
@@ -34,7 +32,6 @@ test.describe("Channel Operations", () => {
       await firstChannel.click();
       await page.waitForTimeout(1000);
     }
-    assertNoWasmErrors(errors);
 
     if (createdId !== undefined) {
       await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: createdId });
@@ -42,7 +39,6 @@ test.describe("Channel Operations", () => {
   });
 
   test("channels: create channel dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/channels`);
     await page.waitForLoadState("load");
 
@@ -51,6 +47,5 @@ test.describe("Channel Operations", () => {
       await createBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 });

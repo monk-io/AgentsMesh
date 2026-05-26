@@ -2,13 +2,10 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 test.describe("Loop Operations", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("loops: open create dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/loops`);
     await page.waitForLoadState("load");
 
@@ -17,7 +14,6 @@ test.describe("Loop Operations", () => {
       await createBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("loops: list → detail navigation", async ({ page, api }) => {
@@ -32,8 +28,6 @@ test.describe("Loop Operations", () => {
     }) as { slug: string };
     const slug = created.slug;
     expect(slug).toBeTruthy();
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/loops`);
     await page.waitForLoadState("load");
 
@@ -42,8 +36,6 @@ test.describe("Loop Operations", () => {
       await link.click();
       await page.waitForLoadState("load");
     }
-    assertNoWasmErrors(errors);
-
     if (slug) {
       await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: slug }).catch(() => null);
     }

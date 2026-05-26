@@ -19,8 +19,8 @@ test.describe("ACP UI: e2e-echo agent (ACP mode)", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });
 
-  test("ACP echo scenario surfaces prompt as assistant chunk in activity stream", async ({ page, api }) => {
-    const ctx = await setupAcpScenarioPage(page, api, {
+  test("ACP echo scenario surfaces prompt as assistant chunk in activity stream", async ({ page, api, monitor }) => {
+    const ctx = await setupAcpScenarioPage(page, api, monitor, {
       mode: "acp", scenario: "echo", prompt: "hello world",
     });
 
@@ -28,8 +28,8 @@ test.describe("ACP UI: e2e-echo agent (ACP mode)", () => {
     ctx.assertWasmHealthy();
   });
 
-  test("ACP pod creation does not require a real LLM CLI on the runner", async ({ page, api }) => {
-    const ctx = await setupAcpScenarioPage(page, api, {
+  test("ACP pod creation does not require a real LLM CLI on the runner", async ({ page, api, monitor }) => {
+    const ctx = await setupAcpScenarioPage(page, api, monitor, {
       mode: "acp", scenario: "echo", prompt: "no-llm probe",
     });
     expect(ctx.pod.podKey).toBeTruthy();

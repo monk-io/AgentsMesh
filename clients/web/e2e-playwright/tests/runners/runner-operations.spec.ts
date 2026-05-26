@@ -1,8 +1,6 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 test.describe("Runner Operations", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
@@ -11,14 +9,11 @@ test.describe("Runner Operations", () => {
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     expect(id, "dev seed must include at least one runner").toBeTruthy();
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/runners/${id}`);
     await page.waitForLoadState("load");
 
     const body = await page.textContent("body");
     expect(body).toMatch(/runner|Runner|dev-runner/i);
-    assertNoWasmErrors(errors);
   });
 
   test("runners list: navigate to detail and back", async ({ page, db }) => {
@@ -26,8 +21,6 @@ test.describe("Runner Operations", () => {
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     expect(id, "dev seed must include at least one runner").toBeTruthy();
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/runners`);
     await page.waitForLoadState("load");
 
@@ -38,6 +31,5 @@ test.describe("Runner Operations", () => {
       await page.goBack();
       await page.waitForLoadState("load");
     }
-    assertNoWasmErrors(errors);
   });
 });
