@@ -71,6 +71,7 @@ test.describe("Data integrity: list pages match API counts", () => {
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`,
     );
     expect(runnerId, "dev seed must include at least one runner").toBeTruthy();
+    const id = runnerId as string;
 
     const cc = await api.connect();
     // ListPods filtered by runner_id — same data the runner-detail Pods
@@ -79,12 +80,12 @@ test.describe("Data integrity: list pages match API counts", () => {
     // to mirror what useRunnerDetail.ts sends.
     const apiRes = await cc.pod.listPods({
       orgSlug: TEST_ORG_SLUG,
-      runnerId: BigInt(runnerId),
+      runnerId: BigInt(id),
       limit: 20,
       offset: 0,
     }) as { items: Array<{ podKey: string }>; total: bigint };
 
-    await page.goto(`/${TEST_ORG_SLUG}/runners/${runnerId}`);
+    await page.goto(`/${TEST_ORG_SLUG}/runners/${id}`);
     await page.waitForLoadState("load");
 
     // Pods tab must be selected for rows to render.
