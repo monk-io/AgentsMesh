@@ -76,6 +76,14 @@ const eslintConfig = defineConfig([
               group: ["@/lib/api/shapes/*"],
               message: "Wire shape converters are internal to the facade layer — use `@/lib/api` barrel or `@/lib/api/facade/*` instead.",
             },
+            {
+              group: [
+                "**/credentialForms/e2e-echo",
+                "**/credentialForms/e2e-echo.ts",
+              ],
+              message:
+                "e2e-echo is a test-only credential form. Production code must not import it directly — the form is registered conditionally via `require()` inside credentialForms/index.ts gated on NEXT_PUBLIC_E2E. See ADR 2026-05-26-test-fixture-isolation.",
+            },
           ],
         },
       ],

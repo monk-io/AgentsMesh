@@ -5,7 +5,6 @@ import { loopalFormSpec } from "./loopal";
 import { geminiCliFormSpec } from "./gemini-cli";
 import { aiderFormSpec } from "./aider";
 import { opencodeFormSpec } from "./opencode";
-import { e2eEchoFormSpec } from "./e2e-echo";
 
 const REGISTRY: Record<string, CredentialFormSpec> = {
   [claudeCodeFormSpec.agentSlug]: claudeCodeFormSpec,
@@ -14,8 +13,18 @@ const REGISTRY: Record<string, CredentialFormSpec> = {
   [geminiCliFormSpec.agentSlug]: geminiCliFormSpec,
   [aiderFormSpec.agentSlug]: aiderFormSpec,
   [opencodeFormSpec.agentSlug]: opencodeFormSpec,
-  [e2eEchoFormSpec.agentSlug]: e2eEchoFormSpec,
 };
+
+// e2e-echo is a test-only agent (see deploy/dev/seed/e2e_echo.sql). The
+// `NEXT_PUBLIC_E2E` build-time flag is inlined as the literal "" in
+// production builds (see clients/web/next.config.ts → env) so this entire
+// branch — including the `require` call — is dead-code-eliminated by
+// webpack. The form spec never enters the prod bundle.
+if (process.env.NEXT_PUBLIC_E2E === "true") {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, no-restricted-imports
+  const { e2eEchoFormSpec } = require("./e2e-echo") as typeof import("./e2e-echo");
+  REGISTRY[e2eEchoFormSpec.agentSlug] = e2eEchoFormSpec;
+}
 
 // Unknown / user-defined agents fall back to a pure custom-ENV form.
 function makeFallback(agentSlug: string): CredentialFormSpec {

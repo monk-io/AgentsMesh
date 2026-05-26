@@ -96,6 +96,13 @@ const nextConfig: NextConfig = {
       process.env.POSTHOG_KEY || "__POSTHOG_KEY__",
     NEXT_PUBLIC_POSTHOG_HOST:
       process.env.POSTHOG_HOST || "__POSTHOG_HOST__",
+    // Build-time gate for test-only UI surfaces (e.g. e2e-echo credential
+    // form). Inlined by Next.js DefinePlugin so the `if (process.env.
+    // NEXT_PUBLIC_E2E === "true")` branches are dead-code-eliminated in
+    // production builds. Set to "true" only in dev/e2e (see
+    // deploy/dev/lib/bootstrap.sh) — defaults to empty string in prod,
+    // never "true" by accident.
+    NEXT_PUBLIC_E2E: process.env.NEXT_PUBLIC_E2E === "true" ? "true" : "",
   },
 
   // 本地开发时代理 API 请求，避免跨域问题
