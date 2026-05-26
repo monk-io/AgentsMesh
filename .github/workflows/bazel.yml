@@ -634,6 +634,11 @@ jobs:
         env:
           PORT: ${{ steps.ports.outputs.WEB_PORT }}
           API_PROXY_TARGET: http://localhost:${{ steps.ports.outputs.HTTP_PORT }}
+          # Enable test-only UI surfaces (e.g. e2e-echo credential form) for
+          # e2e specs that drive the Settings flow. Production builds never
+          # see this flag, so the conditional require() in
+          # credentialForms/index.ts is dead-code-eliminated by webpack.
+          NEXT_PUBLIC_E2E: "true"
         run: |
           # Background bazel run; disown so the Bazel test step can run
           # against a separate output_base without killing this server.
