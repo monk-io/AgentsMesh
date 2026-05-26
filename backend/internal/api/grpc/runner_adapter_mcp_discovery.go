@@ -41,7 +41,7 @@ func (a *GRPCRunnerAdapter) mcpListRunners(ctx context.Context, tc *middleware.T
 		return nil, newMcpError(500, "failed to list runners")
 	}
 
-	builtinTypes, _ := a.agentSvc.ListBuiltinAgents(ctx)
+	builtinTypes, _ := a.agentSvc.ListBuiltinAgentsAll(ctx)
 	customTypes, _ := a.agentSvc.ListCustomAgents(ctx, tc.OrganizationID)
 
 	agentMap := make(map[string]*agentDomain.Agent)

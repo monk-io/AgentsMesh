@@ -20,11 +20,19 @@ func NewAgentRepository(db *gorm.DB) agent.AgentRepository {
 func (r *agentRepo) ListBuiltinActive(ctx context.Context) ([]*agent.Agent, error) {
 	var types []*agent.Agent
 	// `is_internal = false` hides test fixtures (e.g. e2e-echo) from the
-	// user-facing agent picker. Runner discovery uses ListAllActive and
+	// user-facing agent picker. Runner discovery uses ListBuiltinAll and
 	// stays unfiltered so internal agents can still launch pods on a dev
 	// or e2e backend.
 	err := r.db.WithContext(ctx).
 		Where("is_builtin = ? AND is_active = ? AND is_internal = ?", true, true, false).
+		Find(&types).Error
+	return types, err
+}
+
+func (r *agentRepo) ListBuiltinAll(ctx context.Context) ([]*agent.Agent, error) {
+	var types []*agent.Agent
+	err := r.db.WithContext(ctx).
+		Where("is_builtin = ? AND is_active = ?", true, true).
 		Find(&types).Error
 	return types, err
 }
