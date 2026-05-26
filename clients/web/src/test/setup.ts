@@ -1,5 +1,17 @@
 import '@testing-library/jest-dom'
 import { vi, afterEach } from 'vitest'
+import { fromBinary } from '@bufbuild/protobuf'
+import {
+  ReplaceCachedChannelsRequestSchema,
+  InsertChannelRequestSchema,
+  PatchChannelMemberCountRequestSchema,
+  ReplaceCachedChannelMessagesRequestSchema,
+  PrependCachedChannelMessagesRequestSchema,
+  InsertChannelMessageRequestSchema,
+  ApplyIncomingChannelMessageRequestSchema,
+  ApplyChannelMessageEditedEventRequestSchema,
+  ReplaceChannelUnreadCountsRequestSchema,
+} from '@proto/channel_state/v1/mutations_pb'
 import { createAcpManager } from './wasm-mock-acp'
 
 const h = vi.hoisted(() => {
@@ -92,57 +104,49 @@ vi.mock('@/lib/wasm-core', () => {
     _reset: () => { authBox.user = null; authBox.current_org = null; authBox.organizations = []; },
   }
 
+  // Mirrors the real `WasmPodState` (see clients/core/crates/wasm/src/state_pod.rs).
+  // Every mutator that the production renderer hits is on this object,
+  // accepting proto-encoded `Uint8Array` bytes. The body stays opaque to the
+  // mock — tests that care about cache contents override
+  // `pods_json`/`get_pod_json` returns directly via vi.mocked. Adding stale
+  // methods here (`set_pods`, multi-arg `update_pod_status`, etc.) regressed
+  // the test surface: production code stopped calling them but the mock
+  // kept accepting them, hiding wasm-binding drift from vitest.
   const podState = {
-    set_pods: fn((j: string) => { h.pod.pods = j }),
     pods_json: fn(() => h.pod.pods),
-    upsert_pod: fn((j: string) => {
-      const p = JSON.parse(j) as { pod_key: string }
-      const list = JSON.parse(h.pod.pods) as { pod_key: string }[]
-      const idx = list.findIndex((x) => x.pod_key === p.pod_key)
-      if (idx >= 0) list[idx] = p; else list.push(p)
-      h.pod.pods = JSON.stringify(list)
-    }),
-    update_pod_status: fn((key: string, status: string, agentStatus?: string, errorCode?: string, errorMsg?: string) => {
-      const list = JSON.parse(h.pod.pods) as { pod_key: string; status: string; agent_status?: string; error_code?: string; error_message?: string }[]
-      const p = list.find((x) => x.pod_key === key)
-      if (p) { p.status = status; if (agentStatus !== undefined) p.agent_status = agentStatus; if (errorCode !== undefined) p.error_code = errorCode; if (errorMsg !== undefined) p.error_message = errorMsg }
-      h.pod.pods = JSON.stringify(list)
-    }),
-    update_pod_title: fn((key: string, title: string) => {
-      const list = JSON.parse(h.pod.pods) as { pod_key: string; title?: string }[]
-      const p = list.find((x) => x.pod_key === key); if (p) p.title = title
-      h.pod.pods = JSON.stringify(list)
-    }),
-    update_pod_alias: fn((key: string, alias: string) => {
-      const list = JSON.parse(h.pod.pods) as { pod_key: string; alias?: string }[]
-      const p = list.find((x) => x.pod_key === key); if (p) p.alias = alias
-      h.pod.pods = JSON.stringify(list)
-    }),
-    update_agent_status: fn((key: string, agentStatus: string) => {
-      const list = JSON.parse(h.pod.pods) as { pod_key: string; agent_status?: string }[]
-      const p = list.find((x) => x.pod_key === key); if (p) p.agent_status = agentStatus
-      h.pod.pods = JSON.stringify(list)
-    }),
-    remove_pod: fn((key: string) => {
-      const list = JSON.parse(h.pod.pods) as { pod_key: string }[]
-      h.pod.pods = JSON.stringify(list.filter((x) => x.pod_key !== key))
-    }),
-    set_current_pod: fn((j: string) => { h.pod.current = j }),
     current_pod_json: fn(() => h.pod.current || undefined),
     get_pod_json: fn((key: string) => {
       const list = JSON.parse(h.pod.pods) as { pod_key: string }[]
       const p = list.find((x) => x.pod_key === key)
       return p ? JSON.stringify(p) : undefined
     }),
-    fetch_pods: fn().mockResolvedValue(JSON.stringify({ pods: [], total: 0 })),
-    fetch_pod: fn().mockResolvedValue('{}'),
-    fetch_sidebar_pods: fn().mockResolvedValue(JSON.stringify({ pods: [], total: 0, hasMore: false })),
-    load_more_pods: fn().mockResolvedValue(JSON.stringify({ newPods: [], total: 0, hasMore: false, allCount: 0 })),
-    create_pod: fn().mockResolvedValue('{}'),
-    terminate_pod: fn().mockResolvedValue(undefined),
-    update_pod_alias_api: fn().mockResolvedValue(undefined),
-    get_pod_connection: fn().mockResolvedValue('{}'),
-    // Connect-RPC binary lane (proto.pod.v1.PodService).
+    // Proto-bytes mutators. Body is opaque (decoding would require pulling
+    // the proto schemas into the mock); the in-memory pods list is left
+    // untouched so tests that assert "the bridge was called" still pass.
+    // Tests that assert cache contents post-mutation should override
+    // `pods_json` / `get_pod_json` directly.
+    insert_created_pod: fn((_bytes: Uint8Array) => undefined),
+    patch_pod_perpetual: fn((_bytes: Uint8Array) => undefined),
+    apply_pod_status_event: fn((_bytes: Uint8Array) => undefined),
+    apply_pod_title_event: fn((_bytes: Uint8Array) => undefined),
+    apply_pod_alias_event: fn((_bytes: Uint8Array) => undefined),
+    apply_agent_status_event: fn((_bytes: Uint8Array) => undefined),
+    replace_cached_pods: fn((_bytes: Uint8Array) => undefined),
+    append_cached_pods: fn((_bytes: Uint8Array) => undefined),
+    mark_pod_terminated: fn((_bytes: Uint8Array) => undefined),
+    remove_pod: fn((key: string) => {
+      const list = JSON.parse(h.pod.pods) as { pod_key: string }[]
+      h.pod.pods = JSON.stringify(list.filter((x) => x.pod_key !== key))
+    }),
+    update_init_progress: fn(),
+    clear_init_progress: fn(),
+  }
+
+  // Separate service mock — Connect-RPC binary lane only. Real wasm has a
+  // WasmPodService that's distinct from WasmPodState; merging them in the
+  // mock previously masked production splits between cache mutation and
+  // network fetch.
+  const podService = {
     list_pods_connect: fn().mockResolvedValue(new Uint8Array()),
     get_pod_connect: fn().mockResolvedValue(new Uint8Array()),
     create_pod_connect: fn().mockResolvedValue(new Uint8Array()),
@@ -161,25 +165,17 @@ vi.mock('@/lib/wasm-core', () => {
     available_runners_json: fn(() => h.runner.available),
     set_current_runner: fn((j: string) => { h.runner.current = j }),
     current_runner_json: fn(() => h.runner.current || undefined),
-    update_runner: fn((id: number, json: string) => {
+    update_runner_local: fn((id: number, json: string) => {
       const updated = JSON.parse(json) as { id: number };
       const arr = JSON.parse(h.runner.list) as { id: number }[];
       const idx = arr.findIndex((x) => x.id === id);
       if (idx >= 0) arr[idx] = updated;
       h.runner.list = JSON.stringify(arr);
     }),
-    update_runner_status: fn((id: bigint, status: string) => {
-      for (const field of ['list', 'available'] as const) {
-        const arr = JSON.parse(h.runner[field]) as { id: number; status: string }[]
-        const r = arr.find((x) => x.id === Number(id)); if (r) r.status = status
-        h.runner[field] = JSON.stringify(arr)
-      }
-      if (status !== 'online') {
-        const avail = JSON.parse(h.runner.available) as { id: number }[]
-        h.runner.available = JSON.stringify(avail.filter((x) => x.id !== Number(id)))
-      }
+    apply_runner_status_event: fn((_bytes: Uint8Array) => {
+      // No-op default; per-test overrides simulate state mutation when needed.
     }),
-    remove_runner: fn((id: bigint) => {
+    remove_runner_local: fn((id: bigint) => {
       for (const field of ['list', 'available'] as const) {
         const arr = JSON.parse(h.runner[field]) as { id: number }[]
         h.runner[field] = JSON.stringify(arr.filter((x) => x.id !== Number(id)))
@@ -388,90 +384,182 @@ vi.mock('@/lib/wasm-core', () => {
       const list = JSON.parse(h.channel.list) as { id: number }[]
       h.channel.list = JSON.stringify(list.filter((c) => c.id !== Number(id)))
     }),
+    // Proto-bytes mutators (channel store production path). The mocks here
+    // decode the request via @bufbuild/protobuf and apply the same effect
+    // as the legacy JSON helpers above, so behavioural tests don't change.
+    replace_cached_channels: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ReplaceCachedChannelsRequestSchema, bytes)
+        h.channel.list = JSON.stringify(req.channels.map((c) => ({
+          id: Number(c.id),
+          organization_id: c.organizationId !== undefined ? Number(c.organizationId) : undefined,
+          name: c.name, description: c.description, document: c.document,
+          visibility: c.visibility, is_archived: c.isArchived, is_member: c.isMember,
+          member_count: c.memberCount !== undefined ? Number(c.memberCount) : 0,
+          agent_count: c.agentCount !== undefined ? Number(c.agentCount) : 0,
+          created_at: c.createdAt, updated_at: c.updatedAt,
+        })))
+      } catch { h.channel.list = '[]' }
+    }),
+    insert_channel: fn((bytes: Uint8Array) => {
+      try {
+        const { channel: c } = fromBinary(InsertChannelRequestSchema, bytes)
+        if (!c) return
+        const channel = {
+          id: Number(c.id),
+          organization_id: c.organizationId !== undefined ? Number(c.organizationId) : undefined,
+          name: c.name, description: c.description, document: c.document,
+          visibility: c.visibility, is_archived: c.isArchived, is_member: c.isMember,
+          member_count: c.memberCount !== undefined ? Number(c.memberCount) : 0,
+          agent_count: c.agentCount !== undefined ? Number(c.agentCount) : 0,
+          created_at: c.createdAt, updated_at: c.updatedAt,
+        }
+        const list = JSON.parse(h.channel.list) as { id: number }[]
+        const idx = list.findIndex((x) => x.id === channel.id)
+        if (idx >= 0) list[idx] = { ...list[idx], ...channel }
+        else list.unshift(channel)
+        h.channel.list = JSON.stringify(list)
+      } catch { /* noop */ }
+    }),
+    patch_channel_member_count: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(PatchChannelMemberCountRequestSchema, bytes)
+        const list = JSON.parse(h.channel.list) as { id: number; member_count: number }[]
+        const ch = list.find((x) => x.id === Number(req.channelId))
+        if (ch) ch.member_count = Math.max(0, (ch.member_count || 0) + req.delta)
+        h.channel.list = JSON.stringify(list)
+      } catch { /* noop */ }
+    }),
+    replace_cached_channel_messages: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ReplaceCachedChannelMessagesRequestSchema, bytes)
+        const msgs = req.messages.map(decodeProtoMessage)
+        h.channel.msgs.set(cKey(Number(req.channelId)), { json: JSON.stringify(msgs), hasMore: req.hasMore })
+      } catch { /* noop */ }
+    }),
+    prepend_cached_channel_messages: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(PrependCachedChannelMessagesRequestSchema, bytes)
+        const k = cKey(Number(req.channelId))
+        const entry = h.channel.msgs.get(k)
+        const existing = entry ? JSON.parse(entry.json) as { id: number }[] : []
+        const incoming = req.messages.map(decodeProtoMessage)
+        const ids = new Set(existing.map((m) => m.id))
+        const merged = [...incoming.filter((m) => !ids.has(m.id)), ...existing]
+        merged.sort((a, b) => a.id - b.id)
+        h.channel.msgs.set(k, { json: JSON.stringify(merged), hasMore: req.hasMore })
+      } catch { /* noop */ }
+    }),
+    insert_channel_message: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(InsertChannelMessageRequestSchema, bytes)
+        if (!req.message) return
+        const k = cKey(Number(req.channelId))
+        const entry = h.channel.msgs.get(k)
+        const msgs = entry ? JSON.parse(entry.json) as { id: number }[] : []
+        const msg = decodeProtoMessage(req.message)
+        if (!msgs.some((m) => m.id === msg.id)) {
+          msgs.push(msg)
+          h.channel.msgs.set(k, { json: JSON.stringify(msgs), hasMore: entry?.hasMore ?? false })
+        }
+      } catch { /* noop */ }
+    }),
+    apply_incoming_channel_message: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ApplyIncomingChannelMessageRequestSchema, bytes)
+        if (!req.message) return false
+        const k = cKey(Number(req.channelId))
+        const entry = h.channel.msgs.get(k)
+        const msgs = entry ? JSON.parse(entry.json) as { id: number }[] : []
+        const msg = decodeProtoMessage(req.message)
+        if (!msgs.some((m) => m.id === msg.id)) {
+          msgs.push(msg)
+          h.channel.msgs.set(k, { json: JSON.stringify(msgs), hasMore: entry?.hasMore ?? false })
+          return true
+        }
+        return false
+      } catch { return false }
+    }),
+    apply_channel_message_edited_event: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ApplyChannelMessageEditedEventRequestSchema, bytes)
+        const k = cKey(Number(req.channelId))
+        const entry = h.channel.msgs.get(k); if (!entry) return
+        const msgs = JSON.parse(entry.json) as { id: number; body?: string; edited_at?: string; content_json?: string; mentions_json?: string }[]
+        const idx = msgs.findIndex((m) => m.id === Number(req.messageId))
+        if (idx >= 0) {
+          if (req.body) msgs[idx].body = req.body
+          msgs[idx].edited_at = req.editedAt
+          if (req.content !== undefined) msgs[idx].content_json = req.content
+          if (Object.keys(req.mentions).length > 0) msgs[idx].mentions_json = JSON.stringify(req.mentions)
+        }
+        h.channel.msgs.set(k, { json: JSON.stringify(msgs), hasMore: entry.hasMore })
+      } catch { /* noop */ }
+    }),
+    replace_channel_unread_counts: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ReplaceChannelUnreadCountsRequestSchema, bytes)
+        h.channel.unread.clear()
+        for (const [k, v] of Object.entries(req.counts)) h.channel.unread.set(k, v as number)
+      } catch { /* noop */ }
+    }),
   }
 
+  // Helper: proto.channel_state.v1.ChannelMessage (camelCase) → web wasm
+  // projection (snake_case). Mirrors the renderer projection so cached
+  // messages keep the same shape callers expect.
+  function decodeProtoMessage(m: {
+    id: bigint; channelId: bigint; body?: string; senderPod?: string;
+    senderUserId?: bigint; messageType?: string; contentJson?: string;
+    mentionsJson?: string; replyTo?: bigint; editedAt?: string; createdAt?: string;
+    isDeleted?: boolean;
+    senderUser?: { id: bigint; username: string; name?: string; avatarUrl?: string };
+    senderPodInfo?: { podKey: string; alias?: string };
+  }): { id: number; channel_id: number; body?: string; [k: string]: unknown } {
+    return {
+      id: Number(m.id), channel_id: Number(m.channelId),
+      body: m.body, sender_pod: m.senderPod,
+      sender_user_id: m.senderUserId !== undefined ? Number(m.senderUserId) : undefined,
+      message_type: m.messageType,
+      content_json: m.contentJson, mentions_json: m.mentionsJson,
+      reply_to: m.replyTo !== undefined ? Number(m.replyTo) : undefined,
+      edited_at: m.editedAt, created_at: m.createdAt, is_deleted: m.isDeleted,
+      sender_user: m.senderUser ? {
+        id: Number(m.senderUser.id), username: m.senderUser.username,
+        name: m.senderUser.name, avatar_url: m.senderUser.avatarUrl,
+      } : undefined,
+      sender_pod_info: m.senderPodInfo ? {
+        pod_key: m.senderPodInfo.podKey, alias: m.senderPodInfo.alias,
+      } : undefined,
+    }
+  }
+
+  // ticketState now mirrors WasmTicketState (proto bytes mutators + JSON
+  // reads). Tests that need to observe cache state can override these via
+  // vi.mocked(...).mockImplementation; defaults are no-ops so the bridge
+  // doesn't crash when store actions fire.
   const ticketState = {
-    set_tickets: fn((j: string) => { h.ticket.list = j }),
     tickets_json: fn(() => h.ticket.list),
-    add_ticket: fn((j: string) => {
-      const arr = JSON.parse(h.ticket.list); arr.push(JSON.parse(j)); h.ticket.list = JSON.stringify(arr)
-    }),
-    update_ticket: fn((slug: string, j: string) => {
-      const arr = JSON.parse(h.ticket.list) as { slug: string }[]
-      const idx = arr.findIndex((t) => t.slug === slug)
-      if (idx >= 0) { arr[idx] = JSON.parse(j); h.ticket.list = JSON.stringify(arr) }
-      const cur = h.ticket.current ? JSON.parse(h.ticket.current) as { slug: string } : null
-      if (cur?.slug === slug) h.ticket.current = j
-    }),
-    update_ticket_status: fn((slug: string, status: string) => {
-      const arr = JSON.parse(h.ticket.list) as { slug: string; status: string }[]
-      const t = arr.find((t) => t.slug === slug)
-      if (t) { t.status = status; h.ticket.list = JSON.stringify(arr) }
-      if (h.ticket.current) {
-        const cur = JSON.parse(h.ticket.current) as { slug: string; status: string }
-        if (cur.slug === slug) { cur.status = status; h.ticket.current = JSON.stringify(cur) }
-      }
-    }),
-    remove_ticket: fn((slug: string) => {
-      const arr = JSON.parse(h.ticket.list) as { slug: string }[]
-      h.ticket.list = JSON.stringify(arr.filter((t) => t.slug !== slug))
-      if (h.ticket.current) {
-        const cur = JSON.parse(h.ticket.current) as { slug: string }
-        if (cur.slug === slug) h.ticket.current = ''
-      }
-    }),
-    get_ticket_by_slug_json: fn((slug: string) => {
-      const arr = JSON.parse(h.ticket.list) as { slug: string }[]
-      const t = arr.find((t) => t.slug === slug)
-      return t ? JSON.stringify(t) : undefined
-    }),
-    filter_tickets_json: fn((search: string, statusesJson: string, prioritiesJson: string, repoIdsJson: string) => {
-      const tickets = JSON.parse(h.ticket.list) as { slug: string; title: string; status: string; priority: string; repository_id?: number }[]
-      const statuses = JSON.parse(statusesJson) as string[]
-      const priorities = JSON.parse(prioritiesJson) as string[]
-      const repoIds = JSON.parse(repoIdsJson) as number[]
-      const q = search.toLowerCase()
-      return JSON.stringify(tickets.filter((t) => {
-        if (q && !t.title.toLowerCase().includes(q) && !t.slug.toLowerCase().includes(q)) return false
-        if (statuses.length && !statuses.includes(t.status)) return false
-        if (priorities.length && !priorities.includes(t.priority)) return false
-        if (repoIds.length && !repoIds.includes(t.repository_id ?? 0)) return false
-        return true
-      }))
-    }),
     board_columns_json: fn(() => h.ticket.boardCols),
-    set_board_columns: fn((j: string) => {
-      h.ticket.boardCols = j
-      const cols = JSON.parse(j) as { tickets: unknown[] }[]
-      h.ticket.list = JSON.stringify(cols.flatMap((c) => c.tickets))
-    }),
-    append_column_tickets: fn((status: string, j: string) => {
-      const cols = JSON.parse(h.ticket.boardCols) as { status: string; tickets: unknown[] }[]
-      const col = cols.find((c) => c.status === status)
-      if (col) { col.tickets.push(...JSON.parse(j)); h.ticket.boardCols = JSON.stringify(cols) }
-      h.ticket.list = JSON.stringify(cols.flatMap((c) => c.tickets))
-    }),
     labels_json: fn(() => h.ticket.labels),
-    set_labels: fn((j: string) => { h.ticket.labels = j }),
-    add_label: fn((j: string) => {
-      const arr = JSON.parse(h.ticket.labels); arr.push(JSON.parse(j)); h.ticket.labels = JSON.stringify(arr)
-    }),
-    remove_label: fn((id: number) => {
-      const arr = JSON.parse(h.ticket.labels) as { id: number }[]
-      h.ticket.labels = JSON.stringify(arr.filter((l) => l.id !== id))
-    }),
     current_ticket_json: fn(() => h.ticket.current || undefined),
-    set_current_ticket: fn((j: string) => { h.ticket.current = j }),
-    fetch_tickets: fn().mockResolvedValue(JSON.stringify({ tickets: [], total: 0 })),
-    fetch_ticket: fn().mockResolvedValue('{}'),
-    create_ticket: fn().mockResolvedValue('{}'),
-    update_ticket_api: fn().mockResolvedValue('{}'),
-    delete_ticket: fn().mockResolvedValue(undefined),
-    update_status: fn().mockResolvedValue(undefined),
-    fetch_board: fn().mockResolvedValue(JSON.stringify({ board: { columns: [], priority_counts: {} } })),
-    fetch_labels: fn().mockResolvedValue(JSON.stringify({ labels: [] })),
-    get_sub_tickets: fn().mockResolvedValue(JSON.stringify({ sub_tickets: [] })),
-    get_pods: fn().mockResolvedValue(JSON.stringify({ pods: [] })),
+    apply_ticket_status_event: fn((_b: Uint8Array) => undefined),
+    apply_ticket_deleted_event: fn((_b: Uint8Array) => undefined),
+    replace_cached_tickets: fn((_b: Uint8Array) => undefined),
+    insert_created_ticket: fn((_b: Uint8Array) => undefined),
+    patch_cached_ticket: fn((_b: Uint8Array) => undefined),
+    replace_board_columns: fn((_b: Uint8Array) => undefined),
+    append_board_column_tickets: fn((_b: Uint8Array) => undefined),
+    set_current_ticket: fn((_b: Uint8Array) => undefined),
+    replace_cached_labels: fn((_b: Uint8Array) => undefined),
+    insert_created_label: fn((_b: Uint8Array) => undefined),
+    remove_cached_label: fn((_b: Uint8Array) => undefined),
+    filter_tickets: fn((_b: Uint8Array) => new Uint8Array()),
+  }
+
+  // ticketService retains only the ticket-pods cache + Connect-RPC bridge.
+  // State mutation moved to ticketState above per the proto-state contract.
+  const ticketService = {
     get_ticket_pods: fn().mockResolvedValue(JSON.stringify({ pods: [] })),
     ticket_pods_json: fn(() => '[]'),
     // Connect-RPC binary wire — every adapter call resolves to an empty
@@ -527,6 +615,11 @@ vi.mock('@/lib/wasm-core', () => {
     update_loop_local: fn(),
     add_run: fn(), set_runs: fn(), append_runs: fn(),
     update_run_status: fn(), runs_json: fn(() => '[]'), clear_runs: fn(),
+    // Proto-state mutations (binary wire) — TS store uses these.
+    replace_cached_loops: fn(), clear_current_loop: fn(),
+    patch_loop_from_action: fn(), insert_loop_run: fn(),
+    replace_cached_runs: fn(), append_cached_runs: fn(),
+    patch_loop_run_status: fn(), clear_loop_runs: fn(),
     fetch_loops: fn().mockResolvedValue(JSON.stringify({ loops: [], total: 0 })),
     fetch_loop: fn().mockResolvedValue('{}'),
     create_loop: fn().mockResolvedValue('{}'),
@@ -582,8 +675,8 @@ vi.mock('@/lib/wasm-core', () => {
     getApiClient: fn(() => mockClient),
     getAuthManager: fn(() => mockAuth),
     getPodState: fn(() => podState),
-    getPodService: fn(() => podState),
-    getTicketService: fn(() => ticketState),
+    getPodService: fn(() => podService),
+    getTicketService: fn(() => ticketService),
     getChannelService: fn(() => channelState),
     getRunnerService: fn(() => runnerState),
     getTicketState: fn(() => ticketState),
