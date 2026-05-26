@@ -81,6 +81,9 @@ func (r *podRepo) ListByOrg(ctx context.Context, orgID int64, q agentpod.PodList
 	} else if q.CreatedByID > 0 {
 		query = query.Where("created_by_id = ?", q.CreatedByID)
 	}
+	if q.RunnerID > 0 {
+		query = query.Where("runner_id = ?", q.RunnerID)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

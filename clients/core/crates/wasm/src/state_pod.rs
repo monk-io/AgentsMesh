@@ -42,6 +42,19 @@ impl WasmPodState {
         }
     }
 
+    /// Replace the entire pod list with a fresh batch from a ListPods call.
+    /// Mirrors WasmRunnerState::set_runners. Stores/pod.ts::fetchPods +
+    /// fetchSidebarPods call this after each Connect ListPods round-trip
+    /// so the sidebar / workspace pod list reflects the latest server state.
+    /// Without this method, the JS call throws TypeError silently inside
+    /// the store's try/catch and the UI keeps showing "暂无 Pod" even
+    /// though the network round-trip succeeded.
+    pub fn set_pods(&mut self, json: &str) {
+        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(json) {
+            self.inner.set_pods(pods);
+        }
+    }
+
     pub fn update_pod_status(
         &mut self,
         pod_key: &str,
