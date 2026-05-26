@@ -1,42 +1,35 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · support_ticket", () => {
-  test("support_ticket_create_ticket", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "support_ticket_create_ticket", "", "", "", "", [], []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("supportTicketAddSupportTicketMessageConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketAddSupportTicketMessageConnect", returnType: "any" });
   });
 
-  test("support_ticket_add_message", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "support_ticket_add_message", 0, "", [], []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("supportTicketAssociateAttachmentsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketAssociateAttachmentsConnect", returnType: "any" });
   });
 
-  test("support_ticket_list_support_tickets_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "support_ticket_list_support_tickets_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("supportTicketCreateSupportTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketCreateSupportTicketConnect", returnType: "any" });
   });
 
-  test("support_ticket_get_support_ticket_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "support_ticket_get_support_ticket_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("supportTicketGetAttachmentUrlConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketGetAttachmentUrlConnect", returnType: "Array<number>" }, []);
   });
 
-  test("support_ticket_get_attachment_url_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "support_ticket_get_attachment_url_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("supportTicketGetSupportTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketGetSupportTicketConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("supportTicketListSupportTicketsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketListSupportTicketsConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("supportTicketPresignAttachmentUploadConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "supportTicketPresignAttachmentUploadConnect", returnType: "any" });
   });
 });

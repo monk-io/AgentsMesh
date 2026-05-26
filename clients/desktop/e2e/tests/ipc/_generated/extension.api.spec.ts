@@ -1,147 +1,87 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · extension", () => {
-  test("extension_list_skill_registries_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_list_skill_registries_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionCreateSkillRegistryConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionCreateSkillRegistryConnect", returnType: "any" });
   });
 
-  test("extension_create_skill_registry_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_create_skill_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionDeleteSkillRegistryConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionDeleteSkillRegistryConnect", returnType: "any" });
   });
 
-  test("extension_sync_skill_registry_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_sync_skill_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionInstallCustomMcpServerConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionInstallCustomMcpServerConnect", returnType: "any" });
   });
 
-  test("extension_toggle_platform_registry_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_toggle_platform_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionInstallMcpFromMarketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionInstallMcpFromMarketConnect", returnType: "any" });
   });
 
-  test("extension_delete_skill_registry_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_delete_skill_registry_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionInstallSkillFromGithubConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionInstallSkillFromGithubConnect", returnType: "any" });
   });
 
-  test("extension_list_skill_registry_overrides_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_list_skill_registry_overrides_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionInstallSkillFromMarketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionInstallSkillFromMarketConnect", returnType: "any" });
   });
 
-  test("extension_list_market_skills_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_list_market_skills_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionInstallSkillFromUploadedFileConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionInstallSkillFromUploadedFileConnect", returnType: "Array<number>" }, []);
   });
 
-  test("extension_list_market_mcp_servers_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_list_market_mcp_servers_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionListMarketMcpServersConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionListMarketMcpServersConnect", returnType: "any" });
   });
 
-  test("extension_list_repo_skills_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_list_repo_skills_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionListMarketSkillsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionListMarketSkillsConnect", returnType: "any" });
   });
 
-  test("extension_install_skill_from_market_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_install_skill_from_market_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionListRepoMcpServersConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionListRepoMcpServersConnect", returnType: "any" });
   });
 
-  test("extension_install_skill_from_github_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_install_skill_from_github_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionListRepoSkillsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionListRepoSkillsConnect", returnType: "any" });
   });
 
-  test("extension_presign_skill_upload_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_presign_skill_upload_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionListSkillRegistriesConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionListSkillRegistriesConnect", returnType: "any" });
   });
 
-  test("extension_install_skill_from_uploaded_file_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_install_skill_from_uploaded_file_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionListSkillRegistryOverridesConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionListSkillRegistryOverridesConnect", returnType: "any" });
   });
 
-  test("extension_update_skill_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_update_skill_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionPresignSkillUploadConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionPresignSkillUploadConnect", returnType: "Array<number>" }, []);
   });
 
-  test("extension_uninstall_skill_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_uninstall_skill_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionSyncSkillRegistryConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionSyncSkillRegistryConnect", returnType: "any" });
   });
 
-  test("extension_list_repo_mcp_servers_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_list_repo_mcp_servers_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionTogglePlatformRegistryConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionTogglePlatformRegistryConnect", returnType: "any" });
   });
 
-  test("extension_install_mcp_from_market_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_install_mcp_from_market_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionUninstallMcpServerConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionUninstallMcpServerConnect", returnType: "any" });
   });
 
-  test("extension_install_custom_mcp_server_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_install_custom_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionUninstallSkillConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionUninstallSkillConnect", returnType: "any" });
   });
 
-  test("extension_update_mcp_server_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_update_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionUpdateMcpServerConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionUpdateMcpServerConnect", returnType: "any" });
   });
 
-  test("extension_uninstall_mcp_server_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "extension_uninstall_mcp_server_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("extensionUpdateSkillConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "extensionUpdateSkillConnect", returnType: "any" });
   });
 });

@@ -1,42 +1,35 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · invitation", () => {
-  test("invitation_list_invitations_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_list_invitations_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationAcceptInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationAcceptInvitationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_create_invitation_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_create_invitation_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationCreateInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationCreateInvitationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_revoke_invitation_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_revoke_invitation_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationGetInvitationByTokenConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationGetInvitationByTokenConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_resend_invitation_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_resend_invitation_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationListInvitationsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationListInvitationsConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_accept_invitation_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_accept_invitation_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationListPendingInvitationsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationListPendingInvitationsConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_list_pending_invitations_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_list_pending_invitations_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationResendInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationResendInvitationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_get_invitation_by_token_connect", async ({ sharedPage }) => {
-    const result = await invokeIpc(sharedPage, "invitation_get_invitation_by_token_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationRevokeInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationRevokeInvitationConnect", returnType: "Array<number>" }, []);
   });
 });

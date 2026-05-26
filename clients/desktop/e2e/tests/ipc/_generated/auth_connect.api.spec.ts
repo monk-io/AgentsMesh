@@ -1,55 +1,47 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
+
+test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · auth_connect", () => {
-  test("auth_connect_login_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_login_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectForgotPasswordConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectForgotPasswordConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_register_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_register_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectLoginConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectLoginConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_refresh_token_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_refresh_token_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectLogoutConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectLogoutConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_verify_email_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_verify_email_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectOauthCallbackConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectOauthCallbackConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_resend_verification_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_resend_verification_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectOauthRedirectConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectOauthRedirectConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_forgot_password_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_forgot_password_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectRefreshTokenConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectRefreshTokenConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_reset_password_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_reset_password_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectRegisterConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectRegisterConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_oauth_redirect_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_oauth_redirect_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectResendVerificationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectResendVerificationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_oauth_callback_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_oauth_callback_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectResetPasswordConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectResetPasswordConnect", returnType: "Array<number>" }, []);
   });
 
-  test("auth_connect_logout_connect", async ({ page }) => {
-    const result = await invokeIpc(page, "auth_connect_logout_connect", []).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("authConnectVerifyEmailConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authConnectVerifyEmailConnect", returnType: "Array<number>" }, []);
   });
 });

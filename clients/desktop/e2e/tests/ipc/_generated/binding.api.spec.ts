@@ -1,77 +1,47 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · binding", () => {
-  test("binding_request_binding_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_request_binding_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingAcceptBindingConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingAcceptBindingConnect", returnType: "any" });
   });
 
-  test("binding_accept_binding_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_accept_binding_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingApproveScopesConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingApproveScopesConnect", returnType: "any" });
   });
 
-  test("binding_reject_binding_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_reject_binding_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingCheckBindingConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingCheckBindingConnect", returnType: "any" });
   });
 
-  test("binding_unbind_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_unbind_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingGetBoundPodsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingGetBoundPodsConnect", returnType: "any" });
   });
 
-  test("binding_request_scopes_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_request_scopes_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingGetPendingBindingsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingGetPendingBindingsConnect", returnType: "any" });
   });
 
-  test("binding_approve_scopes_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_approve_scopes_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingListBindingsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingListBindingsConnect", returnType: "any" });
   });
 
-  test("binding_list_bindings_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_list_bindings_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingRejectBindingConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingRejectBindingConnect", returnType: "any" });
   });
 
-  test("binding_get_pending_bindings_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_get_pending_bindings_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingRequestBindingConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingRequestBindingConnect", returnType: "any" });
   });
 
-  test("binding_get_bound_pods_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_get_bound_pods_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingRequestScopesConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingRequestScopesConnect", returnType: "any" });
   });
 
-  test("binding_check_binding_connect", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "binding_check_binding_connect", new Uint8Array()).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("bindingUnbindConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "bindingUnbindConnect", returnType: "any" });
   });
 });
