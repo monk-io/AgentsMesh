@@ -3,9 +3,13 @@
 // `Record`/`Enum` from `super::dto` instead of JSON strings.
 
 mod automation;
+mod automation_proto_convert;
+mod billing;
 mod blocks_mesh;
 mod channel;
-mod message;
+mod channel_messages;
+mod channel_proto_convert;
+mod loop_service;
 mod misc;
 mod pod;
 mod repository;

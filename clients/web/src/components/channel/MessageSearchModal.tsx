@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, MessageSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { channelApi, type ChannelMessage } from "@/lib/api/channel";
+import { channelApi, type ChannelMessage } from "@/lib/api/facade/channel";
 import { cn } from "@/lib/utils";
 
 interface MessageSearchModalProps {

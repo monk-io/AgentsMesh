@@ -1,5 +1,5 @@
 import { randomUUID } from "@/lib/blockstore/uuid";
-import type { JSONMap, OpEnvelope } from "@/lib/api/blockstoreTypes";
+import type { JSONMap, OpEnvelope } from "@/lib/viewModels/blockstore";
 
 export function createBlockOp(args: {
   id?: string;

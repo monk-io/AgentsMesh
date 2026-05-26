@@ -7,8 +7,15 @@ import type {
   RunnerPodData,
   SandboxStatus,
   RelayConnectionInfo,
-} from "@/lib/api/runnerTypes";
-import { getRunnerService, getPodService } from "@/lib/wasm-core";
+} from "@/lib/viewModels/runner";
+import { getRunnerService } from "@/lib/wasm-core";
+import {
+  getRunner as getRunnerConnect,
+  updateRunner as updateRunnerConnect,
+  deleteRunner as deleteRunnerConnect,
+  querySandboxes as querySandboxesConnect,
+} from "@/lib/api/connect/runnerConnect";
+import { createPod as createPodConnect } from "@/lib/api/connect/podConnect";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -17,6 +24,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
   const params = useParams();
   const router = useRouter();
   const runnerId = runnerIdArg ?? Number(params.id);
+  const orgSlug = String(params.org ?? "");
 
   const [runner, setRunner] = useState<RunnerData | null>(null);
   const [latestRunnerVersion, setLatestRunnerVersion] = useState<string | undefined>();
@@ -45,7 +53,10 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
 
   const loadRunner = useCallback(async () => {
     try {
-      const res = JSON.parse(await getRunnerService().fetch_runner(BigInt(runnerId)));
+      // Connect-RPC lane (proto.runner_api.v1.RunnerService/GetRunner).
+      // Binary in, binary out — runnerConnect handles the @bufbuild/protobuf
+      // encode/decode and maps to the snake_case web shapes.
+      const res = await getRunnerConnect(orgSlug, runnerId);
       setRunner(res.runner);
       setRelayConnections(res.relay_connections || []);
       setLatestRunnerVersion(res.latest_runner_version);
@@ -54,7 +65,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
     } finally {
       setLoading(false);
     }
-  }, [runnerId]);
+  }, [runnerId, orgSlug]);
 
   const loadPods = useCallback(async () => {
     setLoadingPods(true);
@@ -80,9 +91,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
     if (inactivePodKeys.length === 0) return;
     setLoadingSandbox(true);
     try {
-      const res: { sandboxes: SandboxStatus[] } = JSON.parse(
-        await getRunnerService().query_runner_sandboxes(BigInt(runnerId), JSON.stringify({ pod_keys: inactivePodKeys }))
-      );
+      const res = await querySandboxesConnect(orgSlug, runnerId, inactivePodKeys);
       const newStatuses = new Map<string, SandboxStatus>();
       for (const status of res.sandboxes || []) newStatuses.set(status.pod_key, status);
       setSandboxStatuses(newStatuses);
@@ -97,14 +106,17 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
     if (!runner || !resumingPod) return;
     setResumeLoading(true);
     try {
-      const res: { pod?: { pod_key: string }; pod_key?: string } = JSON.parse(await getPodService().create_pod(JSON.stringify({
+      const { pod } = await createPodConnect(orgSlug, {
         agent_slug: resumingPod.agent_slug || "",
-        runner_id: runner.id, source_pod_key: resumingPod.pod_key,
-        resume_agent_session: true, cols: 120, rows: 30,
-      })));
+        runner_id: runner.id,
+        source_pod_key: resumingPod.pod_key,
+        resume_agent_session: true,
+        cols: 120,
+        rows: 30,
+      });
       setResumeDialogOpen(false);
       setResumingPod(null);
-      router.push(`/${params.org}/workspace?pod=${(res.pod ?? res).pod_key}`);
+      router.push(`/${params.org}/workspace?pod=${pod.pod_key}`);
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     } finally {
@@ -115,7 +127,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
   const handleToggleEnabled = async () => {
     if (!runner) return;
     try {
-      await getRunnerService().update_runner(BigInt(runner.id), JSON.stringify({ is_enabled: !runner.is_enabled }));
+      await updateRunnerConnect(orgSlug, runner.id, { is_enabled: !runner.is_enabled });
       loadRunner();
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
@@ -127,7 +139,7 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
     const confirmed = await deleteDialog.confirm();
     if (!confirmed) return;
     try {
-      await getRunnerService().delete_runner(BigInt(runner.id));
+      await deleteRunnerConnect(orgSlug, runner.id);
       router.push(`/${params.org}/infra?tab=runners`);
     } catch (error) {
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));

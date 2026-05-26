@@ -11,14 +11,20 @@ rust_library(
     visibility = ["//clients/core:__subpackages__"],
     deps = [
         "//clients/core/crates/types",
+        "@crates//:bytes",
         "@crates//:futures",
         "@crates//:futures-util",
+        "@crates//:js-sys",
+        "@crates//:prost",
         "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:thiserror",
         "@crates//:tracing",
         "@crates//:urlencoding",
+        "@crates//:wasm-bindgen",
+        "@crates//:wasm-bindgen-futures",
+        "@crates//:web-sys",
     ],
 )
 

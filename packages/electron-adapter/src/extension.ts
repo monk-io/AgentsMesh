@@ -26,8 +26,14 @@ export class ElectronExtensionService implements IExtensionService {
     return invoke<string>("extensionInstallSkillFromGithub", Number(repoId), json);
   }
 
-  async install_skill_from_upload(repoId: bigint, fileData: Uint8Array, fileName: string, scope?: string | null): Promise<string> {
-    return invoke<string>("extensionInstallSkillFromUpload", Number(repoId), Array.from(fileData), fileName, scope);
+  async presignSkillUploadConnect(request: Uint8Array): Promise<Uint8Array> {
+    const result = await invoke<number[]>("extensionPresignSkillUploadConnect", Array.from(request));
+    return new Uint8Array(result);
+  }
+
+  async installSkillFromUploadedFileConnect(request: Uint8Array): Promise<Uint8Array> {
+    const result = await invoke<number[]>("extensionInstallSkillFromUploadedFileConnect", Array.from(request));
+    return new Uint8Array(result);
   }
 
   async install_mcp_from_market(repoId: bigint, json: string): Promise<string> {

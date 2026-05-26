@@ -1,4 +1,4 @@
-import type { Block, MentionRefInput, MessageContent } from "@/lib/api/channel-message-types";
+import type { Block, MentionRefInput, MessageContent } from "@/lib/viewModels/channelMessage";
 
 export function extractMentionMap(content?: MessageContent): Record<string, MentionRefInput> {
   const out: Record<string, MentionRefInput> = {};

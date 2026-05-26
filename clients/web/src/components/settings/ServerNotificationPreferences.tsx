@@ -40,20 +40,22 @@ export function ServerNotificationPreferences() {
   useEffect(() => { fetchPrefs(); }, [fetchPrefs]);
 
   const getPref = (source: string): NotificationPreference => {
-    const found = prefs.find((p) => p.source === source && !p.entity_id);
-    return found ?? { source, is_muted: false, channels: { toast: true, browser: true } };
+    const found = prefs.find((p) => p.source === source && !p.entityId);
+    return found
+      ? found
+      : { $typeName: "proto.notification.v1.NotificationPreference", source, isMuted: false, channels: { toast: true, browser: true } };
   };
 
   const updatePref = (source: string, updated: NotificationPreference) => {
     setPrefs((prev) => {
-      const idx = prev.findIndex((p) => p.source === source && !p.entity_id);
+      const idx = prev.findIndex((p) => p.source === source && !p.entityId);
       if (idx >= 0) { const next = [...prev]; next[idx] = updated; return next; }
       return [...prev, updated];
     });
   };
 
   const handleMuteToggle = async (source: string, muted: boolean) => {
-    const updated = { ...getPref(source), is_muted: muted };
+    const updated = { ...getPref(source), isMuted: muted };
     updatePref(source, updated);
     try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
   };
@@ -89,11 +91,11 @@ export function ServerNotificationPreferences() {
                   <p className="text-xs text-muted-foreground">{t(descKey)}</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  {pref.is_muted && <BellOff className="w-3.5 h-3.5 text-muted-foreground" />}
-                  <Switch checked={!pref.is_muted} onCheckedChange={(checked) => handleMuteToggle(source, !checked)} />
+                  {pref.isMuted && <BellOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                  <Switch checked={!pref.isMuted} onCheckedChange={(checked) => handleMuteToggle(source, !checked)} />
                 </div>
               </div>
-              {!pref.is_muted && pref.channels && (
+              {!pref.isMuted && pref.channels && (
                 <div className="flex items-center gap-4 pl-1">
                   {Object.entries(pref.channels).map(([ch, enabled]) => (
                     <label key={ch} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">

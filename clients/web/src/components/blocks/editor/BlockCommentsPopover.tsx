@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { Send, X } from "lucide-react";
 
-import type { BlockRef } from "@/lib/api/blockstoreTypes";
-import { REL_COMMENTS_ON } from "@/lib/api/blockstoreTypes";
+import type { BlockRef } from "@/lib/viewModels/blockstore";
+import { REL_COMMENTS_ON } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 import { useRefs, useBlock } from "@/stores/blockstore";
 import { useBlockstoreDispatch } from "./useBlockstoreDispatch";

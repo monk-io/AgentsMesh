@@ -23,10 +23,13 @@ function unique(prefix: string, label: string): string {
 
 async function openCreateLoopDialog(page: import("@playwright/test").Page) {
   await page.goto(`/${TEST_ORG_SLUG}/loops`);
-  await page.waitForLoadState("networkidle");
+  // Use "load" not "networkidle" — DashboardShell holds an open
+  // RealtimeProvider WebSocket, so the page never reaches networkidle.
+  await page.waitForLoadState("load");
   const btn = page
     .getByRole("button", { name: /create loop|新建 ?loop|创建 ?loop|创建你的第一个/i })
     .first();
+  await btn.waitFor({ state: "visible", timeout: 15_000 });
   await btn.click();
   await page.locator('[data-dialog-overlay]').first().waitFor({ state: "visible" });
 }
@@ -57,21 +60,22 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
 
     db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
 
-    const credRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    const cred = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: credName,
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-e2e-loopui" },
-    });
-    const credId = (await credRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const credId = cred.id;
 
-    const runtimeRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const runtime = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: runtimeName,
       kind: "runtime",
       data: { CLAUDE_LOG_LEVEL: "debug" },
-    });
-    const runtimeId = (await runtimeRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const runtimeId = runtime.id;
 
     let loopSlug: string | undefined;
     try {
@@ -82,10 +86,14 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
         .first()
         .fill(loopName);
 
-      await page
+      // The dialog opens before usePodCreationData finishes loading; the
+      // agent <select> mounts only once runners + agents arrive, so wait
+      // for visibility instead of racing the selectOption call.
+      const agentSelect = page
         .locator('[data-dialog-overlay] select#agent-select')
-        .first()
-        .selectOption("claude-code");
+        .first();
+      await agentSelect.waitFor({ state: "visible", timeout: 15_000 });
+      await agentSelect.selectOption("claude-code");
 
       const promptInput = page
         .locator('[data-dialog-overlay] textarea#prompt-input')
@@ -131,10 +139,10 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
       ) ?? undefined;
     } finally {
       if (loopSlug) {
-        await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${loopSlug}`);
+        await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug }).catch(() => null);
       }
-      if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
-      if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);
+      if (credId) await cc.envBundle.deleteEnvBundle({ id: credId }).catch(() => null);
+      if (runtimeId) await cc.envBundle.deleteEnvBundle({ id: runtimeId }).catch(() => null);
       db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
     }
   });
@@ -150,33 +158,35 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
 
     db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
 
-    const credRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    const cred = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: credName,
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-e2e-loopui-edit" },
-    });
-    const credId = (await credRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const credId = cred.id;
 
-    const runtimeRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const runtime = await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: runtimeName,
       kind: "runtime",
       data: { CLAUDE_LOG_LEVEL: "debug" },
-    });
-    const runtimeId = (await runtimeRes.json()).bundle?.id;
+    }) as { id: bigint };
+    const runtimeId = runtime.id;
 
-    const loopRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/loops`, {
+    const loopRes = await cc.loop.createLoop({
+      orgSlug: TEST_ORG_SLUG,
       name: loopName,
-      agent_slug: "claude-code",
-      prompt_template: "echo bound",
-      used_env_bundles: [credName, runtimeName],
-    });
-    const loopSlug = (await loopRes.json()).loop?.slug;
+      agentSlug: "claude-code",
+      promptTemplate: "echo bound",
+      usedEnvBundles: [credName, runtimeName],
+    }) as { slug: string };
+    const loopSlug = loopRes.slug;
 
     try {
       await page.goto(`/${TEST_ORG_SLUG}/loops/${loopSlug}`);
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("load");
 
       await page
         .getByRole("heading", { name: loopName, level: 1 })
@@ -187,10 +197,8 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
         .getByRole("button")
         .filter({ hasText: /^(Edit|编辑)$/i })
         .first();
-      if (!(await editBtn.isVisible({ timeout: 5000 }).catch(() => false))) {
-        test.skip();
-        return;
-      }
+      await expect(editBtn, "loop detail page must render an Edit button for the loop creator")
+        .toBeVisible({ timeout: 10_000 });
       await editBtn.click();
       await page.locator('[data-dialog-overlay]').first().waitFor({ state: "visible" });
 
@@ -211,10 +219,10 @@ test.describe("Loop dialog — EnvBundle binding UI", () => {
       expect(await runtimeCheckbox.isChecked()).toBe(true);
     } finally {
       if (loopSlug) {
-        await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/loops/${loopSlug}`);
+        await cc.loop.deleteLoop({ orgSlug: TEST_ORG_SLUG, loopSlug }).catch(() => null);
       }
-      if (credId) await api.delete(`/api/v1/users/env-bundles/${credId}`);
-      if (runtimeId) await api.delete(`/api/v1/users/env-bundles/${runtimeId}`);
+      if (credId) await cc.envBundle.deleteEnvBundle({ id: credId }).catch(() => null);
+      if (runtimeId) await cc.envBundle.deleteEnvBundle({ id: runtimeId }).catch(() => null);
       db.cleanup(`DELETE FROM env_bundles WHERE name LIKE '${BUNDLE_PREFIX}%'`);
     }
   });

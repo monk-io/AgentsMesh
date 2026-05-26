@@ -1,4 +1,4 @@
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 
 // Fallback to top-level text when data.text is missing (issue #366: MCP
 // agents often populate only the search-summary field).

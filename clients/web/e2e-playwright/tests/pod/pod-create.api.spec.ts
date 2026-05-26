@@ -1,8 +1,11 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
-const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
+type Runner = { id: bigint };
+type Agent = { slug: string };
+type Pod = { podKey: string };
 
 test.describe("Pod Create API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
@@ -11,31 +14,23 @@ test.describe("Pod Create API", () => {
    * TC-POD-001: Create basic pod
    */
   test("create basic pod", async ({ api }) => {
-    // Check available runners first
-    const runnersRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnersRes.json()).runners;
-    if (!runners || runners.length === 0) { test.skip(); return; }
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
+    expect(runners.length, "dev environment must have at least one online runner").toBeGreaterThan(0);
 
-    // Get agents
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentsRes.json()).builtin_agents;
-    if (!agents || agents.length === 0) { test.skip(); return; }
+    const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
+    expect(agents.length, "dev environment must have at least one builtin agent").toBeGreaterThan(0);
 
-    const res = await api.post(PODS_BASE, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E Test Pod - Basic",
-    });
-    expect([200, 201]).toContain(res.status);
-    const data = await res.json();
-    expect(data.pod_key || data.pod?.pod_key).toBeTruthy();
+    const created = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+    }) as { pod: Pod };
+    const podKey = created.pod?.podKey;
+    expect(podKey).toBeTruthy();
 
-    // Cleanup: terminate
-    const podKey = data.pod_key || data.pod?.pod_key;
     if (podKey) {
-      await api.post(`${PODS_BASE}/${podKey}/terminate`, {});
+      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
     }
   });
 
@@ -43,28 +38,22 @@ test.describe("Pod Create API", () => {
    * TC-POD-003: Terminate pod
    */
   test("terminate pod", async ({ api }) => {
-    const runnersRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnersRes.json()).runners;
-    if (!runners || runners.length === 0) { test.skip(); return; }
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
+    expect(runners.length, "dev environment must have at least one online runner").toBeGreaterThan(0);
 
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentsRes.json()).builtin_agents;
-    if (!agents || agents.length === 0) { test.skip(); return; }
+    const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
+    expect(agents.length, "dev environment must have at least one builtin agent").toBeGreaterThan(0);
 
-    // Create pod
-    const createRes = await api.post(PODS_BASE, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E Test Pod - Terminate",
-    });
-    const createData = await createRes.json();
-    const podKey = createData.pod_key || createData.pod?.pod_key;
-    if (!podKey) { test.skip(); return; }
+    const created = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+    }) as { pod: Pod };
+    const podKey = created.pod?.podKey;
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
 
-    // Terminate
-    const termRes = await api.post(`${PODS_BASE}/${podKey}/terminate`, {});
-    expect(termRes.status).toBe(200);
+    // Connect throws on failure — no need to assert status.
+    await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
   });
 });

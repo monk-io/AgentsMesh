@@ -1,56 +1,35 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · invitation", () => {
-  test("invitation_list", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_list").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationAcceptInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationAcceptInvitationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_create", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_create", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationCreateInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationCreateInvitationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_revoke", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_revoke", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationGetInvitationByTokenConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationGetInvitationByTokenConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_resend", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_resend", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationListInvitationsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationListInvitationsConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_get_by_token", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_get_by_token", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationListPendingInvitationsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationListPendingInvitationsConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_accept", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_accept", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationResendInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationResendInvitationConnect", returnType: "Array<number>" }, []);
   });
 
-  test("invitation_list_pending", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "invitation_list_pending").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("invitationRevokeInvitationConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "invitationRevokeInvitationConnect", returnType: "Array<number>" }, []);
   });
 });

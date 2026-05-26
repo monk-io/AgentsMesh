@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuthStore, useCurrentUser, useAuthOrganizations, useIsAuthenticated } from "@/stores/auth";
-import { runnerAuthApi, RunnerAuthStatus } from "@/lib/api/runner";
-import { organizationApi, OrganizationData } from "@/lib/api/organization";
+import { runnerAuthApi, RunnerAuthStatus } from "@/lib/api/facade/runner";
+import { organizationApi, OrganizationData } from "@/lib/api/facade/organization";
 import { ApiError } from "@/lib/api/api-types";
 import { isApiErrorCode } from "@/lib/api/errors";
 import { useTranslations } from "next-intl";

@@ -15,17 +15,17 @@ import {
 // Before Phase D this would silently desync because each Selector kept
 // its own useState; Phase D made the value server-derived through the
 // wasm session cache, and Phase B added the broadcast that updates it.
-test.describe.fixme("ACP UI: multi-tab Selector synchronization", () => {
+// See acp-ui-echo.spec.ts header — same r6 fix applies.
+test.describe("ACP UI: multi-tab Selector synchronization", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });
 
-  test.fixme("mode change in tab A appears in tab B without refresh", async ({ context, api }) => {
+  test("mode change in tab A appears in tab B without refresh", async ({ context, api }) => {
     const pod = await createMockAgentPod(api, {
       mode: "acp",
       scenario: "config_change_plan",
       prompt: "multi-tab probe",
     });
-    if (!pod) { test.skip(); return; }
 
     const tabA = await context.newPage();
     const tabB = await context.newPage();
@@ -34,9 +34,11 @@ test.describe.fixme("ACP UI: multi-tab Selector synchronization", () => {
       tabA.goto(workspaceUrlForPod(pod.podKey)),
       tabB.goto(workspaceUrlForPod(pod.podKey)),
     ]);
+    // Use "load" — see acp-ui-config-change.spec.ts header for the same r6
+    // Connect-RPC streaming rationale.
     await Promise.all([
-      tabA.waitForLoadState("networkidle"),
-      tabB.waitForLoadState("networkidle"),
+      tabA.waitForLoadState("load"),
+      tabB.waitForLoadState("load"),
     ]);
 
     // Wait for both tabs to render the initial activity (so both have
@@ -46,9 +48,9 @@ test.describe.fixme("ACP UI: multi-tab Selector synchronization", () => {
       expect(tabB.getByText("Ready for mode switches", { exact: false })).toBeVisible({ timeout: 15_000 }),
     ]);
 
-    // Drive the change from tab A. Selector trigger button shows the
-    // current label; click opens the dropdown, click "Default" commits.
-    await tabA.locator('button[title]').filter({ has: tabA.locator('svg').first() }).first().click();
+    // Drive the change from tab A. DropdownMenuTrigger carries the active
+    // mode's i18n description as `title` (see AcpPermissionModeSelector).
+    await tabA.locator('button[title*="Mode" i], button[title*="Approve" i], button[title*="Auto-approve" i]').first().click();
     await tabA.getByText("Default", { exact: true }).first().click();
 
     // Tab B must observe the new label through the broadcast → wasm

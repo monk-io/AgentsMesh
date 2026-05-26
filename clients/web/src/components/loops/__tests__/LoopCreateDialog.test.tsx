@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { LoopCreateDialog } from "../LoopCreateDialog";
-import type { LoopData } from "@/lib/api/loopTypes";
+import type { LoopData } from "@/lib/viewModels/loop";
 
 // --- store / data hook mocks ---------------------------------------------
 
@@ -39,12 +39,14 @@ vi.mock("@/components/ide/hooks", () => ({
 }));
 
 // --- EnvBundleService mock --------------------------------------------------
-// useLoopEnvBundles calls list("credential", slug) + list("runtime", slug)
+// useLoopEnvBundles calls listEnvBundles({kind:"credential"}) + listEnvBundles({kind:"runtime"})
 // in parallel. The mock dispatches by kind so each query returns its own list.
 
-const mockListBundles = vi.fn();
-vi.mock("@/lib/wasm-core", () => ({
-  getEnvBundleService: () => ({ list: mockListBundles }),
+const { mockListEnvBundles } = vi.hoisted(() => ({
+  mockListEnvBundles: vi.fn(),
+}));
+vi.mock("@/lib/api/facade/envBundleConnect", () => ({
+  listEnvBundles: mockListEnvBundles,
 }));
 
 // --- Stubs for visual/dialog/intl/toast deps -------------------------------
@@ -79,51 +81,51 @@ vi.mock("@/components/pod/CreatePodForm/AdvancedOptions", () => ({
 // --- Test data --------------------------------------------------------------
 
 const bundleWork = {
-  id: 1,
-  agent_slug: "claude-code",
+  id: BigInt(1),
+  agentSlug: "claude-code",
   name: "Work",
   kind: "credential",
-  kind_primary: true,
-  is_active: true,
-  configured_fields: ["ANTHROPIC_API_KEY"],
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
+  kindPrimary: true,
+  isActive: true,
+  configuredFields: ["ANTHROPIC_API_KEY"],
+  createdAt: "2026-01-01T00:00:00Z",
+  updatedAt: "2026-01-01T00:00:00Z",
 };
 
 const bundlePersonal = {
-  id: 2,
-  agent_slug: "claude-code",
+  id: BigInt(2),
+  agentSlug: "claude-code",
   name: "Personal",
   kind: "credential",
-  kind_primary: false,
-  is_active: true,
-  configured_fields: ["ANTHROPIC_API_KEY"],
-  created_at: "x",
-  updated_at: "x",
+  kindPrimary: false,
+  isActive: true,
+  configuredFields: ["ANTHROPIC_API_KEY"],
+  createdAt: "x",
+  updatedAt: "x",
 };
 
 const bundleDevPreferences = {
-  id: 3,
-  agent_slug: "claude-code",
+  id: BigInt(3),
+  agentSlug: "claude-code",
   name: "dev-preferences",
   kind: "runtime",
-  kind_primary: false,
-  is_active: true,
-  configured_fields: ["ANTHROPIC_MODEL", "LOG_LEVEL"],
-  created_at: "x",
-  updated_at: "x",
+  kindPrimary: false,
+  isActive: true,
+  configuredFields: ["ANTHROPIC_MODEL", "LOG_LEVEL"],
+  createdAt: "x",
+  updatedAt: "x",
 };
 
 const bundleProxyStaging = {
-  id: 4,
-  agent_slug: "claude-code",
+  id: BigInt(4),
+  agentSlug: "claude-code",
   name: "proxy-staging",
   kind: "runtime",
-  kind_primary: false,
-  is_active: true,
-  configured_fields: ["HTTPS_PROXY"],
-  created_at: "x",
-  updated_at: "x",
+  kindPrimary: false,
+  isActive: true,
+  configuredFields: ["HTTPS_PROXY"],
+  createdAt: "x",
+  updatedAt: "x",
 };
 
 function fillRequiredFields() {
@@ -141,10 +143,10 @@ async function waitForBundlesLoaded() {
 }
 
 function mockBundleList(creds: unknown[], runtimes: unknown[] = []) {
-  mockListBundles.mockImplementation(async (kind: string) => {
-    if (kind === "credential") return JSON.stringify({ items: creds });
-    if (kind === "runtime") return JSON.stringify({ items: runtimes });
-    return JSON.stringify({ items: [] });
+  mockListEnvBundles.mockImplementation(async (opts?: { kind?: string }) => {
+    if (opts?.kind === "credential") return { items: creds, total: creds.length };
+    if (opts?.kind === "runtime") return { items: runtimes, total: runtimes.length };
+    return { items: [], total: 0 };
   });
 }
 

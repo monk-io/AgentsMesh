@@ -17,20 +17,17 @@ import { invokeIpc } from "../../helpers/ipc";
 // This spec closes that gap.
 test.describe("Desktop infra · repositories list", () => {
   test("renders backend repositories (not the empty stub)", async ({ page }) => {
-    // Source of truth: backend via IPC. Empty backend → nothing to assert
-    // against, skip rather than flake the suite on dev-env state.
+    // Source of truth: backend via IPC. Dev seed must include at least one
+    // repository so this spec always exercises the cache layer.
     const raw = await invokeIpc<string>(page, "repositoryList");
     const { repositories = [] } = JSON.parse(raw) as {
       repositories?: { id: number; slug: string }[];
     };
-    if (repositories.length === 0) {
-      test.skip(true, "backend has no repositories — nothing to render");
-      return;
-    }
+    expect(repositories.length, "dev seed must include at least one repository").toBeGreaterThan(0);
 
     const infra = new InfraPage(page);
     await infra.gotoTab("repositories");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Empty-state heading is the canonical fingerprint of the regression —
     // RepoSection renders it only when `repositories.length === 0` after

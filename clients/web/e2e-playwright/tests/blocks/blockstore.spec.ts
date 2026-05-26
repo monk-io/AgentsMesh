@@ -1,10 +1,9 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { test as uiTest, expect as uiExpect } from "@playwright/test";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
-const BLOCKS = `/api/v1/orgs/${TEST_ORG_SLUG}/blocks`;
 
 // ────────────────────────────────────────────────────
 // Part 1: API — workspaces, applyOps, catchup, subtree
@@ -15,99 +14,106 @@ test.describe("Block Store · API", () => {
 
   test.beforeAll(async ({ api }) => {
     clearAuthRateLimit();
-    // ensure_default: idempotent — returns the org's default workspace.
-    const res = await api.post(`${BLOCKS}/workspaces/default`, {});
-    expect(res.status).toBe(200);
-    const ws = await res.json();
+    const cc = await api.connect();
+    // ensureDefault is idempotent — returns the org's default workspace.
+    const ws = await cc.blockstore.ensureDefaultWorkspace({ orgSlug: TEST_ORG_SLUG }) as { id: string };
     workspaceId = ws.id;
     expect(workspaceId).toBeTruthy();
   });
 
   test("listWorkspaces includes default workspace", async ({ api }) => {
-    const res = await api.get(`${BLOCKS}/workspaces`);
-    expect(res.status).toBe(200);
-    const { workspaces } = await res.json();
-    expect(Array.isArray(workspaces)).toBe(true);
-    expect(workspaces.some((w: { id: string }) => w.id === workspaceId)).toBe(true);
+    const cc = await api.connect();
+    const { items } = await cc.blockstore.listWorkspaces({ orgSlug: TEST_ORG_SLUG }) as { items: Array<{ id: string }> };
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.some((w) => w.id === workspaceId)).toBe(true);
   });
 
   test("applyOps creates block + nest ref, subtree reflects state", async ({ api }) => {
+    const cc = await api.connect();
     const rootId = crypto.randomUUID();
     const childId = crypto.randomUUID();
     const idempotencyKey = `e2e-blocks-${Date.now()}`;
-    const applyRes = await api.post(`${BLOCKS}/ops`, {
-      workspace_id: workspaceId,
-      idempotency_key: idempotencyKey,
+    const applyBody = await cc.blockstore.applyOps({
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+      idempotencyKey,
       ops: [
-        { op: "createBlock", payload: { id: rootId, type: "page", data: { title: "E2E root" } } },
-        { op: "createBlock", payload: { id: childId, type: "paragraph", data: { text: "child" } } },
-        { op: "addRef", payload: { from: rootId, to: childId, rel: "nest", order_key: "m" } },
+        { op: "createBlock", payloadJson: JSON.stringify({ id: rootId, type: "page", data: { title: "E2E root" } }) },
+        { op: "createBlock", payloadJson: JSON.stringify({ id: childId, type: "paragraph", data: { text: "child" } }) },
+        { op: "addRef", payloadJson: JSON.stringify({ from: rootId, to: childId, rel: "nest", order_key: "m" }) },
       ],
-    });
-    expect([200, 201]).toContain(applyRes.status);
-    const applyBody = await applyRes.json();
-    expect(applyBody.op_ids).toHaveLength(3);
-    expect(applyBody.was_replay).toBe(false);
+    }) as { opIds: bigint[]; wasReplay: boolean };
+    expect(applyBody.opIds).toHaveLength(3);
+    expect(applyBody.wasReplay).toBe(false);
 
-    const sub = await api.get(
-      `${BLOCKS}/workspaces/${workspaceId}/subtree?root=${rootId}&max_depth=8`,
-    );
-    expect(sub.status).toBe(200);
-    const { blocks, refs } = await sub.json();
-    expect(blocks.some((b: { id: string }) => b.id === childId)).toBe(true);
-    expect(refs.some((r: { rel: string; to_id: string }) => r.rel === "nest" && r.to_id === childId)).toBe(true);
+    const sub = await cc.blockstore.getSubtree({
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+      rootId,
+      maxDepth: 8,
+    }) as { blocks: Array<{ id: string }>; refs: Array<{ rel: string; toId: string }> };
+    expect(sub.blocks.some((b) => b.id === childId)).toBe(true);
+    expect(sub.refs.some((r) => r.rel === "nest" && r.toId === childId)).toBe(true);
   });
 
   test("applyOps idempotency — replay returns was_replay=true", async ({ api }) => {
+    const cc = await api.connect();
     const rootId = crypto.randomUUID();
     const idempotencyKey = `e2e-idem-${Date.now()}`;
     const req = {
-      workspace_id: workspaceId,
-      idempotency_key: idempotencyKey,
-      ops: [{ op: "createBlock", payload: { id: rootId, type: "page", data: { title: "Idem" } } }],
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+      idempotencyKey,
+      ops: [{ op: "createBlock", payloadJson: JSON.stringify({ id: rootId, type: "page", data: { title: "Idem" } }) }],
     };
-    const first = await api.post(`${BLOCKS}/ops`, req);
-    expect([200, 201]).toContain(first.status);
-    const second = await api.post(`${BLOCKS}/ops`, req);
-    expect([200, 201]).toContain(second.status);
-    expect((await second.json()).was_replay).toBe(true);
+    const first = await cc.blockstore.applyOps(req) as { wasReplay: boolean };
+    expect(first.wasReplay).toBe(false);
+    const second = await cc.blockstore.applyOps(req) as { wasReplay: boolean };
+    expect(second.wasReplay).toBe(true);
   });
 
   test("catchup returns ops after the watermark", async ({ api }) => {
-    const res = await api.get(`${BLOCKS}/workspaces/${workspaceId}/ops?after=0&limit=50`);
-    expect(res.status).toBe(200);
-    const { ops } = await res.json();
-    expect(Array.isArray(ops)).toBe(true);
+    const cc = await api.connect();
+    const { items } = await cc.blockstore.streamOps({
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+      after: BigInt(0),
+      limit: 50,
+    }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 
   test("type-defs endpoint returns block_type_def blocks", async ({ api }) => {
-    const res = await api.get(`${BLOCKS}/workspaces/${workspaceId}/type-defs`);
-    expect(res.status).toBe(200);
-    const { blocks } = await res.json();
-    expect(Array.isArray(blocks)).toBe(true);
+    const cc = await api.connect();
+    const { items } = await cc.blockstore.listTypeDefs({
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+    }) as { items: Array<{ type: string }> };
+    expect(Array.isArray(items)).toBe(true);
     // All returned blocks should be of type block_type_def.
-    for (const b of blocks) {
+    for (const b of items) {
       expect(b.type).toBe("block_type_def");
     }
   });
 
   test("updateBlock op patches data field", async ({ api }) => {
+    const cc = await api.connect();
     const blockId = crypto.randomUUID();
-    await api.post(`${BLOCKS}/ops`, {
-      workspace_id: workspaceId,
-      idempotency_key: `e2e-upd-create-${Date.now()}`,
-      ops: [{ op: "createBlock", payload: { id: blockId, type: "paragraph", data: { text: "v1" } } }],
+    await cc.blockstore.applyOps({
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+      idempotencyKey: `e2e-upd-create-${Date.now()}`,
+      ops: [{ op: "createBlock", payloadJson: JSON.stringify({ id: blockId, type: "paragraph", data: { text: "v1" } }) }],
     });
-    const upd = await api.post(`${BLOCKS}/ops`, {
-      workspace_id: workspaceId,
-      idempotency_key: `e2e-upd-patch-${Date.now()}`,
-      ops: [{ op: "updateBlock", payload: { id: blockId, data: { text: "v2" } } }],
+    await cc.blockstore.applyOps({
+      orgSlug: TEST_ORG_SLUG,
+      workspaceId,
+      idempotencyKey: `e2e-upd-patch-${Date.now()}`,
+      ops: [{ op: "updateBlock", payloadJson: JSON.stringify({ id: blockId, data: { text: "v2" } }) }],
     });
-    expect([200, 201]).toContain(upd.status);
-    const getRes = await api.get(`${BLOCKS}/${encodeURIComponent(blockId)}`);
-    expect(getRes.status).toBe(200);
-    const block = await getRes.json();
-    expect(block.data.text).toBe("v2");
+    const block = await cc.blockstore.getBlock({ orgSlug: TEST_ORG_SLUG, id: blockId }) as { dataJson: string };
+    const data = JSON.parse(block.dataJson);
+    expect(data.text).toBe("v2");
   });
 });
 
@@ -121,7 +127,7 @@ uiTest.describe("Block Store · UI", () => {
   uiTest("blocks page loads without WASM errors", async ({ page }) => {
     const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/blocks`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     // Page must render past the spinner — either the DocumentView or an
     // error banner is acceptable; a stuck spinner is not.
     await uiExpect(page.locator("body")).toBeVisible();
@@ -130,14 +136,11 @@ uiTest.describe("Block Store · UI", () => {
 
   uiTest("search panel opens on search button click", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/blocks`);
-    await page.waitForLoadState("networkidle");
-    // Search is a Button with a search icon/label. If absent, skip — the page
-    // only mounts SearchPanel after a workspace is hydrated.
+    await page.waitForLoadState("load");
+    // SearchPanel only mounts after the workspace is hydrated — wait for the
+    // Search button rather than skipping; the spec asserts the open flow.
     const searchBtn = page.getByRole("button", { name: /search|搜索/i }).first();
-    if (!(await searchBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
-      uiTest.skip();
-      return;
-    }
+    await uiExpect(searchBtn).toBeVisible({ timeout: 15_000 });
     await searchBtn.click();
     await page.waitForTimeout(300);
   });

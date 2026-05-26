@@ -1,129 +1,120 @@
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_types::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmUserCredentialService {
-    client: Arc<ApiClient>,
+    inner: agentsmesh_services::UserCredentialService,
 }
 
 #[wasm_bindgen]
 impl WasmUserCredentialService {
     pub(crate) fn new(client: Arc<ApiClient>) -> Self {
-        Self { client }
+        Self { inner: agentsmesh_services::UserCredentialService::new(client) }
     }
 
-    pub async fn list_git_credentials(&self) -> Result<String, String> {
-        let resp = self.client.list_user_git_credentials().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    // -------- Connect-RPC (binary wire) — see proto-naming-conventions.md §2.5
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate.
+
+    // UserGitCredentialService
+    #[wasm_bindgen(js_name = listGitCredentialsConnect)]
+    pub async fn list_git_credentials_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.list_git_credentials_connect(request).await
+    }
+    #[wasm_bindgen(js_name = getGitCredentialConnect)]
+    pub async fn get_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.get_git_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = createGitCredentialConnect)]
+    pub async fn create_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.create_git_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = updateGitCredentialConnect)]
+    pub async fn update_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.update_git_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = deleteGitCredentialConnect)]
+    pub async fn delete_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.delete_git_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = getDefaultGitCredentialConnect)]
+    pub async fn get_default_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.get_default_git_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = setDefaultGitCredentialConnect)]
+    pub async fn set_default_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.set_default_git_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = clearDefaultGitCredentialConnect)]
+    pub async fn clear_default_git_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.clear_default_git_credential_connect(request).await
     }
 
-    pub async fn create_git_credential(&self, json: &str) -> Result<String, String> {
-        let req: CreateGitCredentialRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.create_user_git_credential(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    // UserAgentCredentialService
+    #[wasm_bindgen(js_name = listAgentCredentialsConnect)]
+    pub async fn list_agent_credentials_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.list_agent_credentials_connect(request).await
+    }
+    #[wasm_bindgen(js_name = listAgentCredentialsForAgentConnect)]
+    pub async fn list_agent_credentials_for_agent_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.list_agent_credentials_for_agent_connect(request).await
+    }
+    #[wasm_bindgen(js_name = getAgentCredentialConnect)]
+    pub async fn get_agent_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.get_agent_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = createAgentCredentialConnect)]
+    pub async fn create_agent_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.create_agent_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = updateAgentCredentialConnect)]
+    pub async fn update_agent_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.update_agent_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = deleteAgentCredentialConnect)]
+    pub async fn delete_agent_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.delete_agent_credential_connect(request).await
+    }
+    #[wasm_bindgen(js_name = setDefaultAgentCredentialConnect)]
+    pub async fn set_default_agent_credential_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.set_default_agent_credential_connect(request).await
     }
 
-    pub async fn get_git_credential(&self, id: i64) -> Result<String, String> {
-        let resp = self.client.get_user_git_credential(id).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    // UserRepositoryProviderService
+    #[wasm_bindgen(js_name = listRepositoryProvidersConnect)]
+    pub async fn list_repository_providers_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.list_repository_providers_connect(request).await
     }
-
-    pub async fn update_git_credential(&self, id: i64, json: &str) -> Result<String, String> {
-        let req: UpdateGitCredentialRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .update_user_git_credential(id, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = getRepositoryProviderConnect)]
+    pub async fn get_repository_provider_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.get_repository_provider_connect(request).await
     }
-
-    pub async fn delete_git_credential(&self, id: i64) -> Result<(), String> {
-        self.client.delete_user_git_credential(id).await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    #[wasm_bindgen(js_name = createRepositoryProviderConnect)]
+    pub async fn create_repository_provider_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.create_repository_provider_connect(request).await
     }
-
-    pub async fn get_default_git_credential(&self) -> Result<String, String> {
-        let resp = self.client.get_default_git_credential().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = updateRepositoryProviderConnect)]
+    pub async fn update_repository_provider_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.update_repository_provider_connect(request).await
     }
-
-    pub async fn set_default_git_credential(&self, json: &str) -> Result<(), String> {
-        let req: SetDefaultGitCredentialRequest =
-            serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        self.client.set_default_git_credential(&req).await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    #[wasm_bindgen(js_name = deleteRepositoryProviderConnect)]
+    pub async fn delete_repository_provider_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.delete_repository_provider_connect(request).await
     }
-
-    pub async fn clear_default_git_credential(&self) -> Result<(), String> {
-        self.client.clear_default_git_credential().await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    #[wasm_bindgen(js_name = setDefaultRepositoryProviderConnect)]
+    pub async fn set_default_repository_provider_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.set_default_repository_provider_connect(request).await
     }
-
-    pub async fn list_repo_providers(&self) -> Result<String, String> {
-        let resp = self.client
-            .list_user_repository_providers()
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = testRepositoryProviderConnectionConnect)]
+    pub async fn test_repository_provider_connection_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.test_repository_provider_connection_connect(request).await
     }
-
-    pub async fn create_repo_provider(&self, json: &str) -> Result<String, String> {
-        let req: CreateRepositoryProviderRequest =
-            serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .create_user_repository_provider(&req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn get_repo_provider(&self, id: i64) -> Result<String, String> {
-        let resp = self.client
-            .get_user_repository_provider(id)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn update_repo_provider(&self, id: i64, json: &str) -> Result<String, String> {
-        let req: UpdateRepositoryProviderRequest =
-            serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .update_user_repository_provider(id, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn delete_repo_provider(&self, id: i64) -> Result<(), String> {
-        self.client
-            .delete_user_repository_provider(id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
-    }
-
-    pub async fn set_default_repo_provider(&self, id: i64) -> Result<(), String> {
-        self.client
-            .set_default_repository_provider(id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
-    }
-
-    pub async fn test_repo_provider(&self, id: i64) -> Result<(), String> {
-        self.client
-            .test_repository_provider_connection(id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
-    }
-
-    pub async fn list_provider_repositories(
-        &self,
-        id: i64,
-        page: Option<u32>,
-        per_page: Option<u32>,
-        search: Option<String>,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .list_provider_repositories(id, page, per_page, search.as_deref())
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = listProviderRepositoriesConnect)]
+    pub async fn list_provider_repositories_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.inner.list_provider_repositories_connect(request).await
     }
 }

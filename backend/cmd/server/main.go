@@ -182,7 +182,8 @@ func main() {
 
 	subscriptionScheduler := startSubscriptionJobs(db, cfg, services.email, appLogger.Logger)
 
-	srv := startHTTPServer(cfg, router)
+	// Start HTTP server (Connect-RPC handlers wrap the Gin router)
+	srv := startHTTPServer(cfg, wrapWithConnect(cfg, services, svc, router))
 
 	waitForShutdown(srv, grpcResult.server, eventBus, heartbeatBatcher, subscriptionScheduler, loopScheduler, orgAwareness, relayManager, services, db, redisClient)
 }

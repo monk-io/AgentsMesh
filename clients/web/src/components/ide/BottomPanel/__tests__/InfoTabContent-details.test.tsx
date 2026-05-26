@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { InfoTabContent } from "../InfoTabContent";
-import type { PodData } from "@/lib/api/pod";
+import type { PodData } from "@/lib/api/facade/pod";
 
 // Mock pod store
 let mockPods: PodData[] = [];

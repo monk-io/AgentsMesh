@@ -1,79 +1,74 @@
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_types::*;
+use agentsmesh_services::OrgApiService;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub struct WasmOrgApiService {
-    client: Arc<ApiClient>,
-}
+pub struct WasmOrgApiService(pub(crate) OrgApiService);
 
 #[wasm_bindgen]
 impl WasmOrgApiService {
     pub(crate) fn new(client: Arc<ApiClient>) -> Self {
-        Self { client }
+        Self(OrgApiService::new(client))
     }
 
-    pub async fn list(&self) -> Result<String, String> {
-        let resp = self.client.list_organizations().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate; conventions §2.5 forbids it on the client.
+    //
+    // js_name is camelCase; the `Connect` suffix marks the migration lane so
+    // the legacy JSON methods can coexist until all 26 services flip.
+
+    #[wasm_bindgen(js_name = listMyOrgsConnect)]
+    pub async fn list_my_orgs_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_my_orgs_connect(request).await
     }
 
-    pub async fn get(&self, slug: &str) -> Result<String, String> {
-        let resp = self.client.get_organization(slug).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = createOrgConnect)]
+    pub async fn create_org_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_org_connect(request).await
     }
 
-    pub async fn create(&self, json: &str) -> Result<String, String> {
-        let req: CreateOrganizationRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.create_organization(&req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = createPersonalOrgConnect)]
+    pub async fn create_personal_org_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_personal_org_connect(request).await
     }
 
-    pub async fn create_personal(&self) -> Result<String, String> {
-        let resp = self.client.create_personal_organization().await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = getOrgConnect)]
+    pub async fn get_org_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_org_connect(request).await
     }
 
-    pub async fn update(&self, slug: &str, json: &str) -> Result<String, String> {
-        let req: UpdateOrganizationRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .update_organization(slug, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = updateOrgConnect)]
+    pub async fn update_org_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.update_org_connect(request).await
     }
 
-    pub async fn delete(&self, slug: &str) -> Result<(), String> {
-        self.client.delete_organization(slug).await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    #[wasm_bindgen(js_name = deleteOrgConnect)]
+    pub async fn delete_org_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_org_connect(request).await
     }
 
-    pub async fn list_members(&self, slug: &str) -> Result<String, String> {
-        let resp = self.client.list_org_members(slug).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = listMembersConnect)]
+    pub async fn list_members_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_members_connect(request).await
     }
 
-    pub async fn invite_member(&self, slug: &str, json: &str) -> Result<String, String> {
-        let req: InviteMemberRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client.invite_org_member(slug, &req).await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = inviteMemberConnect)]
+    pub async fn invite_member_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.invite_member_connect(request).await
     }
 
-    pub async fn remove_member(&self, slug: &str, user_id: i64) -> Result<(), String> {
-        self.client
-            .remove_org_member(slug, user_id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    #[wasm_bindgen(js_name = removeMemberConnect)]
+    pub async fn remove_member_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.remove_member_connect(request).await
     }
 
-    pub async fn update_member_role(
-        &self, slug: &str, user_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: UpdateMemberRoleRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .update_org_member_role(slug, user_id, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    #[wasm_bindgen(js_name = updateMemberRoleConnect)]
+    pub async fn update_member_role_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.update_member_role_connect(request).await
     }
 }

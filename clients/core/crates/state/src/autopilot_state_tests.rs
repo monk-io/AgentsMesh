@@ -1,7 +1,6 @@
-use agentsmesh_types::{AutopilotController, AutopilotIteration};
 use serde_json::json;
 
-use crate::autopilot_state::AutopilotState;
+use crate::autopilot_state::{AutopilotController, AutopilotIteration, AutopilotState};
 
 fn make_controller(key: &str, phase: &str) -> AutopilotController {
     AutopilotController {

@@ -18,86 +18,21 @@ impl WasmApiClient {
         Self { client, base_url }
     }
 
-    pub fn org_path(&self, path: &str) -> String {
-        self.client.org_path(path)
-    }
-
     #[wasm_bindgen(getter)]
     pub fn base_url(&self) -> String {
         self.base_url.clone()
     }
 
-    pub async fn get(&self, endpoint: String) -> Result<String, String> {
-        self.client
-            .get::<serde_json::Value>(&endpoint)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn post(&self, endpoint: String, body: String) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .post::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn put(&self, endpoint: String, body: String) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .put::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn delete(&self, endpoint: String) -> Result<String, String> {
-        self.client
-            .delete::<serde_json::Value>(&endpoint)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn patch(&self, endpoint: String, body: String) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .patch::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn public_get(&self, endpoint: String) -> Result<String, String> {
-        self.client
-            .public_get::<serde_json::Value>(&endpoint)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
-    pub async fn public_post(
-        &self,
-        endpoint: String,
-        body: String,
-    ) -> Result<String, String> {
-        let val: serde_json::Value =
-            serde_json::from_str(&body).map_err(agentsmesh_services::wire)?;
-        self.client
-            .public_post::<serde_json::Value>(&endpoint, &val)
-            .await
-            .map(|v| serde_json::to_string(&v).unwrap_or_default())
-            .map_err(agentsmesh_services::wire)
-    }
-
     pub fn create_pod_service(&self) -> crate::service_pod::WasmPodService {
         let state = agentsmesh_state::pod_state::PodState::with_storage(crate::new_memory_backend());
         crate::service_pod::WasmPodService::new(self.client.clone(), state)
+    }
+
+    /// Create a WasmEventsManager backed by this client's ApiClient.
+    /// Replaces the legacy `new WasmEventsManager(ws_url)` — token, base
+    /// URL, and org slug now flow through the shared ApiClient instead.
+    pub fn create_events_manager(&self) -> crate::events_manager::WasmEventsManager {
+        crate::events_manager::WasmEventsManager::new_internal(self.client.clone())
     }
 
     pub fn create_ticket_service(&self) -> crate::service_ticket::WasmTicketService {
@@ -163,10 +98,6 @@ impl WasmApiClient {
         crate::service_binding::WasmBindingService::new(self.client.clone())
     }
 
-    pub fn create_message_service(&self) -> crate::service_message::WasmMessageService {
-        crate::service_message::WasmMessageService::new(self.client.clone())
-    }
-
     pub fn create_notification_service(
         &self,
     ) -> crate::service_notification::WasmNotificationService {
@@ -227,7 +158,9 @@ impl WasmApiClient {
         crate::service_support_ticket::WasmSupportTicketService::new(self.client.clone())
     }
 
-    pub fn create_auth_api_service(&self) -> crate::service_auth_api::WasmAuthApiService {
-        crate::service_auth_api::WasmAuthApiService::new(self.client.clone())
+    pub fn create_auth_connect_service(
+        &self,
+    ) -> crate::service_auth_connect::WasmAuthConnectService {
+        crate::service_auth_connect::WasmAuthConnectService::new(self.client.clone())
     }
 }

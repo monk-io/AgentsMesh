@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Copy, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { WebhookSecretResponse } from "@/lib/api/repositoryTypes";
+import type { WebhookSecretResponse } from "@/lib/viewModels/repository";
 
 interface WebhookManualSetupFormProps {
   secretData: WebhookSecretResponse;

@@ -1,33 +1,31 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { ADMIN_USER, TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
 /**
- * Runner admin tests — require system admin auth.
+ * Runner admin tests — require system admin auth. Goes through AdminService
+ * (proto.admin.v1) — distinct from the org-scoped RunnerService.
  */
 test.describe("Runner Admin API", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /**
-   * TC-ADMIN-001: Admin list all runners
-   */
   test("admin lists all runners across orgs", async ({ api }) => {
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    const res = await api.get("/api/v1/admin/runners");
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.data).toBeTruthy(); // admin endpoint uses "data" key
+    const cc = await api.connect();
+    const res = await cc.admin.listRunners({}) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  test("non-admin gets 403 on admin runners endpoint", async ({ api }) => {
+  test("non-admin gets permission_denied on admin runners endpoint", async ({ api }) => {
     // Default login is non-admin user
-    const res = await api.get("/api/v1/admin/runners");
-    expect(res.status).toBe(403);
+    const cc = await api.connect();
+    // Connect maps the admin interceptor's permission check to HTTP 403.
+    await expect(
+      cc.admin.listRunners({}),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
-  /**
-   * TC-ADMIN-002: Admin get single runner
-   */
   test("admin gets single runner detail", async ({ api, db }) => {
     db.setup(`
       INSERT INTO runners (organization_id, node_id, description, status, max_concurrent_pods, is_enabled)
@@ -40,15 +38,13 @@ test.describe("Runner Admin API", () => {
     );
 
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    const res = await api.get(`/api/v1/admin/runners/${id}`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const runner = await cc.admin.getRunner({ runnerId: Number(id) }) as { id?: number };
+    expect(runner.id).toBeTruthy();
 
     db.cleanup(`DELETE FROM runners WHERE node_id = 'admin-single-test'`);
   });
 
-  /**
-   * TC-ADMIN-003: Admin disable/enable runner
-   */
   test("admin disables and enables runner", async ({ api, db }) => {
     db.setup(`
       INSERT INTO runners (organization_id, node_id, description, status, max_concurrent_pods, is_enabled)
@@ -61,17 +57,14 @@ test.describe("Runner Admin API", () => {
     );
 
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
+    const cc = await api.connect();
 
-    // Disable
-    const disRes = await api.post(`/api/v1/admin/runners/${id}/disable`, {});
-    expect(disRes.status).toBe(200);
+    await cc.admin.disableRunner({ runnerId: Number(id) });
     expect(db.queryValue(
       `SELECT is_enabled::text FROM runners WHERE node_id = 'admin-disable-test'`
     )).toBe("false");
 
-    // Enable
-    const enRes = await api.post(`/api/v1/admin/runners/${id}/enable`, {});
-    expect(enRes.status).toBe(200);
+    await cc.admin.enableRunner({ runnerId: Number(id) });
     expect(db.queryValue(
       `SELECT is_enabled::text FROM runners WHERE node_id = 'admin-disable-test'`
     )).toBe("true");
@@ -79,9 +72,6 @@ test.describe("Runner Admin API", () => {
     db.cleanup(`DELETE FROM runners WHERE node_id = 'admin-disable-test'`);
   });
 
-  /**
-   * TC-ADMIN-004: Admin delete runner
-   */
   test("admin deletes runner", async ({ api, db }) => {
     db.setup(`
       INSERT INTO runners (organization_id, node_id, description, status, max_concurrent_pods, is_enabled)
@@ -94,10 +84,11 @@ test.describe("Runner Admin API", () => {
     );
 
     await api.loginAs(ADMIN_USER.email, ADMIN_USER.password);
-    const res = await api.delete(`/api/v1/admin/runners/${id}`);
-    expect([200, 204]).toContain(res.status);
+    const cc = await api.connect();
+    await cc.admin.deleteRunner({ runnerId: Number(id) });
 
-    const getRes = await api.get(`/api/v1/admin/runners/${id}`);
-    expect(getRes.status).toBe(404);
+    await expect(
+      cc.admin.getRunner({ runnerId: Number(id) }),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

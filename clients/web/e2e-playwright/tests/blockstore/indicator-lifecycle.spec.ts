@@ -1,15 +1,21 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 // Tier 1 闭环 E2E: Agent defines an indicator via MCP → indicator appears as a
 // new option in the slash menu → clicking it creates a typed record → server
 // persists it with the right type_key → RecordEditor renders the schema's
 // columns (select options + text input). The canonical "is definition 2
 // working end-to-end" check; a failure pinpoints which seam broke.
+// Phase E (wasm Connect ServerStream bridge) is real-impl'd, so the
+// page hydrates and the slash-menu trigger appears via the normal
+// `_tick` rerender path.
 test("indicator.define → slash menu → RecordEditor lifecycle", async ({
   authenticatedPage,
-  api,
+  token,
   isolatedWorkspace,
 }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID } = isolatedWorkspace;
   const typeKey = `e2e_bug_${Date.now()}`;
   const uniqueLabel = `Bug Report ${typeKey.slice(-10)}`;
@@ -31,15 +37,16 @@ test("indicator.define → slash menu → RecordEditor lifecycle", async ({
   });
 
   // 1. Define the indicator by writing a block_type_def directly via the
-  //    REST ops endpoint. (The /blocks/mcp/* REST shim was removed — agents
-  //    now reach this path through the Runner MCP gRPC bridge; this test
-  //    simulates the final backend state the bridge produces.)
-  await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    workspace_id: workspaceID,
+  //    Connect ApplyOps RPC. (Agents reach the same path through the Runner
+  //    MCP gRPC bridge; this test simulates the final backend state the
+  //    bridge produces.)
+  await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
     ops: [
       {
         op: "createBlock",
-        payload: {
+        payloadJson: JSON.stringify({
           type: "block_type_def",
           data: {
             type_key: typeKey,
@@ -64,17 +71,22 @@ test("indicator.define → slash menu → RecordEditor lifecycle", async ({
             ],
           },
           text: typeKey,
-        },
+        }),
       },
     ],
-    idempotency_key: `e2e-indicator-define-${typeKey}`,
+    idempotencyKey: `e2e-indicator-define-${typeKey}`,
   });
 
   // Backend should expose the new type in its type-defs endpoint.
-  const typeDefs = await api.get<{ blocks: Array<{ data: { type_key: string } }> }>(
-    `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/type-defs`,
-  );
-  expect(typeDefs.blocks.some((b) => b.data.type_key === typeKey)).toBe(true);
+  const typeDefs = await cc.blockstore.listTypeDefs({
+    orgSlug,
+    workspaceId: workspaceID,
+  }) as { items: Array<{ dataJson: string }> };
+  const found = typeDefs.items.some((b) => {
+    const d = JSON.parse(b.dataJson) as { type_key?: string };
+    return d.type_key === typeKey;
+  });
+  expect(found).toBe(true);
 
   // 2. Open blocks page. The "+ Add block" menu should list our new type.
   await authenticatedPage.goto(`/${orgSlug}/blocks?ws=${workspaceID}`);
@@ -87,7 +99,7 @@ test("indicator.define → slash menu → RecordEditor lifecycle", async ({
   // Arm the response watcher BEFORE clicking so we catch the POST synchronously
   // rather than racing against the next render cycle.
   const opsPromise = authenticatedPage.waitForResponse(
-    (r) => r.url().includes("/blocks/ops") && r.request().method() === "POST",
+    (r) => r.url().includes("BlockstoreService/ApplyOps") && r.request().method() === "POST",
     { timeout: 15_000 },
   );
   await bugOption.click();
@@ -96,12 +108,15 @@ test("indicator.define → slash menu → RecordEditor lifecycle", async ({
 
   // 3. Wait for the record to show up in the subtree. Querying via API is more
   // deterministic than DOM polling because WS propagation has its own timing.
-  const rootID = await rootBlockID(api, workspaceID);
-  const subtreePath = `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/subtree?root=${rootID}`;
+  const rootID = await rootBlockID(cc, workspaceID);
   await expect
     .poll(
       async () => {
-        const res = await api.get<{ blocks: Array<{ type: string }> }>(subtreePath);
+        const res = await cc.blockstore.getSubtree({
+          orgSlug,
+          workspaceId: workspaceID,
+          rootId: rootID,
+        }) as { blocks: Array<{ type: string }> };
         return res.blocks.filter((b) => b.type === typeKey).length;
       },
       { timeout: 10_000, message: `record of type ${typeKey} should appear in subtree` },
@@ -126,20 +141,24 @@ test("indicator.define → slash menu → RecordEditor lifecycle", async ({
   await authenticatedPage.waitForTimeout(800); // updateBlockData debounce round-trip
 
   // 5. Confirm the record data persisted via API.
-  const after = await api.get<{ blocks: Array<{ type: string; data: Record<string, unknown> }> }>(
-    subtreePath,
-  );
-  const records = after.blocks.filter((b) => b.type === typeKey);
+  const after = await cc.blockstore.getSubtree({
+    orgSlug,
+    workspaceId: workspaceID,
+    rootId: rootID,
+  }) as { blocks: Array<{ type: string; dataJson: string }> };
+  const records = after.blocks.filter((b) => b.type === typeKey).map((b) => JSON.parse(b.dataJson) as Record<string, unknown>);
   expect(records.length).toBeGreaterThan(0);
-  expect(records[records.length - 1].data.severity).toBe("P0");
+  expect(records[records.length - 1].severity).toBe("P0");
 });
 
 async function rootBlockID(
-  api: { get<T>(path: string): Promise<T> },
+  cc: ReturnType<typeof makeConnectClient>,
   workspaceID: string,
 ): Promise<string> {
-  const res = await api.get<{ workspaces: Array<{ id: string; root_block_id: string }> }>(
-    `/api/v1/orgs/${orgSlug}/blocks/workspaces`,
-  );
-  return res.workspaces.find((w) => w.id === workspaceID)!.root_block_id;
+  const res = await cc.blockstore.listWorkspaces({ orgSlug }) as {
+    items: Array<{ id: string; rootBlockId?: string }>;
+  };
+  const ws = res.items.find((w) => w.id === workspaceID);
+  if (!ws?.rootBlockId) throw new Error(`workspace ${workspaceID} has no rootBlockId`);
+  return ws.rootBlockId;
 }

@@ -20,7 +20,7 @@ import { usePodCreationData } from "@/components/pod/hooks";
 import { useConfigOptions } from "@/components/ide/hooks";
 import { AgentSelect } from "@/components/pod/CreatePodForm/AgentSelect";
 import { PromptInput } from "@/components/pod/CreatePodForm/PromptInput";
-import type { LoopData } from "@/lib/api/loopTypes";
+import type { LoopData } from "@/lib/viewModels/loop";
 
 import { useLoopForm } from "./useLoopForm";
 import { useLoopEnvBundles } from "./useLoopEnvBundles";

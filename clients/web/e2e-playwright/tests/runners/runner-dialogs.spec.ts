@@ -11,7 +11,7 @@ test.describe("Runner UI Dialogs", () => {
   test.beforeEach(async ({ page }) => {
     const sidebar = new SidebarPage(page, TEST_ORG_SLUG);
     await page.goto(`/${TEST_ORG_SLUG}/runners`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     await sidebar.dismissDevOverlay();
   });
 
@@ -43,7 +43,7 @@ test.describe("Runner UI Dialogs", () => {
     const hasRunner = db.queryValue(
       `SELECT COUNT(*) FROM runners WHERE node_id = 'dev-runner'`
     );
-    if (hasRunner === "0") { test.skip(); return; }
+    expect(hasRunner, "dev seed must include the 'dev-runner' runner").not.toBe("0");
 
     // Find and click Configure button
     const configBtn = page.getByRole("button", { name: /configure|配置/i }).first();
@@ -67,7 +67,7 @@ test.describe("Runner UI Dialogs", () => {
       ON CONFLICT (organization_id, node_id) DO NOTHING
     `);
     await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     // Find delete button for the test runner
     const deleteBtn = page.getByRole("button", { name: /delete|删除/i }).first();

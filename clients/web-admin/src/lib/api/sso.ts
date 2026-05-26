@@ -1,120 +1,147 @@
-import { apiClient } from "./base";
+// Connect-RPC adapter for proto.sso.v1.SSOAdminService.
+//
+// Migrated from REST `/api/v1/admin/sso/configs/*`. Keeps the existing
+// snake_case + number TS surface (`SSOConfig`, `CreateSSOConfigRequest`,
+// `SSOTestResult`) so the page + table + form don't need to change.
+// Proto types are camelCase + bigint; conversion lives in ssoConvert.ts
+// to keep this file under the 200-line cap.
+//
+// Write-only secrets: oidc_client_secret, saml_idp_cert,
+// saml_idp_metadata_xml, ldap_bind_password — transit on Create / Update
+// but never round-trip on AdminSSOConfig (response shape mirrors REST's
+// ToConfigResponse, which strips them server-side).
+import {
+  AdminSSOConfigSchema,
+  CreateSSOConfigRequestSchema,
+  DeleteSSOConfigRequestSchema,
+  DeleteSSOConfigResponseSchema,
+  DisableSSOConfigRequestSchema,
+  EnableSSOConfigRequestSchema,
+  GetSSOConfigRequestSchema,
+  ListSSOConfigsRequestSchema,
+  ListSSOConfigsResponseSchema,
+  SSOAdminService,
+  TestSSOConnectionRequestSchema,
+  TestSSOConnectionResponseSchema,
+  UpdateSSOConfigRequestSchema,
+} from "@proto/sso/v1/sso_admin_pb";
 
-export type SSOProtocol = "oidc" | "saml" | "ldap";
+import { callConnect } from "@/lib/connect/transport";
+import { buildCreateInit, buildUpdateInit, fromProto } from "./ssoConvert";
+import type {
+  CreateSSOConfigRequest,
+  SSOConfig,
+  SSOConfigListParams,
+  SSOTestResult,
+  UpdateSSOConfigRequest,
+} from "./ssoTypes";
 
-export interface SSOConfig {
-  id: number;
-  domain: string;
-  name: string;
-  protocol: SSOProtocol;
-  is_enabled: boolean;
-  enforce_sso: boolean;
-  // OIDC
-  oidc_issuer_url?: string;
-  oidc_client_id?: string;
-  oidc_scopes?: string;
-  // SAML
-  saml_idp_metadata_url?: string;
-  saml_idp_sso_url?: string;
-  saml_sp_entity_id?: string;
-  saml_name_id_format?: string;
-  // LDAP
-  ldap_host?: string;
-  ldap_port?: number;
-  ldap_use_tls?: boolean;
-  ldap_bind_dn?: string;
-  ldap_base_dn?: string;
-  ldap_user_filter?: string;
-  ldap_email_attr?: string;
-  ldap_name_attr?: string;
-  ldap_username_attr?: string;
-  created_at: string;
-  updated_at: string;
-}
+export type {
+  CreateSSOConfigRequest,
+  SSOConfig,
+  SSOConfigListParams,
+  SSOProtocol,
+  SSOTestResult,
+  UpdateSSOConfigRequest,
+} from "./ssoTypes";
 
-export interface SSOConfigListParams {
-  search?: string;
-  protocol?: SSOProtocol;
-  is_enabled?: boolean;
-  page?: number;
-  page_size?: number;
-}
+const SERVICE = "proto.sso.v1.SSOAdminService";
+void SSOAdminService;
 
-export interface CreateSSOConfigRequest {
-  domain: string;
-  name: string;
-  protocol: SSOProtocol;
-  is_enabled?: boolean;
-  enforce_sso?: boolean;
-  // OIDC
-  oidc_issuer_url?: string;
-  oidc_client_id?: string;
-  oidc_client_secret?: string;
-  oidc_scopes?: string;
-  // SAML
-  saml_idp_metadata_url?: string;
-  saml_idp_sso_url?: string;
-  saml_idp_cert?: string;
-  saml_sp_entity_id?: string;
-  saml_name_id_format?: string;
-  // LDAP
-  ldap_host?: string;
-  ldap_port?: number;
-  ldap_use_tls?: boolean;
-  ldap_bind_dn?: string;
-  ldap_bind_password?: string;
-  ldap_base_dn?: string;
-  ldap_user_filter?: string;
-  ldap_email_attr?: string;
-  ldap_name_attr?: string;
-  ldap_username_attr?: string;
-}
-
-export type UpdateSSOConfigRequest = Partial<CreateSSOConfigRequest>;
-
-export interface SSOTestResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  details?: Record<string, unknown>;
-}
-
-export async function listSSOConfigs(params?: SSOConfigListParams): Promise<{ data: SSOConfig[]; total: number }> {
-  const queryParams: Record<string, string | number | undefined> = {};
-  if (params) {
-    if (params.search) queryParams.search = params.search;
-    if (params.protocol) queryParams.protocol = params.protocol;
-    if (params.is_enabled !== undefined) queryParams.is_enabled = params.is_enabled ? "true" : "false";
-    if (params.page) queryParams.page = params.page;
-    if (params.page_size) queryParams.page_size = params.page_size;
-  }
-  return apiClient.get<{ data: SSOConfig[]; total: number }>("/sso/configs", queryParams);
+export async function listSSOConfigs(
+  params?: SSOConfigListParams,
+): Promise<{ data: SSOConfig[]; total: number }> {
+  const resp = await callConnect(
+    SERVICE,
+    "ListSSOConfigs",
+    ListSSOConfigsRequestSchema,
+    ListSSOConfigsResponseSchema,
+    {
+      search: params?.search ?? "",
+      protocol: params?.protocol ?? "",
+      page: params?.page ?? 0,
+      pageSize: params?.page_size ?? 0,
+    },
+  );
+  return { data: resp.data.map(fromProto), total: Number(resp.total) };
 }
 
 export async function getSSOConfig(id: number): Promise<SSOConfig> {
-  return apiClient.get<SSOConfig>(`/sso/configs/${id}`);
+  const resp = await callConnect(
+    SERVICE,
+    "GetSSOConfig",
+    GetSSOConfigRequestSchema,
+    AdminSSOConfigSchema,
+    { id: BigInt(id) },
+  );
+  return fromProto(resp);
 }
 
 export async function createSSOConfig(data: CreateSSOConfigRequest): Promise<SSOConfig> {
-  return apiClient.post<SSOConfig>("/sso/configs", data);
+  const resp = await callConnect(
+    SERVICE,
+    "CreateSSOConfig",
+    CreateSSOConfigRequestSchema,
+    AdminSSOConfigSchema,
+    buildCreateInit(data),
+  );
+  return fromProto(resp);
 }
 
-export async function updateSSOConfig(id: number, data: UpdateSSOConfigRequest): Promise<SSOConfig> {
-  return apiClient.put<SSOConfig>(`/sso/configs/${id}`, data);
+export async function updateSSOConfig(
+  id: number,
+  data: UpdateSSOConfigRequest,
+): Promise<SSOConfig> {
+  const resp = await callConnect(
+    SERVICE,
+    "UpdateSSOConfig",
+    UpdateSSOConfigRequestSchema,
+    AdminSSOConfigSchema,
+    buildUpdateInit(id, data),
+  );
+  return fromProto(resp);
 }
 
 export async function deleteSSOConfig(id: number): Promise<{ message: string }> {
-  return apiClient.delete<{ message: string }>(`/sso/configs/${id}`);
+  await callConnect(
+    SERVICE,
+    "DeleteSSOConfig",
+    DeleteSSOConfigRequestSchema,
+    DeleteSSOConfigResponseSchema,
+    { id: BigInt(id) },
+  );
+  return { message: "SSO config deleted" };
 }
 
 export async function enableSSOConfig(id: number): Promise<SSOConfig> {
-  return apiClient.post<SSOConfig>(`/sso/configs/${id}/enable`);
+  const resp = await callConnect(
+    SERVICE,
+    "EnableSSOConfig",
+    EnableSSOConfigRequestSchema,
+    AdminSSOConfigSchema,
+    { id: BigInt(id) },
+  );
+  return fromProto(resp);
 }
 
 export async function disableSSOConfig(id: number): Promise<SSOConfig> {
-  return apiClient.post<SSOConfig>(`/sso/configs/${id}/disable`);
+  const resp = await callConnect(
+    SERVICE,
+    "DisableSSOConfig",
+    DisableSSOConfigRequestSchema,
+    AdminSSOConfigSchema,
+    { id: BigInt(id) },
+  );
+  return fromProto(resp);
 }
 
 export async function testSSOConfig(id: number): Promise<SSOTestResult> {
-  return apiClient.post<SSOTestResult>(`/sso/configs/${id}/test`);
+  const resp = await callConnect(
+    SERVICE,
+    "TestSSOConnection",
+    TestSSOConnectionRequestSchema,
+    TestSSOConnectionResponseSchema,
+    { id: BigInt(id) },
+  );
+  return { success: resp.success, message: resp.message, error: resp.error };
 }

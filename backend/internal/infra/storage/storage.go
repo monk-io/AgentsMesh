@@ -17,6 +17,10 @@ type FileInfo struct {
 type Storage interface {
 	Upload(ctx context.Context, key string, reader io.Reader, size int64, contentType string) (*FileInfo, error)
 
+	// Download streams object bytes back. Callers MUST Close() the reader.
+	// Returned size is the storage-reported Content-Length (-1 if unknown).
+	Download(ctx context.Context, key string) (io.ReadCloser, int64, error)
+
 	Delete(ctx context.Context, key string) error
 
 	GetURL(ctx context.Context, key string, expiry time.Duration) (string, error)

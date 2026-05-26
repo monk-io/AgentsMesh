@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "../../fixtures/index";
+import { test, expect } from "../../fixtures/index";
+import { type Page } from "@playwright/test";
 import { LoginPage } from "../../pages/login.page";
 import { TEST_USER, TEST_ORG_SLUG, getWebBaseUrl } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -25,7 +26,7 @@ async function seedLightSession(
   const baseUrl = getWebBaseUrl();
   const expiresAt = Math.floor(Date.now() / 1000) + 3600;
   await page.addInitScript(
-    ({ tokens, baseUrl, expiresAt }) => {
+    ({ tokens, baseUrl, expiresAt }: { tokens: { token: string; refresh_token: string }; baseUrl: string; expiresAt: number }) => {
       const blob = {
         access_token: tokens.token,
         refresh_token: tokens.refresh_token,

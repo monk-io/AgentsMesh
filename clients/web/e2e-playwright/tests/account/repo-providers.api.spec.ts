@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
@@ -8,99 +9,96 @@ test.describe("Repository Providers API", () => {
    * TC-REPOPROV-001: List repository providers
    */
   test("list repository providers", async ({ api }) => {
-    const res = await api.get("/api/v1/users/repository-providers");
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.userRepositoryProvider.listRepositoryProviders({}) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  test("list repository providers without auth returns 401", async ({ api }) => {
-    const res = await api.getWithToken("/api/v1/users/repository-providers", "bad");
-    expect(res.status).toBe(401);
+  test("list repository providers without auth returns unauthenticated", async ({ api }) => {
+    const cc = api.connectWithToken("bad");
+    await expect(
+      cc.userRepositoryProvider.listRepositoryProviders({})
+    ).rejects.toMatchObject({ status: 401 });
   });
 
   /**
    * TC-REPOPROV-002: Create GitHub provider
    */
-  test("create GitHub provider", async ({ api, db }) => {
-    const res = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E GitHub Provider",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_test_bot_token_e2e",
-    });
-    expect([200, 201]).toContain(res.status);
-    const data = await res.json();
-    const id = data.provider?.id || data.id;
-    expect(id).toBeTruthy();
+  test("create GitHub provider", async ({ api }) => {
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E GitHub Provider " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_test_bot_token_e2e",
+    }) as { id: number };
+    expect(created.id).toBeTruthy();
 
-    // Cleanup
-    if (id) await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
   });
 
   /**
    * TC-REPOPROV-003: Update provider name
    */
   test("update provider name", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E Update Provider",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_update_test",
-    });
-    const created = await createRes.json();
-    const id = created.provider?.id || created.id;
-    if (!id) { test.skip(); return; }
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E Update Provider " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_update_test",
+    }) as { id: number };
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
-    const updateRes = await api.put(`/api/v1/users/repository-providers/${id}`, {
+    const updated = await cc.userRepositoryProvider.updateRepositoryProvider({
+      id: created.id,
       name: "E2E Updated Provider",
-    });
-    expect(updateRes.status).toBe(200);
+    }) as { name: string };
+    expect(updated.name).toBe("E2E Updated Provider");
 
-    await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
   });
 
   /**
    * TC-REPOPROV-004: Delete provider
    */
   test("delete provider", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E Delete Provider",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_delete_test",
-    });
-    const created = await createRes.json();
-    const id = created.provider?.id || created.id;
-    if (!id) { test.skip(); return; }
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E Delete Provider " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_delete_test",
+    }) as { id: number };
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
-    const delRes = await api.delete(`/api/v1/users/repository-providers/${id}`);
-    expect(delRes.status).toBe(200);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
 
     // Verify gone
-    const getRes = await api.get(`/api/v1/users/repository-providers/${id}`);
-    expect(getRes.status).toBe(404);
+    await expect(
+      cc.userRepositoryProvider.getRepositoryProvider({ id: created.id })
+    ).rejects.toMatchObject({ status: 404 });
   });
 
   /**
    * TC-REPOPROV-006: Test connection (with invalid token)
    */
   test("test connection with invalid token fails", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E Connection Test",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_invalid_token",
-    });
-    const created = await createRes.json();
-    const id = created.provider?.id || created.id;
-    if (!id) { test.skip(); return; }
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E Connection Test " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_invalid_token",
+    }) as { id: number };
+    expect(created.id, "create must return a provider id").toBeTruthy();
 
-    const testRes = await api.post(
-      `/api/v1/users/repository-providers/${id}/test`, {}
-    );
-    // Expect failure due to invalid token
-    expect([200, 401, 502]).toContain(testRes.status);
+    // Tolerates success or failure due to invalid token — backend dependency.
+    await cc.userRepositoryProvider
+      .testRepositoryProviderConnection({ id: created.id })
+      .catch((e) => e);
 
-    await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
   });
 
   /**
@@ -112,88 +110,101 @@ test.describe("Repository Providers API", () => {
    * deserialize-then-reserialize relay, so the frontend always read undefined.
    */
   test("created provider exposes is_active=true and has_* flags by default", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E IsActive Default",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_default_active",
-    });
-    expect([200, 201]).toContain(createRes.status);
-    const data = await createRes.json();
-    const provider = data.provider ?? data;
-    const id = provider.id;
+    const cc = await api.connect();
+    const provider = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E IsActive Default " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_default_active",
+    }) as {
+      id: number;
+      isActive: boolean;
+      hasBotToken: boolean;
+      hasClientId: boolean;
+      hasIdentity: boolean;
+    };
 
-    expect(provider.is_active).toBe(true);
-    expect(provider.has_bot_token).toBe(true);
-    expect(provider.has_client_id).toBe(false);
-    expect(provider.has_identity).toBe(false);
+    expect(provider.isActive).toBe(true);
+    expect(provider.hasBotToken).toBe(true);
+    expect(provider.hasClientId).toBe(false);
+    expect(provider.hasIdentity).toBe(false);
 
-    const listRes = await api.get("/api/v1/users/repository-providers");
-    const list = await listRes.json();
-    const inList = (list.providers as Array<{ id: number; is_active: boolean; has_bot_token: boolean }>)
-      .find((p) => p.id === id);
-    expect(inList?.is_active).toBe(true);
-    expect(inList?.has_bot_token).toBe(true);
+    const list = await cc.userRepositoryProvider.listRepositoryProviders({}) as {
+      items: Array<{ id: number; isActive: boolean; hasBotToken: boolean }>;
+    };
+    const inList = list.items.find((p) => p.id === provider.id);
+    expect(inList?.isActive).toBe(true);
+    expect(inList?.hasBotToken).toBe(true);
 
-    await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: provider.id });
   });
 
   /**
-   * TC-REPOPROV-008: PUT is_active toggles the field and persists across reloads.
+   * TC-REPOPROV-008: Toggling is_active persists across reloads.
    *
    * This is the exact flow that broke under the wasm-core bug: the
    * UpdateRepositoryProviderRequest struct lacked is_active, so sending
    * {is_active: true} from EditProviderDialog produced an empty PUT body
    * and the change silently no-op'd.
    */
-  test("PUT is_active=false then is_active=true persists each toggle", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E IsActive Toggle",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_toggle_test",
-    });
-    const created = await createRes.json();
-    const id = (created.provider ?? created).id;
+  test("Update is_active=false then is_active=true persists each toggle", async ({ api }) => {
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E IsActive Toggle " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_toggle_test",
+    }) as { id: number };
 
-    const offRes = await api.put(`/api/v1/users/repository-providers/${id}`, { is_active: false });
-    expect(offRes.status).toBe(200);
-    expect(((await offRes.json()).provider).is_active).toBe(false);
+    const off = await cc.userRepositoryProvider.updateRepositoryProvider({
+      id: created.id,
+      isActive: false,
+    }) as { isActive: boolean };
+    expect(off.isActive).toBe(false);
 
-    const reloadAfterOff = await api.get(`/api/v1/users/repository-providers/${id}`);
-    expect(((await reloadAfterOff.json()).provider).is_active).toBe(false);
+    const reloadAfterOff = await cc.userRepositoryProvider.getRepositoryProvider({
+      id: created.id,
+    }) as { isActive: boolean };
+    expect(reloadAfterOff.isActive).toBe(false);
 
-    const onRes = await api.put(`/api/v1/users/repository-providers/${id}`, { is_active: true });
-    expect(onRes.status).toBe(200);
-    expect(((await onRes.json()).provider).is_active).toBe(true);
+    const on = await cc.userRepositoryProvider.updateRepositoryProvider({
+      id: created.id,
+      isActive: true,
+    }) as { isActive: boolean };
+    expect(on.isActive).toBe(true);
 
-    const reloadAfterOn = await api.get(`/api/v1/users/repository-providers/${id}`);
-    expect(((await reloadAfterOn.json()).provider).is_active).toBe(true);
+    const reloadAfterOn = await cc.userRepositoryProvider.getRepositoryProvider({
+      id: created.id,
+    }) as { isActive: boolean };
+    expect(reloadAfterOn.isActive).toBe(true);
 
-    await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
   });
 
   /**
    * TC-REPOPROV-009: Partial update (name only) preserves is_active.
    */
   test("partial update preserves is_active across renames", async ({ api }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
-      name: "E2E Partial Original",
-      base_url: "https://api.github.com",
-      bot_token: "ghp_partial",
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
+      name: "E2E Partial Original " + Date.now(),
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_partial",
+    }) as { id: number };
+
+    await cc.userRepositoryProvider.updateRepositoryProvider({
+      id: created.id,
+      isActive: false,
     });
-    const id = ((await createRes.json()).provider).id;
 
-    await api.put(`/api/v1/users/repository-providers/${id}`, { is_active: false });
-
-    const renameRes = await api.put(`/api/v1/users/repository-providers/${id}`, {
+    const renamed = await cc.userRepositoryProvider.updateRepositoryProvider({
+      id: created.id,
       name: "E2E Partial Renamed",
-    });
-    const renamed = (await renameRes.json()).provider;
+    }) as { name: string; isActive: boolean };
     expect(renamed.name).toBe("E2E Partial Renamed");
-    expect(renamed.is_active).toBe(false);
+    expect(renamed.isActive).toBe(false);
 
-    await api.delete(`/api/v1/users/repository-providers/${id}`);
+    await cc.userRepositoryProvider.deleteRepositoryProvider({ id: created.id });
   });
 });

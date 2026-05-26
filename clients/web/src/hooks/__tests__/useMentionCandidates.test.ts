@@ -32,7 +32,7 @@ vi.mock("@/lib/pod-display-name", () => ({
   getShortPodKey: (key: string) => key.substring(0, 8),
 }));
 
-vi.mock("@/lib/api/organization", () => ({
+vi.mock("@/lib/api/facade/organization", () => ({
   organizationApi: {
     listMembers: vi.fn().mockResolvedValue({
       members: [
@@ -66,7 +66,7 @@ vi.mock("@/lib/wasm-core", async () => {
   };
 });
 
-vi.mock("@/lib/api/channel", () => ({
+vi.mock("@/lib/api/facade/channel", () => ({
   channelApi: {
     getPods: vi.fn(async (id: number) => {
       // Simulate the real path: channelApi.getPods goes through WASM which
@@ -172,7 +172,7 @@ describe("useMentionCandidates", () => {
   });
 
   it("handles member fetch error gracefully", async () => {
-    const { organizationApi } = await import("@/lib/api/organization");
+    const { organizationApi } = await import("@/lib/api/facade/organization");
     vi.mocked(organizationApi.listMembers).mockRejectedValueOnce(new Error("network error"));
 
     const { result } = renderHook(() =>
@@ -187,7 +187,7 @@ describe("useMentionCandidates", () => {
   });
 
   it("handles pod fetch error gracefully", async () => {
-    const { channelApi } = await import("@/lib/api/channel");
+    const { channelApi } = await import("@/lib/api/facade/channel");
     vi.mocked(channelApi.getPods).mockRejectedValueOnce(new Error("pod fetch failed"));
 
     const { result } = renderHook(() =>

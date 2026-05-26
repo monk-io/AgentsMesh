@@ -1,6 +1,5 @@
-
 use agentsmesh_state::runner_state::RunnerState;
-use agentsmesh_types::Runner;
+use agentsmesh_types::proto_runner_api_v1::Runner;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -70,8 +69,7 @@ impl WasmRunnerState {
     }
 
     pub fn update_runner_status(&mut self, id: i64, status: &str) {
-        let parsed = crate::parse_status::<agentsmesh_types::RunnerStatus>(status);
-        self.inner.update_runner_status(id, parsed);
+        self.inner.update_runner_status(id, status);
     }
 
     pub fn remove_runner(&mut self, id: i64) {

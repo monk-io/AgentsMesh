@@ -38,6 +38,14 @@ func (m *packagerMockStorage) Upload(_ context.Context, key string, reader io.Re
 
 func (m *packagerMockStorage) Delete(_ context.Context, _ string) error { return nil }
 
+func (m *packagerMockStorage) Download(_ context.Context, key string) (io.ReadCloser, int64, error) {
+	data, ok := m.uploaded[key]
+	if !ok {
+		return nil, 0, errors.New("not found")
+	}
+	return io.NopCloser(bytes.NewReader(data)), int64(len(data)), nil
+}
+
 func (m *packagerMockStorage) GetURL(_ context.Context, key string, _ time.Duration) (string, error) {
 	return "https://mock/" + key, nil
 }

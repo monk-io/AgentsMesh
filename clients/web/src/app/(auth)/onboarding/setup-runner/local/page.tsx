@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import type { RunnerData } from "@/lib/api/runnerTypes";
+import type { RunnerData } from "@/lib/viewModels/runner";
 import { isApiErrorCode } from "@/lib/api/errors";
 import { lightCreateRunnerToken, lightListRunners } from "@/lib/light-auth";
 import { useLightSession } from "@/hooks/useLightSession";

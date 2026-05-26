@@ -1,5 +1,5 @@
 import { usePodStore } from "@/stores/pod";
-import { getPodService } from "@/lib/wasm-core";
+import { getPodState } from "@/lib/wasm-core";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useMeshStore } from "@/stores/mesh";
 import type { DebounceRef } from "./realtimeEventHandlers";
@@ -44,7 +44,7 @@ export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: Deboun
     case "pod:status_changed": {
       const data = event.data as PodStatusChangedData;
       const podState = usePodStore.getState();
-      const existingPodJson = getPodService().get_pod_json(data.pod_key);
+      const existingPodJson = getPodState().get_pod_json(data.pod_key);
       if (!existingPodJson) {
         podState.fetchPod?.(data.pod_key);
       } else {

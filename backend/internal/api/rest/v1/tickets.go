@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	ticketDomain "github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
@@ -10,15 +11,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TicketHandler handles REST surfaces that survived the proto.ticket.v1
+// migration. User-facing CRUD/board/labels/assignees moved to the Connect
+// handler in backend/internal/api/connect/ticket; the methods here back
+// the third-party API key callers in routes_ext.go (ListTickets / GetBoard /
+// GetTicket / CreateTicket / UpdateTicket / UpdateTicketStatus / DeleteTicket).
 type TicketHandler struct {
 	ticketService *ticket.Service
 }
 
 func NewTicketHandler(ticketService *ticket.Service) *TicketHandler {
-	return &TicketHandler{
-		ticketService: ticketService,
-	}
+	return &TicketHandler{ticketService: ticketService}
 }
+
+// ========== Request Types (ext routes) ==========
 
 type ListTicketsRequest struct {
 	RepositoryID *int64   `form:"repository_id"`
@@ -44,34 +50,32 @@ type CreateTicketRequest struct {
 }
 
 type UpdateTicketRequest struct {
-	Title        string   `json:"title"`
-	Content      *string  `json:"content"`
-	Status       string   `json:"status"`
-	Priority     string   `json:"priority"`
-	RepositoryID *int64   `json:"repository_id"`
-	AssigneeIDs  []int64  `json:"assignee_ids"`
-	Labels       []string `json:"labels"`
-	DueDate      *string  `json:"due_date"`
+	Title        string  `json:"title"`
+	Content      *string `json:"content"`
+	Status       string  `json:"status"`
+	Priority     string  `json:"priority"`
+	RepositoryID *int64  `json:"repository_id"`
+	DueDate      *string `json:"due_date"`
 }
 
 type UpdateTicketStatusRequest struct {
 	Status string `json:"status" binding:"required"`
 }
 
+// ========== Handlers backing routes_ext.go ==========
+
+// GET /api/v1/organizations/:slug/tickets
 func (h *TicketHandler) ListTickets(c *gin.Context) {
 	var req ListTicketsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		apierr.ValidationError(c, err.Error())
 		return
 	}
-
 	tenant := middleware.GetTenant(c)
-
 	limit := req.Limit
 	if limit == 0 {
 		limit = 20
 	}
-
 	tickets, total, err := h.ticketService.ListTickets(c.Request.Context(), &ticketDomain.TicketListFilter{
 		OrganizationID: tenant.OrganizationID,
 		RepositoryID:   req.RepositoryID,
@@ -87,7 +91,6 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 		apierr.InternalError(c, "Failed to list tickets")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"tickets": tickets,
 		"total":   total,
@@ -96,20 +99,18 @@ func (h *TicketHandler) ListTickets(c *gin.Context) {
 	})
 }
 
+// POST /api/v1/organizations/:slug/tickets
 func (h *TicketHandler) CreateTicket(c *gin.Context) {
 	var req CreateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apierr.ValidationError(c, err.Error())
 		return
 	}
-
 	tenant := middleware.GetTenant(c)
-
 	var content *string
 	if req.Content != "" {
 		content = &req.Content
 	}
-
 	var parentTicketID *int64
 	if req.ParentTicketSlug != nil && *req.ParentTicketSlug != "" {
 		parent, err := h.ticketService.GetTicketByIDOrSlug(c.Request.Context(), tenant.OrganizationID, *req.ParentTicketSlug)
@@ -119,7 +120,6 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		}
 		parentTicketID = &parent.ID
 	}
-
 	t, err := h.ticketService.CreateTicket(c.Request.Context(), &ticket.CreateTicketRequest{
 		OrganizationID: tenant.OrganizationID,
 		RepositoryID:   req.RepositoryID,
@@ -136,39 +136,35 @@ func (h *TicketHandler) CreateTicket(c *gin.Context) {
 		apierr.InternalError(c, "Failed to create ticket")
 		return
 	}
-
 	c.JSON(http.StatusCreated, gin.H{"ticket": t})
 }
 
+// GET /api/v1/organizations/:slug/tickets/:ticket_slug
 func (h *TicketHandler) GetTicket(c *gin.Context) {
 	slug := c.Param("ticket_slug")
 	tenant := middleware.GetTenant(c)
-
 	t, err := h.ticketService.GetTicketBySlug(c.Request.Context(), tenant.OrganizationID, slug)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"ticket": t})
 }
 
+// PUT /api/v1/organizations/:slug/tickets/:ticket_slug
 func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 	slug := c.Param("ticket_slug")
 	tenant := middleware.GetTenant(c)
-
 	var req UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apierr.ValidationError(c, err.Error())
 		return
 	}
-
 	t, err := h.ticketService.GetTicketBySlug(c.Request.Context(), tenant.OrganizationID, slug)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
-
 	updates := make(map[string]interface{})
 	if req.Title != "" {
 		updates["title"] = req.Title
@@ -196,62 +192,68 @@ func (h *TicketHandler) UpdateTicket(c *gin.Context) {
 			updates["due_date"] = *req.DueDate
 		}
 	}
-
 	t, err = h.ticketService.UpdateTicket(c.Request.Context(), t.ID, updates)
 	if err != nil {
 		apierr.InternalError(c, "Failed to update ticket")
 		return
 	}
-
-	if req.AssigneeIDs != nil {
-		if err := h.ticketService.UpdateAssignees(c.Request.Context(), t.ID, req.AssigneeIDs); err != nil {
-			apierr.InternalError(c, "Failed to update assignees")
-			return
-		}
-	}
-
 	c.JSON(http.StatusOK, gin.H{"ticket": t})
 }
 
+// DELETE /api/v1/organizations/:slug/tickets/:ticket_slug
 func (h *TicketHandler) DeleteTicket(c *gin.Context) {
 	slug := c.Param("ticket_slug")
 	tenant := middleware.GetTenant(c)
-
 	t, err := h.ticketService.GetTicketBySlug(c.Request.Context(), tenant.OrganizationID, slug)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
-
 	if err := h.ticketService.DeleteTicket(c.Request.Context(), t.ID); err != nil {
 		apierr.InternalError(c, "Failed to delete ticket")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket deleted"})
 }
 
+// PATCH /api/v1/organizations/:slug/tickets/:ticket_slug/status
 func (h *TicketHandler) UpdateTicketStatus(c *gin.Context) {
 	slug := c.Param("ticket_slug")
-
 	var req UpdateTicketStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apierr.ValidationError(c, err.Error())
 		return
 	}
-
 	tenant := middleware.GetTenant(c)
-
 	t, err := h.ticketService.GetTicketBySlug(c.Request.Context(), tenant.OrganizationID, slug)
 	if err != nil {
 		apierr.ResourceNotFound(c, "Ticket not found")
 		return
 	}
-
 	if err := h.ticketService.UpdateStatus(c.Request.Context(), t.ID, req.Status); err != nil {
 		apierr.InternalError(c, "Failed to update status")
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Status updated"})
+}
+
+// GET /api/v1/organizations/:slug/tickets/board (ext route)
+func (h *TicketHandler) GetBoard(c *gin.Context) {
+	tenant := middleware.GetTenant(c)
+	filter := &ticketDomain.TicketListFilter{
+		OrganizationID: tenant.OrganizationID,
+		UserRole:       tenant.UserRole,
+		Limit:          50,
+	}
+	if repoIDStr := c.Query("repository_id"); repoIDStr != "" {
+		if id, err := strconv.ParseInt(repoIDStr, 10, 64); err == nil {
+			filter.RepositoryID = &id
+		}
+	}
+	board, err := h.ticketService.GetBoard(c.Request.Context(), filter)
+	if err != nil {
+		apierr.InternalError(c, "Failed to get board")
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"board": board})
 }

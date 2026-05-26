@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Block, SummaryColumn } from "@/lib/api/blockstoreTypes";
+import type { Block, SummaryColumn } from "@/lib/viewModels/blockstore";
 
 import { computeAggregate } from "./SummaryBar";
 

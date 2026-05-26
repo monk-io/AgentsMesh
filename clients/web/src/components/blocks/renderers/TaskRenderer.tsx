@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
-import { BLOCK_TYPE_TASK } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
+import { BLOCK_TYPE_TASK } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 
 import { NestChildren } from "../BlockRenderer";

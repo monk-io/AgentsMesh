@@ -1,175 +1,133 @@
 use crate::ApiClient;
+use crate::connect_call::connect_call;
 use crate::error::ApiError;
-use agentsmesh_types::*;
+use agentsmesh_types::proto_ticket_v1 as ticket_proto;
+
+// =============================================================================
+// Connect-RPC (binary wire). See proto-naming-conventions.md §2.5.
+// =============================================================================
+//
+// These methods call the Connect handlers in
+// backend/internal/api/connect/ticket/. Procedure paths derive from
+// `proto.ticket.v1.TicketService.<Method>` (conventions §12).
 
 impl ApiClient {
-    pub async fn list_tickets(
+    pub async fn list_tickets_connect(
         &self,
-        status: Option<&str>,
-        limit: Option<u32>,
-        offset: Option<u32>,
-    ) -> Result<TicketListResponse, ApiError> {
-        let mut path = self.org_path("/tickets");
-        let mut params = Vec::new();
-        if let Some(s) = status {
-            params.push(format!("status={s}"));
-        }
-        if let Some(l) = limit {
-            params.push(format!("limit={l}"));
-        }
-        if let Some(o) = offset {
-            params.push(format!("offset={o}"));
-        }
-        if !params.is_empty() {
-            path = format!("{path}?{}", params.join("&"));
-        }
-        self.get(&path).await
+        req: &ticket_proto::ListTicketsRequest,
+    ) -> Result<ticket_proto::ListTicketsResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/ListTickets", req).await
     }
 
-    pub async fn get_ticket(&self, slug: &str) -> Result<Ticket, ApiError> {
-        self.get_resource(&self.org_path(&format!("/tickets/{slug}")), "ticket").await
-    }
-
-    pub async fn create_ticket(&self, data: &CreateTicketRequest) -> Result<Ticket, ApiError> {
-        self.post_resource(&self.org_path("/tickets"), data, "ticket").await
-    }
-
-    pub async fn update_ticket(
+    pub async fn get_ticket_connect(
         &self,
-        slug: &str,
-        data: &UpdateTicketRequest,
-    ) -> Result<Ticket, ApiError> {
-        self.put_resource(&self.org_path(&format!("/tickets/{slug}")), data, "ticket").await
+        req: &ticket_proto::GetTicketRequest,
+    ) -> Result<ticket_proto::Ticket, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/GetTicket", req).await
     }
 
-    pub async fn delete_ticket(&self, slug: &str) -> Result<EmptyResponse, ApiError> {
-        self.delete(&self.org_path(&format!("/tickets/{slug}")))
-            .await
-    }
-
-    pub async fn update_ticket_status(
+    pub async fn create_ticket_connect(
         &self,
-        slug: &str,
-        data: &UpdateTicketStatusRequest,
-    ) -> Result<Ticket, ApiError> {
-        self.patch(&self.org_path(&format!("/tickets/{slug}/status")), data)
-            .await
+        req: &ticket_proto::CreateTicketRequest,
+    ) -> Result<ticket_proto::Ticket, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/CreateTicket", req).await
     }
 
-    pub async fn get_active_tickets(
+    pub async fn update_ticket_connect(
         &self,
-        limit: Option<u32>,
-    ) -> Result<TicketListResponse, ApiError> {
-        let mut path = self.org_path("/tickets/active");
-        if let Some(l) = limit {
-            path = format!("{path}?limit={l}");
-        }
-        self.get(&path).await
+        req: &ticket_proto::UpdateTicketRequest,
+    ) -> Result<ticket_proto::Ticket, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/UpdateTicket", req).await
     }
 
-    pub async fn get_ticket_board(
+    pub async fn delete_ticket_connect(
         &self,
-        repository_id: Option<i64>,
-    ) -> Result<BoardResponse, ApiError> {
-        let mut path = self.org_path("/tickets/board");
-        if let Some(id) = repository_id {
-            path = format!("{path}?repository_id={id}");
-        }
-        self.get_resource(&path, "board").await
+        req: &ticket_proto::DeleteTicketRequest,
+    ) -> Result<ticket_proto::DeleteTicketResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/DeleteTicket", req).await
     }
 
-    pub async fn get_sub_tickets(&self, slug: &str) -> Result<TicketListResponse, ApiError> {
-        self.get(&self.org_path(&format!("/tickets/{slug}/sub-tickets")))
-            .await
-    }
-
-    pub async fn list_labels(
+    pub async fn update_ticket_status_connect(
         &self,
-        repository_id: Option<i64>,
-    ) -> Result<LabelListResponse, ApiError> {
-        let mut path = self.org_path("/labels");
-        if let Some(id) = repository_id {
-            path = format!("{path}?repository_id={id}");
-        }
-        self.get(&path).await
+        req: &ticket_proto::UpdateTicketStatusRequest,
+    ) -> Result<ticket_proto::UpdateTicketStatusResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/UpdateTicketStatus", req).await
     }
 
-    pub async fn create_label(&self, data: &CreateLabelRequest) -> Result<Label, ApiError> {
-        self.post(&self.org_path("/labels"), data).await
-    }
-
-    pub async fn update_label(
+    pub async fn get_active_tickets_connect(
         &self,
-        id: i64,
-        data: &UpdateLabelRequest,
-    ) -> Result<Label, ApiError> {
-        self.put(&self.org_path(&format!("/labels/{id}")), data)
-            .await
+        req: &ticket_proto::GetActiveTicketsRequest,
+    ) -> Result<ticket_proto::ListTicketsResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/GetActiveTickets", req).await
     }
 
-    pub async fn delete_label(&self, id: i64) -> Result<EmptyResponse, ApiError> {
-        self.delete(&self.org_path(&format!("/labels/{id}"))).await
-    }
-
-    pub async fn add_ticket_assignee(
+    pub async fn get_board_connect(
         &self,
-        slug: &str,
-        data: &AddAssigneeRequest,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.post(
-            &self.org_path(&format!("/tickets/{slug}/assignees")),
-            data,
-        )
-        .await
+        req: &ticket_proto::GetBoardRequest,
+    ) -> Result<ticket_proto::Board, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/GetBoard", req).await
     }
 
-    pub async fn remove_ticket_assignee(
+    pub async fn get_sub_tickets_connect(
         &self,
-        slug: &str,
-        user_id: i64,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.delete(&self.org_path(&format!("/tickets/{slug}/assignees/{user_id}")))
-            .await
+        req: &ticket_proto::GetSubTicketsRequest,
+    ) -> Result<ticket_proto::ListTicketsResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/GetSubTickets", req).await
     }
 
-    pub async fn get_ticket_pods(
+    pub async fn add_assignee_connect(
         &self,
-        slug: &str,
-        active_only: Option<bool>,
-    ) -> Result<PodListResponse, ApiError> {
-        let mut path = self.org_path(&format!("/tickets/{slug}/pods"));
-        if let Some(active) = active_only {
-            path = format!("{path}?active={active}");
-        }
-        self.get(&path).await
+        req: &ticket_proto::AddAssigneeRequest,
+    ) -> Result<ticket_proto::AddAssigneeResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/AddAssignee", req).await
     }
 
-    pub async fn batch_get_ticket_pods(
+    pub async fn remove_assignee_connect(
         &self,
-        data: &BatchPodRequest,
-    ) -> Result<serde_json::Value, ApiError> {
-        self.post(&self.org_path("/tickets/batch-pods"), data)
-            .await
+        req: &ticket_proto::RemoveAssigneeRequest,
+    ) -> Result<ticket_proto::RemoveAssigneeResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/RemoveAssignee", req).await
     }
 
-    pub async fn add_ticket_label(
+    pub async fn list_labels_connect(
         &self,
-        slug: &str,
-        data: &AddTicketLabelRequest,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.post(
-            &self.org_path(&format!("/tickets/{slug}/labels")),
-            data,
-        )
-        .await
+        req: &ticket_proto::ListLabelsRequest,
+    ) -> Result<ticket_proto::ListLabelsResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/ListLabels", req).await
     }
 
-    pub async fn remove_ticket_label(
+    pub async fn create_label_connect(
         &self,
-        slug: &str,
-        label_id: i64,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.delete(&self.org_path(&format!("/tickets/{slug}/labels/{label_id}")))
-            .await
+        req: &ticket_proto::CreateLabelRequest,
+    ) -> Result<ticket_proto::Label, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/CreateLabel", req).await
+    }
+
+    pub async fn update_label_connect(
+        &self,
+        req: &ticket_proto::UpdateLabelRequest,
+    ) -> Result<ticket_proto::Label, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/UpdateLabel", req).await
+    }
+
+    pub async fn delete_label_connect(
+        &self,
+        req: &ticket_proto::DeleteLabelRequest,
+    ) -> Result<ticket_proto::DeleteLabelResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/DeleteLabel", req).await
+    }
+
+    pub async fn add_label_connect(
+        &self,
+        req: &ticket_proto::AddLabelRequest,
+    ) -> Result<ticket_proto::AddLabelResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/AddLabel", req).await
+    }
+
+    pub async fn remove_label_connect(
+        &self,
+        req: &ticket_proto::RemoveLabelRequest,
+    ) -> Result<ticket_proto::RemoveLabelResponse, ApiError> {
+        connect_call(self, "/proto.ticket.v1.TicketService/RemoveLabel", req).await
     }
 }

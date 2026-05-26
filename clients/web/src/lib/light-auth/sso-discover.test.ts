@@ -44,12 +44,12 @@ describe("lightDiscoverSSO", () => {
   });
 
   it("returns the configs array when SSO is configured for the domain", async () => {
-    const fetchSpy = vi.fn(async () =>
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
-          configs: [
-            { domain: "b.c", name: "Corp OIDC", protocol: "oidc", enforce_sso: true },
-            { domain: "b.c", name: "Corp LDAP", protocol: "ldap", enforce_sso: false },
+          items: [
+            { domain: "b.c", name: "Corp OIDC", protocol: "oidc", enforceSso: true },
+            { domain: "b.c", name: "Corp LDAP", protocol: "ldap", enforceSso: false },
           ],
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -61,36 +61,32 @@ describe("lightDiscoverSSO", () => {
 
     expect(configs).toHaveLength(2);
     expect(configs[0].protocol).toBe("oidc");
-    const [url] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(
-      `${ORIGIN}/api/v1/auth/sso/discover?email=user%40b.c`,
-    );
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(String(url)).toBe(`${ORIGIN}/proto.sso.v1.SSOService/Discover`);
+    expect((init as RequestInit).method).toBe("POST");
+    expect((init as RequestInit).body).toBe(JSON.stringify({ email: "user@b.c" }));
   });
 
-  it("returns [] when 200 response has no configs field", async () => {
-    globalThis.fetch = vi.fn(async () =>
+  it("returns [] when 200 response has no items field", async () => {
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response("{}", { status: 200 }),
     ) as typeof fetch;
     const configs = await lightDiscoverSSO("user@b.c");
     expect(configs).toEqual([]);
   });
 
-  it("propagates ApiError on server failure", async () => {
-    globalThis.fetch = vi.fn(async () =>
+  it("swallows server errors and returns [] (best-effort fallback)", async () => {
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "INTERNAL" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       }),
     ) as typeof fetch;
 
-    let caught: unknown = null;
-    try {
-      await lightDiscoverSSO("user@b.c");
-    } catch (e) {
-      caught = e;
-    }
-    expect(caught).toBeInstanceOf(ApiError);
-    expect((caught as ApiError).status).toBe(500);
+    // Production-side lightDiscoverSSO wraps the call in try/catch and returns []
+    // on any failure — login page treats SSO discovery as advisory.
+    const configs = await lightDiscoverSSO("user@b.c");
+    expect(configs).toEqual([]);
   });
 });
 
@@ -107,13 +103,17 @@ describe("lightLdapAuth", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /sso/:domain/ldap and persists session on 200", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs to SSOService/LdapAuth and persists session on 200", async () => {
+    // LdapAuthResponse proto: token + refresh_token + expires_at (RFC3339) + token_type + user.
+    // Connect-JSON serializes those as camelCase.
+    const futureIso = new Date(Date.now() + 3600_000).toISOString();
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           token: "ldap-tok",
-          refresh_token: "ldap-ref",
-          expires_in: 3600,
+          refreshToken: "ldap-ref",
+          expiresAt: futureIso,
+          tokenType: "Bearer",
           user: { id: 11, email: "u@b.c", username: "u" },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -129,20 +129,19 @@ describe("lightLdapAuth", () => {
 
     expect(resp.token).toBe("ldap-tok");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(
-      `${ORIGIN}/api/v1/auth/sso/corp.example/ldap`,
-    );
+    expect(String(url)).toBe(`${ORIGIN}/proto.sso.v1.SSOService/LdapAuth`);
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(
-      JSON.stringify({ username: "alice", password: "p@ss" }),
+      JSON.stringify({ domain: "corp.example", username: "alice", password: "p@ss" }),
     );
     expect(readBlob().access_token).toBe("ldap-tok");
   });
 
-  it("URL-encodes domain segment with special chars", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("sends domain as part of the JSON body (Connect-RPC, no URL encoding)", async () => {
+    const futureIso = new Date(Date.now() + 3600_000).toISOString();
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
-        JSON.stringify({ token: "t", refresh_token: "r", expires_in: 3600 }),
+        JSON.stringify({ token: "t", refreshToken: "r", expiresAt: futureIso }),
         { status: 200 },
       ),
     );
@@ -150,12 +149,15 @@ describe("lightLdapAuth", () => {
 
     await lightLdapAuth({ domain: "ns/corp", username: "u", password: "p" });
 
-    const [url] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/auth/sso/ns%2Fcorp/ldap`);
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(String(url)).toBe(`${ORIGIN}/proto.sso.v1.SSOService/LdapAuth`);
+    expect((init as RequestInit).body).toBe(
+      JSON.stringify({ domain: "ns/corp", username: "u", password: "p" }),
+    );
   });
 
   it("throws ApiError on bad credentials without persisting", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "BAD_CREDENTIALS" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },

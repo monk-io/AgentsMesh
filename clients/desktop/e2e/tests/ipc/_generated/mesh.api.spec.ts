@@ -1,91 +1,67 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · mesh", () => {
-  test("mesh_topology_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_topology_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshBatchGetTicketPodsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshBatchGetTicketPodsConnect", returnType: "any" });
   });
 
-  test("mesh_selected_node", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_selected_node").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshClearTopology", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshClearTopology", returnType: "void" });
   });
 
-  test("mesh_get_node_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_get_node_json", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshCreatePodForTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshCreatePodForTicketConnect", returnType: "any" });
   });
 
-  test("mesh_get_edges_for_node_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_get_edges_for_node_json", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshFetchTopology", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshFetchTopology", returnType: "string" });
   });
 
-  test("mesh_get_channels_for_node_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_get_channels_for_node_json", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetActiveNodesJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetActiveNodesJson", returnType: "string" });
   });
 
-  test("mesh_get_active_nodes_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_get_active_nodes_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetChannelsForNodeJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetChannelsForNodeJson", returnType: "string" }, "");
   });
 
-  test("mesh_get_nodes_by_runner_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_get_nodes_by_runner_json", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetEdgesForNodeJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetEdgesForNodeJson", returnType: "string" }, "");
   });
 
-  test("mesh_get_runner_info_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_get_runner_info_json", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetMeshTopologyConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetMeshTopologyConnect", returnType: "any" });
   });
 
-  test("mesh_set_topology", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_set_topology", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetNodeJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetNodeJson", returnType: "string" }, "");
   });
 
-  test("mesh_clear_topology", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_clear_topology").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetNodesByRunnerJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetNodesByRunnerJson", returnType: "string" }, 0);
   });
 
-  test("mesh_select_node", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_select_node", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetRunnerInfoJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetRunnerInfoJson", returnType: "string" }, 0);
   });
 
-  test("mesh_fetch_topology", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "mesh_fetch_topology").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("meshGetTicketPodsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshGetTicketPodsConnect", returnType: "any" });
+  });
+
+  test("meshSelectedNode", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshSelectedNode", returnType: "string" });
+  });
+
+  test("meshSelectNode", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshSelectNode", returnType: "void" }, "");
+  });
+
+  test("meshTopologyJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshTopologyJson", returnType: "string" });
   });
 });

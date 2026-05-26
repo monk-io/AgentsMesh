@@ -19,7 +19,7 @@ test.describe("Channel actions", () => {
     channels = new ChannelsPage(page, TEST_ORG_SLUG);
     sidebar = new SidebarPage(page, TEST_ORG_SLUG);
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     channelName = `e2e-actions-${Date.now()}`;
     await sidebar.navigateTo("channels");

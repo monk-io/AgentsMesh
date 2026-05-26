@@ -1,11 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   setupProviderMocks,
   mockRepositoryCreate,
   stableRepoSvc,
 } from "./ImportRepositoryModal.utils";
+
+const stable = vi.hoisted(() => ({
+  org: { id: 1, name: "TestOrg", slug: "test-org" },
+  user: { id: 1, email: "u@e.com", username: "u" },
+}));
+
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stable.org,
+  useCurrentUser: () => stable.user,
+  useAuthOrganizations: () => [],
+  useAuthStore: () => ({ currentOrg: stable.org }),
+  useIsAuthenticated: () => true,
+  readCurrentUser: () => stable.user,
+  readCurrentOrg: () => stable.org,
+  readOrganizations: () => [],
+}));
+
+import { ImportRepositoryModal } from "../ImportRepositoryModal";
 
 describe("ImportRepositoryModal - Import Actions", () => {
   const mockOnClose = vi.fn();
@@ -14,9 +31,10 @@ describe("ImportRepositoryModal - Import Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupProviderMocks();
+    mockRepositoryCreate();
   });
 
-  it("should call repositoryApi.create when import is clicked", async () => {
+  it("should call createRepository (Connect) when import is clicked", async () => {
     mockRepositoryCreate();
 
     render(
@@ -41,9 +59,13 @@ describe("ImportRepositoryModal - Import Actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
+    // Production calls getRepositoryService().create(JSON.stringify({...})) over the
+    // wasm bridge. Assert the request payload after JSON-decoding.
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalledWith(
-        expect.stringContaining('"provider_type":"github"'),
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
+        expect.objectContaining({ provider_type: "github" }),
       );
     });
   });

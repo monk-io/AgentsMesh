@@ -35,6 +35,10 @@ export class CreatePodModal {
     const select = this.page
       .locator('[role="dialog"] select#agent-select')
       .first();
+    // The dialog opens before usePodCreationData finishes loading agents,
+    // so AgentSelect renders "no agents" until runners + agents arrive.
+    // Wait up to 15s for the actual <select> to mount.
+    await select.waitFor({ state: "visible", timeout: 15_000 });
     await select.selectOption(agentSlug);
   }
 

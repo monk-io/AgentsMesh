@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from "react";
-import { channelApi } from "@/lib/api/channel";
+import { channelApi } from "@/lib/api/facade/channel";
 import { getChannelService } from "@/lib/wasm-core";
 
 export interface ChannelPodSummary {

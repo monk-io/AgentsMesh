@@ -3,6 +3,7 @@ package runnerlog
 import (
 	"context"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +25,10 @@ func (m *mockStorage) Upload(_ context.Context, _ string, _ io.Reader, _ int64, 
 }
 
 func (m *mockStorage) Delete(_ context.Context, _ string) error { return nil }
+
+func (m *mockStorage) Download(_ context.Context, _ string) (io.ReadCloser, int64, error) {
+	return io.NopCloser(strings.NewReader("")), 0, nil
+}
 
 func (m *mockStorage) GetURL(_ context.Context, _ string, _ time.Duration) (string, error) {
 	return "https://mock-s3.example.com/download", nil

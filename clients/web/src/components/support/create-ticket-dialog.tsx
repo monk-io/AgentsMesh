@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Paperclip, X, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { createSupportTicket } from "@/lib/api/support-ticket";
+import { createSupportTicket } from "@/lib/api/facade/support-ticket";
 
 interface CreateTicketDialogProps {
   open: boolean;

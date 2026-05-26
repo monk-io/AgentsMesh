@@ -1,77 +1,63 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · runner", () => {
-  test("runner_runners_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_runners_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerAuthorizeRunner", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerAuthorizeRunner", returnType: "string" }, "");
   });
 
-  test("runner_available_runners_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_available_runners_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerAvailableRunnersJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerAvailableRunnersJson", returnType: "string" });
   });
 
-  test("runner_current_runner_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_current_runner_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerCurrentRunnerJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerCurrentRunnerJson", returnType: "string" });
   });
 
-  test("runner_get_runner_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_get_runner_json", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerGetAuthStatus", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerGetAuthStatus", returnType: "string" }, "");
   });
 
-  test("runner_set_runners", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_set_runners", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerGetRunnerJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerGetRunnerJson", returnType: "string" }, 0);
   });
 
-  test("runner_set_available_runners", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_set_available_runners", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerListRunnerPods", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerListRunnerPods", returnType: "string" }, 0, "", 0, 0);
   });
 
-  test("runner_set_current_runner", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_set_current_runner", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerRemoveRunnerLocal", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerRemoveRunnerLocal", returnType: "void" }, 0);
   });
 
-  test("runner_update_runner_local", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_update_runner_local", 0, "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerRunnersJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerRunnersJson", returnType: "string" });
   });
 
-  test("runner_update_runner_status", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_update_runner_status", 0, "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerSetAvailableRunners", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerSetAvailableRunners", returnType: "void" }, "");
   });
 
-  test("runner_remove_runner_local", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "runner_remove_runner_local", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("runnerSetCurrentRunner", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerSetCurrentRunner", returnType: "void" }, "");
+  });
+
+  test("runnerSetRunners", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerSetRunners", returnType: "void" }, "");
+  });
+
+  test("runnerUpdateRunner", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerUpdateRunner", returnType: "string" }, 0, "");
+  });
+
+  test("runnerUpdateRunnerLocal", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerUpdateRunnerLocal", returnType: "void" }, 0, "");
+  });
+
+  test("runnerUpdateRunnerStatus", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerUpdateRunnerStatus", returnType: "void" }, 0, "");
   });
 });

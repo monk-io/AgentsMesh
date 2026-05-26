@@ -1,20 +1,21 @@
 import { test, expect } from "../../fixtures";
 import { ChannelsPage } from "../../pages/channels.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
+import type { ApiFixture } from "../../../../web/e2e-playwright/fixtures/api.fixture";
 
 async function createChannelViaApi(
-  api: { login: () => Promise<unknown>; post: (p: string, b?: unknown) => Promise<Response> },
+  api: ApiFixture,
   name: string,
 ): Promise<number> {
   await api.login();
-  const res = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/channels`, {
+  const cc = await api.connect();
+  const channel = await cc.channel.createChannel({
+    orgSlug: TEST_ORG_SLUG,
     name,
     description: "Desktop toolbar e2e",
     visibility: "public",
-  });
-  if (!res.ok) throw new Error(`create channel failed: ${res.status} ${await res.text()}`);
-  const data = (await res.json()) as { channel: { id: number } };
-  return data.channel.id;
+  }) as { id: bigint | number };
+  return Number(channel.id);
 }
 
 test.describe("Channel toolbar (desktop)", () => {

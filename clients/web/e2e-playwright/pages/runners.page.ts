@@ -24,7 +24,7 @@ export class RunnersPage {
 
   async goto(): Promise<void> {
     await this.page.goto(`/${this.orgSlug}/infra?tab=runners`);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("load");
   }
 
   async waitForList(): Promise<void> {

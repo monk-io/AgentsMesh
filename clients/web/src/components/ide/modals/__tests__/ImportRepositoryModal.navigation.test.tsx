@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   mockCreatedRepository,
   setupProviderMocks,
@@ -9,6 +8,24 @@ import {
   stableRepoSvc,
 } from "./ImportRepositoryModal.utils";
 
+const stable = vi.hoisted(() => ({
+  org: { id: 1, name: "TestOrg", slug: "test-org" },
+  user: { id: 1, email: "u@e.com", username: "u" },
+}));
+
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stable.org,
+  useCurrentUser: () => stable.user,
+  useAuthOrganizations: () => [],
+  useAuthStore: () => ({ currentOrg: stable.org }),
+  useIsAuthenticated: () => true,
+  readCurrentUser: () => stable.user,
+  readCurrentOrg: () => stable.org,
+  readOrganizations: () => [],
+}));
+
+import { ImportRepositoryModal } from "../ImportRepositoryModal";
+
 describe("ImportRepositoryModal - Navigation Flow", () => {
   const mockOnClose = vi.fn();
   const mockOnImported = vi.fn();
@@ -16,6 +33,7 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupProviderMocks();
+    mockRepositoryCreate();
   });
 
   it("should complete manual import flow successfully", async () => {
@@ -59,8 +77,10 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalledWith(
-        expect.stringContaining('"provider_type":"github"'),
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
+        expect.objectContaining({ provider_type: "github" }),
       );
       expect(mockOnImported).toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
@@ -101,8 +121,10 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalledWith(
-        expect.stringContaining('"visibility":"private"'),
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
+        expect.objectContaining({ visibility: "private" }),
       );
     });
   });

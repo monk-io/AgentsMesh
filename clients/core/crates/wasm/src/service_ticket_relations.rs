@@ -1,102 +1,62 @@
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_types::*;
+use agentsmesh_services::TicketRelationsService;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub struct WasmTicketRelationsService {
-    client: Arc<ApiClient>,
-}
+pub struct WasmTicketRelationsService(pub(crate) TicketRelationsService);
 
+// Connect-RPC binary wire. Each `*_connect` method takes prost-encoded bytes
+// (Uint8Array on the JS side) and returns prost-encoded bytes — TS callers
+// encode via @bufbuild/protobuf `.toBinary()` and decode via `.fromBinary()`.
 #[wasm_bindgen]
 impl WasmTicketRelationsService {
     pub(crate) fn new(client: Arc<ApiClient>) -> Self {
-        Self { client }
+        Self(TicketRelationsService::new(client))
     }
 
-    pub async fn list_relations(&self, slug: &str) -> Result<String, String> {
-        let resp = self.client
-            .list_ticket_relations(slug)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn list_relations_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_relations_connect(request_bytes).await
     }
 
-    pub async fn create_relation(&self, slug: &str, json: &str) -> Result<String, String> {
-        let req: CreateTicketRelationRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .create_ticket_relation(slug, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn create_relation_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_relation_connect(request_bytes).await
     }
 
-    pub async fn delete_relation(&self, slug: &str, relation_id: i64) -> Result<(), String> {
-        self.client
-            .delete_ticket_relation(slug, relation_id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    pub async fn delete_relation_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_relation_connect(request_bytes).await
     }
 
-    pub async fn list_commits(&self, slug: &str) -> Result<String, String> {
-        let resp = self.client
-            .list_ticket_commits(slug)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn list_merge_requests_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_merge_requests_connect(request_bytes).await
     }
 
-    pub async fn link_commit(&self, slug: &str, json: &str) -> Result<String, String> {
-        let req: LinkTicketCommitRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .link_ticket_commit(slug, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn list_commits_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_commits_connect(request_bytes).await
     }
 
-    pub async fn unlink_commit(&self, slug: &str, commit_id: i64) -> Result<(), String> {
-        self.client
-            .unlink_ticket_commit(slug, commit_id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    pub async fn link_commit_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.link_commit_connect(request_bytes).await
     }
 
-    pub async fn list_merge_requests(&self, slug: &str) -> Result<String, String> {
-        let resp = self.client
-            .list_ticket_merge_requests(slug)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn unlink_commit_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.unlink_commit_connect(request_bytes).await
     }
 
-    pub async fn list_comments(
-        &self, slug: &str, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .list_ticket_comments(slug, limit, offset)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn list_comments_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_comments_connect(request_bytes).await
     }
 
-    pub async fn create_comment(&self, slug: &str, json: &str) -> Result<String, String> {
-        let req: CreateTicketCommentRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .create_ticket_comment(slug, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn create_comment_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_comment_connect(request_bytes).await
     }
 
-    pub async fn update_comment(
-        &self, slug: &str, comment_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: UpdateTicketCommentRequest = serde_json::from_str(json).map_err(agentsmesh_services::wire)?;
-        let resp = self.client
-            .update_ticket_comment(slug, comment_id, &req)
-            .await.map_err(agentsmesh_services::wire)?;
-        serde_json::to_string(&resp).map_err(agentsmesh_services::wire)
+    pub async fn update_comment_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.update_comment_connect(request_bytes).await
     }
 
-    pub async fn delete_comment(&self, slug: &str, comment_id: i64) -> Result<(), String> {
-        self.client
-            .delete_ticket_comment(slug, comment_id)
-            .await.map_err(agentsmesh_services::wire)?;
-        Ok(())
+    pub async fn delete_comment_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_comment_connect(request_bytes).await
     }
 }

@@ -23,7 +23,7 @@ import {
   BLOCK_TYPE_TASK,
   BLOCK_TYPE_TOGGLE,
   BLOCK_TYPE_VIDEO,
-} from "@/lib/api/blockstoreTypes";
+} from "@/lib/viewModels/blockstore";
 
 import type { SlashOption } from "./SlashMenu";
 

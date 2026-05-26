@@ -3,7 +3,7 @@
 import React from "react";
 import { Plus, Trash } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 
 import { BlockChrome } from "../editor/BlockChrome";

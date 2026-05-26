@@ -1,35 +1,48 @@
 use std::sync::Arc;
 
+use agentsmesh_api_client::ApiClient;
 use agentsmesh_transport::runtime::Runtime;
-use agentsmesh_transport::{WebSocketConnection, WsMessage, WsReceiver, WsSender};
+use agentsmesh_types::proto_events_v1::{Event as ProtoEvent, SubscribeRequest};
 use futures::channel::mpsc;
 use futures::stream::StreamExt;
 use futures::FutureExt;
 use parking_lot::RwLock;
+use std::time::Duration;
 use tracing::{debug, error, info, warn};
 
 use crate::event_types::EventType;
-use crate::heartbeat::{HeartbeatEvent, HeartbeatManager};
 use crate::reconnect::{self, ReconnectPolicy};
 use crate::subscription_manager::{dispatch_event, set_state, Inner};
-use crate::types::{ConnectionState, EventSubscriptionManagerOptions, PingMessage};
+use crate::types::{ConnectionState, EventCategory, EventSubscriptionManagerOptions, RealtimeEvent};
+
+/// Idle-timeout for the Connect server stream. When `idle_ms` elapses
+/// without a single inbound event, we treat the stream as stalled and
+/// trigger reconnect. HTTP/2 PING keeps the connection alive at the
+/// transport layer; this is application-level "are we still receiving
+/// events?" detection.
+const DEFAULT_IDLE_MS: u64 = 60_000;
 
 pub(crate) struct ManagerOpts {
     pub max_reconnect_attempts: u32,
     pub initial_reconnect_delay_ms: u64,
     pub max_reconnect_delay_ms: u64,
-    pub ping_interval_ms: u64,
-    pub pong_timeout_ms: u64,
+    pub idle_timeout_ms: u64,
 }
 
 impl ManagerOpts {
     pub fn from_options(o: &EventSubscriptionManagerOptions) -> Self {
+        // Reuse pong_timeout_ms as the idle threshold so existing callers
+        // don't need a new knob. Fallback to the conservative default.
+        let idle_ms = if o.pong_timeout_ms == 0 {
+            DEFAULT_IDLE_MS
+        } else {
+            o.pong_timeout_ms.max(o.ping_interval_ms) + o.pong_timeout_ms
+        };
         Self {
             max_reconnect_attempts: o.max_reconnect_attempts,
             initial_reconnect_delay_ms: o.initial_reconnect_delay_ms,
             max_reconnect_delay_ms: o.max_reconnect_delay_ms,
-            ping_interval_ms: o.ping_interval_ms,
-            pong_timeout_ms: o.pong_timeout_ms,
+            idle_timeout_ms: idle_ms,
         }
     }
 }
@@ -37,7 +50,7 @@ impl ManagerOpts {
 pub(crate) async fn connection_loop<R: Runtime>(
     runtime: R,
     inner: Arc<RwLock<Inner>>,
-    url: String,
+    api_client: Arc<ApiClient>,
     opts: ManagerOpts,
     mut shutdown_rx: mpsc::UnboundedReceiver<()>,
 ) {
@@ -49,127 +62,175 @@ pub(crate) async fn connection_loop<R: Runtime>(
 
     loop {
         set_state(&inner, ConnectionState::Connecting);
-        info!("events: connecting to {}", url);
+        let org_slug = api_client.current_org_slug();
+        info!("events: subscribing via Connect stream (org={})", org_slug);
 
-        let conn = match WebSocketConnection::connect(&url).await {
-            Ok(c) => c,
-            Err(e) => {
-                error!("events: connection failed: {}", e);
+        let session_close = run_session(
+            &runtime,
+            &inner,
+            &api_client,
+            &org_slug,
+            &opts,
+            &mut shutdown_rx,
+        )
+        .await;
+
+        match session_close {
+            SessionClose::Shutdown => {
+                set_state(&inner, ConnectionState::Disconnected);
+                break;
+            }
+            SessionClose::ConnectFailed | SessionClose::StreamError | SessionClose::IdleTimeout => {
                 if !schedule_reconnect(&runtime, &inner, &mut reconnect_policy, &mut shutdown_rx)
                     .await
                 {
                     break;
                 }
-                continue;
             }
-        };
-
-        set_state(&inner, ConnectionState::Connected);
-        reconnect_policy.reset();
-        info!("events: connected");
-
-        let (sender, mut receiver) = conn.into_split();
-        let close_code =
-            run_session(&runtime, &inner, sender, &mut receiver, &opts, &mut shutdown_rx).await;
-
-        if !reconnect::should_reconnect(close_code) {
-            debug!("events: clean close (1000), not reconnecting");
-            set_state(&inner, ConnectionState::Disconnected);
-            break;
-        }
-
-        if !schedule_reconnect(&runtime, &inner, &mut reconnect_policy, &mut shutdown_rx).await {
-            break;
+            SessionClose::ServerClosed => {
+                // Clean server close — reset backoff and reconnect immediately.
+                reconnect_policy.reset();
+                if !schedule_reconnect(&runtime, &inner, &mut reconnect_policy, &mut shutdown_rx)
+                    .await
+                {
+                    break;
+                }
+            }
         }
     }
+}
+
+enum SessionClose {
+    /// User called `disconnect()` — exit cleanly, no reconnect.
+    Shutdown,
+    /// `subscribe_events_connect` returned an error before yielding the
+    /// first frame (auth, network, server down).
+    ConnectFailed,
+    /// Stream yielded an error mid-flight (network reset, 5xx).
+    StreamError,
+    /// No events for `idle_timeout_ms` — server likely silent or proxy
+    /// buffered the response.
+    IdleTimeout,
+    /// Stream ended cleanly with EndStreamResponse{error: None}.
+    ServerClosed,
 }
 
 async fn run_session<R: Runtime>(
     runtime: &R,
     inner: &Arc<RwLock<Inner>>,
-    sender: WsSender,
-    receiver: &mut WsReceiver,
+    api_client: &Arc<ApiClient>,
+    org_slug: &str,
     opts: &ManagerOpts,
     shutdown_rx: &mut mpsc::UnboundedReceiver<()>,
-) -> Option<u16> {
-    let (hb_event_tx, mut hb_event_rx) = mpsc::unbounded();
-    let mut heartbeat =
-        HeartbeatManager::with_runtime(runtime.clone(), opts.ping_interval_ms, opts.pong_timeout_ms);
-    heartbeat.start(hb_event_tx);
+) -> SessionClose {
+    let req = SubscribeRequest {
+        org_slug: org_slug.to_string(),
+        event_types: Vec::new(),
+    };
+    let stream = match subscribe(api_client, &req).await {
+        Ok(s) => s,
+        Err(e) => {
+            error!("events: subscribe failed: {:?}", e);
+            return SessionClose::ConnectFailed;
+        }
+    };
+    futures::pin_mut!(stream);
 
-    let close_code: Option<u16>;
+    set_state(inner, ConnectionState::Connected);
+    info!("events: connected");
+
+    let idle = Duration::from_millis(opts.idle_timeout_ms);
 
     loop {
-        // `receiver.recv()` borrows `receiver` mutably; recreate per iteration
-        // so the unfinished future is dropped on every other arm's completion.
-        let recv_fut = receiver.recv().fuse();
-        futures::pin_mut!(recv_fut);
+        let next_fut = stream.next().fuse();
+        let sleep_fut = runtime.sleep(idle).fuse();
+        futures::pin_mut!(next_fut);
+        futures::pin_mut!(sleep_fut);
 
         futures::select! {
-            result = recv_fut => {
-                match result {
-                    Ok(WsMessage::Text(text)) => {
-                        handle_text_message(inner, &mut heartbeat, &text);
+            item = next_fut => {
+                match item {
+                    Some(Ok(evt)) => {
+                        if let Some(re) = proto_to_realtime(evt) {
+                            dispatch_event(inner, &re);
+                        }
                     }
-                    Ok(WsMessage::Close(code)) => {
-                        close_code = code;
-                        break;
+                    Some(Err(e)) => {
+                        warn!("events: stream error: {:?}", e);
+                        return SessionClose::StreamError;
                     }
-                    Err(_) => { close_code = None; break; }
-                    _ => {}
+                    None => {
+                        debug!("events: server closed stream");
+                        return SessionClose::ServerClosed;
+                    }
                 }
             }
-            hb_event = hb_event_rx.next() => {
-                match hb_event {
-                    Some(HeartbeatEvent::SendPing) => {
-                        if !send_ping(&sender) { close_code = None; break; }
-                    }
-                    Some(HeartbeatEvent::PongTimeout) => {
-                        warn!("events: pong timeout, closing");
-                        sender.close();
-                        close_code = Some(4000);
-                        break;
-                    }
-                    None => { close_code = None; break; }
-                }
+            _ = sleep_fut => {
+                warn!("events: idle timeout ({}ms) — reconnecting", opts.idle_timeout_ms);
+                return SessionClose::IdleTimeout;
             }
             _ = shutdown_rx.next() => {
-                sender.close();
-                close_code = Some(1000);
-                break;
+                return SessionClose::Shutdown;
             }
         }
     }
-
-    heartbeat.stop();
-    close_code
 }
 
-fn handle_text_message<R: Runtime>(
-    inner: &Arc<RwLock<Inner>>,
-    heartbeat: &mut HeartbeatManager<R>,
-    text: &str,
-) {
-    use crate::types::RealtimeEvent;
-    match serde_json::from_str::<RealtimeEvent>(text) {
-        Ok(event) => {
-            if event.event_type == EventType::Pong {
-                heartbeat.pong_received();
-            } else {
-                dispatch_event(inner, &event);
-            }
+#[cfg(not(target_arch = "wasm32"))]
+async fn subscribe(
+    api_client: &Arc<ApiClient>,
+    req: &SubscribeRequest,
+) -> Result<impl futures::Stream<Item = Result<ProtoEvent, agentsmesh_api_client::ApiError>>, agentsmesh_api_client::ApiError>
+{
+    api_client.subscribe_events_connect_native(req).await
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn subscribe(
+    api_client: &Arc<ApiClient>,
+    req: &SubscribeRequest,
+) -> Result<impl futures::Stream<Item = Result<ProtoEvent, agentsmesh_api_client::ApiError>>, agentsmesh_api_client::ApiError>
+{
+    let (stream, abort) = api_client.subscribe_events_connect_wasm(req).await?;
+    // Keep the abort handle alive for the lifetime of the stream — its
+    // Drop calls AbortController.abort() which kills the in-flight fetch
+    // and surfaces a reader.read() rejection. Previously the handle was
+    // discarded immediately, so every connect attempt aborted itself
+    // before the first frame arrived → `Reconnecting → Connected →
+    // Reconnecting` flapping with zero events delivered to the page.
+    let stream = Box::pin(stream);
+    Ok(futures::stream::unfold((stream, abort), |(mut s, abort)| async move {
+        use futures::StreamExt as _;
+        s.next().await.map(|item| (item, (s, abort)))
+    }))
+}
+
+fn proto_to_realtime(p: ProtoEvent) -> Option<RealtimeEvent> {
+    let event_type = match serde_json::from_str::<EventType>(&format!("\"{}\"", p.r#type)) {
+        Ok(t) => t,
+        Err(_) => {
+            debug!("events: unknown type from server: {}", p.r#type);
+            return None;
         }
-        Err(e) => warn!("events: parse error: {}", e),
-    }
-}
-
-fn send_ping(sender: &WsSender) -> bool {
-    let ts = web_time::SystemTime::now()
-        .duration_since(web_time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as i64;
-    let ping = serde_json::to_string(&PingMessage::new(ts)).unwrap_or_default();
-    sender.send_text(ping).is_ok()
+    };
+    let category = match p.category.as_str() {
+        "entity" => Some(EventCategory::Entity),
+        "notification" => Some(EventCategory::Notification),
+        "system" => Some(EventCategory::System),
+        _ => None,
+    };
+    let data: serde_json::Value = serde_json::from_str(&p.data_json).unwrap_or(serde_json::Value::Null);
+    Some(RealtimeEvent {
+        event_type,
+        category,
+        organization_id: p.organization_id,
+        target_user_id: p.target_user_id,
+        target_user_ids: if p.target_user_ids.is_empty() { None } else { Some(p.target_user_ids) },
+        entity_type: p.entity_type,
+        entity_id: p.entity_id,
+        data,
+        timestamp: p.timestamp,
+    })
 }
 
 async fn schedule_reconnect<R: Runtime>(
@@ -203,4 +264,12 @@ async fn schedule_reconnect<R: Runtime>(
             false
         }
     }
+}
+
+// Suppress unused-import warning when `reconnect::should_reconnect` is
+// not referenced after the WebSocket close-code logic moved to the
+// idle-timeout + stream-error decision.
+#[allow(dead_code)]
+fn _suppress_reconnect_dead_code() {
+    let _ = reconnect::should_reconnect(None);
 }

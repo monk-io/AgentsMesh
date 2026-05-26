@@ -56,7 +56,7 @@ describe("WebhookSettings - Error State", () => {
   it("should retry loading status when retry clicked", async () => {
     mockGetWebhookStatus
       .mockRejectedValueOnce(new Error("Network error"))
-      .mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
+      .mockResolvedValue(registeredStatus);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

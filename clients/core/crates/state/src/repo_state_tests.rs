@@ -1,18 +1,16 @@
-use agentsmesh_types::{Branch, Repository};
+use agentsmesh_types::proto_repository_v1::{Branch, Repository};
 
 use crate::repo_state::RepoState;
 
 fn make_repo(id: i64, name: &str) -> Repository {
     Repository {
-        id, name: name.to_string(), slug: Some(name.to_lowercase()),
-        provider_type: None, provider_base_url: None, http_clone_url: None, ssh_clone_url: None,
-        external_id: None, default_branch: None, ticket_prefix: None, visibility: None,
-        is_active: None, created_at: None, updated_at: None,
+        id, name: name.to_string(), slug: name.to_lowercase(),
+        ..Default::default()
     }
 }
 
 fn make_branch(name: &str) -> Branch {
-    Branch { name: name.to_string(), is_default: None, last_commit: None }
+    Branch { name: name.to_string(), ..Default::default() }
 }
 
 #[test]
@@ -28,7 +26,7 @@ fn set_and_get_repositories() {
     let mut s = RepoState::new();
     s.set_repositories(vec![make_repo(1, "repo1")]);
     assert_eq!(s.repositories().len(), 1);
-    assert_eq!(s.repositories()[0].slug.as_deref(), Some("repo1"));
+    assert_eq!(s.repositories()[0].slug, "repo1");
 }
 
 #[test]

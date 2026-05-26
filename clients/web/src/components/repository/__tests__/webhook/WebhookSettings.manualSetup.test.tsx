@@ -37,8 +37,8 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: manualSetupStatus }));
-    mockGetWebhookSecret.mockResolvedValue(JSON.stringify(secretResponse));
+    mockGetWebhookStatus.mockResolvedValue(manualSetupStatus);
+    mockGetWebhookSecret.mockResolvedValue(secretResponse);
   });
 
   afterEach(() => {
@@ -87,10 +87,10 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
       is_active: true,
       needs_manual_setup: false,
     };
-    mockMarkWebhookConfigured.mockResolvedValue(JSON.stringify({ message: "Marked as configured" }));
+    mockMarkWebhookConfigured.mockResolvedValue(undefined);
     mockGetWebhookStatus
-      .mockResolvedValueOnce(JSON.stringify({ webhook_status: manualSetupStatus }))
-      .mockResolvedValue(JSON.stringify({ webhook_status: activeStatus }));
+      .mockResolvedValueOnce(manualSetupStatus)
+      .mockResolvedValue(activeStatus);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -167,9 +167,12 @@ describe("WebhookSettings - Needs Manual Setup State", () => {
   });
 
   it("should handle try again click", async () => {
-    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
-      result: { repo_id: 1, registered: true, webhook_id: "wh_new" },
-    }));
+    mockRegisterWebhook.mockResolvedValue({
+      repo_id: 1,
+      registered: true,
+      webhook_id: "wh_new",
+      needs_manual_setup: false,
+    });
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

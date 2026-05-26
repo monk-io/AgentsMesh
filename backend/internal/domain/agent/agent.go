@@ -23,6 +23,13 @@ type Agent struct {
 	IsBuiltin bool `gorm:"not null;default:false" json:"is_builtin"`
 	IsActive  bool `gorm:"not null;default:true" json:"is_active"`
 
+	// IsInternal marks agents that exist for testing/internal use only.
+	// They stay visible to the runner (so test pods can actually launch)
+	// but are hidden from the user-facing ListBuiltinActive surface, so
+	// the front-end agent picker never offers them. See
+	// .claude/adr/2026-05-26-test-fixture-isolation.md for the policy.
+	IsInternal bool `gorm:"not null;default:false" json:"is_internal"`
+
 	SupportedModes string `gorm:"column:supported_modes;type:varchar(50);default:pty;not null" json:"supported_modes"`
 
 	UsesLegacyColumns bool `gorm:"column:uses_legacy_columns;not null;default:false" json:"uses_legacy_columns"`

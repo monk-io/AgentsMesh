@@ -34,7 +34,7 @@ describe("WebhookSettings - Registered State", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
+    mockGetWebhookStatus.mockResolvedValue(registeredStatus);
   });
 
   afterEach(() => {
@@ -67,12 +67,15 @@ describe("WebhookSettings - Registered State", () => {
       ...registeredStatus,
       webhook_id: "wh_456",
     };
-    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
-      result: { repo_id: 1, registered: true, webhook_id: "wh_456" },
-    }));
+    mockRegisterWebhook.mockResolvedValue({
+      repo_id: 1,
+      registered: true,
+      webhook_id: "wh_456",
+      needs_manual_setup: false,
+    });
     mockGetWebhookStatus
-      .mockResolvedValueOnce(JSON.stringify({ webhook_status: registeredStatus }))
-      .mockResolvedValue(JSON.stringify({ webhook_status: newStatus }));
+      .mockResolvedValueOnce(registeredStatus)
+      .mockResolvedValue(newStatus);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -90,7 +93,7 @@ describe("WebhookSettings - Registered State", () => {
   });
 
   it("should handle delete click", async () => {
-    mockDeleteWebhook.mockResolvedValue(JSON.stringify({ message: "Webhook deleted" }));
+    mockDeleteWebhook.mockResolvedValue(undefined);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

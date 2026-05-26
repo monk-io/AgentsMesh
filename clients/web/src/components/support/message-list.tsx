@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import type { SupportTicketMessage } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+import type { SupportTicketMessage } from "@/lib/api/facade/supportTicketConnect";
+import { getSupportTicketAttachmentUrl } from "@/lib/api/facade/supportTicketConnect";
 import { Download, Shield, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatTimeAgo } from "@/lib/utils/time";
@@ -28,7 +28,7 @@ export function MessageList({ messages }: { messages: SupportTicketMessage[] }) 
   return (
     <div className="space-y-4">
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+        <MessageBubble key={Number(msg.id)} message={msg} />
       ))}
     </div>
   );
@@ -36,13 +36,11 @@ export function MessageList({ messages }: { messages: SupportTicketMessage[] }) 
 
 function MessageBubble({ message }: { message: SupportTicketMessage }) {
   const t = useTranslations();
-  const isAdmin = message.is_admin_reply;
+  const isAdmin = message.isAdminReply;
 
   const handleDownload = async (attachmentId: number) => {
     try {
-      const { url } = JSON.parse(
-        await getSupportTicketService().get_attachment_url(BigInt(attachmentId))
-      );
+      const { url } = await getSupportTicketAttachmentUrl(attachmentId);
       window.open(url, "_blank");
     } catch {
       toast.error(t("support.downloadFailed"));
@@ -76,7 +74,7 @@ function MessageBubble({ message }: { message: SupportTicketMessage }) {
             </Badge>
           )}
           <span className="text-xs text-muted-foreground">
-            {formatTimeAgo(message.created_at, t)}
+            {formatTimeAgo(message.createdAt, t)}
           </span>
         </div>
 
@@ -93,20 +91,23 @@ function MessageBubble({ message }: { message: SupportTicketMessage }) {
         {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
           <div className={`mt-2 flex flex-wrap gap-2 ${isAdmin ? "justify-end" : ""}`}>
-            {message.attachments.map((att) => (
+            {message.attachments.map((att) => {
+              const id = Number(att.id);
+              return (
               <button
-                key={att.id}
-                onClick={() => handleDownload(att.id)}
-                aria-label={`${t("support.download")} ${att.original_name}`}
+                key={id}
+                onClick={() => handleDownload(id)}
+                aria-label={`${t("support.download")} ${att.originalName}`}
                 className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-muted transition-colors"
               >
                 <Download className="h-3 w-3" />
-                <span className="max-w-[120px] truncate">{att.original_name}</span>
+                <span className="max-w-[120px] truncate">{att.originalName}</span>
                 <span className="text-muted-foreground">
-                  ({formatFileSize(att.size)})
+                  ({formatFileSize(Number(att.size))})
                 </span>
               </button>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

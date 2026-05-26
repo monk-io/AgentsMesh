@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { SSOConfig } from "@/lib/api/ssoTypes";
+import type { SSODiscoverConfig } from "@/lib/api/connect/ssoConnect";
 import { getOAuthBaseUrl } from "@/lib/env";
 import { useTranslations } from "next-intl";
 
 interface SSOSectionProps {
-  ssoConfigs: SSOConfig[];
+  ssoConfigs: SSODiscoverConfig[];
   onLdapSubmit: (username: string, password: string) => void;
   ldapLoading: boolean;
 }
@@ -30,7 +30,7 @@ export function SSOSection({ ssoConfigs, onLdapSubmit, ldapLoading }: SSOSection
     (c) => c.protocol === "oidc" || c.protocol === "saml"
   );
 
-  const handleSSORedirect = (config: SSOConfig) => {
+  const handleSSORedirect = (config: SSODiscoverConfig) => {
     window.location.assign(getSSOAuthURL(config.domain, config.protocol));
   };
 

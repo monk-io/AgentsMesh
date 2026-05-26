@@ -1,7 +1,7 @@
-use agentsmesh_types::{Block, BlockOp, BlockRef, OpKind, ActorType, Workspace};
 use serde_json::json;
 
 use crate::blockstore_state::BlockstoreState;
+use crate::blockstore_types::{ActorType, Block, BlockOp, BlockRef, OpKind, Workspace};
 
 fn mk_block(id: &str, ws: &str, ty: &str) -> Block {
     Block {

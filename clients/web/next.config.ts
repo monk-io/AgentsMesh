@@ -26,6 +26,16 @@ const enableStandalone = process.env.BAZEL_BUILD === "standalone";
 const nextConfig: NextConfig = {
   ...(enableStandalone ? { output: "standalone" as const } : {}),
 
+  // Bazel runs `:next` and `:next_image` in the same package. The
+  // standalone build writes to `.next/` (hard-coded inside
+  // build_defs/web/next_bazel_wrapper.mjs); the dev build is moved
+  // to `.next-dev/` so Bazel's wildcard build (`//...`) doesn't see
+  // two actions declaring the same output. `BAZEL_TARGET_NAME` is
+  // set by js_run_binary and matches the BUILD `next_build_out` arg.
+  ...(process.env.BAZEL_TARGET_NAME === "next"
+    ? { distDir: ".next-dev" as const }
+    : {}),
+
   // Type checks live in the separate "Web (lint + type-check +
   // vitest)" Bazel job (plain `pnpm type-check`). Don't re-run them
   // inside `next build` — the Next.js build path hits a stricter
@@ -41,6 +51,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@agentsmesh/service-runtime",
     "@agentsmesh/service-interface",
+    "@agentsmesh/proto",
   ],
 
   webpack: (config, { isServer }) => {
@@ -85,6 +96,13 @@ const nextConfig: NextConfig = {
       process.env.POSTHOG_KEY || "__POSTHOG_KEY__",
     NEXT_PUBLIC_POSTHOG_HOST:
       process.env.POSTHOG_HOST || "__POSTHOG_HOST__",
+    // Build-time gate for test-only UI surfaces (e.g. e2e-echo credential
+    // form). Inlined by Next.js DefinePlugin so the `if (process.env.
+    // NEXT_PUBLIC_E2E === "true")` branches are dead-code-eliminated in
+    // production builds. Set to "true" only in dev/e2e (see
+    // deploy/dev/lib/bootstrap.sh) — defaults to empty string in prod,
+    // never "true" by accident.
+    NEXT_PUBLIC_E2E: process.env.NEXT_PUBLIC_E2E === "true" ? "true" : "",
   },
 
   // 本地开发时代理 API 请求，避免跨域问题
@@ -96,11 +114,21 @@ const nextConfig: NextConfig = {
 
     // 仅在本地开发且配置了代理目标时启用
     if (process.env.NODE_ENV === "development" && proxyTarget) {
-      console.log(`[Next.js] API proxy enabled: /api/* → ${proxyTarget}/api/*`);
+      console.log(`[Next.js] API proxy enabled: /api/* + /proto.* + /health → ${proxyTarget}`);
       return [
         {
           source: "/api/:path*",
           destination: `${proxyTarget}/api/:path*`,
+        },
+        // Connect-RPC procedures use the path `/proto.<svc>.v1.Service/Method`.
+        // Next.js path-to-regexp doesn't tolerate escaped dots in `source`,
+        // so match by the `connect-protocol-version` header that every
+        // Connect client sends. Browsers without this header (regular page
+        // requests) don't match — keeps the marketing routes intact.
+        {
+          source: "/:svc/:method",
+          has: [{ type: "header", key: "connect-protocol-version" }],
+          destination: `${proxyTarget}/:svc/:method`,
         },
         {
           source: "/health",

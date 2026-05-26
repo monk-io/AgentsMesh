@@ -5,9 +5,9 @@ import { Users, Plus, X, Loader2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { channelApi } from "@/lib/api/channel";
-import { organizationApi } from "@/lib/api/organization";
-import type { OrganizationMember } from "@/lib/api/organization";
+import { channelApi } from "@/lib/api/facade/channel";
+import { organizationApi } from "@/lib/api/facade/organization";
+import type { OrganizationMember } from "@/lib/api/facade/org";
 import { useCurrentOrg } from "@/stores/auth";
 import { useChannelMembers, useChannelStore } from "@/stores/channelStore";
 import { useTranslations } from "next-intl";
@@ -54,7 +54,7 @@ export function ChannelMemberManager({
 
   const memberUserIds = new Set(members.map((m) => m.user_id));
   const availableMembers = orgMembers.filter(
-    (m) => m.user?.id && !memberUserIds.has(m.user.id)
+    (m) => m.user?.id && !memberUserIds.has(Number(m.user.id))
   );
 
   const handleInvite = useCallback(
@@ -90,7 +90,7 @@ export function ChannelMemberManager({
   );
 
   const getUserDisplay = (userId: number) => {
-    const orgMember = orgMembers.find((m) => m.user?.id === userId);
+    const orgMember = orgMembers.find((m) => Number(m.user?.id) === userId);
     return orgMember?.user?.name || orgMember?.user?.username || `User #${userId}`;
   };
 
@@ -164,29 +164,32 @@ export function ChannelMemberManager({
                 <p className="text-xs text-muted-foreground px-2 py-1">
                   {t("channels.members.available")} ({availableMembers.length})
                 </p>
-                {availableMembers.slice(0, 20).map((m) => (
+                {availableMembers.slice(0, 20).map((m) => {
+                  const userId = Number(m.userId);
+                  return (
                   <div
-                    key={m.user_id}
+                    key={userId}
                     className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted/50"
                   >
                     <span className="text-xs font-medium truncate">
-                      {m.user?.name || m.user?.username || `User #${m.user_id}`}
+                      {m.user?.name || m.user?.username || `User #${userId}`}
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0"
-                      onClick={() => m.user?.id && handleInvite(m.user.id)}
-                      disabled={actionLoading === m.user_id}
+                      onClick={() => m.user?.id && handleInvite(Number(m.user.id))}
+                      disabled={actionLoading === userId}
                     >
-                      {actionLoading === m.user_id ? (
+                      {actionLoading === userId ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
                         <Plus className="w-3 h-3 text-muted-foreground hover:text-primary" />
                       )}
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

@@ -14,7 +14,7 @@ import {
   getSupportTicketDetail,
   addSupportTicketMessage,
   SupportTicketDetail,
-} from "@/lib/api/support-ticket";
+} from "@/lib/api/facade/support-ticket";
 
 export function SupportTicketDetailPage() {
   const params = useParams();

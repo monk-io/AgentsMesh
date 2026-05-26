@@ -13,25 +13,24 @@ impl WasmGrantService {
         Self(GrantService::new(client))
     }
 
-    pub async fn list(&self, resource_type: String, resource_id: String) -> Result<String, String> {
-        self.0.list(&resource_type, &resource_id).await
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate; conventions §2.5 forbids it on the client.
+
+    #[wasm_bindgen(js_name = listGrantsConnect)]
+    pub async fn list_grants_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_grants_connect(request).await
     }
 
-    pub async fn grant(
-        &self,
-        resource_type: String,
-        resource_id: String,
-        user_id: i64,
-    ) -> Result<String, String> {
-        self.0.grant(&resource_type, &resource_id, user_id).await
+    #[wasm_bindgen(js_name = createGrantConnect)]
+    pub async fn create_grant_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_grant_connect(request).await
     }
 
-    pub async fn revoke(
-        &self,
-        resource_type: String,
-        resource_id: String,
-        grant_id: i64,
-    ) -> Result<(), String> {
-        self.0.revoke(&resource_type, &resource_id, grant_id).await
+    #[wasm_bindgen(js_name = deleteGrantConnect)]
+    pub async fn delete_grant_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_grant_connect(request).await
     }
 }

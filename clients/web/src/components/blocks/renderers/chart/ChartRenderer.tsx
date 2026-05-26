@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { BarChart3, Check, Pencil, X } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 
 import { BlockChrome } from "../../editor/BlockChrome";

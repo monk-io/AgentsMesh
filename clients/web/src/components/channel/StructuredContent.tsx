@@ -1,6 +1,6 @@
 "use client";
 
-import type { MessageContent, Block, InlineElement } from "@/lib/api/channel-message-types";
+import type { MessageContent, Block, InlineElement } from "@/lib/viewModels/channelMessage";
 import { usePods } from "@/stores/pod";
 import { getPodDisplayName } from "@/lib/pod-display-name";
 import { cn } from "@/lib/utils";

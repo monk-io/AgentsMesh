@@ -13,33 +13,41 @@ impl WasmSupportTicketService {
         Self(SupportTicketService::new(client))
     }
 
-    pub async fn list(
-        &self, status: Option<String>, page: Option<u32>, page_size: Option<u32>,
-    ) -> Result<String, String> {
-        self.0.list(status, page, page_size).await
+    // All RPCs are Connect-binary (conventions §2.5). Multipart upload is
+    // gone — attachments take the presign → S3 PUT → associate handshake.
+
+    #[wasm_bindgen(js_name = listSupportTicketsConnect)]
+    pub async fn list_support_tickets_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_support_tickets_connect(request).await
     }
 
-    pub async fn get_detail(&self, id: i64) -> Result<String, String> {
-        self.0.get_detail(id).await
+    #[wasm_bindgen(js_name = getSupportTicketConnect)]
+    pub async fn get_support_ticket_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_support_ticket_connect(request).await
     }
 
-    pub async fn get_attachment_url(&self, id: i64) -> Result<String, String> {
-        self.0.get_attachment_url(id).await
+    #[wasm_bindgen(js_name = getAttachmentUrlConnect)]
+    pub async fn get_attachment_url_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_attachment_url_connect(request).await
     }
 
-    pub async fn create_ticket(
-        &self, title: &str, category: &str, content: &str,
-        priority: Option<String>, file_data: Vec<js_sys::Uint8Array>, file_names: Vec<String>,
-    ) -> Result<String, String> {
-        let bytes: Vec<Vec<u8>> = file_data.iter().map(|d| d.to_vec()).collect();
-        self.0.create_ticket(title, category, content, priority, bytes, file_names).await
+    #[wasm_bindgen(js_name = createSupportTicketConnect)]
+    pub async fn create_support_ticket_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_support_ticket_connect(request).await
     }
 
-    pub async fn add_message(
-        &self, ticket_id: i64, content: &str,
-        file_data: Vec<js_sys::Uint8Array>, file_names: Vec<String>,
-    ) -> Result<String, String> {
-        let bytes: Vec<Vec<u8>> = file_data.iter().map(|d| d.to_vec()).collect();
-        self.0.add_message(ticket_id, content, bytes, file_names).await
+    #[wasm_bindgen(js_name = addSupportTicketMessageConnect)]
+    pub async fn add_support_ticket_message_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.add_support_ticket_message_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = presignAttachmentUploadConnect)]
+    pub async fn presign_attachment_upload_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.presign_attachment_upload_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = associateAttachmentsConnect)]
+    pub async fn associate_attachments_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.associate_attachments_connect(request).await
     }
 }

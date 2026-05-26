@@ -128,14 +128,14 @@ impl WasmAuthManager {
     }
 
     pub fn apply_session(&self, session_json: &str) -> Result<(), String> {
-        let session: agentsmesh_types::AuthSession = serde_json::from_str(session_json)
+        let session: agentsmesh_state::auth_types::AuthSession = serde_json::from_str(session_json)
             .map_err(agentsmesh_services::wire)?;
         self.manager.apply_session(&session);
         Ok(())
     }
 
     pub fn set_organizations(&self, orgs_json: &str) -> Result<(), String> {
-        let orgs: Vec<agentsmesh_types::Organization> = serde_json::from_str(orgs_json)
+        let orgs: Vec<agentsmesh_state::auth_types::Organization> = serde_json::from_str(orgs_json)
             .map_err(agentsmesh_services::wire)?;
         self.manager.replace_organizations(orgs);
         Ok(())
@@ -145,7 +145,7 @@ impl WasmAuthManager {
         if org_json.is_empty() {
             self.manager.set_current_org(None);
         } else {
-            let org: agentsmesh_types::Organization = serde_json::from_str(org_json)
+            let org: agentsmesh_state::auth_types::Organization = serde_json::from_str(org_json)
                 .map_err(agentsmesh_services::wire)?;
             self.manager.set_current_org(Some(org));
         }

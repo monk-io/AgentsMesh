@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useCurrentUser, useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { usePods } from "@/stores/pod";
-import { organizationApi } from "@/lib/api/organization";
+import { organizationApi } from "@/lib/api/facade/organization";
+import type { OrganizationMember } from "@/lib/api/facade/org";
 import { useChannelPods } from "@/hooks/useChannelPods";
 import { getPodDisplayName, getMentionSafeName, getShortPodKey } from "@/lib/pod-display-name";
 
@@ -58,14 +59,18 @@ export function useMentionCandidates({
         if (cancelled) return;
 
         const memberItems: MentionItem[] = (response.members || [])
-          .filter((m: { user?: { id: number } }) => m.user && m.user.id !== user?.id)
-          .map((m: { user: { id: number; username: string; name?: string; avatar_url?: string } }) => ({
-            id: `user:${m.user.id}`,
+          .filter(
+            (m): m is OrganizationMember & {
+              user: NonNullable<OrganizationMember["user"]>;
+            } => !!m.user && Number(m.user.id) !== user?.id,
+          )
+          .map((m) => ({
+            id: `user:${Number(m.user.id)}`,
             type: "user" as const,
             mentionText: m.user.username,
             displayName: m.user.name || m.user.username,
-            description: (m.user as { email?: string }).email,
-            avatarUrl: m.user.avatar_url,
+            description: m.user.email,
+            avatarUrl: m.user.avatarUrl,
           }));
 
         setMembers(memberItems);

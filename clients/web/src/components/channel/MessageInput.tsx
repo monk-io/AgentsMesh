@@ -7,7 +7,7 @@ import { MessageInputToolbar } from "./MessageInputToolbar";
 import { useFileAttachment } from "@/hooks/useFileAttachment";
 import { useMentionCandidates, type MentionItem } from "@/hooks/useMentionCandidates";
 import { getMentionQuery } from "./mention";
-import type { MentionRefInput, MessageSendPayload } from "@/lib/api/channel-message-types";
+import type { MentionRefInput, MessageSendPayload } from "@/lib/viewModels/channelMessage";
 
 interface MessageInputProps {
   onSend: (payload: MessageSendPayload) => void;

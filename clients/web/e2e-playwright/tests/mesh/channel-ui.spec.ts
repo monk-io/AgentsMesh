@@ -13,7 +13,7 @@ test.describe("Channel UI", () => {
     channels = new ChannelsPage(page, TEST_ORG_SLUG);
     sidebar = new SidebarPage(page, TEST_ORG_SLUG);
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
   });
 
   /**
@@ -53,10 +53,13 @@ test.describe("Channel UI", () => {
     const item = channels.getChannelItem(name);
     await expect(item).toBeVisible({ timeout: 5000 });
 
-    // Should have a lock icon (Lock svg) instead of hash
+    // Selecting it should reveal a header with the channel name (no `#`
+    // prefix on screen — the icon, not a literal hash, conveys visibility).
     await channels.selectChannel(name);
-    // Header should show channel name
-    await expect(page.getByText(`#${name}`)).toBeVisible();
+    await expect(page.getByText(name).first()).toBeVisible();
+    // Lock icon (lucide-react) is exposed via the `lucide-lock` class
+    // — see ChannelHeader's `Icon = isPrivate ? Lock : Hash`.
+    await expect(page.locator("svg.lucide-lock").first()).toBeVisible();
   });
 
   /**

@@ -1,10 +1,10 @@
 import { usePodStore } from "@/stores/pod";
 import { useRunnerStore } from "@/stores/runner";
-import { getTicketService, getPodService, parseWasmAny } from "@/lib/wasm-core";
+import { getTicketService, getPodState, parseWasmAny } from "@/lib/wasm-core";
 import { useTicketStore } from "@/stores/ticket";
 import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
 import { readCurrentUser } from "@/stores/auth";
-import type { PodData } from "@/lib/api/pod";
+import type { PodData } from "@/lib/api/facade/pod";
 import type {
   RealtimeEvent, RunnerStatusData, TicketStatusChangedData,
   ChannelMessageData, ChannelMessageEditedData, ChannelMessageDeletedData,
@@ -103,7 +103,7 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
       const data = event.data as MREventData;
       if (data.ticket_slug) useTicketStore.getState().fetchTicket?.(data.ticket_slug);
       if (data.pod_id) {
-        const pods = JSON.parse(getPodService().pods_json()) as PodData[];
+        const pods = JSON.parse(getPodState().pods_json()) as PodData[];
         const pod = pods.find((p) => p.id === data.pod_id);
         if (pod) usePodStore.getState().fetchPod?.(pod.pod_key);
       }
@@ -113,7 +113,7 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
       const data = event.data as PipelineEventData;
       if (data.ticket_slug) useTicketStore.getState().fetchTicket?.(data.ticket_slug);
       if (data.pod_id) {
-        const pods = JSON.parse(getPodService().pods_json()) as PodData[];
+        const pods = JSON.parse(getPodState().pods_json()) as PodData[];
         const pod = pods.find((p) => p.id === data.pod_id);
         if (pod) usePodStore.getState().fetchPod?.(pod.pod_key);
       }

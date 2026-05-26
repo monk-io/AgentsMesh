@@ -14,6 +14,7 @@ type PodListQuery struct {
 	Statuses      []string // empty = all statuses
 	CreatedByID   int64    // >0 restricts to this creator
 	GrantedUserID int64    // >0 also includes pods granted to this user
+	RunnerID      int64    // >0 restricts to pods owned by this runner
 	Limit         int
 	Offset        int
 }

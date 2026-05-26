@@ -3,12 +3,8 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::channel_state::ChannelState;
-use agentsmesh_types::{
-    Channel, ChannelMessage,
-    CreateChannelRequest, UpdateChannelRequest,
-    SendChannelMessageRequest, EditChannelMessageRequest,
-    JoinChannelPodRequest, MuteChannelRequest,
-};
+use agentsmesh_state::channel_types::{Channel, ChannelMember, ChannelMessage};
+use agentsmesh_types::proto_pod_v1::Pod;
 
 pub struct ChannelService {
     client: Arc<ApiClient>,
@@ -19,6 +15,10 @@ impl ChannelService {
     pub fn new(client: Arc<ApiClient>, state: ChannelState) -> Self {
         Self { client, state: RwLock::new(state) }
     }
+
+    /// Crate-local accessor used by channel_connect.rs to forward to the
+    /// underlying api-client `*_connect` methods.
+    pub(crate) fn client(&self) -> &ApiClient { &self.client }
 
     pub fn channels_json(&self) -> String {
         serde_json::to_string(self.state.read().unwrap().get_channels()).unwrap_or_default()
@@ -59,7 +59,8 @@ impl ChannelService {
     }
 
     pub fn unread_counts_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().get_all_unread_counts()).unwrap_or_default()
+        let counts = self.state.read().unwrap().get_all_unread_counts();
+        serde_json::to_string(&counts).unwrap_or_default()
     }
 
     pub fn get_mention_count(&self, channel_id: i64) -> u32 {
@@ -71,7 +72,8 @@ impl ChannelService {
     }
 
     pub fn mention_counts_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().get_all_mention_counts()).unwrap_or_default()
+        let counts = self.state.read().unwrap().get_all_mention_counts();
+        serde_json::to_string(&counts).unwrap_or_default()
     }
 
     pub fn sorted_channel_ids_json(&self, mode: &str, include_archived: bool) -> String {
@@ -119,6 +121,22 @@ impl ChannelService {
 
     pub fn remove_channel_local(&self, id: i64) {
         self.state.write().unwrap().remove_channel(id);
+    }
+
+    pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
+        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(json) {
+            self.state.write().unwrap().set_channel_pods(channel_id, pods);
+        }
+    }
+
+    pub fn set_channel_members_local(&self, channel_id: i64, json: &str) {
+        if let Ok(members) = serde_json::from_str::<Vec<ChannelMember>>(json) {
+            self.state.write().unwrap().set_channel_members(channel_id, members);
+        }
+    }
+
+    pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {
+        self.state.write().unwrap().remove_channel_member(channel_id, user_id);
     }
 
     pub fn set_current_user(&self, user_json: &str) {
@@ -200,243 +218,62 @@ impl ChannelService {
         }
     }
 
-    pub async fn fetch_channels(&self, include_archived: Option<bool>) -> Result<String, String> {
-        let resp = self.client
-            .list_channels(include_archived)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_channels(resp.channels.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn fetch_channel(&self, id: i64) -> Result<String, String> {
-        let ch: Channel = self.client
-            .get_channel(id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_channel(id, ch.clone());
-        serde_json::to_string(&ch).map_err(crate::wire)
-    }
-
-    pub async fn create_channel(&self, request_json: &str) -> Result<String, String> {
-        let req: CreateChannelRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let ch: Channel = self.client
-            .create_channel(&req)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().add_channel(ch.clone());
-        serde_json::to_string(&ch).map_err(crate::wire)
-    }
-
-    pub async fn update_channel(&self, id: i64, request_json: &str) -> Result<String, String> {
-        let req: UpdateChannelRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let ch: Channel = self.client
-            .update_channel(id, &req)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_channel(id, ch.clone());
-        serde_json::to_string(&ch).map_err(crate::wire)
-    }
-
-    pub async fn archive_channel(&self, id: i64) -> Result<(), String> {
-        self.client.archive_channel(id).await.map_err(crate::wire)?;
-        if let Some(ch) = self.state.read().unwrap().get_channel(id).cloned() {
-            let mut updated = ch;
-            updated.is_archived = true;
-            self.state.write().unwrap().update_channel(id, updated);
-        }
-        Ok(())
-    }
-
-    pub async fn unarchive_channel(&self, id: i64) -> Result<(), String> {
-        self.client.unarchive_channel(id).await.map_err(crate::wire)?;
-        if let Some(ch) = self.state.read().unwrap().get_channel(id).cloned() {
-            let mut updated = ch;
-            updated.is_archived = false;
-            self.state.write().unwrap().update_channel(id, updated);
-        }
-        Ok(())
-    }
-
-    pub async fn join_channel(&self, channel_id: i64, pod_key: &str) -> Result<String, String> {
-        let req = JoinChannelPodRequest { pod_key: pod_key.to_string() };
-        self.client.join_channel_pod(channel_id, &req).await.map_err(crate::wire)?;
-        let ch: Channel = self.client
-            .get_channel(channel_id)
-            .await.map_err(crate::wire)?;
-        let pods_resp = self.client
-            .get_channel_pods(channel_id)
-            .await.map_err(crate::wire)?;
-        {
-            let mut state = self.state.write().unwrap();
-            state.update_channel(channel_id, ch.clone());
-            state.set_channel_pods(channel_id, pods_resp.pods);
-        }
-        serde_json::to_string(&ch).map_err(crate::wire)
-    }
-
-    pub async fn leave_channel(&self, channel_id: i64, pod_key: &str) -> Result<String, String> {
-        self.client.leave_channel_pod(channel_id, pod_key).await.map_err(crate::wire)?;
-        let ch: Channel = self.client
-            .get_channel(channel_id)
-            .await.map_err(crate::wire)?;
-        let pods_resp = self.client
-            .get_channel_pods(channel_id)
-            .await.map_err(crate::wire)?;
-        {
-            let mut state = self.state.write().unwrap();
-            state.update_channel(channel_id, ch.clone());
-            state.set_channel_pods(channel_id, pods_resp.pods);
-        }
-        serde_json::to_string(&ch).map_err(crate::wire)
-    }
-
-    pub async fn fetch_messages(
-        &self, channel_id: i64, limit: Option<u32>, before_id: Option<i64>,
-    ) -> Result<String, String> {
-        let resp = self.client
-            .get_channel_messages(channel_id, limit, before_id)
-            .await.map_err(crate::wire)?;
-        if before_id.is_some() {
-            self.state.write().unwrap().prepend_messages(
-                channel_id, resp.messages.clone(), false,
-            );
-        } else {
-            self.state.write().unwrap().set_messages(
-                channel_id, resp.messages.clone(), false,
-            );
-        }
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn send_message(&self, channel_id: i64, request_json: &str) -> Result<String, String> {
-        let value: serde_json::Value = serde_json::from_str(request_json).map_err(crate::wire)?;
-        let req = if request_has_new_shape(&value) {
-            serde_json::from_value::<SendChannelMessageRequest>(value).map_err(crate::wire)?
-        } else {
-            SendChannelMessageRequest { content: Some(value), ..Default::default() }
-        };
-        let msg: ChannelMessage = self.client
-            .send_channel_message(channel_id, &req)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().on_new_message(msg.clone());
-        serde_json::to_string(&msg).map_err(crate::wire)
-    }
-
-    /// Accepts either an `EditChannelMessageRequest` or a bare
-    /// `MessageContent` AST from legacy callers — bare AST gets rewrapped
-    /// into `{content: <ast>}` (shape detected structurally).
-    pub async fn edit_message(
-        &self, channel_id: i64, message_id: i64, request_json: &str,
-    ) -> Result<String, String> {
-        let value: serde_json::Value = serde_json::from_str(request_json)
-            .map_err(|e| format!("invalid edit request JSON: {e}"))?;
-        let req = if request_has_new_shape(&value) {
-            serde_json::from_value::<EditChannelMessageRequest>(value)
-                .map_err(|e| format!("invalid edit request JSON: {e}"))?
-        } else {
-            EditChannelMessageRequest { content: Some(value), ..Default::default() }
-        };
-        let msg: ChannelMessage = self.client
-            .edit_channel_message(channel_id, message_id, &req)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_message(channel_id, msg.clone());
-        serde_json::to_string(&msg).map_err(crate::wire)
-    }
-
-    pub async fn delete_message(&self, channel_id: i64, message_id: i64) -> Result<(), String> {
-        self.client
-            .delete_channel_message(channel_id, message_id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().remove_message(channel_id, message_id);
-        Ok(())
-    }
-
-    pub async fn fetch_unread_counts(&self) -> Result<String, String> {
-        let resp = self.client
-            .get_channel_unread_counts()
-            .await.map_err(crate::wire)?;
-        let counts: std::collections::HashMap<i64, u32> = resp.unread
-            .into_iter()
-            .filter_map(|(k, v)| k.parse::<i64>().ok().map(|id| (id, v)))
-            .collect();
-        self.state.write().unwrap().set_unread_counts(counts);
-        serde_json::to_string(self.state.read().unwrap().get_all_unread_counts()).map_err(crate::wire)
-    }
-
-    pub async fn mark_read(&self, channel_id: i64, message_id: i64) -> Result<(), String> {
-        self.client
-            .mark_channel_read(channel_id, message_id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().clear_channel_unread(channel_id);
-        Ok(())
-    }
-
-    pub async fn mute_channel(&self, channel_id: i64, muted: bool) -> Result<(), String> {
-        let req = MuteChannelRequest { muted };
-        self.client.mute_channel(channel_id, &req).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
-    pub async fn get_channel_pods(&self, id: i64) -> Result<String, String> {
-        let resp = self.client
-            .get_channel_pods(id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_channel_pods(id, resp.pods.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
     pub fn channel_pods_json(&self, id: i64) -> String {
         let pods = self.state.read().unwrap().get_channel_pods(id);
         serde_json::to_string(&pods).unwrap_or_else(|_| "[]".into())
-    }
-
-    pub async fn fetch_channel_members(&self, id: i64) -> Result<String, String> {
-        let resp = self.client
-            .list_channel_members(id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_channel_members(id, resp.members.clone());
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn invite_channel_members(&self, id: i64, user_ids_json: &str) -> Result<(), String> {
-        let user_ids: Vec<i64> = serde_json::from_str(user_ids_json).map_err(crate::wire)?;
-        let req = agentsmesh_types::InviteChannelMembersRequest { user_ids };
-        self.client
-            .invite_channel_members(id, &req)
-            .await.map_err(crate::wire)?;
-        let fresh = self.client
-            .list_channel_members(id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().set_channel_members(id, fresh.members);
-        Ok(())
-    }
-
-    pub async fn remove_channel_member(&self, id: i64, user_id: i64) -> Result<(), String> {
-        self.client
-            .remove_channel_member(id, user_id)
-            .await.map_err(crate::wire)?;
-        self.state.write().unwrap().remove_channel_member(id, user_id);
-        Ok(())
     }
 
     pub fn channel_members_json(&self, id: i64) -> String {
         let members = self.state.read().unwrap().get_channel_members(id);
         serde_json::to_string(&members).unwrap_or_else(|_| "[]".into())
     }
-
-    pub async fn search_channel_messages(&self, id: i64, q: &str, limit: Option<u32>) -> Result<String, String> {
-        let resp = self.client
-            .search_channel_messages(id, q, limit)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
 }
 
-fn request_has_new_shape(v: &serde_json::Value) -> bool {
-    let Some(obj) = v.as_object() else { return false };
-    obj.contains_key("source")
-        || obj.contains_key("content")
-        || obj.contains_key("mentions")
-        || obj.contains_key("attachment_key")
-        || obj.contains_key("pod_key")
-        || obj.contains_key("reply_to")
+// =============================================================================
+// Connect-RPC bridge methods. Binary in (prost-encoded), binary out — same wire
+// the wasm/node-bridge layers speak. Each method decodes the request, calls the
+// `*_connect` method on the shared ApiClient, and re-encodes the response.
+// =============================================================================
+
+use agentsmesh_types::proto_channel_v1 as channel_proto;
+use prost::Message;
+
+use crate::wire;
+
+macro_rules! connect_bridge {
+    ($name:ident, $req:ident, $client_call:ident) => {
+        pub async fn $name(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+            let req = channel_proto::$req::decode(request_bytes)
+                .map_err(|e| format!("decode {}: {e}", stringify!($req)))?;
+            let resp = self.client().$client_call(&req).await.map_err(wire)?;
+            Ok(resp.encode_to_vec())
+        }
+    };
+}
+
+impl ChannelService {
+    connect_bridge!(list_channels_connect, ListChannelsRequest, list_channels_connect);
+    connect_bridge!(get_channel_connect, GetChannelRequest, get_channel_connect);
+    connect_bridge!(create_channel_connect, CreateChannelRequest, create_channel_connect);
+    connect_bridge!(update_channel_connect, UpdateChannelRequest, update_channel_connect);
+    connect_bridge!(archive_channel_connect, ArchiveChannelRequest, archive_channel_connect);
+    connect_bridge!(unarchive_channel_connect, UnarchiveChannelRequest, unarchive_channel_connect);
+    connect_bridge!(get_channel_document_connect, GetChannelDocumentRequest, get_channel_document_connect);
+    connect_bridge!(update_channel_document_connect, UpdateChannelDocumentRequest, update_channel_document_connect);
+    connect_bridge!(list_channel_messages_connect, ListChannelMessagesRequest, list_channel_messages_connect);
+    connect_bridge!(search_channel_messages_connect, SearchChannelMessagesRequest, search_channel_messages_connect);
+    connect_bridge!(send_channel_message_connect, SendChannelMessageRequest, send_channel_message_connect);
+    connect_bridge!(edit_channel_message_connect, EditChannelMessageRequest, edit_channel_message_connect);
+    connect_bridge!(delete_channel_message_connect, DeleteChannelMessageRequest, delete_channel_message_connect);
+    connect_bridge!(mark_channel_read_connect, MarkChannelReadRequest, mark_channel_read_connect);
+    connect_bridge!(get_channel_unread_counts_connect, GetChannelUnreadCountsRequest, get_channel_unread_counts_connect);
+    connect_bridge!(mute_channel_connect, MuteChannelRequest, mute_channel_connect);
+    connect_bridge!(list_channel_members_connect, ListChannelMembersRequest, list_channel_members_connect);
+    connect_bridge!(join_channel_connect, JoinChannelRequest, join_channel_connect);
+    connect_bridge!(leave_channel_connect, LeaveChannelRequest, leave_channel_connect);
+    connect_bridge!(invite_channel_members_connect, InviteChannelMembersRequest, invite_channel_members_connect);
+    connect_bridge!(remove_channel_member_connect, RemoveChannelMemberRequest, remove_channel_member_connect);
+    connect_bridge!(list_channel_pods_connect, ListChannelPodsRequest, list_channel_pods_connect);
+    connect_bridge!(join_channel_pod_connect, JoinChannelPodRequest, join_channel_pod_connect);
+    connect_bridge!(leave_channel_pod_connect, LeaveChannelPodRequest, leave_channel_pod_connect);
 }

@@ -13,6 +13,18 @@ const enableStandalone = process.env.BAZEL_BUILD === "standalone";
 const nextConfig: NextConfig = {
   ...(enableStandalone ? { output: "standalone" as const } : {}),
 
+  // See clients/web/next.config.ts for the matching note — keeps the
+  // dev-path build out of the `.next/` directory the standalone
+  // pipeline owns.
+  ...(process.env.BAZEL_TARGET_NAME === "next"
+    ? { distDir: ".next-dev" as const }
+    : {}),
+
+  // `@agentsmesh/proto` ships raw .ts files (the generated Connect-RPC
+  // message classes). Webpack/SWC needs to compile them — same reason
+  // clients/web lists this in transpilePackages.
+  transpilePackages: ["@agentsmesh/proto"],
+
   // =============================================================================
   // Unified Domain Configuration
   // 将 PRIMARY_DOMAIN / USE_HTTPS 映射为 NEXT_PUBLIC_* 变量
@@ -39,6 +51,12 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${backendUrl}/api/:path*`,
+      },
+      // Connect-RPC: backend serves /proto.<svc>.v1.<Service>/<Method>
+      // at the root path (no /api prefix) — see backend/cmd/server/connect_init.go
+      {
+        source: "/proto.:path*",
+        destination: `${backendUrl}/proto.:path*`,
       },
     ];
   },

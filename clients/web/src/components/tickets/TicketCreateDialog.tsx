@@ -13,10 +13,10 @@ import {
   ResponsiveDialogBody,
   ResponsiveDialogFooter,
 } from "@/components/ui/responsive-dialog";
-import { TicketPriority } from "@/lib/api/ticketTypes";
-import { getTicketService } from "@/lib/wasm-core";
-import type { OrganizationMember } from "@/lib/api/organizationTypes";
-import { getOrgApiService } from "@/lib/wasm-getters";
+import { TicketPriority } from "@/lib/viewModels/ticket";
+import { createTicket as createTicketConnect } from "@/lib/api/facade/ticketConnect";
+import type { OrganizationMember } from "@/lib/api/facade/org";
+import { listMembers } from "@/lib/api/facade/org";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { RepositorySelect } from "@/components/common/RepositorySelect";
 import { useBreakpoint } from "@/components/layout/useBreakpoint";
@@ -64,8 +64,8 @@ export function TicketCreateDialog({
 
   useEffect(() => {
     if (open && currentOrg?.slug && members.length === 0) {
-      getOrgApiService().list_members(currentOrg.slug)
-        .then((raw: string) => setMembers(JSON.parse(raw).members || []))
+      listMembers(currentOrg.slug)
+        .then((resp) => setMembers(resp.items || []))
         .catch(() => {});
     }
   }, [open, currentOrg?.slug, members.length]);
@@ -113,14 +113,14 @@ export function TicketCreateDialog({
     setError(null);
 
     try {
-      const response = JSON.parse(await getTicketService().create_ticket(JSON.stringify({
+      const response = await createTicketConnect(currentOrg?.slug || "", {
         repository_id: form.repositoryId,
         title: form.title.trim(),
         content: form.content || undefined,
         priority: form.priority,
         parent_ticket_slug: parentTicketSlug,
         assignee_ids: form.assigneeIds.length > 0 ? form.assigneeIds : undefined,
-      })));
+      });
 
       onCreated?.(response.id, response.slug);
       handleClose();
@@ -200,7 +200,7 @@ export function TicketCreateDialog({
                     {form.assigneeIds.length === 0
                       ? t("tickets.detail.noAssignees")
                       : members
-                          .filter((m) => form.assigneeIds.includes(m.user_id))
+                          .filter((m) => form.assigneeIds.includes(Number(m.userId)))
                           .map((m) => m.user?.name || m.user?.username || m.user?.email)
                           .join(", ")}
                   </span>
@@ -210,20 +210,21 @@ export function TicketCreateDialog({
                   <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 text-popover-foreground shadow-md max-h-48 overflow-y-auto">
                     {members.length > 0 ? (
                       members.map((member) => {
-                        const isSelected = form.assigneeIds.includes(member.user_id);
+                        const userId = Number(member.userId);
+                        const isSelected = form.assigneeIds.includes(userId);
                         return (
                           <button
-                            key={member.user_id}
+                            key={userId}
                             type="button"
                             className="flex items-center gap-2 w-full rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                            onClick={() => toggleAssignee(member.user_id)}
+                            onClick={() => toggleAssignee(userId)}
                           >
                             <span className={cn("flex h-4 w-4 items-center justify-center shrink-0", !isSelected && "opacity-0")}>
                               <Check className="h-3.5 w-3.5" />
                             </span>
-                            {member.user?.avatar_url ? (
+                            {member.user?.avatarUrl ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={member.user.avatar_url} alt="" className="w-5 h-5 rounded-full shrink-0" />
+                              <img src={member.user.avatarUrl} alt="" className="w-5 h-5 rounded-full shrink-0" />
                             ) : (
                               <Users className="w-4 h-4 text-muted-foreground shrink-0" />
                             )}

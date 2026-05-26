@@ -1,11 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import { ImportRepositoryModal } from "../ImportRepositoryModal";
 import {
   setupProviderMocks,
   mockRepositoryCreate,
   stableRepoSvc,
 } from "./ImportRepositoryModal.utils";
+
+// Stable references so React's useCallback([currentOrg]) doesn't churn.
+// vi.hoisted survives vi.mock's factory hoisting.
+const stable = vi.hoisted(() => ({
+  org: { id: 1, name: "TestOrg", slug: "test-org" },
+  user: { id: 1, email: "u@e.com", username: "u" },
+}));
+
+// useImportWizard.handleImport bails on !currentOrg; provide a non-null org.
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stable.org,
+  useCurrentUser: () => stable.user,
+  useAuthOrganizations: () => [],
+  useAuthStore: () => ({ currentOrg: stable.org }),
+  useIsAuthenticated: () => true,
+  readCurrentUser: () => stable.user,
+  readCurrentOrg: () => stable.org,
+  readOrganizations: () => [],
+}));
+
+import { ImportRepositoryModal } from "../ImportRepositoryModal";
 
 describe("ImportRepositoryModal - Confirmation Step", () => {
   const mockOnClose = vi.fn();
@@ -14,6 +34,7 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupProviderMocks();
+    mockRepositoryCreate();
   });
 
   it("should navigate to confirm step after selecting repository", async () => {
@@ -115,8 +136,12 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalledWith(
-        expect.stringContaining('"ticket_prefix":"TEST"'),
+      // useImportWizard.handleImport calls getRepositoryService().create(JSON.stringify({...}))
+      // — assert on the parsed JSON payload.
+      expect(stableRepoSvc.create).toHaveBeenCalled();
+      const arg = stableRepoSvc.create.mock.calls[0][0];
+      expect(JSON.parse(arg as string)).toEqual(
+        expect.objectContaining({ ticket_prefix: "TEST" }),
       );
     });
   });

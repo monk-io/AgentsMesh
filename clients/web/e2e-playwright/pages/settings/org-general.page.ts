@@ -22,7 +22,7 @@ export class OrgGeneralPage {
     await this.page.goto(
       `/${this.orgSlug}/settings?scope=organization&tab=general`
     );
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("load");
   }
 
   async updateName(newName: string): Promise<void> {

@@ -1,18 +1,18 @@
 use crate::mesh_state::MeshState;
-use agentsmesh_types::*;
+use agentsmesh_types::proto_mesh_v1::{ChannelInfo, MeshEdge, MeshNode, MeshTopology, RunnerInfo};
 
 fn sample_topology() -> MeshTopology {
     MeshTopology {
         nodes: vec![
-            MeshNode { pod_key: "p1".into(), alias: Some("worker".into()), status: PodStatus::Running, agent_status: Some("idle".into()), agent_slug: "claude".into(), runner_id: Some(1), ..Default::default() },
-            MeshNode { pod_key: "p2".into(), status: PodStatus::Creating, agent_slug: "aider".into(), runner_id: Some(1), ..Default::default() },
-            MeshNode { pod_key: "p3".into(), status: PodStatus::Terminated, agent_slug: "claude".into(), runner_id: Some(2), ..Default::default() },
+            MeshNode { pod_key: "p1".into(), alias: Some("worker".into()), status: "running".into(), agent_status: "idle".into(), agent_slug: "claude".into(), runner_id: 1, ..Default::default() },
+            MeshNode { pod_key: "p2".into(), status: "creating".into(), agent_slug: "aider".into(), runner_id: 1, ..Default::default() },
+            MeshNode { pod_key: "p3".into(), status: "terminated".into(), agent_slug: "claude".into(), runner_id: 2, ..Default::default() },
         ],
-        edges: vec![MeshEdge { source: "p1".into(), target: "p2".into(), binding_status: Some("bound".into()), ..Default::default() }],
-        channels: vec![MeshChannelInfo { id: 1, name: "general".into(), pod_keys: vec!["p1".into(), "p2".into()], ..Default::default() }],
+        edges: vec![MeshEdge { source: "p1".into(), target: "p2".into(), status: "bound".into(), ..Default::default() }],
+        channels: vec![ChannelInfo { id: 1, name: "general".into(), pod_keys: vec!["p1".into(), "p2".into()], ..Default::default() }],
         runners: vec![
-            MeshRunnerInfo { id: 1, name: "r1".into(), status: RunnerStatus::Online, pod_keys: vec!["p1".into(), "p2".into()], ..Default::default() },
-            MeshRunnerInfo { id: 2, name: "r2".into(), status: RunnerStatus::Offline, pod_keys: vec!["p3".into()], ..Default::default() },
+            RunnerInfo { id: 1, node_id: "r1".into(), status: "online".into(), ..Default::default() },
+            RunnerInfo { id: 2, node_id: "r2".into(), status: "offline".into(), ..Default::default() },
         ],
     }
 }
@@ -29,4 +29,4 @@ fn sample_topology() -> MeshTopology {
 #[test] fn get_channels_no_topo() { let s = MeshState::new(); assert!(s.get_channels_for_node("p1").is_empty()); }
 #[test] fn get_nodes_by_runner() { let mut s = MeshState::new(); s.set_topology(sample_topology()); assert_eq!(s.get_nodes_by_runner(1).len(), 2); assert!(s.get_nodes_by_runner(99).is_empty()); }
 #[test] fn get_active_nodes() { let mut s = MeshState::new(); s.set_topology(sample_topology()); assert_eq!(s.get_active_nodes().len(), 2); }
-#[test] fn get_runner_info() { let mut s = MeshState::new(); s.set_topology(sample_topology()); assert_eq!(s.get_runner_info(1).unwrap().name, "r1"); assert!(s.get_runner_info(99).is_none()); }
+#[test] fn get_runner_info() { let mut s = MeshState::new(); s.set_topology(sample_topology()); assert_eq!(s.get_runner_info(1).unwrap().node_id, "r1"); assert!(s.get_runner_info(99).is_none()); }

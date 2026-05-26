@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { AggregateOp, Block, JSONMap, SummaryColumn } from "@/lib/api/blockstoreTypes";
+import type { AggregateOp, Block, JSONMap, SummaryColumn } from "@/lib/viewModels/blockstore";
 
 export interface SummaryBarProps {
   blocks: Block[];

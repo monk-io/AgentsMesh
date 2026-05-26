@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 
@@ -12,24 +13,25 @@ test.describe("Settings → Git Providers · is_active flow", () => {
 
   test.afterEach(async ({ api }) => {
     if (providerId) {
-      await api.delete(`/api/v1/users/repository-providers/${providerId}`);
+      const cc = await api.connect();
+      await cc.userRepositoryProvider.deleteRepositoryProvider({ id: providerId }).catch(() => null);
       providerId = undefined;
     }
   });
 
   test("freshly created provider does NOT show disabled badge", async ({ api, page }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
       name: `E2E UI Active ${Date.now()}`,
-      base_url: "https://api.github.com",
-      bot_token: "ghp_e2e_ui_active",
-    });
-    const created = (await createRes.json()).provider;
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_e2e_ui_active",
+    }) as { id: number; isActive: boolean };
     providerId = created.id;
-    expect(created.is_active).toBe(true);
+    expect(created.isActive).toBe(true);
 
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=personal&tab=git`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const card = page.locator(`[data-testid="git-provider-card"][data-provider-id="${providerId}"]`);
     await expect(card).toBeVisible({ timeout: 10_000 });
@@ -40,16 +42,17 @@ test.describe("Settings → Git Providers · is_active flow", () => {
   });
 
   test("toggling is_active off in EditDialog persists and shows disabled badge", async ({ api, page }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
       name: `E2E UI Toggle ${Date.now()}`,
-      base_url: "https://api.github.com",
-      bot_token: "ghp_e2e_ui_toggle",
-    });
-    providerId = (await createRes.json()).provider.id;
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_e2e_ui_toggle",
+    }) as { id: number };
+    providerId = created.id;
 
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=personal&tab=git`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const card = page.locator(`[data-testid="git-provider-card"][data-provider-id="${providerId}"]`);
     await expect(card).toBeVisible();
@@ -71,22 +74,23 @@ test.describe("Settings → Git Providers · is_active flow", () => {
     await expect(card).toHaveAttribute("data-is-active", "false");
     await expect(card.locator('[data-testid="git-provider-disabled-badge"]')).toBeVisible();
 
-    const verifyRes = await api.get(`/api/v1/users/repository-providers/${providerId}`);
-    expect((await verifyRes.json()).provider.is_active).toBe(false);
+    const verified = await cc.userRepositoryProvider.getRepositoryProvider({ id: providerId! }) as { isActive: boolean };
+    expect(verified.isActive).toBe(false);
   });
 
   test("re-enabling a disabled provider clears the disabled badge", async ({ api, page }) => {
-    const createRes = await api.post("/api/v1/users/repository-providers", {
-      provider_type: "github",
+    const cc = await api.connect();
+    const created = await cc.userRepositoryProvider.createRepositoryProvider({
+      providerType: "github",
       name: `E2E UI ReEnable ${Date.now()}`,
-      base_url: "https://api.github.com",
-      bot_token: "ghp_e2e_reenable",
-    });
-    providerId = (await createRes.json()).provider.id;
-    await api.put(`/api/v1/users/repository-providers/${providerId}`, { is_active: false });
+      baseUrl: "https://api.github.com",
+      botToken: "ghp_e2e_reenable",
+    }) as { id: number };
+    providerId = created.id;
+    await cc.userRepositoryProvider.updateRepositoryProvider({ id: providerId!, isActive: false });
 
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=personal&tab=git`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const card = page.locator(`[data-testid="git-provider-card"][data-provider-id="${providerId}"]`);
     await expect(card.locator('[data-testid="git-provider-disabled-badge"]')).toBeVisible();
@@ -103,7 +107,7 @@ test.describe("Settings → Git Providers · is_active flow", () => {
     await expect(card).toHaveAttribute("data-is-active", "true");
     await expect(card.locator('[data-testid="git-provider-disabled-badge"]')).toHaveCount(0);
 
-    const verifyRes = await api.get(`/api/v1/users/repository-providers/${providerId}`);
-    expect((await verifyRes.json()).provider.is_active).toBe(true);
+    const verified = await cc.userRepositoryProvider.getRepositoryProvider({ id: providerId! }) as { isActive: boolean };
+    expect(verified.isActive).toBe(true);
   });
 });

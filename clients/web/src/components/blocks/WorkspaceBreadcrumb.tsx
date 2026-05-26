@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-import { blockstoreApi } from "@/lib/api/blockstoreApi";
-import type { Workspace } from "@/lib/api/blockstoreTypes";
+import { blockstoreApi } from "@/lib/api/facade/blockstoreApi";
+import type { Workspace } from "@/lib/viewModels/blockstore";
 import { cn, getErrorMessage } from "@/lib/utils";
 import { useBlockstoreStore } from "@/stores/blockstore";
 

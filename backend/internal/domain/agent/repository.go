@@ -8,7 +8,13 @@ import (
 // AgentRepository defines persistence operations for agents
 type AgentRepository interface {
 	// Builtin agents
+	// ListBuiltinActive returns user-facing builtin agents (is_internal=false).
+	// Use this for any path that surfaces a list to a regular user.
 	ListBuiltinActive(ctx context.Context) ([]*Agent, error)
+	// ListBuiltinAll returns every active builtin row including internal
+	// ones. Use this for runner discovery + admin / e2e dev paths where
+	// the consumer legitimately needs to see test fixtures.
+	ListBuiltinAll(ctx context.Context) ([]*Agent, error)
 	ListAllActive(ctx context.Context) ([]*Agent, error)
 	GetBySlug(ctx context.Context, slug string) (*Agent, error)
 

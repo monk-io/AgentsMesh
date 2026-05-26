@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { ConfirmDialog, useConfirmDialog } from "@/components/ui/confirm-dialog";
-import { getOrgApiService } from "@/lib/wasm-getters";
+import { updateOrg, deleteOrg } from "@/lib/api/facade/org";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useCurrentOrg, useAuthOrganizations, useAuthStore } from "@/stores/auth";
 import { toast } from "sonner";
@@ -23,7 +22,6 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   useEffect(() => { if (org?.name && !name) setName(org.name); }, [org?.name]);
-  const router = useRouter();
   const currentOrg = useCurrentOrg();
   const organizations = useAuthOrganizations();
   const setCurrentOrg = useAuthStore((s) => s.setCurrentOrg);
@@ -39,7 +37,7 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await getOrgApiService().update(org!.slug, JSON.stringify({ name }));
+      await updateOrg(org!.slug, { name });
 
       if (currentOrg && currentOrg.slug === org!.slug) {
         setCurrentOrg({ ...currentOrg, name });
@@ -65,18 +63,24 @@ export function GeneralSettings({ org, t }: GeneralSettingsProps) {
 
     setDeleting(true);
     try {
-      await getOrgApiService().delete(org!.slug);
+      await deleteOrg(org!.slug);
 
       const remaining = organizations.filter((o) => o.slug !== org!.slug);
-      setOrganizations(remaining);
+      // Hard nav (window.location.assign) instead of router.push: when
+      // setOrganizations writes the updated SSOT slice, OrgLayout's effect
+      // detects "current URL slug no longer in orgs" and fires its own
+      // `router.replace` — racing this handler's soft navigation. The two
+      // competing Next.js client navigations abort each other, freezing
+      // the URL on the deleted org's settings page (test flake source).
+      // Switching orgs already reinits wasm + Connect streams, so a full
+      // reload costs nothing extra and removes the race.
+      const target = remaining.length > 0 ? `/${remaining[0].slug}/workspace` : "/";
+      await setOrganizations(remaining);
       if (remaining.length > 0) {
-        setCurrentOrg(remaining[0]);
-        router.push(`/${remaining[0].slug}/workspace`);
-      } else {
-        router.push("/");
+        await setCurrentOrg(remaining[0]);
       }
-
       toast.success(t("settings.dangerZone.deleteSuccess") || "Organization deleted");
+      window.location.assign(target);
     } catch (error) {
       console.error("Failed to delete organization:", error);
       toast.error(getLocalizedErrorMessage(error, t, t("settings.dangerZone.deleteFailed") || "Failed to delete"));

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AtSign } from "lucide-react";
 
-import { userApi, type UserSummary } from "@/lib/api/user";
+import { userApi, type UserSummary } from "@/lib/api/facade/user";
 import { cn, getErrorMessage } from "@/lib/utils";
 
 export interface UserPickerProps {

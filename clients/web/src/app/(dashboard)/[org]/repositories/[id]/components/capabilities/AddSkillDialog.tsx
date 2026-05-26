@@ -5,7 +5,10 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { SkillMarketItem } from "@/lib/api";
-import { getExtensionService } from "@/lib/wasm-core";
+import { extensionApi } from "@/lib/api/facade/extension";
+import { listMarketSkills } from "@/lib/api/facade/marketExtension";
+import { installSkillFromMarket, installSkillFromGitHub } from "@/lib/api/facade/repoSkillExtension";
+import { useCurrentOrg } from "@/stores/auth";
 import type { InstalledSkill } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -25,6 +28,8 @@ interface AddSkillDialogProps {
 
 export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInstalled, installedSlugs }: AddSkillDialogProps) {
   const t = useTranslations();
+  const currentOrg = useCurrentOrg();
+  const orgSlug = currentOrg?.slug ?? "";
   const [installing, setInstalling] = useState(false);
 
   const [marketSkills, setMarketSkills] = useState<SkillMarketItem[]>([]);
@@ -38,16 +43,17 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadMarketSkills = useCallback(async (query?: string) => {
+    if (!orgSlug) return;
     setLoadingMarket(true);
     try {
-      const res = JSON.parse(await getExtensionService().list_market_skills(query));
-      setMarketSkills(res.skills || []);
+      const res = await listMarketSkills(orgSlug, { query });
+      setMarketSkills(res.items);
     } catch (error) {
       console.error("Failed to load market skills:", error);
     } finally {
       setLoadingMarket(false);
     }
-  }, []);
+  }, [orgSlug]);
 
   useEffect(() => {
     if (open) {
@@ -61,12 +67,13 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
 
   const handleInstallFromMarket = useCallback(
     async (item: SkillMarketItem) => {
+      if (!orgSlug) return;
       setInstalling(true);
       try {
-        await getExtensionService().install_skill_from_market(BigInt(repositoryId), JSON.stringify({
-          market_item_id: item.id,
+        await installSkillFromMarket(orgSlug, repositoryId, {
+          marketItemId: item.id,
           scope,
-        }));
+        });
         toast.success(t("extensions.installed"));
         onInstalled();
       } catch (error) {
@@ -75,19 +82,19 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
         setInstalling(false);
       }
     },
-    [repositoryId, scope, t, onInstalled]
+    [orgSlug, repositoryId, scope, t, onInstalled]
   );
 
   const handleInstallFromGitHub = useCallback(async () => {
-    if (!githubUrl.trim()) return;
+    if (!githubUrl.trim() || !orgSlug) return;
     setInstalling(true);
     try {
-      await getExtensionService().install_skill_from_github(BigInt(repositoryId), JSON.stringify({
+      await installSkillFromGitHub(orgSlug, repositoryId, {
         url: githubUrl.trim(),
         branch: githubBranch.trim() || undefined,
         path: githubPath.trim() || undefined,
         scope,
-      }));
+      });
       toast.success(t("extensions.installed"));
       onInstalled();
     } catch (error) {
@@ -95,18 +102,15 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
     } finally {
       setInstalling(false);
     }
-  }, [repositoryId, githubUrl, githubBranch, githubPath, scope, t, onInstalled]);
+  }, [orgSlug, repositoryId, githubUrl, githubBranch, githubPath, scope, t, onInstalled]);
 
   const handleUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file) return;
+      if (!file || !orgSlug) return;
       setInstalling(true);
       try {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        await getExtensionService().install_skill_from_upload(
-          BigInt(repositoryId), bytes, file.name, scope,
-        );
+        await extensionApi.installSkillFromUpload(orgSlug, repositoryId, file, scope);
         toast.success(t("extensions.installed"));
         onInstalled();
       } catch (error) {
@@ -118,7 +122,7 @@ export function AddSkillDialog({ repositoryId, scope, open, onOpenChange, onInst
         }
       }
     },
-    [repositoryId, scope, t, onInstalled]
+    [orgSlug, repositoryId, scope, t, onInstalled]
   );
 
   return (

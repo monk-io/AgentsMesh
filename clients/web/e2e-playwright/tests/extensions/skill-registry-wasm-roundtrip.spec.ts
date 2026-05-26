@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
@@ -66,7 +67,10 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
     // The bug manifested as an empty list even though the POST succeeded.
     // Asserting the URL is rendered proves the wasm relay preserved the
     // `skill_registries` wrapper key on the subsequent list refresh.
-    await expect(page.getByText(testUrl)).toBeVisible();
+    // Scope to the title span: the row's `sync_error` field also embeds
+    // the URL once the initial sync fails (the test URLs aren't reachable),
+    // so an unscoped getByText would race the sync.
+    await expect(page.locator("span.font-medium", { hasText: testUrl })).toBeVisible();
 
     // Belt-and-braces: confirm the DB row exists, so a future bug that hides
     // rows in the UI without ever POSTing can't pass by simply staying empty.
@@ -78,20 +82,68 @@ test.describe("Skill registry — wasm round-trip (#341)", () => {
 
   test("UI lists pre-existing org registry on page load", async ({ page, api }) => {
     // Symptom 2 from the bug report: even if the DB has rows, the page renders
-    // empty. Pre-seed via the backend API (which bypasses wasm), then load the
-    // settings page and assert the row appears — this exercises the wasm
-    // list_skill_registries() path without going through the create dialog.
+    // empty. Pre-seed via the backend Connect RPC (which bypasses wasm), then
+    // load the settings page and assert the row appears — this exercises the
+    // wasm list_skill_registries() path without going through the create dialog.
     const testUrl = `${TEST_URL_PREFIX}preexisting-${Date.now()}`;
-    const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/skill-registries`, {
-      repository_url: testUrl,
+    const cc = await api.connect();
+    await cc.skillRegistry.createSkillRegistry({
+      orgSlug: TEST_ORG_SLUG,
+      repositoryUrl: testUrl,
       branch: "main",
-      auth_type: "none",
+      authType: "none",
     });
-    expect([200, 201]).toContain(createRes.status);
 
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "extensions");
 
-    await expect(page.getByText(testUrl)).toBeVisible();
+    // Strict-mode scope: target the registry row's title span specifically.
+    // The initial-sync against a non-existent GitHub URL fails fast and
+    // the resulting `sync_error` text also contains the URL — without
+    // scoping we'd hit two matches.
+    await expect(page.locator("span.font-medium", { hasText: testUrl })).toBeVisible();
+  });
+
+  // Connect-RPC binary lane (proto-migration feature branch). Asserts the
+  // wasm-side `listSkillRegistriesConnect` (binary protobuf) ends up
+  // populating the same UI list — i.e. the Connect handler at
+  // /proto.extension.v1.SkillRegistryService/ListSkillRegistries returns
+  // the same data the REST handler does, and the @bufbuild/protobuf
+  // fromBinary path on the renderer side doesn't lose fields.
+  //
+  // Marked as Connect-path explicitly so a future regression in the
+  // protobuf wire surfaces as a distinct failure rather than masquerading
+  // as a generic empty-list bug.
+  test("UI shows newly added org registry after submit (Connect path)", async ({ page, db }) => {
+    const testUrl = `${TEST_URL_PREFIX}connect-${Date.now()}`;
+
+    const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
+    await nav.goto("organization", "extensions");
+
+    const openButton = page.getByRole("button", { name: /add source|添加注册表/i });
+    await expect(openButton).toBeVisible();
+    await openButton.click();
+
+    const dialog = page.locator("[data-dialog-overlay]");
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByPlaceholder("https://github.com/owner/skills-repo").fill(testUrl);
+    await dialog.getByRole("button", { name: /add source|添加注册表/i }).click();
+    await expect(dialog).toBeHidden();
+
+    // The row appearing in the UI after the dialog closes is the proof:
+    // it must have come back from a list call (the create response is
+    // single-entity, not a list), and the post-create refresh now goes
+    // through Connect (`listSkillRegistries(orgSlug)`). If the Connect
+    // handler dropped the entity (wrong envelope, drifted prost tag,
+    // missing field), this assertion fails. Scope to the row title span
+    // since the row's sync_error also embeds the URL once initial sync
+    // fails (test URLs aren't reachable).
+    await expect(page.locator("span.font-medium", { hasText: testUrl })).toBeVisible();
+
+    const dbCount = db.queryValue(
+      `SELECT COUNT(*) FROM skill_registries WHERE organization_id = ${orgIdSql} AND repository_url = '${testUrl}'`
+    );
+    expect(dbCount).toBe("1");
   });
 });

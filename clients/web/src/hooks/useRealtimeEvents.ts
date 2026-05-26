@@ -10,14 +10,18 @@ import {
   type RealtimeEvent,
   type ConnectionState,
 } from "@/lib/realtime";
-import { useCurrentUser, useCurrentOrg, readCurrentOrg } from "@/stores/auth";
-import { getAuthManager } from "@/lib/wasm-core";
-import { getWsBaseUrl } from "@/lib/env";
+import { useCurrentUser, useCurrentOrg } from "@/stores/auth";
 
-function buildEventsWsUrl(orgSlug: string, token: string): string {
-  return `${getWsBaseUrl()}/api/v1/orgs/${orgSlug}/ws/events?token=${token}`;
-}
-
+/**
+ * Manages the realtime events connection.
+ *
+ * After R5-11 the underlying transport is Connect-RPC server streaming
+ * driven by the wasm-side `WasmEventsManager`. The hook only triggers
+ * connect/disconnect lifecycle around (currentOrg, user) identity —
+ * reconnect, auth refresh, and heartbeat live inside Rust core.
+ *
+ * Used once at the app root level (RealtimeProvider).
+ */
 export function useRealtimeConnection() {
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("disconnected");
@@ -25,32 +29,32 @@ export function useRealtimeConnection() {
   const user = useCurrentUser();
   const managerRef = useRef(getEventSubscriptionManager());
 
-  // deps use `user?.id` (not `user`) — useCurrentUser returns a fresh object on every
-  // store tick, so reference-deps would close()'d the WS mid-handshake on login.
+  // deps use `user?.id` (not `user`) on purpose: useCurrentUser() returns a
+  // fresh object reference on every store tick, so the login flow ticks
+  // several times in quick succession (token set → user populated → org
+  // list fetched → user-me roundtrip). Comparing primitives keeps the
+  // effect pinned to actual identity changes (user switch, org switch).
   useEffect(() => {
     if (!currentOrg || !user) {
-      managerRef.current.disconnect();
+      void managerRef.current.disconnect();
       return;
     }
 
     resetEventSubscriptionManager();
     const manager = getEventSubscriptionManager();
     managerRef.current = manager;
-    manager.connect(() => {
-      const o = readCurrentOrg();
-      const t = getAuthManager().get_token?.();
-      return o && t ? buildEventsWsUrl(o.slug, t) : "";
-    });
+    void manager.connect();
 
     const unsubscribe = manager.onConnectionStateChange(setConnectionState);
 
     return () => {
       unsubscribe();
-      // Delay disconnect to avoid killing connection during React Strict Mode re-mount.
+      // Delay disconnect to avoid killing connection during React Strict
+      // Mode re-mount.
       const currentManager = manager;
       setTimeout(() => {
         if (managerRef.current === currentManager) {
-          currentManager.disconnect();
+          void currentManager.disconnect();
         }
       }, 100);
     };
@@ -58,16 +62,9 @@ export function useRealtimeConnection() {
   }, [currentOrg?.id, user?.id]);
 
   const reconnect = useCallback(() => {
-    const org = readCurrentOrg();
-    const t = getAuthManager().get_token?.();
-    if (!org || !t) return;
     resetEventSubscriptionManager();
     managerRef.current = getEventSubscriptionManager();
-    managerRef.current.connect(() => {
-      const o = readCurrentOrg();
-      const tk = getAuthManager().get_token?.();
-      return o && tk ? buildEventsWsUrl(o.slug, tk) : "";
-    });
+    void managerRef.current.connect();
   }, []);
 
   return {
@@ -76,6 +73,9 @@ export function useRealtimeConnection() {
   };
 }
 
+/**
+ * Subscribe to a specific event type.
+ */
 export function useEventSubscription<T = unknown>(
   eventType: EventType,
   handler: EventHandler<T>,
@@ -107,6 +107,9 @@ export function useEventSubscription<T = unknown>(
   }, [eventType]);
 }
 
+/**
+ * Subscribe to all events.
+ */
 export function useAllEventsSubscription(
   handler: EventHandler,
   deps: React.DependencyList = []
@@ -137,6 +140,9 @@ export function useAllEventsSubscription(
   }, []);
 }
 
+/**
+ * Get the latest event of a specific type as React state.
+ */
 export function useLatestEvent<T = unknown>(
   eventType: EventType
 ): RealtimeEvent<T> | null {

@@ -3,6 +3,13 @@
 // matches `err instanceof ApiError && err.hasCode(...)` keeps working
 // unchanged. Bearer tokens are pulled lazily from localStorage via
 // readLightAuthToken so callers don't need to thread them through.
+//
+// Two transport surfaces:
+//   - lightFetch — legacy REST (still used by /runners/grpc/auth-url and
+//     a couple of public read endpoints that the runner CLI hits).
+//   - lightConnect — Connect-RPC JSON. The bulk of auth + org + user
+//     surfaces migrated to Connect in R5/R6; light-auth talks to them over
+//     application/json without pulling the wasm protobuf runtime.
 
 import { ApiError } from "@/lib/api/api-types";
 import { readLightAuthToken, resolveLightBaseUrl } from "@/lib/light-session";
@@ -62,3 +69,62 @@ export async function lightFetch<T = unknown>(
   if (!text) return undefined as T;
   try { return JSON.parse(text) as T; } catch { return undefined as T; }
 }
+
+export interface LightConnectOptions {
+  authenticated?: boolean;
+  signal?: AbortSignal;
+  baseUrl?: string;
+}
+
+interface ConnectErrorPayload {
+  code?: string;
+  message?: string;
+}
+
+// Calls a Connect-RPC unary method over JSON. `service` is the fully-qualified
+// proto path (e.g. "proto.auth.v1.AuthService"), `method` is the RPC's
+// PascalCase name. Connect rejects 4xx/5xx with a JSON body shaped
+// `{code,message}` — surface that via ApiError so callers can pattern-match
+// on `.hasCode("SSO_REQUIRED")` etc.
+export async function lightConnect<TReq, TResp = unknown>(
+  service: string,
+  method: string,
+  body: TReq,
+  options: LightConnectOptions = {},
+): Promise<TResp> {
+  const baseUrl = options.baseUrl ?? resolveLightBaseUrl();
+  const url = `${baseUrl}/${service}/${method}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Connect-Protocol-Version": "1",
+  };
+  if (options.authenticated) {
+    const token = readLightAuthToken(baseUrl);
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body ?? {}),
+    signal: options.signal,
+    credentials: "include",
+  });
+
+  if (!resp.ok) {
+    let payload: ConnectErrorPayload | null = null;
+    try { payload = (await resp.json()) as ConnectErrorPayload; } catch { /* ignore */ }
+    const code = payload?.code ? String(payload.code).toUpperCase() : undefined;
+    const message = payload?.message ?? resp.statusText;
+    // Mirror REST error shape so ApiError.serverMessage / hasCode keep
+    // working — handlers across the (auth) group key off `data.error` and
+    // `data.code` already.
+    throw new ApiError(resp.status, message, { code, error: message });
+  }
+
+  if (resp.status === 204) return undefined as TResp;
+  const text = await resp.text();
+  if (!text) return undefined as TResp;
+  try { return JSON.parse(text) as TResp; } catch { return undefined as TResp; }
+}
+

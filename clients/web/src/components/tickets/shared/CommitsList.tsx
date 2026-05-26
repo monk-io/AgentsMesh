@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import type { TicketCommit } from "@/lib/api/ticketTypes";
+import type { TicketCommit } from "@/lib/viewModels/ticket";
 import { GitCommit } from "lucide-react";
 import { cn } from "@/lib/utils";
 

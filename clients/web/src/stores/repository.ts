@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { useMemo } from "react";
-import { getRepoState, getRepositoryService } from "@/lib/wasm-core";
+import { getRepoState } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import { repositoryApi } from "@/lib/api/facade/repository";
+import type { RepositoryData } from "@/lib/viewModels/repository";
 
 export type Repository = RepositoryData;
 
@@ -33,9 +34,8 @@ export const useRepositoryStore = create<RepositoryState>((set) => ({
   fetchRepositories: async () => {
     set({ isLoading: true, error: null });
     try {
-      const raw = await getRepositoryService().list();
-      const parsed = JSON.parse(raw) as { repositories?: Repository[] };
-      rs().set_repositories(JSON.stringify(parsed.repositories ?? []));
+      const { items } = await repositoryApi.list();
+      rs().set_repositories(JSON.stringify(items));
       bump();
       set({ isLoading: false, fetched: true });
     } catch (e) {
@@ -44,7 +44,7 @@ export const useRepositoryStore = create<RepositoryState>((set) => ({
   },
 
   deleteRepository: async (id: number) => {
-    await getRepositoryService().delete(BigInt(id));
+    await repositoryApi.delete(id);
     rs().remove_repository(String(id));
     bump();
   },

@@ -1,6 +1,24 @@
 import { invoke } from "./invoke";
 import type { IRepositoryService, IRepoState } from "@agentsmesh/service-interface";
 
+// Web's wasm-side `WasmRepositoryService` exposes `<verb>Connect(bytes)`
+// methods. RepositoryService in Rust core is a thin proxy (no cache, no
+// business logic — see ADR 2026-05-24-service-binding-matrix.md "Decision
+// 1: thin-proxy services don't require binding symmetry"). Desktop renderer
+// reaches the backend through `connectCall` generic IPC proxy (main owns
+// the auth header injection + URL prefix) — adding a dedicated napi binding
+// would be form symmetry without functional gain, so we go directly to the
+// backend Connect endpoint through main process.
+async function connectCall(method: string, request: Uint8Array): Promise<Uint8Array> {
+  const resp = await invoke<number[] | Uint8Array>(
+    "connectCall",
+    "proto.repository.v1.RepositoryService",
+    method,
+    Array.from(request),
+  );
+  return resp instanceof Uint8Array ? resp : new Uint8Array(resp);
+}
+
 // Service-is-State-superset 模式（对齐 ElectronPodService）：内部 cache 由 Service 持有，
 // provider 让 repoState 别名同一实例，renderer 端 useRepositories() 读到的就是这里的 cache。
 export class ElectronRepositoryService implements IRepositoryService, IRepoState {
@@ -90,5 +108,47 @@ export class ElectronRepositoryService implements IRepositoryService, IRepoState
 
   async mark_webhook_configured(id: bigint): Promise<void> {
     await invoke<void>("repositoryMarkWebhookConfigured", Number(id));
+  }
+
+  // ── Connect-RPC binary surface (mirrors WasmRepositoryService) ──
+
+  listRepositoriesConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("ListRepositories", request);
+  }
+  getRepositoryConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("GetRepository", request);
+  }
+  createRepositoryConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("CreateRepository", request);
+  }
+  updateRepositoryConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("UpdateRepository", request);
+  }
+  deleteRepositoryConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("DeleteRepository", request);
+  }
+  listRepositoryBranchesConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("ListRepositoryBranches", request);
+  }
+  syncRepositoryBranchesConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("SyncRepositoryBranches", request);
+  }
+  listRepositoryMergeRequestsConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("ListRepositoryMergeRequests", request);
+  }
+  registerRepositoryWebhookConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("RegisterRepositoryWebhook", request);
+  }
+  deleteRepositoryWebhookConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("DeleteRepositoryWebhook", request);
+  }
+  getRepositoryWebhookStatusConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("GetRepositoryWebhookStatus", request);
+  }
+  getRepositoryWebhookSecretConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("GetRepositoryWebhookSecret", request);
+  }
+  markRepositoryWebhookConfiguredConnect(request: Uint8Array): Promise<Uint8Array> {
+    return connectCall("MarkRepositoryWebhookConfigured", request);
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckoutFlow, CancelSubscriptionDialog, SeatManagement, BillingCycleSwitch } from "@/components/billing";
-import type { BillingCycle } from "@/lib/api/billing-types";
+import type { BillingCycle } from "@/lib/viewModels/billing";
 import type { TranslationFn } from "./GeneralSettings";
 import {
   BillingLoadingSkeleton,
@@ -18,6 +19,7 @@ interface BillingSettingsProps {
 }
 
 export function BillingSettings({ t }: BillingSettingsProps) {
+  const { org: orgSlug } = useParams<{ org: string }>();
   const state = useBillingSettings(t);
   const currentUrl = typeof window !== "undefined" ? window.location.href.split("?")[0] : "";
 
@@ -117,7 +119,7 @@ export function BillingSettings({ t }: BillingSettingsProps) {
       )}
       <SeatManagement t={(key, params) => t(`settings.${key}`, params)} currentUrl={currentUrl} />
       <UsageCard usage={usage} getUsagePercent={getUsagePercent} formatLimit={formatLimit} t={t} />
-      <PromoCodeCard onRedeemSuccess={() => state.loadBillingData()} t={t} />
+      <PromoCodeCard orgSlug={orgSlug ?? ""} onRedeemSuccess={() => state.loadBillingData()} t={t} />
       {state.showPlansDialog && (
         <PlansDialog plans={state.plans} currentPlan={plan?.name || null} onSelect={state.handleSelectPlan}
           onClose={() => state.setShowPlansDialog(false)} loading={state.upgrading} t={t} />

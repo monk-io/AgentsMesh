@@ -23,7 +23,7 @@ describe("lightFetch", () => {
   });
 
   it("sends a GET with Accept header and parses JSON", async () => {
-    const fetchSpy = vi.fn(async () =>
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -43,7 +43,7 @@ describe("lightFetch", () => {
   });
 
   it("serializes body and sets Content-Type for POST", async () => {
-    const fetchSpy = vi.fn(async () => new Response("{}", { status: 200 }));
+    const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{}", { status: 200 }));
     mockFetch(fetchSpy);
 
     await lightFetch("/api/v1/auth/login", {
@@ -66,7 +66,7 @@ describe("lightFetch", () => {
       expiresAt: Math.floor(Date.now() / 1000) + 3600,
       baseUrl: ORIGIN,
     });
-    const fetchSpy = vi.fn(async () => new Response("{}", { status: 200 }));
+    const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{}", { status: 200 }));
     mockFetch(fetchSpy);
 
     await lightFetch("/api/v1/orgs", { authenticated: true, baseUrl: ORIGIN });
@@ -78,7 +78,7 @@ describe("lightFetch", () => {
 
   it("omits Authorization header when no token is stored", async () => {
     clearLightSession(ORIGIN);
-    const fetchSpy = vi.fn(async () => new Response("{}", { status: 200 }));
+    const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{}", { status: 200 }));
     mockFetch(fetchSpy);
 
     await lightFetch("/api/v1/anything", { authenticated: true, baseUrl: ORIGIN });
@@ -88,7 +88,7 @@ describe("lightFetch", () => {
   });
 
   it("encodes query params", async () => {
-    const fetchSpy = vi.fn(async () => new Response("{}", { status: 200 }));
+    const fetchSpy = vi.fn<typeof fetch>(async () => new Response("{}", { status: 200 }));
     mockFetch(fetchSpy);
 
     await lightFetch("/api/v1/auth/sso/discover", {
@@ -101,7 +101,7 @@ describe("lightFetch", () => {
   });
 
   it("throws ApiError on 4xx and preserves data + code", async () => {
-    mockFetch(vi.fn(async () =>
+    mockFetch(vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ code: "INVALID_CREDENTIALS", error: "wrong password" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -126,13 +126,13 @@ describe("lightFetch", () => {
   });
 
   it("returns undefined for 204 responses", async () => {
-    mockFetch(vi.fn(async () => new Response(null, { status: 204 })));
+    mockFetch(vi.fn<typeof fetch>(async () => new Response(null, { status: 204 })));
     const result = await lightFetch("/api/v1/auth/logout", { method: "POST", baseUrl: ORIGIN });
     expect(result).toBeUndefined();
   });
 
   it("handles empty body without throwing", async () => {
-    mockFetch(vi.fn(async () => new Response("", { status: 200 })));
+    mockFetch(vi.fn<typeof fetch>(async () => new Response("", { status: 200 })));
     const result = await lightFetch("/api/v1/empty", { baseUrl: ORIGIN });
     expect(result).toBeUndefined();
   });

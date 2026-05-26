@@ -1,21 +1,31 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · user", () => {
-  test("user_get_me", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "user_get_me").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("userChangePasswordConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "userChangePasswordConnect", returnType: "Array<number>" }, []);
   });
 
-  test("user_get_organizations", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "user_get_organizations").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("userDeleteIdentityConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "userDeleteIdentityConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("userGetMeConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "userGetMeConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("userListIdentitiesConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "userListIdentitiesConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("userSearchUsersConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "userSearchUsersConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("userUpdateMeConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "userUpdateMeConnect", returnType: "Array<number>" }, []);
   });
 });

@@ -34,7 +34,6 @@ interface FakeService {
 
 let svc: FakeService | undefined;
 let createTokenResp: { token: string; id: number } | null;
-let latestReleaseResp: { version: string; sha256?: Record<string, string> } | null;
 
 function makeService(): FakeService {
   const state = {
@@ -91,22 +90,20 @@ function makeService(): FakeService {
 
 vi.mock("@agentsmesh/service-runtime", () => ({
   getLocalRunnerService: () => svc,
-  getRunnerService: () => ({
-    create_token: vi.fn(async () => JSON.stringify(createTokenResp ?? { token: "tok-xyz", id: 1 })),
-  }),
 }));
 
-vi.mock("@/lib/wasm-core", () => ({
-  getApiClient: () => ({
-    get: vi.fn(async () => JSON.stringify(latestReleaseResp ?? { version: "0.29.0", sha256: {} })),
-  }),
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => ({ slug: "test-org" }),
+}));
+
+vi.mock("@/lib/api/facade/runnerConnect", () => ({
+  createRunnerToken: vi.fn(async () => createTokenResp ?? { token: "tok-xyz", id: 1 }),
 }));
 
 describe("useLocalRunnerOnboarding", () => {
   beforeEach(() => {
     svc = makeService();
     createTokenResp = null;
-    latestReleaseResp = null;
   });
 
   afterEach(() => {
@@ -140,11 +137,11 @@ describe("useLocalRunnerOnboarding", () => {
     expect(result.current.localNodeId).toBe("test-mac");
   });
 
-  // Regression #1 + #2: GitHub URL must point to AgentsMesh/AgentsMesh
-  // (not anthropics/agentsmesh) and use the version returned by the
-  // backend's latest-release endpoint.
+  // Regression #1: GitHub URL must point to AgentsMesh/AgentsMesh
+  // (not anthropics/agentsmesh) and use the bundled fallback version.
+  // The legacy `/api/v1/runners/latest-release` endpoint was deleted —
+  // release metadata now lives entirely in the service runtime.
   it("builds GitHub release URL with correct owner + version", async () => {
-    latestReleaseResp = { version: "1.2.3" };
     const { result } = renderHook(() => useLocalRunnerOnboarding());
     await waitFor(() => expect(result.current.phase.kind).toBe("idle"));
     await act(async () => { await result.current.onRegister(); });
@@ -152,12 +149,11 @@ describe("useLocalRunnerOnboarding", () => {
     const { url } = svc!.calls.install_binary[0];
     expect(url).toContain("github.com/AgentsMesh/AgentsMesh");
     expect(url).not.toContain("anthropics");
-    expect(url).toContain("v1.2.3");
-    expect(url).toContain("agentsmesh-runner_1.2.3_darwin_arm64.tar.gz");
+    expect(url).toContain("v0.29.0");
+    expect(url).toContain("agentsmesh-runner_0.29.0_darwin_arm64.tar.gz");
   });
 
-  it("falls back to crate version when backend latest-release is unreachable", async () => {
-    latestReleaseResp = { version: "" };
+  it("uses bundled fallback version (no backend release endpoint)", async () => {
     const { result } = renderHook(() => useLocalRunnerOnboarding());
     await waitFor(() => expect(result.current.phase.kind).toBe("idle"));
     await act(async () => { await result.current.onRegister(); });

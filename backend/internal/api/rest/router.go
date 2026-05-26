@@ -7,15 +7,10 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/api/rest/internal"
 	"github.com/anthropics/agentsmesh/backend/internal/api/rest/v1"
-	"github.com/anthropics/agentsmesh/backend/internal/api/rest/v1/admin"
 	"github.com/anthropics/agentsmesh/backend/internal/api/rest/v1/webhooks"
-	"github.com/anthropics/agentsmesh/backend/internal/api/rest/ws"
 	"github.com/anthropics/agentsmesh/backend/internal/config"
-	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
-	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/pkg/apierr"
-	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -96,35 +91,28 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 		})
 	})
 
-	// Initialize email service
-	// BaseURL is derived from PrimaryDomain
-	emailSvc := email.NewService(email.Config{
-		Provider:    cfg.Email.Provider,
-		ResendKey:   cfg.Email.ResendKey,
-		FromAddress: cfg.Email.FromAddress,
-		BaseURL:     cfg.FrontendURL(), // Derived from PrimaryDomain
-	})
-
 	// API v1
 	apiV1 := r.Group("/api/v1")
 	{
-		// Public routes (no auth required, with rate limiting)
-		authHandler := v1.NewAuthHandler(svc.Auth, svc.User, emailSvc, cfg)
+		// Public OAuth browser-redirect endpoints (no auth required, with
+		// rate limiting). Login / register / refresh / logout / verify /
+		// resend / forgot / reset / sso-discover / sso-ldap moved to
+		// Connect-RPC — see backend/internal/api/connect/auth + connect/sso.
+		authHandler := v1.NewAuthHandler(svc.Auth, cfg)
 		authGroup := apiV1.Group("/auth")
 		authGroup.Use(middleware.IPRateLimiter(redisClient, "auth", 20, time.Minute))
 		authHandler.RegisterRoutes(authGroup)
 
-		// SSO authentication routes (public, under /auth/sso)
+		// SSO OIDC/SAML browser-redirect endpoints (public, under /auth/sso).
+		// Discover + LDAPAuth migrated to proto.sso.v1.SSOService.
 		if svc.SSO != nil {
 			ssoAuthHandler := v1.NewSSOAuthHandler(svc.SSO, svc.Auth, cfg)
 			ssoAuthHandler.RegisterRoutes(authGroup.Group("/sso"))
 		}
 
-		// Public config endpoints (deployment info for frontend)
-		v1.RegisterPublicConfigRoutes(apiV1.Group("/config"), svc.Billing)
-
-		// Public runner release endpoint (consumed by desktop onboarding)
-		v1.RegisterRunnerReleaseRoutes(apiV1)
+		// Public config routes migrated to
+		// proto.billing.v1.BillingPublicService — marketing pages reach it
+		// over plain-fetch Connect (clients/web/src/lib/public-api.ts).
 
 		// gRPC Runner routes (public, for Runner CLI registration with mTLS)
 		if svc.GRPCRunnerHandler != nil {
@@ -153,28 +141,21 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 		webhookRouter := webhooks.NewWebhookRouterWithBillingSvc(db, cfg, logger, svc.Billing, webhookOpts...)
 		webhookRouter.RegisterRoutes(apiV1.Group("/webhooks"))
 
-		// Public invitation routes (token-based access)
-		if svc.Invitation != nil {
-			invitationHandler := v1.NewInvitationHandler(svc.Invitation, svc.Org, svc.User, svc.Billing)
-			invitationHandler.RegisterRoutes(apiV1, middleware.AuthMiddleware(cfg.JWT.Secret))
-		}
+		// Invitation routes migrated to proto.invitation.v1.{InvitationService,
+		// InvitationPublicService} — see backend/internal/api/connect/invitation.
 
 		// Protected routes (auth required)
 		protected := apiV1.Group("")
 		protected.Use(middleware.AuthMiddleware(cfg.JWT.Secret))
 		{
-			// User-level routes (no tenant context required)
-			v1.RegisterUserRoutes(protected.Group("/users"), svc.User, svc.Org, svc.AgentSvc, svc.EnvBundle, svc.UserConfig, svc.AgentPodSettings, svc.AgentPodAIProvider)
+			// User-level routes (no tenant context required).
+			// /me + /me/organizations migrated to proto.user.v1.UserService
+			// + proto.org.v1.OrgService.ListMyOrgs — REST surface removed.
 
-			// Organization routes (authenticated, some require org context)
-			// Path changed: /organizations → /orgs
-			v1.RegisterOrganizationRoutes(protected.Group("/orgs"), svc.Org, svc.User, redisClient)
-
-			// Support Tickets (user-level, no tenant context required)
-			if svc.SupportTicket != nil {
-				supportTicketHandler := v1.NewSupportTicketHandler(svc.SupportTicket)
-				supportTicketHandler.RegisterRoutes(protected.Group("/support-tickets"))
-			}
+			// Support tickets fully migrated to
+			// proto.support_ticket.v1.SupportTicketService — see
+			// backend/internal/api/connect/support_ticket. Attachment uploads
+			// use the 3-step presign flow (no multipart REST).
 
 			// Organization-scoped routes (require tenant context)
 			// Path changed: /organizations/:slug → /orgs/:slug
@@ -183,14 +164,9 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 			{
 				v1.RegisterOrgScopedRoutes(orgScoped, svc)
 
-				// WebSocket endpoints for real-time events
-				// Note: Terminal WebSocket has been moved to Relay architecture
-				// Use GET /pods/:key/relay/connect to get Relay URL and token
-				wsGroup := orgScoped.Group("/ws")
-				{
-					eventHandler := ws.NewEventsHandler(svc.Hub)
-					wsGroup.GET("/events", eventHandler.HandleEvents)
-				}
+				// Real-time events migrated to proto.events.v1.EventsService.Subscribe
+				// (Connect server-streaming). Terminal WebSocket moved to Relay
+				// architecture (use GET /pods/:key/relay/connect for URL+token).
 			}
 
 			// Note: /org alias route removed - all org-scoped requests must use /orgs/:slug/*
@@ -210,21 +186,10 @@ func NewRouter(cfg *config.Config, svc *v1.Services, db *gorm.DB, logger *slog.L
 		}
 	}
 
-	// Admin Console routes
-	if cfg.Admin.IsEnabled() {
-		dbWrapper := database.NewGormWrapper(db)
-		adminSvc := adminservice.NewService(dbWrapper)
-		admin.RegisterRoutes(r, cfg, dbWrapper, &admin.Services{
-			Auth:              svc.Auth,
-			Admin:             adminSvc,
-			Billing:           svc.Billing,
-			SSO:               svc.SSO,
-			RelayManager:      svc.RelayManager,
-			ExtensionRepo:     svc.ExtensionRepo,
-			MarketplaceWorker: svc.MarketplaceWorker,
-			SupportTicket:     svc.SupportTicket,
-		})
-	}
+	// Admin console fully migrated to Connect-RPC — see
+	// backend/internal/api/connect/admin. The admin REST surface no
+	// longer mounts; admin services still flow through serviceContainer
+	// for Connect handlers.
 
 	// Internal API routes (Relay communication)
 	if svc.RelayManager != nil {

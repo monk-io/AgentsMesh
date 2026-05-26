@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 
 import { buildSpecMap } from "./useBlockTypeSpec";
 

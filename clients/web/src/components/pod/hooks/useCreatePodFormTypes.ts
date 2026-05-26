@@ -1,6 +1,6 @@
 import { PodData } from "@/lib/api";
 import type { PodMode } from "@/lib/pod-modes";
-import type { EnvBundleSummary } from "@/lib/api/envBundleTypes";
+import type { EnvBundleSummary } from "@/lib/viewModels/envBundleSummary";
 
 /**
  * Validation errors for the form

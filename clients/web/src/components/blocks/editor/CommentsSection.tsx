@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { MessageSquare } from "lucide-react";
 
-import { BLOCK_TYPE_COMMENT, REL_COMMENTS_ON } from "@/lib/api/blockstoreTypes";
+import { BLOCK_TYPE_COMMENT, REL_COMMENTS_ON } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 import { useRefs, useBlockstoreStore } from "@/stores/blockstore";
 

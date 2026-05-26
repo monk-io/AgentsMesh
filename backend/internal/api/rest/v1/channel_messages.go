@@ -12,6 +12,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// MentionRefRequest is the wire-format mapping a `@<key>` substring in a
+// markdown source string to a typed entity reference. Used by SendMessage
+// when `source` is supplied.
+type MentionRefRequest struct {
+	EntityType string `json:"entity_type"`
+	EntityKey  string `json:"entity_key"`
+}
+
+// SendMessageRequest accepts EITHER a markdown source string (server parses to
+// AST) OR a pre-built MessageContent AST. Sending both is a 400.
+type SendMessageRequest struct {
+	Source        *string                       `json:"source,omitempty"`
+	Mentions      map[string]MentionRefRequest  `json:"mentions,omitempty"`
+	Content       *channelDomain.MessageContent `json:"content,omitempty"`
+	AttachmentKey string                        `json:"attachment_key,omitempty"`
+	PodKey        string                        `json:"pod_key"`
+	ReplyTo       *int64                        `json:"reply_to"`
+}
+
+// ListMessages lists channel messages.
+// Retained for routes_ext.go (third-party API key callers reading messages).
 func (h *ChannelHandler) ListMessages(c *gin.Context) {
 	ch, ok := h.requireChannelAccess(c)
 	if !ok {
@@ -50,20 +71,6 @@ func (h *ChannelHandler) ListMessages(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"messages": messages, "has_more": hasMore})
 }
 
-type MentionRefRequest struct {
-	EntityType string `json:"entity_type"`
-	EntityKey  string `json:"entity_key"`
-}
-
-type SendMessageRequest struct {
-	Source        *string                       `json:"source,omitempty"`
-	Mentions      map[string]MentionRefRequest  `json:"mentions,omitempty"`
-	Content       *channelDomain.MessageContent `json:"content,omitempty"`
-	AttachmentKey string                        `json:"attachment_key,omitempty"`
-	PodKey        string                        `json:"pod_key"`
-	ReplyTo       *int64                        `json:"reply_to"`
-}
-
 func resolveContent(source *string, mentions map[string]MentionRefRequest, content *channelDomain.MessageContent, attachmentKey string) (channelDomain.MessageContent, error) {
 	hasSource := source != nil && *source != ""
 	hasContent := content != nil && len(content.Blocks) > 0
@@ -95,6 +102,8 @@ func resolveContent(source *string, mentions map[string]MentionRefRequest, conte
 	return resolved, nil
 }
 
+// SendMessage sends a message to a channel.
+// Retained for routes_ext.go (third-party API key callers posting messages).
 func (h *ChannelHandler) SendMessage(c *gin.Context) {
 	ch, ok := h.requireChannelAccess(c)
 	if !ok {
@@ -139,115 +148,4 @@ func (h *ChannelHandler) SendMessage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": msg})
-}
-
-type EditMessageRequest struct {
-	Source        *string                       `json:"source,omitempty"`
-	Mentions      map[string]MentionRefRequest  `json:"mentions,omitempty"`
-	Content       *channelDomain.MessageContent `json:"content,omitempty"`
-	AttachmentKey string                        `json:"attachment_key,omitempty"`
-}
-
-func (h *ChannelHandler) EditMessage(c *gin.Context) {
-	ch, ok := h.requireChannelAccess(c)
-	if !ok {
-		return
-	}
-
-	msgID, err := strconv.ParseInt(c.Param("msg_id"), 10, 64)
-	if err != nil {
-		apierr.InvalidInput(c, "Invalid message ID")
-		return
-	}
-
-	var req EditMessageRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		apierr.ValidationError(c, err.Error())
-		return
-	}
-
-	content, err := resolveContent(req.Source, req.Mentions, req.Content, req.AttachmentKey)
-	if err != nil {
-		apierr.BadRequest(c, apierr.VALIDATION_FAILED, err.Error())
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	msg, err := h.channelService.EditMessage(c.Request.Context(), ch.ID, msgID, tenant.UserID, content)
-	if err != nil {
-		switch {
-		case errors.Is(err, channelService.ErrMessageNotFound):
-			apierr.ResourceNotFound(c, "Message not found")
-		case errors.Is(err, channelService.ErrNotMessageSender):
-			apierr.ForbiddenAccess(c)
-		case errors.Is(err, channelService.ErrChannelArchived):
-			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot edit messages in archived channel")
-		case errors.Is(err, channelService.ErrEmptyContent), errors.Is(err, channelService.ErrInvalidContent):
-			apierr.BadRequest(c, apierr.VALIDATION_FAILED, err.Error())
-		default:
-			apierr.InternalError(c, "Failed to edit message")
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": msg})
-}
-
-func (h *ChannelHandler) DeleteMessage(c *gin.Context) {
-	ch, ok := h.requireChannelAccess(c)
-	if !ok {
-		return
-	}
-
-	msgID, err := strconv.ParseInt(c.Param("msg_id"), 10, 64)
-	if err != nil {
-		apierr.InvalidInput(c, "Invalid message ID")
-		return
-	}
-
-	tenant := middleware.GetTenant(c)
-	err = h.channelService.DeleteMessage(c.Request.Context(), ch.ID, msgID, tenant.UserID)
-	if err != nil {
-		switch {
-		case errors.Is(err, channelService.ErrMessageNotFound):
-			apierr.ResourceNotFound(c, "Message not found")
-		case errors.Is(err, channelService.ErrNotMessageSender):
-			apierr.ForbiddenAccess(c)
-		case errors.Is(err, channelService.ErrChannelArchived):
-			apierr.BadRequest(c, apierr.VALIDATION_FAILED, "Cannot delete messages in archived channel")
-		default:
-			apierr.InternalError(c, "Failed to delete message")
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
-}
-
-func (h *ChannelHandler) SearchMessages(c *gin.Context) {
-	ch, ok := h.requireChannelAccess(c)
-	if !ok {
-		return
-	}
-
-	query := c.Query("q")
-	if query == "" {
-		apierr.InvalidInput(c, "Search query is required")
-		return
-	}
-
-	limit := 20
-	if l := c.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
-			limit = parsed
-		}
-	}
-
-	messages, err := h.channelService.SearchMessages(c.Request.Context(), ch.ID, query, limit)
-	if err != nil {
-		apierr.InternalError(c, "Failed to search messages")
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"messages": messages})
 }

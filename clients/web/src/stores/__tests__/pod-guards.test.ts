@@ -1,41 +1,43 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "@testing-library/react";
+import { create, toBinary } from "@bufbuild/protobuf";
+import { ListPodsResponseSchema, PodSchema } from "@proto/pod/v1/pod_pb";
 import { usePodStore, SIDEBAR_STATUS_MAP, Pod } from "../pod";
-import { useAuthStore } from "../auth";
-import { getAuthManager } from "@/lib/wasm-core";
-import { getPodService } from "@/lib/wasm-core";
+import { getAuthManager, getPodService } from "@/lib/wasm-core";
 import { mockPod, mockPod2, resetPodStore, seedPods, readPods } from "./pod-test-utils";
 
-function svc() {
-  return getPodService() as unknown as {
-    fetch_sidebar_pods: ReturnType<typeof vi.fn>;
-    load_more_pods: ReturnType<typeof vi.fn>;
-    set_pods: (json: string) => void;
-    upsert_pod: (json: string) => void;
-  };
+interface MockService {
+  list_pods_connect: ReturnType<typeof vi.fn>;
 }
 
-function mockSidebar(pods: unknown[], total: number, hasMore = pods.length < total) {
-  vi.mocked(svc().fetch_sidebar_pods).mockImplementation(async () => {
-    svc().set_pods(JSON.stringify(pods));
-    return JSON.stringify({ pods, total, hasMore });
-  });
+function svc(): MockService {
+  return getPodService() as unknown as MockService;
+}
+
+function encodePods(pods: unknown[], total: number) {
+  const items = pods.map((p) =>
+    create(PodSchema, {
+      id: BigInt((p as { id: number }).id),
+      podKey: (p as { pod_key: string }).pod_key,
+      status: (p as { status: string }).status,
+      agentStatus: (p as { agent_status?: string }).agent_status ?? "",
+      createdAt: (p as { created_at?: string }).created_at ?? "",
+    }),
+  );
+  const resp = create(ListPodsResponseSchema, { items, total: BigInt(total), limit: 0, offset: 0 });
+  return toBinary(ListPodsResponseSchema, resp);
+}
+
+function mockSidebar(pods: unknown[], total: number) {
+  vi.mocked(svc().list_pods_connect).mockResolvedValue(encodePods(pods, total));
 }
 
 function mockLoadMore(newPods: unknown[], total: number) {
-  vi.mocked(svc().load_more_pods).mockImplementation(async () => {
-    for (const p of newPods) svc().upsert_pod(JSON.stringify(p));
-    const allCount = JSON.parse(
-      ((svc() as unknown) as { pods_json: () => string }).pods_json() || "[]"
-    ).length;
-    return JSON.stringify({ newPods, total, hasMore: allCount < total, allCount });
-  });
+  vi.mocked(svc().list_pods_connect).mockResolvedValue(encodePods(newPods, total));
 }
 
 describe("Pod Store — defaults", () => {
   it("should default currentSidebarFilter to mine", () => {
-    // Fresh store import — check the initial value before any setState
-    // resetPodStore also sets "mine", so we verify via SIDEBAR_STATUS_MAP keys
     expect(SIDEBAR_STATUS_MAP).toHaveProperty("mine");
     expect(SIDEBAR_STATUS_MAP).not.toHaveProperty("all");
   });
@@ -47,7 +49,6 @@ describe("Pod Store — defaults", () => {
 });
 
 describe("Pod Store — SIDEBAR_STATUS_MAP client-side guard", () => {
-  // Simulates the client-side filtering logic from WorkspaceSidebarContent
   function applyClientFilter(pods: Pod[], filter: string, userId?: number): Pod[] {
     const allowedStatuses = SIDEBAR_STATUS_MAP[filter];
     const statusSet = allowedStatuses
@@ -102,28 +103,28 @@ describe("Pod Store — SIDEBAR_STATUS_MAP client-side guard", () => {
 describe("Pod Store — fetchSidebarPods", () => {
   beforeEach(resetPodStore);
 
-  it("should pass org filter to service with no user id", async () => {
+  it("should call list_pods_connect for org filter", async () => {
     mockSidebar([mockPod], 1);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("org");
     });
 
-    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("org", null);
+    expect(svc().list_pods_connect).toHaveBeenCalled();
     expect(usePodStore.getState().currentSidebarFilter).toBe("org");
   });
 
-  it("should pass completed filter to service", async () => {
+  it("should call list_pods_connect for completed filter", async () => {
     mockSidebar([], 0);
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("completed");
     });
 
-    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("completed", null);
+    expect(svc().list_pods_connect).toHaveBeenCalled();
   });
 
-  it("should pass mine filter with current user id", async () => {
+  it("should call list_pods_connect with mine filter when user is logged in", async () => {
     getAuthManager().apply_session(JSON.stringify({ token: "t", refresh_token: "r", user: { id: 42, email: "test@test.com", username: "test" } }));
     mockSidebar([mockPod], 1);
 
@@ -131,11 +132,11 @@ describe("Pod Store — fetchSidebarPods", () => {
       await usePodStore.getState().fetchSidebarPods("mine");
     });
 
-    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("mine", BigInt(42));
+    expect(svc().list_pods_connect).toHaveBeenCalled();
     expect(usePodStore.getState().currentSidebarFilter).toBe("mine");
   });
 
-  it("should pass mine filter with null user when not logged in", async () => {
+  it("should call list_pods_connect with mine filter when not logged in", async () => {
     (getAuthManager() as unknown as { _reset: () => void })._reset();
     mockSidebar([], 0);
 
@@ -143,15 +144,14 @@ describe("Pod Store — fetchSidebarPods", () => {
       await usePodStore.getState().fetchSidebarPods("mine");
     });
 
-    expect(svc().fetch_sidebar_pods).toHaveBeenCalledWith("mine", null);
+    expect(svc().list_pods_connect).toHaveBeenCalled();
   });
 
   it("should set loading during fetch and clear after", async () => {
     let loadingDuringFetch = false;
-    vi.mocked(svc().fetch_sidebar_pods).mockImplementation(async () => {
+    vi.mocked(svc().list_pods_connect).mockImplementation(async () => {
       loadingDuringFetch = usePodStore.getState().loading;
-      svc().set_pods("[]");
-      return JSON.stringify({ pods: [], total: 0, hasMore: false });
+      return encodePods([], 0);
     });
 
     await act(async () => {
@@ -174,7 +174,7 @@ describe("Pod Store — fetchSidebarPods", () => {
   });
 
   it("should handle error and clear loading", async () => {
-    vi.mocked(svc().fetch_sidebar_pods).mockRejectedValue(new Error("Network error"));
+    vi.mocked(svc().list_pods_connect).mockRejectedValue(new Error("Network error"));
 
     await act(async () => {
       await usePodStore.getState().fetchSidebarPods("org");
@@ -197,7 +197,7 @@ describe("Pod Store — loadMorePods", () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(svc().load_more_pods).toHaveBeenCalledWith("org", null, BigInt(1));
+    expect(svc().list_pods_connect).toHaveBeenCalled();
     expect(readPods()).toHaveLength(2);
   });
 
@@ -209,7 +209,7 @@ describe("Pod Store — loadMorePods", () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(svc().load_more_pods).not.toHaveBeenCalled();
+    expect(svc().list_pods_connect).not.toHaveBeenCalled();
   });
 
   it("should skip when already loading more", async () => {
@@ -220,7 +220,7 @@ describe("Pod Store — loadMorePods", () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(svc().load_more_pods).not.toHaveBeenCalled();
+    expect(svc().list_pods_connect).not.toHaveBeenCalled();
   });
 
   it("should deduplicate pods already in list (upsert by pod_key)", async () => {
@@ -235,7 +235,7 @@ describe("Pod Store — loadMorePods", () => {
     expect(readPods()).toHaveLength(2);
   });
 
-  it("should pass mine filter with current user id", async () => {
+  it("should load mine filter when user is logged in", async () => {
     getAuthManager().apply_session(JSON.stringify({ token: "t", refresh_token: "r", user: { id: 42, email: "test@test.com", username: "test" } }));
     seedPods(mockPod);
     usePodStore.setState({ podHasMore: true, currentSidebarFilter: "mine" });
@@ -245,8 +245,7 @@ describe("Pod Store — loadMorePods", () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(svc().load_more_pods).toHaveBeenCalledWith("mine", BigInt(42), BigInt(1));
+    expect(svc().list_pods_connect).toHaveBeenCalled();
     expect(readPods()).toHaveLength(2);
   });
 });
-

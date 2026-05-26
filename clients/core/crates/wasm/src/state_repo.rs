@@ -1,5 +1,5 @@
 use agentsmesh_state::repo_state::RepoState;
-use agentsmesh_types::{Branch, Repository};
+use agentsmesh_types::proto_repository_v1::{Branch, Repository};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

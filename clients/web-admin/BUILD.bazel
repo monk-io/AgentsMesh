@@ -1,4 +1,3 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:next/package_json.bzl", next_bin = "bin")
 load("//build_defs/web:eslint.bzl", "eslint_test")
 load("//build_defs/web:next.bzl", "next_app", "next_standalone_app")
@@ -51,7 +50,15 @@ ts_project(
     no_emit = True,
     resolve_json_module = True,
     tsconfig = "tsconfig.bazel.json",
-    deps = ["//:node_modules"],
+    deps = [
+        "//:node_modules",
+        # Bazel-native first-party package mounting the generated TS
+        # Connect-RPC proto modules. tsc resolves `@proto/<svc>/v1/...`
+        # imports through this node-module walk; the tsconfig path
+        # alias `@proto/*` is a fallback that aspect_rules_ts can't use
+        # because the underlying files sit outside the project rootDir.
+        "//:node_modules/@agentsmesh/proto",
+    ],
 )
 
 # Common build inputs — see clients/web/BUILD.bazel for the rationale.
@@ -63,13 +70,21 @@ _NEXT_DATA_COMMON = [
     "//:node_modules/@agentsmesh/service-runtime",
     "//:node_modules/agentsmesh-wasm",
     "//:package_json_bin",
+    # Generated TS proto modules — mounted as `@agentsmesh/proto` via
+    # //BUILD.bazel's `npm_link_package`. Next.js's bundler walks the
+    # node_modules resolution chain for `@proto/*` imports (the
+    # tsconfig path alias points there).
+    "//:node_modules/@agentsmesh/proto",
 ]
 
 # Dev path — keeps next.config.ts so existing `bazel run :next_dev` works.
+# `next_build_out=".next-dev"` avoids the `.next/` output collision
+# with `:next_image` — see //clients/web for the matching note.
 next_app(
     name = "next",
     srcs = _SRC_FILES,
     data = _NEXT_DATA_COMMON + ["next.config.ts"],
+    next_build_out = ".next-dev",
     next_js_binary = ":next_js_binary",
 )
 
@@ -125,11 +140,11 @@ sh_test(
     data = [":next_image_server_dir"],
 )
 
-js_library(
-    name = "web_admin",
-    srcs = [":next"],
-    visibility = ["//visibility:public"],
-)
+# `:next` (dev build) and `:next_image` (standalone) both write into
+# `.next/`. Wildcard builds (`bazel build //...`) trigger both → Bazel
+# rejects with "conflicting actions". `:next` carries the `manual` tag
+# via the `next_app` macro so wildcards skip it. See //clients/web for
+# the matching note.
 
 # `bazel test //clients/web-admin:lint` — see //build_defs/web:eslint.bzl.
 eslint_test(
@@ -161,6 +176,11 @@ vitest_test(
         "tsconfig.json",
         "//:node_modules",
         "//:package_json_bin",
+        # Generated TS proto modules — vitest's `@proto/*` alias
+        # (vitest.config.ts) resolves to `../../proto/gen/ts/*`. The
+        # runfiles must contain the generated sources or vite's
+        # import-analysis plugin rejects the alias.
+        "//proto:proto_gen_ts",
     ] + glob(
         [
             "src/**/*.ts",

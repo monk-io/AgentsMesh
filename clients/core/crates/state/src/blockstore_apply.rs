@@ -1,7 +1,7 @@
-use agentsmesh_types::{Block, BlockOp, BlockRef, OpKind};
 use serde_json::{json, Value};
 
 use crate::blockstore_state::BlockstoreState;
+use crate::blockstore_types::{Block, BlockOp, BlockRef, OpKind};
 
 pub fn apply_op(state: &mut BlockstoreState, op: &BlockOp) {
     match op.op {

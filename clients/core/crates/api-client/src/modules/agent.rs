@@ -1,49 +1,108 @@
 use crate::ApiClient;
+use crate::connect_call::connect_call;
 use crate::error::ApiError;
-use agentsmesh_types::*;
+use agentsmesh_types::proto_agent_v1 as agent_proto;
+
+// =============================================================================
+// Connect-RPC (binary wire). See proto-naming-conventions.md §2.5.
+// =============================================================================
+//
+// These methods call the Connect handlers in
+// backend/internal/api/connect/agent/. Procedure paths derive from
+// `proto.agent.v1.<Service>.<Method>` (conventions §12).
 
 impl ApiClient {
-    pub async fn list_agents(&self) -> Result<AgentListResponse, ApiError> {
-        self.get(&self.org_path("/agents")).await
+    pub async fn list_agents_connect(
+        &self,
+        req: &agent_proto::ListAgentsRequest,
+    ) -> Result<agent_proto::AgentListResponse, ApiError> {
+        connect_call(self, "/proto.agent.v1.AgentService/ListAgents", req).await
     }
 
-    pub async fn get_agent_config_schema(
+    pub async fn get_agent_connect(
         &self,
-        agent_slug: &str,
-    ) -> Result<AgentConfigSchema, ApiError> {
-        self.get_resource(&self.org_path(&format!("/agents/{agent_slug}/config-schema")), "schema").await
+        req: &agent_proto::GetAgentRequest,
+    ) -> Result<agent_proto::Agent, ApiError> {
+        connect_call(self, "/proto.agent.v1.AgentService/GetAgent", req).await
     }
 
-    pub async fn list_user_agent_configs(
+    pub async fn get_agent_config_schema_connect(
         &self,
-    ) -> Result<UserAgentConfigListResponse, ApiError> {
-        self.get("/api/v1/users/me/agent-configs").await
-    }
-
-    pub async fn get_user_agent_config(
-        &self,
-        agent_slug: &str,
-    ) -> Result<UserAgentConfig, ApiError> {
-        self.get_resource(&format!("/api/v1/users/me/agent-configs/{agent_slug}"), "config").await
-    }
-
-    pub async fn set_user_agent_config(
-        &self,
-        agent_slug: &str,
-        data: &SetUserAgentConfigRequest,
-    ) -> Result<UserAgentConfig, ApiError> {
-        self.put(
-            &format!("/api/v1/users/me/agent-configs/{agent_slug}"),
-            data,
+        req: &agent_proto::GetAgentConfigSchemaRequest,
+    ) -> Result<agent_proto::ConfigSchema, ApiError> {
+        connect_call(
+            self,
+            "/proto.agent.v1.AgentService/GetAgentConfigSchema",
+            req,
         )
         .await
     }
 
-    pub async fn delete_user_agent_config(
+    pub async fn create_custom_agent_connect(
         &self,
-        agent_slug: &str,
-    ) -> Result<EmptyResponse, ApiError> {
-        self.delete(&format!("/api/v1/users/me/agent-configs/{agent_slug}"))
-            .await
+        req: &agent_proto::CreateCustomAgentRequest,
+    ) -> Result<agent_proto::Agent, ApiError> {
+        connect_call(self, "/proto.agent.v1.AgentService/CreateCustomAgent", req).await
+    }
+
+    pub async fn update_custom_agent_connect(
+        &self,
+        req: &agent_proto::UpdateCustomAgentRequest,
+    ) -> Result<agent_proto::Agent, ApiError> {
+        connect_call(self, "/proto.agent.v1.AgentService/UpdateCustomAgent", req).await
+    }
+
+    pub async fn delete_custom_agent_connect(
+        &self,
+        req: &agent_proto::DeleteCustomAgentRequest,
+    ) -> Result<agent_proto::DeleteCustomAgentResponse, ApiError> {
+        connect_call(self, "/proto.agent.v1.AgentService/DeleteCustomAgent", req).await
+    }
+
+    pub async fn list_user_agent_configs_connect(
+        &self,
+    ) -> Result<agent_proto::UserAgentConfigListResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.agent.v1.UserAgentConfigService/ListUserAgentConfigs",
+            &agent_proto::ListUserAgentConfigsRequest {},
+        )
+        .await
+    }
+
+    pub async fn get_user_agent_config_connect(
+        &self,
+        req: &agent_proto::GetUserAgentConfigRequest,
+    ) -> Result<agent_proto::UserAgentConfig, ApiError> {
+        connect_call(
+            self,
+            "/proto.agent.v1.UserAgentConfigService/GetUserAgentConfig",
+            req,
+        )
+        .await
+    }
+
+    pub async fn set_user_agent_config_connect(
+        &self,
+        req: &agent_proto::SetUserAgentConfigRequest,
+    ) -> Result<agent_proto::UserAgentConfig, ApiError> {
+        connect_call(
+            self,
+            "/proto.agent.v1.UserAgentConfigService/SetUserAgentConfig",
+            req,
+        )
+        .await
+    }
+
+    pub async fn delete_user_agent_config_connect(
+        &self,
+        req: &agent_proto::DeleteUserAgentConfigRequest,
+    ) -> Result<agent_proto::DeleteUserAgentConfigResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.agent.v1.UserAgentConfigService/DeleteUserAgentConfig",
+            req,
+        )
+        .await
     }
 }

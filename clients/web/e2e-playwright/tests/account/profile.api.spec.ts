@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_USER } from "../../helpers/env";
 import { CLEANUP } from "../../helpers/test-data";
@@ -7,17 +8,15 @@ test.describe("User Profile API", () => {
    * TC-PROF-001: Get current user
    */
   test("get current user returns user info", async ({ api }) => {
-    const res = await api.get("/api/v1/users/me");
-    expect(res.status).toBe(200);
-
-    const data = await res.json();
-    expect(data.user.email).toBe(TEST_USER.email);
-    expect(data.user.id).toBeTruthy();
+    const cc = await api.connect();
+    const user = await cc.user.getMe({}) as { id: string | number; email: string };
+    expect(user.email).toBe(TEST_USER.email);
+    expect(user.id).toBeTruthy();
   });
 
-  test("get current user without auth returns 401", async ({ api }) => {
-    const res = await api.getWithToken("/api/v1/users/me", "invalid-token");
-    expect(res.status).toBe(401);
+  test("get current user without auth returns unauthenticated", async ({ api }) => {
+    const cc = api.connectWithToken("invalid-token");
+    await expect(cc.user.getMe({})).rejects.toMatchObject({ status: 401 });
   });
 
   /**
@@ -26,19 +25,20 @@ test.describe("User Profile API", () => {
   test("update user name", async ({ api, db }) => {
     const email = "profile-e2e@test.local";
     const password = "TestPass123!";
-    db.cleanup(CLEANUP.userByEmail(email)); // pre-clean
+    db.cleanup(CLEANUP.userByEmail(email));
 
-    // Create user via API to avoid hash issues
-    await api.postPublic("/api/v1/auth/register", {
-      email, username: "profilee2e", password, name: "Original Name",
+    const publicCc = api.connectWithToken("");
+    await publicCc.auth.register({
+      email,
+      username: "profilee2e",
+      password,
+      name: "Original Name",
     });
 
     await api.loginAs(email, password);
-    const res = await api.put("/api/v1/users/me", { name: "Updated Name E2E" });
-    expect(res.status).toBe(200);
-
-    const data = await res.json();
-    expect(data.user.name).toBe("Updated Name E2E");
+    const cc = await api.connect();
+    const updated = await cc.user.updateMe({ name: "Updated Name E2E" }) as { name: string };
+    expect(updated.name).toBe("Updated Name E2E");
 
     db.cleanup(CLEANUP.userByEmail(email));
   });
@@ -49,24 +49,29 @@ test.describe("User Profile API", () => {
   test("change password with correct current password", async ({ api, db }) => {
     const email = "pwchange-e2e@test.local";
     const password = "TestPass123!";
-    db.cleanup(CLEANUP.userByEmail(email)); // pre-clean
+    db.cleanup(CLEANUP.userByEmail(email));
 
-    await api.postPublic("/api/v1/auth/register", {
-      email, username: "pwchangee2e", password, name: "PW Change User",
+    const publicCc = api.connectWithToken("");
+    await publicCc.auth.register({
+      email,
+      username: "pwchangee2e",
+      password,
+      name: "PW Change User",
     });
 
     await api.loginAs(email, password);
-    const res = await api.post("/api/v1/users/me/password", {
-      current_password: password,
-      new_password: "NewPassword456!",
+    const cc = await api.connect();
+    await cc.user.changePassword({
+      currentPassword: password,
+      newPassword: "NewPassword456!",
     });
-    expect(res.status).toBe(200);
 
     // Verify login with new password
-    const loginRes = await api.postPublic("/api/v1/auth/login", {
-      email, password: "NewPassword456!",
-    });
-    expect(loginRes.status).toBe(200);
+    const loginRes = await publicCc.auth.login({
+      email,
+      password: "NewPassword456!",
+    }) as { token: string };
+    expect(loginRes.token).toBeTruthy();
 
     db.cleanup(CLEANUP.userByEmail(email));
   });
@@ -75,22 +80,22 @@ test.describe("User Profile API", () => {
    * TC-PROF-004: Change password with wrong current password
    */
   test("change password with wrong current password fails", async ({ api }) => {
-    const res = await api.post("/api/v1/users/me/password", {
-      current_password: "wrongpassword",
-      new_password: "NewPassword456!",
-    });
-    expect(res.status).toBe(401);
+    const cc = await api.connect();
+    await expect(
+      cc.user.changePassword({
+        currentPassword: "wrongpassword",
+        newPassword: "NewPassword456!",
+      })
+    ).rejects.toMatchObject({ status: 401 });
   });
 
   /**
    * TC-PROF-005: List organizations
    */
   test("list user organizations returns org list", async ({ api }) => {
-    const res = await api.get("/api/v1/users/me/organizations");
-    expect(res.status).toBe(200);
-
-    const data = await res.json();
-    expect(data.organizations).toBeTruthy();
-    expect(data.organizations.length).toBeGreaterThan(0);
+    const cc = await api.connect();
+    const res = await cc.org.listMyOrgs({}) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
+    expect(res.items.length).toBeGreaterThan(0);
   });
 });

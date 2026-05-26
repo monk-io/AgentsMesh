@@ -23,18 +23,18 @@ describe("lightRegister", () => {
     window.localStorage.clear();
   });
 
-  it("POSTs to /api/v1/auth/register with full payload and persists session", async () => {
-    const fetchSpy = vi.fn(async () =>
+  it("POSTs to AuthService/Register Connect endpoint with full payload and persists session", async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({
           token: "reg-tok",
-          refresh_token: "reg-ref",
-          expires_in: 3600,
+          refreshToken: "reg-ref",
+          expiresIn: 3600,
           user: {
             id: 2,
             email: "new@b.c",
             username: "newbie",
-            is_email_verified: false,
+            isEmailVerified: false,
           },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
@@ -51,7 +51,7 @@ describe("lightRegister", () => {
 
     expect(resp.token).toBe("reg-tok");
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(String(url)).toBe(`${ORIGIN}/api/v1/auth/register`);
+    expect(String(url)).toBe(`${ORIGIN}/proto.auth.v1.AuthService/Register`);
     expect((init as RequestInit).method).toBe("POST");
     expect((init as RequestInit).body).toBe(
       JSON.stringify({
@@ -65,7 +65,7 @@ describe("lightRegister", () => {
   });
 
   it("throws ApiError on 409 duplicate email without persisting", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({ code: "EMAIL_TAKEN", error: "email already registered" }),
         { status: 409, headers: { "Content-Type": "application/json" } },
@@ -90,7 +90,7 @@ describe("lightRegister", () => {
   });
 
   it("throws ApiError on 400 weak password without persisting", async () => {
-    globalThis.fetch = vi.fn(async () =>
+    globalThis.fetch = vi.fn<typeof fetch>(async () =>
       new Response(
         JSON.stringify({ code: "WEAK_PASSWORD", error: "password too short" }),
         { status: 400, headers: { "Content-Type": "application/json" } },

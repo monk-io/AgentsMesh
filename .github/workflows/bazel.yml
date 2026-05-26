@@ -308,7 +308,15 @@ jobs:
   docker-verify:
     name: OCI Image Build (${{ matrix.service }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 25-min ceiling absorbs cache-miss cold builds — web image transitively
+    # needs Rust core (wasm), and Rust compile alone can take 8-12 min uncached.
+    # Two consecutive runs (commits f6f24878 and de83b389) hit the previous
+    # 15-min limit exactly when GitHub's cache service was degraded
+    # ("Failed to restore: 400" → bazelisk-cache + disk-cache both miss).
+    # Backend/runner/relay/web-admin don't pull Rust and stay under 15-min,
+    # so this overhead is web-image-specific but the shared matrix budget
+    # has to fit the slowest leg.
+    timeout-minutes: 25
     needs: smoke
     if: github.event_name == 'pull_request'
     strategy:
@@ -626,6 +634,11 @@ jobs:
         env:
           PORT: ${{ steps.ports.outputs.WEB_PORT }}
           API_PROXY_TARGET: http://localhost:${{ steps.ports.outputs.HTTP_PORT }}
+          # Enable test-only UI surfaces (e.g. e2e-echo credential form) for
+          # e2e specs that drive the Settings flow. Production builds never
+          # see this flag, so the conditional require() in
+          # credentialForms/index.ts is dead-code-eliminated by webpack.
+          NEXT_PUBLIC_E2E: "true"
         run: |
           # Background bazel run; disown so the Bazel test step can run
           # against a separate output_base without killing this server.

@@ -2,8 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { blockstoreApi } from "@/lib/api/blockstoreApi";
-import type { SearchHit } from "@/lib/api/blockstoreTypes";
+import { blockstoreApi } from "@/lib/api/facade/blockstoreApi";
+import type { SearchHit } from "@/lib/viewModels/blockstore";
 import { getErrorMessage } from "@/lib/utils";
 
 interface SearchPanelProps {

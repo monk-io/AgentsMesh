@@ -50,6 +50,10 @@ pub struct AcpToolCall {
     pub result_text: Option<String>,
     pub error_message: Option<String>,
     pub success: Option<bool>,
+    // 客户端事件分发器透传 wire payload — 这些 payload 没有 timestamp
+    // 字段（ToolCallUpdate / ToolCallSnapshot Go 结构未带）。AcpSessionManager
+    // 在 update_tool_call 里会用 now_millis() 覆盖，所以这里只需要默认值。
+    #[serde(default)]
     pub timestamp: i64,
 }
 

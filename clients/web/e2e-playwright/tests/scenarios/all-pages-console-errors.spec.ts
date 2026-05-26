@@ -39,70 +39,70 @@ test.describe("All Pages Console Error Validation", () => {
   test("workspace page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("tickets list page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/tickets`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("mesh page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/mesh`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("loops list page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/loops`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("runners list page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/runners`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("repositories list page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/repositories`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("channels page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/channels`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("blocks page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/blocks`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("infra page (repositories tab): no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=repositories`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
   test("infra page (runners tab): no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 
@@ -199,7 +199,7 @@ test.describe("All Pages Console Error Validation", () => {
   test("support page: no console errors", async ({ page }) => {
     const errors = consoleErrorCollector(page);
     await page.goto(`/${TEST_ORG_SLUG}/support`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     assertNoWasmErrors(errors);
   });
 });

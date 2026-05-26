@@ -1,4 +1,4 @@
-use agentsmesh_types::RegisterRequest;
+use agentsmesh_state::auth_types::RegisterRequest;
 
 use crate::core::AgentsMeshCore;
 use crate::dto::{AuthSessionDto, AuthTokensDto, OrganizationDto};

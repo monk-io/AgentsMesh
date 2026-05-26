@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
-import { BLOCK_TYPE_PARAGRAPH } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
+import { BLOCK_TYPE_PARAGRAPH } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 
 import { BlockChrome } from "../editor/BlockChrome";

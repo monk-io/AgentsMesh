@@ -76,10 +76,15 @@ pub(crate) fn make_event_handler(
 ) -> agentsmesh_events::EventHandler {
     let f = JsFunction(f);
     Arc::new(move |event: &agentsmesh_events::RealtimeEvent| {
+        // The TS-side callback signature is `(eventJson: string) => void`
+        // (see clients/web/src/lib/realtime/EventSubscriptionManager.ts —
+        // it calls `JSON.parse(eventJson)`). Pass the raw JSON string,
+        // NOT a pre-parsed JS Object. Pre-parsing here used to land an
+        // Object on the TS side; `JSON.parse(Object)` coerces the input
+        // to "[object Object]" and throws a SyntaxError, so no events
+        // were ever delivered to the page.
         if let Ok(json) = serde_json::to_string(event) {
-            if let Ok(val) = js_sys::JSON::parse(&json) {
-                f.call1(&val);
-            }
+            f.call1(&JsValue::from_str(&json));
         }
     })
 }

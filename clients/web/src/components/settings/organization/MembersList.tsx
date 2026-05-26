@@ -1,16 +1,9 @@
 import { Button } from "@/components/ui/button";
 import type { TranslationFn } from "./GeneralSettings";
-
-export interface Member {
-  id: number;
-  user_id: number;
-  role: string;
-  joined_at: string;
-  user?: { id: number; email: string; username: string; name?: string };
-}
+import type { OrganizationMember } from "@/lib/api/facade/org";
 
 interface MembersListProps {
-  members: Member[];
+  members: OrganizationMember[];
   loading: boolean;
   currentUserId?: number;
   t: TranslationFn;
@@ -29,8 +22,10 @@ export function MembersList({ members, loading, currentUserId, t, onRoleChange, 
 
   return (
     <div className="space-y-3">
-      {members.map((member) => (
-        <div key={member.user_id || member.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
+      {members.map((member) => {
+        const userId = Number(member.userId);
+        return (
+        <div key={userId || Number(member.id)} className="flex items-center justify-between p-4 border border-border rounded-lg">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
               {member.user?.name?.[0] || member.user?.username?.[0] || "?"}
@@ -43,7 +38,7 @@ export function MembersList({ members, loading, currentUserId, t, onRoleChange, 
                 <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(member.role)}`}>
                   {member.role}
                 </span>
-                {member.user_id === currentUserId && (
+                {userId === currentUserId && (
                   <span className="text-xs text-muted-foreground">{t("settings.members.you")}</span>
                 )}
               </div>
@@ -51,25 +46,26 @@ export function MembersList({ members, loading, currentUserId, t, onRoleChange, 
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {member.role !== "owner" && member.user_id !== currentUserId && (
+            {member.role !== "owner" && userId !== currentUserId && (
               <>
                 <select
                   value={member.role}
-                  onChange={(e) => onRoleChange(member.user_id, e.target.value)}
+                  onChange={(e) => onRoleChange(userId, e.target.value)}
                   className="text-sm border border-border rounded px-2 py-1 bg-background"
                 >
                   <option value="member">{t("settings.members.roleMember")}</option>
                   <option value="admin">{t("settings.members.roleAdmin")}</option>
                 </select>
                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
-                  onClick={() => onRemove(member.user_id)}>
+                  onClick={() => onRemove(userId)}>
                   {t("settings.members.remove")}
                 </Button>
               </>
             )}
           </div>
         </div>
-      ))}
+      );
+      })}
     </div>
   );
 }

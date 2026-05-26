@@ -57,6 +57,9 @@ vi.mock("@/lib/wasm-core", async () => {
     getPodService: () => ({
       pods_json: () => JSON.stringify([{ id: 1, pod_key: "pk-1" }]),
     }),
+    getPodState: () => ({
+      pods_json: () => JSON.stringify([{ id: 1, pod_key: "pk-1" }]),
+    }),
     getTicketService: () => ({
       current_ticket_json: () => null,
     }),

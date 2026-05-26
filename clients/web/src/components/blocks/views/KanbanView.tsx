@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { Block, ViewSpec } from "@/lib/api/blockstoreTypes";
+import type { Block, ViewSpec } from "@/lib/viewModels/blockstore";
 import { useBlockTypeSpec } from "@/lib/blockstore/useBlockTypeSpec";
 import { cn } from "@/lib/utils";
 

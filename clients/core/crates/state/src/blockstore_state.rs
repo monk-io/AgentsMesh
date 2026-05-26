@@ -1,11 +1,11 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use agentsmesh_types::{Block, BlockOp, BlockRef, Workspace};
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::blockstore_apply::apply_op;
+use crate::blockstore_types::{Block, BlockOp, BlockRef, Workspace};
 
 #[derive(Debug, Default)]
 pub struct BlockstoreState {

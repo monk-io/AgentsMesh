@@ -2,49 +2,46 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { type AgentData } from "@/lib/api";
-import { getAgentService, getEnvBundleService } from "@/lib/wasm-core";
+import {
+  listEnvBundles,
+  createEnvBundle,
+  updateEnvBundle,
+  deleteEnvBundle,
+  setPrimaryEnvBundle,
+  type EnvBundle,
+} from "@/lib/api/facade/envBundleConnect";
+import { listAgents } from "@/lib/api/facade/agentConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { AgentCredentialsState, AgentCredentialsActions, CredentialFormData } from "./types";
 import type {
   CredentialProfileViewModel,
   CredentialProfilesByAgent,
 } from "../_shared/credentialViewModel";
 
-// EnvBundle wire shape from the backend (flat list). The settings page still
-// thinks in per-agent groups, so this hook adapts EnvBundle rows into the
-// settings-private CredentialProfileViewModel grouped by agent slug.
-interface WireEnvBundle {
-  id: number;
-  agent_slug?: string | null;
-  name: string;
-  description?: string | null;
-  kind: string;
-  kind_primary: boolean;
-  is_active: boolean;
-  configured_fields?: string[];
-  configured_values?: Record<string, string>;
-  created_at: string;
-  updated_at: string;
-}
+// The settings page still thinks in per-agent groups, so this hook adapts
+// EnvBundle rows into the settings-private CredentialProfileViewModel grouped
+// by agent slug.
 
-function bundleToProfile(b: WireEnvBundle): CredentialProfileViewModel {
+function bundleToProfile(b: EnvBundle): CredentialProfileViewModel {
   return {
-    id: b.id,
-    agent_slug: b.agent_slug ?? "",
+    id: Number(b.id),
+    agent_slug: b.agentSlug ?? "",
     name: b.name,
     description: b.description ?? undefined,
-    is_default: b.kind_primary,
-    is_active: b.is_active,
-    configured_fields: b.configured_fields,
-    configured_values: b.configured_values,
-    created_at: b.created_at,
-    updated_at: b.updated_at,
+    is_default: b.kindPrimary,
+    is_active: b.isActive,
+    configured_fields: b.configuredFields.length > 0 ? b.configuredFields : undefined,
+    configured_values:
+      Object.keys(b.configuredValues).length > 0 ? b.configuredValues : undefined,
+    created_at: b.createdAt,
+    updated_at: b.updatedAt,
   };
 }
 
-function groupByAgent(bundles: WireEnvBundle[]): CredentialProfilesByAgent[] {
+function groupByAgent(bundles: EnvBundle[]): CredentialProfilesByAgent[] {
   const groups: Record<string, CredentialProfilesByAgent> = {};
   for (const b of bundles) {
-    const slug = b.agent_slug ?? "";
+    const slug = b.agentSlug ?? "";
     if (!groups[slug]) {
       groups[slug] = { agent_slug: slug, agent_name: "", profiles: [] };
     }
@@ -64,23 +61,28 @@ export function useAgentCredentials(
   const [agents, setAgents] = useState<AgentData[]>([]);
   const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const [agentsWithoutPrimaryBundle, setAgentsWithoutPrimaryBundle] = useState<Set<string>>(new Set());
+  const currentOrg = useCurrentOrg();
 
   const loadData = useCallback(async () => {
+    if (!currentOrg) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
 
       const [bundlesRes, agentsRes] = await Promise.all([
-        getEnvBundleService().list("credential", "").then((j: string) => JSON.parse(j)),
-        getAgentService().list_agents().then((j: string) => JSON.parse(j)),
+        listEnvBundles({ kind: "credential" }),
+        listAgents(currentOrg.slug),
       ]);
 
       const grouped = groupByAgent(bundlesRes.items || []);
       setProfilesByAgent(grouped);
       const agentList = [
-        ...(agentsRes.builtin_agents || []),
-        ...(agentsRes.custom_agents || []),
-        ...(agentsRes.agents || []),
+        ...agentsRes.builtin_agents,
+        ...agentsRes.custom_agents,
+        ...agentsRes.agents,
       ];
       setAgents(agentList);
 
@@ -105,7 +107,7 @@ export function useAgentCredentials(
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, currentOrg]);
 
   useEffect(() => {
     loadData();
@@ -126,10 +128,7 @@ export function useAgentCredentials(
       const group = profilesByAgent.find((g) => g.agent_slug === agentSlug);
       const currentDefault = group?.profiles.find((p) => p.is_default);
       if (currentDefault) {
-        await getEnvBundleService().update(
-          BigInt(currentDefault.id),
-          JSON.stringify({ kind_primary: false })
-        );
+        await updateEnvBundle(BigInt(currentDefault.id), { kindPrimary: false });
       }
       setSuccess(t("settings.agentCredentials.defaultSet"));
       await loadData();
@@ -143,7 +142,7 @@ export function useAgentCredentials(
   const handleSetDefault = useCallback(async (profileId: number) => {
     try {
       setError(null);
-      await getEnvBundleService().set_primary(BigInt(profileId));
+      await setPrimaryEnvBundle(BigInt(profileId));
       setSuccess(t("settings.agentCredentials.defaultSet"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
@@ -156,7 +155,7 @@ export function useAgentCredentials(
   const handleDelete = useCallback(async (profileId: number) => {
     try {
       setError(null);
-      await getEnvBundleService().delete(BigInt(profileId));
+      await deleteEnvBundle(BigInt(profileId));
       setSuccess(t("settings.agentCredentials.profileDeleted"));
       await loadData();
       setTimeout(() => setSuccess(null), 3000);
@@ -173,25 +172,21 @@ export function useAgentCredentials(
   ) => {
     try {
       if (editingProfile) {
-        await getEnvBundleService().update(
-          BigInt(editingProfile.id),
-          JSON.stringify({
-            name: data.name,
-            description: data.description || undefined,
-            data: Object.keys(data.credentials).length > 0 ? data.credentials : undefined,
-          })
-        );
+        await updateEnvBundle(BigInt(editingProfile.id), {
+          name: data.name,
+          description: data.description || undefined,
+          hasData: Object.keys(data.credentials).length > 0,
+          data: Object.keys(data.credentials).length > 0 ? data.credentials : undefined,
+        });
         setSuccess(t("settings.agentCredentials.profileUpdated"));
       } else {
-        await getEnvBundleService().create(
-          JSON.stringify({
-            agent_slug: agentSlug,
-            name: data.name,
-            description: data.description || undefined,
-            kind: "credential",
-            data: data.credentials,
-          })
-        );
+        await createEnvBundle({
+          agentSlug,
+          name: data.name,
+          description: data.description || undefined,
+          kind: "credential",
+          data: data.credentials,
+        });
         setSuccess(t("settings.agentCredentials.profileCreated"));
       }
       await loadData();

@@ -1,6 +1,5 @@
-
 use agentsmesh_state::pod_state::PodState;
-use agentsmesh_types::Pod;
+use agentsmesh_types::proto_pod_v1::Pod;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -52,10 +51,9 @@ impl WasmPodState {
         error_message: Option<String>,
         timestamp: Option<i64>,
     ) {
-        let parsed = crate::parse_status::<agentsmesh_types::PodStatus>(status);
         self.inner.update_pod_status(
             pod_key,
-            parsed,
+            status,
             agent_status.as_deref(),
             error_code.as_deref(),
             error_message.as_deref(),
@@ -82,20 +80,5 @@ impl WasmPodState {
 
     pub fn remove_pod(&mut self, pod_key: &str) {
         self.inner.remove_pod(pod_key);
-    }
-
-    pub fn set_pods(&mut self, pods_json: &str) {
-        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(pods_json) {
-            self.inner.set_pods(pods);
-        }
-    }
-
-    pub fn set_current_pod(&mut self, pod_json: &str) {
-        let pod = if pod_json.is_empty() {
-            None
-        } else {
-            serde_json::from_str::<Pod>(pod_json).ok()
-        };
-        self.inner.set_current_pod(pod);
     }
 }

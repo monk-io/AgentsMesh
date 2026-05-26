@@ -8,8 +8,34 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
-import { getApiKeyService } from "@/lib/wasm-core";
+import type { ApiKey } from "@/lib/api/facade/apikey";
+import { create } from "@bufbuild/protobuf";
+import { ApiKeySchema } from "@proto/apikey/v1/api_key_pb";
+
+interface UpdateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  isEnabled?: boolean;
+}
+
+const { mockListApiKeys, mockCreateApiKey } = vi.hoisted(() => ({
+  mockListApiKeys: vi.fn(),
+  mockCreateApiKey: vi.fn(),
+}));
+vi.mock("@/lib/api/facade/apikey", () => ({
+  listApiKeys: mockListApiKeys,
+  createApiKey: mockCreateApiKey,
+  updateApiKey: vi.fn(),
+  revokeApiKey: vi.fn(),
+}));
+
+const { stableOrg } = vi.hoisted(() => ({
+  stableOrg: { id: 10, slug: "test-org", name: "Test Org", role: "owner" },
+}));
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stableOrg,
+}));
 
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
@@ -32,9 +58,9 @@ vi.mock("../apikeys", () => ({
     onEdit,
     onRevoke,
   }: {
-    apiKey: APIKeyData;
-    onEdit: (key: APIKeyData) => void;
-    onRevoke: (id: number) => void;
+    apiKey: ApiKey;
+    onEdit: (key: ApiKey) => void;
+    onRevoke: (id: bigint) => void;
     t: unknown;
   }) => (
     <div data-testid={`api-key-card-${apiKey.id}`}>
@@ -112,10 +138,10 @@ vi.mock("../apikeys", () => ({
     onOpenChange,
     onSave,
   }: {
-    apiKey: APIKeyData;
+    apiKey: ApiKey;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (id: number, data: UpdateAPIKeyRequest) => Promise<void>;
+    onSave: (id: bigint, data: UpdateInput) => Promise<void>;
     t: unknown;
   }) => {
     if (!open) return null;
@@ -141,20 +167,6 @@ vi.mock("../apikeys", () => ({
 
 const mockT = vi.fn((key: string) => key);
 
-const mockList = vi.fn();
-const mockCreate = vi.fn();
-
-function setupServiceMock() {
-  vi.mocked(getApiKeyService).mockReturnValue({
-    list: mockList,
-    get: vi.fn(),
-    create: mockCreate,
-    update: vi.fn(),
-    delete: vi.fn(),
-    revoke: vi.fn(),
-  } as unknown as ReturnType<typeof getApiKeyService>);
-}
-
 async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   let result: ReturnType<typeof render>;
   await act(async () => {
@@ -163,39 +175,36 @@ async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   return result!;
 }
 
-const sampleKeys: APIKeyData[] = [
-  {
-    id: 1,
-    organization_id: 10,
+const sampleKeys: ApiKey[] = [
+  create(ApiKeySchema, {
+    id: BigInt(1),
+    organizationId: BigInt(10),
     name: "CI/CD Key",
-    key_prefix: "am_ci",
+    keyPrefix: "am_ci",
     scopes: ["pods:read", "pods:write"],
-    is_enabled: true,
-    created_by: 1,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 2,
-    organization_id: 10,
+    isEnabled: true,
+    createdBy: BigInt(1),
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  }),
+  create(ApiKeySchema, {
+    id: BigInt(2),
+    organizationId: BigInt(10),
     name: "Monitoring Key",
-    key_prefix: "am_mon",
+    keyPrefix: "am_mon",
     scopes: ["tickets:read"],
-    is_enabled: false,
-    created_by: 1,
-    created_at: "2024-02-01T00:00:00Z",
-    updated_at: "2024-02-01T00:00:00Z",
-  },
+    isEnabled: false,
+    createdBy: BigInt(1),
+    createdAt: "2024-02-01T00:00:00Z",
+    updatedAt: "2024-02-01T00:00:00Z",
+  }),
 ];
 
 describe("APIKeysSettings - flows", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    setupServiceMock();
-    mockList.mockResolvedValue(
-      JSON.stringify({ api_keys: sampleKeys, total: 2 })
-    );
+    mockListApiKeys.mockResolvedValue({ items: sampleKeys, total: 2, limit: 50, offset: 0 });
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -233,12 +242,14 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should show secret dialog after successful creation", async () => {
-      vi.mocked(mockCreate).mockResolvedValue(
-        JSON.stringify({
-          api_key: { id: 3, name: "New Key" },
-          raw_key: "am_new_secret123",
-        })
-      );
+      vi.mocked(mockCreateApiKey).mockResolvedValue({
+        apiKey: create(ApiKeySchema, {
+          id: BigInt(3), organizationId: BigInt(10), name: "New Key", keyPrefix: "am_new",
+          scopes: [], isEnabled: true, createdBy: BigInt(1),
+          createdAt: "2024-03-01T00:00:00Z", updatedAt: "2024-03-01T00:00:00Z",
+        }),
+        rawKey: "am_new_secret123",
+      });
 
       await renderAndWaitForLoad();
 
@@ -259,12 +270,14 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should close secret dialog when done is clicked", async () => {
-      vi.mocked(mockCreate).mockResolvedValue(
-        JSON.stringify({
-          api_key: { id: 3, name: "New Key" },
-          raw_key: "am_new_secret123",
-        })
-      );
+      vi.mocked(mockCreateApiKey).mockResolvedValue({
+        apiKey: create(ApiKeySchema, {
+          id: BigInt(3), organizationId: BigInt(10), name: "New Key", keyPrefix: "am_new",
+          scopes: [], isEnabled: true, createdBy: BigInt(1),
+          createdAt: "2024-03-01T00:00:00Z", updatedAt: "2024-03-01T00:00:00Z",
+        }),
+        rawKey: "am_new_secret123",
+      });
 
       await renderAndWaitForLoad();
 
@@ -290,16 +303,18 @@ describe("APIKeysSettings - flows", () => {
     });
 
     it("should refresh key list after creation", async () => {
-      vi.mocked(mockCreate).mockResolvedValue(
-        JSON.stringify({
-          api_key: { id: 3, name: "New Key" },
-          raw_key: "am_new_secret123",
-        })
-      );
+      vi.mocked(mockCreateApiKey).mockResolvedValue({
+        apiKey: create(ApiKeySchema, {
+          id: BigInt(3), organizationId: BigInt(10), name: "New Key", keyPrefix: "am_new",
+          scopes: [], isEnabled: true, createdBy: BigInt(1),
+          createdAt: "2024-03-01T00:00:00Z", updatedAt: "2024-03-01T00:00:00Z",
+        }),
+        rawKey: "am_new_secret123",
+      });
 
       await renderAndWaitForLoad();
 
-      expect(mockList).toHaveBeenCalledTimes(1);
+      expect(mockListApiKeys).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         fireEvent.click(screen.getByText("settings.apiKeys.createKey"));
@@ -310,7 +325,7 @@ describe("APIKeysSettings - flows", () => {
       });
 
       await waitFor(() => {
-        expect(mockList).toHaveBeenCalledTimes(2);
+        expect(mockListApiKeys).toHaveBeenCalledTimes(2);
       });
     });
   });

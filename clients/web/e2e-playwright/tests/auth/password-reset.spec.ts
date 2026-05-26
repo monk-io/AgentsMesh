@@ -1,31 +1,28 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { CLEANUP, HASH_PASSWORD123 } from "../../helpers/test-data";
 import { clearAuthRateLimit } from "../../helpers/redis";
+import { ConnectError } from "../../helpers/connect-client";
 
 test.describe("Password Reset Flow", () => {
   test.beforeEach(async () => {
     clearAuthRateLimit();
   });
+
   /**
    * TC-PWRST-001: Request password reset
    */
   test("forgot password returns success for valid email", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/forgot-password", {
-      email: "dev@agentsmesh.local",
-    });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.message).toBeTruthy();
+    const cc = api.connectWithToken("");
+    const res = await cc.auth.forgotPassword({ email: "dev@agentsmesh.local" }) as { message?: string };
+    expect(res.message).toBeTruthy();
   });
 
   test("forgot password returns success for non-existent email (no enumeration)", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/forgot-password", {
-      email: "nonexistent@test.local",
-    });
+    const cc = api.connectWithToken("");
     // Security: same response for non-existent emails
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.message).toBeTruthy();
+    const res = await cc.auth.forgotPassword({ email: "nonexistent@test.local" }) as { message?: string };
+    expect(res.message).toBeTruthy();
   });
 
   /**
@@ -43,18 +40,19 @@ test.describe("Password Reset Flow", () => {
         password_reset_expires_at = NOW() + INTERVAL '1 hour'
     `);
 
-    const res = await api.postPublic("/api/v1/auth/reset-password", {
+    const cc = api.connectWithToken("");
+    const res = await cc.auth.resetPassword({
       token: "test-reset-token-12345",
-      new_password: "NewTestPass456!",
-    });
-    expect(res.status).toBe(200);
+      newPassword: "NewTestPass456!",
+    }) as { message?: string };
+    expect(res).toBeTruthy();
 
     // Verify login with new password works
-    const loginRes = await api.postPublic("/api/v1/auth/login", {
+    const loginRes = await cc.auth.login({
       email,
       password: "NewTestPass456!",
-    });
-    expect(loginRes.status).toBe(200);
+    }) as { token: string };
+    expect(loginRes.token).toBeTruthy();
 
     db.cleanup(CLEANUP.userByEmail(email));
   });
@@ -63,26 +61,32 @@ test.describe("Password Reset Flow", () => {
    * TC-PWRST-003: Reset password with invalid token
    */
   test("reset password with invalid token fails", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/reset-password", {
-      token: "invalid-reset-token-xyz",
-      new_password: "NewTestPass456!",
-    });
-    expect(res.status).toBe(400);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.resetPassword({
+        token: "invalid-reset-token-xyz",
+        newPassword: "NewTestPass456!",
+      })
+    ).rejects.toBeInstanceOf(ConnectError);
   });
 
   test("reset password with empty token fails", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/reset-password", {
-      token: "",
-      new_password: "NewTestPass456!",
-    });
-    expect(res.status).toBe(400);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.resetPassword({
+        token: "",
+        newPassword: "NewTestPass456!",
+      })
+    ).rejects.toBeInstanceOf(ConnectError);
   });
 
   test("reset password with weak new password fails", async ({ api }) => {
-    const res = await api.postPublic("/api/v1/auth/reset-password", {
-      token: "some-token",
-      new_password: "123",
-    });
-    expect(res.status).toBe(400);
+    const cc = api.connectWithToken("");
+    await expect(
+      cc.auth.resetPassword({
+        token: "some-token",
+        newPassword: "123",
+      })
+    ).rejects.toBeInstanceOf(ConnectError);
   });
 });

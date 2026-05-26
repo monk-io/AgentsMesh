@@ -26,6 +26,9 @@ const nextConfig = {
   transpilePackages: [
     "@agentsmesh/service-runtime",
     "@agentsmesh/service-interface",
+    // Internal npm package mounted by Bazel; ships .ts sources so the
+    // .next/standalone build relies on Next's SWC pipeline to transpile.
+    "@agentsmesh/proto",
   ],
 
   webpack: (config, { isServer }) => {

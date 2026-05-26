@@ -68,10 +68,12 @@ describe("useRedirectIfAuthenticated", () => {
 
   it("authenticated + no currentOrgSlug → fetches /orgs and redirects to first org", async () => {
     persistSession(null);
+    // fetchFirstOrgSlug calls Connect-JSON OrgService/ListMyOrgs which returns
+    // `{items: [{slug, ...}]}`, not the legacy REST `{organizations: [...]}` shape.
     globalThis.fetch = vi.fn(async () =>
       new Response(JSON.stringify({
-        organizations: [
-          { id: 1, slug: "fetched-org", name: "Fetched" },
+        items: [
+          { id: "1", slug: "fetched-org", name: "Fetched" },
         ],
       }), { status: 200 }),
     ) as typeof fetch;
@@ -97,7 +99,7 @@ describe("useRedirectIfAuthenticated", () => {
   it("authenticated + empty orgs list → redirects to /onboarding", async () => {
     persistSession(null);
     globalThis.fetch = vi.fn(async () =>
-      new Response(JSON.stringify({ organizations: [] }), { status: 200 }),
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
     ) as typeof fetch;
 
     renderHook(() => useRedirectIfAuthenticated());
@@ -117,8 +119,21 @@ describe("useRedirectIfAuthenticated", () => {
     unmount();
 
     // Resolve fetch AFTER unmount — cancellation flag must suppress the replace.
-    resolveFetch(new Response(JSON.stringify({ organizations: [{ id: 1, slug: "x", name: "X" }] }), { status: 200 }));
+    resolveFetch(new Response(JSON.stringify({ items: [{ id: "1", slug: "x", name: "X" }] }), { status: 200 }));
     await new Promise((r) => setTimeout(r, 10));
+
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("authenticated + skipIfRedirectParam set → does NOT redirect (form owns it)", async () => {
+    persistSession(null);
+    updateLightSessionOrgSlug("my-org", ORIGIN);
+
+    renderHook(() => useRedirectIfAuthenticated({
+      skipIfRedirectParam: "/popout/terminal/abc",
+    }));
+
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(mockReplace).not.toHaveBeenCalled();
   });

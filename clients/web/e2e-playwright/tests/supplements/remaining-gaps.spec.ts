@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -9,96 +10,90 @@ import { textContent } from "../../helpers/test-data";
 test.describe("Remaining Coverage Gaps", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /** TC-ORGSET-005: Delete org confirmation dialog */
   test("org settings page has danger zone", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=organization&tab=general`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/danger|危险|delete|删除/i);
   });
 
-  /** TC-NOTIFY-003: Disable notifications */
   test("notification settings toggle exists", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=personal&tab=notifications`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/notification|通知/i);
   });
 
-  /** TC-WS-003/004: Workspace layout */
   test("workspace page supports terminal layout", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForLoadState("networkidle");
-    // Page loads without error
+    await page.waitForLoadState("load");
     expect(page.url()).toContain("/workspace");
   });
 
-  /** TC-GITCRED-006/007: Git credentials UI flow */
   test("git settings page loads", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=personal&tab=git`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/git|credential|凭据/i);
   });
 
-  /** TC-PROF-006: User settings full flow (profile page) */
   test("user profile accessible from settings", async ({ page }) => {
     await page.goto(`/${TEST_ORG_SLUG}/settings?scope=personal&tab=general`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/language|语言|personal|个人/i);
   });
 
-  /** TC-CHAN-002: Send message to channel */
   test("send message to channel", async ({ api }) => {
-    // Create channel
-    const chRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/channels`, {
+    const cc = await api.connect();
+    const created = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: "E2E Msg Channel " + Date.now(),
+    }) as { id?: number };
+    expect(created.id, "createChannel must return an id").toBeTruthy();
+
+    await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: Number(created.id),
+      // content_json is a stringified MessageContent JSON (proto stores it
+      // verbatim — wasm parses on receive).
+      contentJson: JSON.stringify(textContent("Hello from E2E test")),
     });
-    expect([200, 201]).toContain(chRes.status);
-    const ch = await chRes.json();
-    const chId = ch.channel?.id || ch.id;
-    if (!chId) { test.skip(); return; }
 
-    // Send message
-    const msgRes = await api.post(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/channels/${chId}/messages`,
-      { content: textContent("Hello from E2E test") }
-    );
-    expect([200, 201]).toContain(msgRes.status);
+    const list = await cc.channel.listChannelMessages({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: Number(created.id),
+    }) as { items: unknown[] };
+    expect(Array.isArray(list.items)).toBe(true);
 
-    // Get messages
-    const listRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/channels/${chId}/messages`
-    );
-    expect(listRes.status).toBe(200);
-
-    // Cleanup
-    await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/channels/${chId}/archive`, {});
+    await cc.channel.archiveChannel({
+      orgSlug: TEST_ORG_SLUG,
+      id: Number(created.id),
+    });
   });
 
-  /** TC-MESH-002~004: Mesh topology with pods */
   test("mesh topology API returns structure", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/mesh/topology`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data).toBeTruthy();
+    const cc = await api.connect();
+    const res = await cc.mesh.getMeshTopology({ orgSlug: TEST_ORG_SLUG });
+    expect(res).toBeTruthy();
   });
 
-  /** Billing: cancel, seats, checkout UI stubs */
   test("billing plans prices endpoint", async ({ api }) => {
-    const res = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/billing/plans/prices`
-    );
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.billing.listPlans({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  /** TC-CYCLE-003: Billing cycle change (yearly to monthly) */
   test("billing cycle change to monthly", async ({ api }) => {
-    const res = await api.post(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/billing/subscription/change-cycle`,
-      { billing_cycle: "monthly" }
-    );
-    expect([200, 400]).toContain(res.status);
+    const cc = await api.connect();
+    try {
+      await cc.billing.changeBillingCycle({
+        orgSlug: TEST_ORG_SLUG,
+        billingCycle: "monthly",
+      });
+    } catch (err) {
+      // Cycle may be same as current — 400 acceptable.
+      expect((err as { status: number }).status).toBe(400);
+    }
   });
 });

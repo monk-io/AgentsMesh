@@ -15,40 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *LoopHandler) EnableLoop(c *gin.Context) {
-	tenant := middleware.GetTenant(c)
-	loopSlug := c.Param("loop_slug")
-
-	loop, err := h.loopService.SetStatus(c.Request.Context(), tenant.OrganizationID, loopSlug, loopDomain.StatusEnabled)
-	if err != nil {
-		if errors.Is(err, loopService.ErrLoopNotFound) {
-			apierr.ResourceNotFound(c, "Loop not found")
-		} else {
-			apierr.InternalError(c, "Failed to enable loop")
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"loop": loop})
-}
-
-func (h *LoopHandler) DisableLoop(c *gin.Context) {
-	tenant := middleware.GetTenant(c)
-	loopSlug := c.Param("loop_slug")
-
-	loop, err := h.loopService.SetStatus(c.Request.Context(), tenant.OrganizationID, loopSlug, loopDomain.StatusDisabled)
-	if err != nil {
-		if errors.Is(err, loopService.ErrLoopNotFound) {
-			apierr.ResourceNotFound(c, "Loop not found")
-		} else {
-			apierr.InternalError(c, "Failed to disable loop")
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"loop": loop})
-}
-
+// TriggerLoop manually triggers a loop run.
+// POST /api/v1/orgs/:slug/loops/:loop_slug/trigger
 func (h *LoopHandler) TriggerLoop(c *gin.Context) {
 	tenant := middleware.GetTenant(c)
 	loopSlug := c.Param("loop_slug")
@@ -92,6 +60,8 @@ func (h *LoopHandler) TriggerLoop(c *gin.Context) {
 		return
 	}
 
+	// Run start is async — orchestrator handles Pod creation + Autopilot setup.
+	// Timeout prevents goroutine leak if Pod creation hangs indefinitely.
 	startCtx, startCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	go func() {
 		defer startCancel()

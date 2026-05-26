@@ -3,13 +3,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Key, Pencil, Ban } from "lucide-react";
-import type { APIKeyData } from "@/lib/api/apikeyTypes";
+import type { ApiKey } from "@/lib/api/facade/apikey";
 import type { TranslationFn } from "../GeneralSettings";
 
 interface APIKeyCardProps {
-  apiKey: APIKeyData;
-  onEdit: (apiKey: APIKeyData) => void;
-  onRevoke: (id: number) => void;
+  apiKey: ApiKey;
+  onEdit: (apiKey: ApiKey) => void;
+  onRevoke: (id: bigint) => void;
   t: TranslationFn;
 }
 
@@ -34,8 +34,8 @@ function formatRelativeTime(dateString?: string, t?: TranslationFn): string {
 }
 
 export function APIKeyCard({ apiKey, onEdit, onRevoke, t }: APIKeyCardProps) {
-  const isExpired = apiKey.expires_at && new Date(apiKey.expires_at) < new Date();
-  const isActive = apiKey.is_enabled && !isExpired;
+  const isExpired = apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date();
+  const isActive = apiKey.isEnabled && !isExpired;
 
   return (
     <div className="flex items-center justify-between p-4 border border-border rounded-lg">
@@ -47,7 +47,7 @@ export function APIKeyCard({ apiKey, onEdit, onRevoke, t }: APIKeyCardProps) {
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium truncate">{apiKey.name}</span>
             <code className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              {apiKey.key_prefix}...
+              {apiKey.keyPrefix}...
             </code>
             {isActive ? (
               <Badge variant="default" className="text-xs">
@@ -55,14 +55,13 @@ export function APIKeyCard({ apiKey, onEdit, onRevoke, t }: APIKeyCardProps) {
               </Badge>
             ) : (
               <Badge variant="secondary" className="text-xs">
-                {apiKey.is_enabled
+                {apiKey.isEnabled
                   ? t("settings.apiKeys.expired")
                   : t("settings.apiKeys.disabled")}
               </Badge>
             )}
           </div>
 
-          {/* Scopes */}
           <div className="flex flex-wrap gap-1 mb-1.5">
             {apiKey.scopes.map((scope) => (
               <span
@@ -74,18 +73,17 @@ export function APIKeyCard({ apiKey, onEdit, onRevoke, t }: APIKeyCardProps) {
             ))}
           </div>
 
-          {/* Metadata */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>
               {t("settings.apiKeys.lastUsed", {
-                time: formatRelativeTime(apiKey.last_used_at, t),
+                time: formatRelativeTime(apiKey.lastUsedAt, t),
               })}
             </span>
             <span>·</span>
             <span>
-              {apiKey.expires_at
+              {apiKey.expiresAt
                 ? t("settings.apiKeys.expiresAt", {
-                    date: new Date(apiKey.expires_at).toLocaleDateString(),
+                    date: new Date(apiKey.expiresAt).toLocaleDateString(),
                   })
                 : t("settings.apiKeys.neverExpires")}
             </span>
@@ -102,7 +100,7 @@ export function APIKeyCard({ apiKey, onEdit, onRevoke, t }: APIKeyCardProps) {
         >
           <Pencil className="w-4 h-4" />
         </Button>
-        {apiKey.is_enabled && (
+        {apiKey.isEnabled && (
           <Button
             variant="ghost"
             size="sm"

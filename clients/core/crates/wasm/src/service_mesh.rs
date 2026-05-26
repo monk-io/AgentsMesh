@@ -56,7 +56,6 @@ impl WasmMeshService {
         }
     }
 
-    pub fn set_topology(&self, json: &str) { self.0.set_topology(json); }
     pub fn clear_topology(&self) { self.0.clear_topology(); }
 
     pub fn select_node(&self, pod_key: Option<String>) {

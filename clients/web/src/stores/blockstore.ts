@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { useMemo } from "react";
 import { getBlockstoreService } from "@/lib/wasm-core";
-import { blockstoreApi } from "@/lib/api/blockstoreApi";
-import type { Block, BlockRef, Workspace } from "@/lib/api/blockstoreTypes";
+import { blockstoreApi } from "@/lib/api/facade/blockstoreApi";
+import type { Block, BlockRef, Workspace } from "@/lib/viewModels/blockstore";
 import type {
   BlockstoreState,
   BlocksMap,
@@ -13,6 +13,18 @@ import type {
   LastOpIdMap,
 } from "./blockstoreTypes";
 
+// Zustand store for Block Store — Rust SSOT edition.
+//
+// All block/ref/workspace data lives in the Rust BlockstoreService.
+// This store only tracks:
+//   • `_tick`: invalidation signal bumped on Rust-side mutations. Selector
+//     hooks re-derive from `svc().*_json()` whenever tick advances.
+//   • UI state: selection, focus, active workspace, comments rail target.
+//
+// Writes go through Rust (apply_ops / load_subtree / apply_remote_op) and
+// the store reacts by bumping tick. There is no JS-side mirror — zero
+// drift risk.
+
 const svc = () => getBlockstoreService();
 const bump = () => useBlockstoreStore.setState((s) => ({ _tick: s._tick + 1 }));
 
@@ -20,6 +32,8 @@ function safeParse<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
   try { return JSON.parse(raw) as T; } catch { return fallback; }
 }
+
+// ── Non-hook readers (for outside-render / tests) ──
 
 export function readWorkspaces(): WorkspacesMap {
   return safeParse<WorkspacesMap>(svc().workspaces_json(), {});
@@ -50,6 +64,8 @@ export function readBacklinks(): BacklinksIndex {
 export function readLastOpIds(): LastOpIdMap {
   return safeParse<LastOpIdMap>(svc().last_op_ids_json(), {});
 }
+
+// ── Selector hooks (tick-driven) ──
 
 export function useWorkspaces(): WorkspacesMap {
   const tick = useBlockstoreStore((s) => s._tick);
@@ -123,6 +139,8 @@ export function useLastOpIds(): LastOpIdMap {
   return useMemo(() => readLastOpIds(), [tick]);
 }
 
+// ── Store ──
+
 export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
   _tick: 0,
   pendingFocusBlockID: null,
@@ -160,9 +178,12 @@ export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
 
     async loadSubtree(workspaceID, rootID) {
       await blockstoreApi.getSubtree(workspaceID, rootID);
-      // Seed watermark so the WS filter recognises the workspace.
+      // Seed watermark if not yet present so the WS filter recognises the
+      // workspace. wasm-bindgen exposes set_last_op_id as i64, so we MUST
+      // pass a BigInt — Number would throw "Cannot convert 0 to a BigInt"
+      // and wedge DocumentView at "Loading workspace…".
       if (!(workspaceID in readLastOpIds())) {
-        svc().set_last_op_id(workspaceID, 0);
+        svc().set_last_op_id(workspaceID, BigInt(0));
       }
       bump();
     },
@@ -173,12 +194,15 @@ export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
     },
 
     async catchup(workspaceID) {
+      // Rust's catchup applies all server ops atomically. No JS-side replay.
       await blockstoreApi.catchupOps(workspaceID);
       bump();
     },
 
     setLastOpId(workspaceID, id) {
-      svc().set_last_op_id(workspaceID, id);
+      // wasm-bindgen i64 setter needs BigInt; tolerate Number callers by
+      // coercing here so non-bigint inputs don't blow up at the boundary.
+      svc().set_last_op_id(workspaceID, typeof id === "bigint" ? id : BigInt(id));
       bump();
     },
 
@@ -219,4 +243,5 @@ export const useBlockstoreStore = create<BlockstoreState>((set, get) => ({
   },
 }));
 
+// Re-export selector hook types for convenience.
 export type { Block, BlockRef, Workspace };

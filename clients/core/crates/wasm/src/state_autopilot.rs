@@ -1,5 +1,4 @@
-use agentsmesh_state::autopilot_state::AutopilotState;
-use agentsmesh_types::{AutopilotController, AutopilotIteration};
+use agentsmesh_state::autopilot_state::{AutopilotController, AutopilotIteration, AutopilotState};
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 

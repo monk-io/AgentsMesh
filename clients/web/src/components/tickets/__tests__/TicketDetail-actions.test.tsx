@@ -1,7 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@/test/test-utils'
+import { render, screen, waitFor } from '@/test/test-utils'
 import { TicketDetail } from '../TicketDetail'
-import { getTicketRelationsService, getApiClient, getOrgApiService } from '@/lib/wasm-core'
+import { getApiClient } from '@/lib/wasm-core'
+import * as ticketRelations from '@/lib/api/facade/ticketRelations'
+import * as org from '@/lib/api/facade/org'
+
+vi.mock('@/lib/api/facade/ticketRelations', () => ({
+  listRelations: vi.fn(),
+  listCommits: vi.fn(),
+  listComments: vi.fn(),
+  listMergeRequests: vi.fn(),
+}))
+
+vi.mock('@/lib/api/facade/org', () => ({
+  listMembers: vi.fn(),
+}))
 
 // Mock next/navigation
 const mockRouterBack = vi.fn()
@@ -128,11 +141,19 @@ describe('TicketDetail - Editing, Status & Delete', () => {
 
     const client = getApiClient()
     vi.mocked(client.get).mockResolvedValue(JSON.stringify({ sub_tickets: [], pods: [] }))
-    vi.mocked(getTicketRelationsService().list_relations).mockResolvedValue(JSON.stringify({ relations: [] }))
-    vi.mocked(getTicketRelationsService().list_commits).mockResolvedValue(JSON.stringify({ commits: [] }))
-    vi.mocked(getTicketRelationsService().list_comments).mockResolvedValue(JSON.stringify({ comments: [], total: 0 }))
+    vi.mocked(ticketRelations.listRelations).mockResolvedValue({ relations: [] })
+    vi.mocked(ticketRelations.listCommits).mockResolvedValue({ commits: [] })
+    vi.mocked(ticketRelations.listComments).mockResolvedValue({
+      comments: [], total: 0, limit: 0, offset: 0,
+    })
+    vi.mocked(ticketRelations.listMergeRequests).mockResolvedValue({ merge_requests: [] })
 
-    vi.mocked(getOrgApiService().list_members).mockResolvedValue(JSON.stringify({ members: [] }))
+    vi.mocked(org.listMembers).mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 0,
+      offset: 0,
+    })
   })
 
   // NOTE: after the ticket-detail redesign the following UI surfaces moved out

@@ -10,9 +10,11 @@ import (
 	runnerDomain "github.com/anthropics/agentsmesh/backend/internal/domain/runner"
 	"github.com/anthropics/agentsmesh/backend/internal/infra"
 	blockstoreinfra "github.com/anthropics/agentsmesh/backend/internal/infra/blockstore"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/database"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/email"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agent"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
+	adminservice "github.com/anthropics/agentsmesh/backend/internal/service/admin"
 	apikeyservice "github.com/anthropics/agentsmesh/backend/internal/service/apikey"
 	"github.com/anthropics/agentsmesh/backend/internal/service/auth"
 	"github.com/anthropics/agentsmesh/backend/internal/service/billing"
@@ -22,6 +24,7 @@ import (
 	envbundleservice "github.com/anthropics/agentsmesh/backend/internal/service/envbundle"
 	extensionservice "github.com/anthropics/agentsmesh/backend/internal/service/extension"
 	fileservice "github.com/anthropics/agentsmesh/backend/internal/service/file"
+	grantservice "github.com/anthropics/agentsmesh/backend/internal/service/grant"
 	ssoservice "github.com/anthropics/agentsmesh/backend/internal/service/sso"
 	supportticketservice "github.com/anthropics/agentsmesh/backend/internal/service/supportticket"
 	tokenusagesvc "github.com/anthropics/agentsmesh/backend/internal/service/tokenusage"
@@ -47,6 +50,8 @@ type serviceContainer struct {
 	auth              *auth.Service
 	user              *user.Service
 	org               *organization.Service
+	admin             *adminservice.Service
+	adminDB           database.DB
 	agentSvc          *agent.AgentService
 	envBundle         *envbundleservice.Service
 	userConfig        *agent.UserConfigService
@@ -61,6 +66,7 @@ type serviceContainer struct {
 	billing           *billing.Service
 	binding           *binding.Service
 	mesh              *mesh.Service
+	message           *agent.MessageService
 	invitation        *invitation.Service
 	file              *fileservice.Service
 	promoCode         *promocode.Service
@@ -80,6 +86,7 @@ type serviceContainer struct {
 	supportTicket     *supportticketservice.Service
 	tokenUsage        *tokenusagesvc.Service
 	blockstore        *blockstoreservice.Service
+	grant             *grantservice.Service
 
 	notifDispatcher *notifService.Dispatcher
 	notifPrefStore  *notifService.PreferenceStore
@@ -132,7 +139,9 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	orgSvc := organization.NewServiceWithBilling(orgRepo, billingSvc)
 	runnerRepo := infra.NewRunnerRepository(db)
 	runnerSvc := runner.NewService(runnerRepo, billingSvc)
-	runnerSvc.SetGrantQuerier(infra.NewGrantRepository(db))
+	grantRepo := infra.NewGrantRepository(db)
+	grantSvc := grantservice.NewService(grantRepo)
+	runnerSvc.SetGrantQuerier(grantRepo)
 	podRepo := infra.NewPodRepository(db)
 	podSvc := agentpod.NewPodService(podRepo)
 	autopilotRepo := infra.NewAutopilotRepository(db)
@@ -147,6 +156,8 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	bindingSvc := binding.NewService(bindingRepo, podSvc)
 	meshRepo := infra.NewMeshRepository(db)
 	meshSvc := mesh.NewService(meshRepo, podSvc, channelSvc, bindingSvc)
+	agentMessageRepo := infra.NewAgentMessageRepository(db)
+	messageSvc := agent.NewMessageService(agentMessageRepo)
 
 	emailSvc := email.NewService(email.Config{
 		Provider:    cfg.Email.Provider,
@@ -193,10 +204,19 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 	}
 	ticketSvc.SetBlockstore(blockstoreSvc)
 
+	// admin.Service backs both the REST admin handlers (mounted by
+	// admin.RegisterRoutes) and the Connect admin handlers (mounted by
+	// connect_init's mountAdminServices). Keeping a single instance here
+	// avoids two parallel audit-log pipelines.
+	dbWrapper := database.NewGormWrapper(db)
+	adminSvc := adminservice.NewService(dbWrapper)
+
 	return &serviceContainer{
 		auth:               authSvc,
 		user:               userSvc,
 		org:                orgSvc,
+		admin:              adminSvc,
+		adminDB:            dbWrapper,
 		agentSvc:           agentSvc,
 		envBundle:          envBundleSvc,
 		userConfig:         userConfigSvc,
@@ -211,6 +231,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		billing:            billingSvc,
 		binding:            bindingSvc,
 		mesh:               meshSvc,
+		message:            messageSvc,
 		invitation:         invitationSvc,
 		file:               fileSvc,
 		promoCode:          promoCodeSvc,
@@ -231,6 +252,7 @@ func initializeServices(cfg *config.Config, db *gorm.DB, redisClient *redis.Clie
 		notifPrefStore:     notifPrefStore,
 		tokenUsage:         tokenUsageSvc,
 		blockstore:         blockstoreSvc,
+		grant:              grantSvc,
 		podRepo:            podRepo,
 		runnerRepo:         runnerRepo,
 		autopilotRepo:      autopilotRepo,

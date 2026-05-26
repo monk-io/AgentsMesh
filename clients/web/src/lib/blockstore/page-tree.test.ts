@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildPageTree } from "./page-tree";
-import { BLOCK_TYPE_PAGE, type Block, type BlockRef } from "@/lib/api/blockstoreTypes";
+import { BLOCK_TYPE_PAGE, type Block, type BlockRef } from "@/lib/viewModels/blockstore";
 
 function page(id: string, title: string): Block {
   return {

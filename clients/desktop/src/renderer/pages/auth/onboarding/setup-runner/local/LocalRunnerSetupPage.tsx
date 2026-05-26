@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth";
-import { runnerApi, RunnerData } from "@/lib/api/runner";
+import { runnerApi, RunnerData } from "@/lib/api/facade/runner";
 import { isApiErrorCode } from "@/lib/api/errors";
 import { useServerUrl } from "@/hooks/useServerUrl";
 import { useTranslations } from "next-intl";

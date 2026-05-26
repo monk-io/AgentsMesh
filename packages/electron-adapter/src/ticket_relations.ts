@@ -1,48 +1,85 @@
 import { invoke } from "./invoke";
 import type { ITicketRelationsService } from "@agentsmesh/service-interface";
 
+// Forwards the Connect-RPC Uint8Array round-trip to the node-bridge's
+// `ticket_relations_*_connect` napi commands. Naming mirrors the wasm
+// surface (snake_case, `_connect` suffix) so the same TS adapter can
+// switch between renderer and Electron transports.
 export class ElectronTicketRelationsService implements ITicketRelationsService {
-  async list_relations(slug: string): Promise<string> {
-    return invoke<string>("ticketRelationsListRelations", slug);
+  async list_relations_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsListRelationsConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async create_relation(slug: string, json: string): Promise<string> {
-    return invoke<string>("ticketRelationsCreateRelation", slug, json);
+  async create_relation_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsCreateRelationConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async delete_relation(slug: string, relationId: bigint): Promise<void> {
-    await invoke<void>("ticketRelationsDeleteRelation", slug, Number(relationId));
+  async delete_relation_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsDeleteRelationConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async list_comments(slug: string, limit?: number | null, offset?: number | null): Promise<string> {
-    return invoke<string>("ticketRelationsListComments", slug, limit, offset);
+  async list_commits_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsListCommitsConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async create_comment(slug: string, json: string): Promise<string> {
-    return invoke<string>("ticketRelationsCreateComment", slug, json);
+  async link_commit_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsLinkCommitConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async update_comment(slug: string, commentId: bigint, json: string): Promise<string> {
-    return invoke<string>("ticketRelationsUpdateComment", slug, Number(commentId), json);
+  async unlink_commit_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsUnlinkCommitConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async delete_comment(slug: string, commentId: bigint): Promise<void> {
-    await invoke<void>("ticketRelationsDeleteComment", slug, Number(commentId));
+  async list_merge_requests_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsListMergeRequestsConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async list_commits(slug: string): Promise<string> {
-    return invoke<string>("ticketRelationsListCommits", slug);
+  async list_comments_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsListCommentsConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async link_commit(slug: string, json: string): Promise<string> {
-    return invoke<string>("ticketRelationsLinkCommit", slug, json);
+  async create_comment_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsCreateCommentConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async unlink_commit(slug: string, commitId: bigint): Promise<void> {
-    await invoke<void>("ticketRelationsUnlinkCommit", slug, Number(commitId));
+  async update_comment_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsUpdateCommentConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async list_merge_requests(slug: string): Promise<string> {
-    return invoke<string>("ticketRelationsListMergeRequests", slug);
+  async delete_comment_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "ticketRelationsDeleteCommentConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 }

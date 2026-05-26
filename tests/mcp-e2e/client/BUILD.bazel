@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "client",
     srcs = [
-        "backend_rest.go",
+        "backend_connect.go",
         "db.go",
         "mcp.go",
     ],

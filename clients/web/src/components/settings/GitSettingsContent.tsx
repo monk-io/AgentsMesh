@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CenteredSpinner } from "@/components/ui/spinner";
-import { RepositoryProviderData, CredentialType } from "@/lib/api";
+import { CredentialType } from "@/lib/api";
+import type { RepositoryProvider } from "@/lib/api/facade/userRepositoryProvider";
 import { AlertMessage } from "@/components/ui/alert-message";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
@@ -38,7 +39,7 @@ export function GitSettingsContent() {
 
   const [showAddProviderDialog, setShowAddProviderDialog] = useState(false);
   const [showAddCredentialDialog, setShowAddCredentialDialog] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<RepositoryProviderData | null>(null);
+  const [editingProvider, setEditingProvider] = useState<RepositoryProvider | null>(null);
 
   const deleteProviderDialog = useConfirmDialog({
     title: t("settings.gitSettings.providers.deleteDialog.title"),
@@ -134,11 +135,11 @@ export function GitSettingsContent() {
           <div className="space-y-3">
             {data.providers.map((provider) => (
               <GitProviderCard
-                key={provider.id}
+                key={Number(provider.id)}
                 provider={provider}
                 onEdit={() => setEditingProvider(provider)}
-                onDelete={() => onDeleteProvider(provider.id)}
-                onTestConnection={() => handleTestConnection(provider.id)}
+                onDelete={() => onDeleteProvider(Number(provider.id))}
+                onTestConnection={() => handleTestConnection(Number(provider.id))}
                 t={t}
               />
             ))}

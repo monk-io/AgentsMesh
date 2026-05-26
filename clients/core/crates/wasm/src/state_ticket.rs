@@ -1,5 +1,5 @@
 use agentsmesh_state::ticket_state::TicketState;
-use agentsmesh_types::{BoardColumn, Label, Ticket, TicketPriority, TicketStatus};
+use agentsmesh_types::proto_ticket_v1::{BoardColumn, Label, Ticket};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -44,9 +44,7 @@ impl WasmTicketState {
     }
 
     pub fn update_ticket_status(&mut self, slug: &str, status: &str) {
-        if let Ok(s) = serde_json::from_str::<TicketStatus>(&format!("\"{status}\"")) {
-            self.inner.update_ticket_status(slug, s);
-        }
+        self.inner.update_ticket_status(slug, status);
     }
 
     pub fn remove_ticket(&mut self, slug: &str) {
@@ -61,8 +59,8 @@ impl WasmTicketState {
         repository_ids_json: &str,
     ) -> String {
         let search_opt = if search.is_empty() { None } else { Some(search) };
-        let statuses: Vec<TicketStatus> = serde_json::from_str(statuses_json).unwrap_or_default();
-        let priorities: Vec<TicketPriority> = serde_json::from_str(priorities_json).unwrap_or_default();
+        let statuses: Vec<String> = serde_json::from_str(statuses_json).unwrap_or_default();
+        let priorities: Vec<String> = serde_json::from_str(priorities_json).unwrap_or_default();
         let repo_ids: Vec<i64> = serde_json::from_str(repository_ids_json).unwrap_or_default();
         let filtered = self.inner.filter_tickets(search_opt, &statuses, &priorities, &repo_ids);
         serde_json::to_string(&filtered).unwrap_or_default()
@@ -79,11 +77,8 @@ impl WasmTicketState {
     }
 
     pub fn append_column_tickets(&mut self, status: &str, tickets_json: &str) {
-        if let (Ok(s), Ok(tickets)) = (
-            serde_json::from_str::<TicketStatus>(&format!("\"{status}\"")),
-            serde_json::from_str::<Vec<Ticket>>(tickets_json),
-        ) {
-            self.inner.append_column_tickets(s, tickets);
+        if let Ok(tickets) = serde_json::from_str::<Vec<Ticket>>(tickets_json) {
+            self.inner.append_column_tickets(status, tickets);
         }
     }
 

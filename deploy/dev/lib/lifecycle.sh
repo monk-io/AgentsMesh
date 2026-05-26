@@ -277,7 +277,14 @@ start_frontend() {
     # API_PROXY_TARGET drives next.config.ts rewrites: /api/* → traefik
     # → host backend. Without it, /api/auth/login 404s and the UI can't
     # log in. HTTP_PORT is traefik's worktree-allocated entrypoint.
+    #
+    # NEXT_PUBLIC_E2E=true enables build-time conditional registration of
+    # test-only UI surfaces (e.g. the e2e-echo credential form). Production
+    # builds never see this flag, so the e2e form is tree-shaken out. See
+    # clients/web/src/components/settings/AgentCredentialsSettings/
+    # credentialForms/index.ts.
     API_PROXY_TARGET="http://localhost:$HTTP_PORT" \
+    NEXT_PUBLIC_E2E="true" \
         bazel run //clients/web:next_dev -- --port "$web_port" > "$log_file" 2>&1 < /dev/null &
     disown $!
     cd "$saved_dir"

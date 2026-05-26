@@ -1,7 +1,7 @@
 "use client";
 
 import { Wrench } from "lucide-react";
-import type { MessageContent } from "@/lib/api/channel-message-types";
+import type { MessageContent } from "@/lib/viewModels/channelMessage";
 
 interface ToolCallCardProps {
   content: MessageContent;

@@ -23,7 +23,7 @@ export class WorkspacePage {
 
   async goto(): Promise<void> {
     await this.page.goto(`/${this.orgSlug}/workspace`);
-    await this.page.waitForLoadState("networkidle");
+    await this.page.waitForLoadState("load");
   }
 
   /** Check if the terminal grid area exists. */

@@ -1,5 +1,5 @@
 use agentsmesh_state::mesh_state::MeshState;
-use agentsmesh_types::MeshTopology;
+use agentsmesh_types::proto_mesh_v1::MeshTopology;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

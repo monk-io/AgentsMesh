@@ -73,43 +73,55 @@ impl WasmAutopilotService {
         self.0.update_thinking(key, json);
     }
 
-    pub async fn fetch_controllers(&self) -> Result<String, String> {
-        self.0.fetch_controllers().await
+    // -------- Connect-RPC (binary wire) --------
+
+    #[wasm_bindgen(js_name = listAutopilotsConnect)]
+    pub async fn list_autopilots_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_autopilots_connect(request).await
     }
 
-    pub async fn fetch_controller(&self, key: &str) -> Result<String, String> {
-        self.0.fetch_controller(key).await
+    #[wasm_bindgen(js_name = getAutopilotConnect)]
+    pub async fn get_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_autopilot_connect(request).await
     }
 
-    pub async fn create_controller(&self, request_json: &str) -> Result<String, String> {
-        self.0.create_controller(request_json).await
+    #[wasm_bindgen(js_name = createAutopilotConnect)]
+    pub async fn create_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_autopilot_connect(request).await
     }
 
-    pub async fn pause_controller(&self, key: &str) -> Result<(), String> {
-        self.0.pause_controller(key).await
+    #[wasm_bindgen(js_name = pauseAutopilotConnect)]
+    pub async fn pause_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.action_autopilot_connect("pause", request).await
     }
 
-    pub async fn resume_controller(&self, key: &str) -> Result<(), String> {
-        self.0.resume_controller(key).await
+    #[wasm_bindgen(js_name = resumeAutopilotConnect)]
+    pub async fn resume_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.action_autopilot_connect("resume", request).await
     }
 
-    pub async fn stop_controller(&self, key: &str) -> Result<(), String> {
-        self.0.stop_controller(key).await
+    #[wasm_bindgen(js_name = stopAutopilotConnect)]
+    pub async fn stop_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.action_autopilot_connect("stop", request).await
     }
 
-    pub async fn approve_controller(&self, key: &str, request_json: &str) -> Result<(), String> {
-        self.0.approve_controller(key, request_json).await
+    #[wasm_bindgen(js_name = takeoverAutopilotConnect)]
+    pub async fn takeover_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.action_autopilot_connect("takeover", request).await
     }
 
-    pub async fn takeover_controller(&self, key: &str) -> Result<(), String> {
-        self.0.takeover_controller(key).await
+    #[wasm_bindgen(js_name = handbackAutopilotConnect)]
+    pub async fn handback_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.action_autopilot_connect("handback", request).await
     }
 
-    pub async fn handback_controller(&self, key: &str) -> Result<(), String> {
-        self.0.handback_controller(key).await
+    #[wasm_bindgen(js_name = approveAutopilotConnect)]
+    pub async fn approve_autopilot_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.approve_autopilot_connect(request).await
     }
 
-    pub async fn fetch_iterations(&self, key: &str) -> Result<String, String> {
-        self.0.fetch_iterations(key).await
+    #[wasm_bindgen(js_name = getIterationsConnect)]
+    pub async fn get_iterations_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_iterations_connect(request).await
     }
 }

@@ -1,6 +1,6 @@
 
 import { Settings, Key, GitBranch } from "lucide-react";
-import { CredentialType } from "@/lib/api/userGitCredentialTypes";
+import { CredentialType } from "@/lib/viewModels/userGitCredential";
 
 interface GitProviderIconProps {
   provider: string;

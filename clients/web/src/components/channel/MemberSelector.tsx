@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { organizationApi } from "@/lib/api/organization";
-import type { OrganizationMember } from "@/lib/api/organization";
+import { organizationApi } from "@/lib/api/facade/organization";
+import type { OrganizationMember } from "@/lib/api/facade/org";
 import { useCurrentOrg, useAuthStore } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 
@@ -28,7 +28,7 @@ export function MemberSelector({ selectedIds, onChange }: MemberSelectorProps) {
 
   const filtered = useMemo(() => orgMembers.filter((m) => {
     if (!m.user) return false;
-    if (selectedIds.includes(m.user.id)) return false;
+    if (selectedIds.includes(Number(m.user.id))) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -47,7 +47,7 @@ export function MemberSelector({ selectedIds, onChange }: MemberSelectorProps) {
   }, [selectedIds, onChange]);
 
   const getDisplay = (userId: number) => {
-    const m = orgMembers.find((om) => om.user?.id === userId);
+    const m = orgMembers.find((om) => Number(om.user?.id) === userId);
     return m?.user?.name || m?.user?.username || `User #${userId}`;
   };
 
@@ -77,10 +77,10 @@ export function MemberSelector({ selectedIds, onChange }: MemberSelectorProps) {
       <div className="max-h-32 overflow-y-auto border border-border rounded-md">
         {filtered.slice(0, 10).map((m) => (
           <button
-            key={m.user_id}
+            key={Number(m.userId)}
             type="button"
             className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors"
-            onClick={() => m.user?.id && toggle(m.user.id)}
+            onClick={() => m.user?.id && toggle(Number(m.user.id))}
           >
             <span className="font-medium">{m.user?.name || m.user?.username}</span>
             {m.user?.email && (

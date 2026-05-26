@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
-import { getRepositoryService } from "@/lib/wasm-core";
+import type { RepositoryData } from "@/lib/viewModels/repository";
+import { getRepository, deleteRepository } from "@/lib/api/connect/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import { useTranslations } from "next-intl";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
   const t = useTranslations();
   const router = useRouter();
   const { org } = useParams<{ org: string }>();
+  const currentOrg = useCurrentOrg();
 
   const [repository, setRepository] = useState<RepositoryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,32 +43,33 @@ export function useRepositoryDetail(repositoryId: number): UseRepositoryDetailRe
   });
 
   const loadRepository = useCallback(async () => {
+    if (!currentOrg) return;
     try {
-      const res = JSON.parse(await getRepositoryService().get(BigInt(repositoryId)));
-      setRepository(res.repository ?? res);
+      const res = await getRepository(currentOrg.slug, repositoryId);
+      setRepository(res);
     } catch (error) {
       console.error("Failed to load repository:", error);
     } finally {
       setLoading(false);
     }
-  }, [repositoryId]);
+  }, [repositoryId, currentOrg]);
 
   useEffect(() => {
     loadRepository();
   }, [loadRepository]);
 
   const handleDelete = useCallback(async () => {
-    if (!repository) return;
+    if (!repository || !currentOrg) return;
     const confirmed = await deleteDialog.confirm();
     if (!confirmed) return;
     try {
-      await getRepositoryService().delete(BigInt(repositoryId));
+      await deleteRepository(currentOrg.slug, repositoryId);
       router.push(`/${org}/infra?tab=repositories`);
     } catch (error) {
       console.error("Failed to delete repository:", error);
       toast.error(getLocalizedErrorMessage(error, t, t("common.error")));
     }
-  }, [repository, repositoryId, router, org, deleteDialog, t]);
+  }, [repository, repositoryId, router, org, deleteDialog, t, currentOrg]);
 
   return {
     repository,

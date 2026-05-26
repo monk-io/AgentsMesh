@@ -1,126 +1,151 @@
 // AUTO-GENERATED — do not edit by hand. Regenerate: pnpm --filter desktop e2e:gen
-import { test, expect } from "../../../fixtures/electron-shared.fixture";
-import { invokeIpc } from "../../../helpers/ipc";
+import { test } from "../../../fixtures/electron-shared.fixture";
+import { invokeIpcContract } from "../../../helpers/ipc-contract";
 
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · ticket", () => {
-  test("ticket_tickets_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_tickets_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketAddAssigneeConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketAddAssigneeConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_get_ticket_by_slug_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_get_ticket_by_slug_json", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketAddLabel", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketAddLabel", returnType: "void" }, "");
   });
 
-  test("ticket_current_ticket_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_current_ticket_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketAddLabelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketAddLabelConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_board_columns_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_board_columns_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketAddTicket", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketAddTicket", returnType: "void" }, "");
   });
 
-  test("ticket_labels_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_labels_json").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketAppendColumnTickets", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketAppendColumnTickets", returnType: "void" }, "", "");
   });
 
-  test("ticket_filter_tickets_json", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_filter_tickets_json", "", "", "", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketBoardColumnsJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketBoardColumnsJson", returnType: "string" });
   });
 
-  test("ticket_set_tickets", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_set_tickets", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketCreateLabelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketCreateLabelConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_add_ticket", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_add_ticket", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketCreateTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketCreateTicketConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_update_ticket_local", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_update_ticket_local", "", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketCurrentTicketJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketCurrentTicketJson", returnType: "string" });
   });
 
-  test("ticket_update_ticket_status_local", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_update_ticket_status_local", "", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketDeleteLabelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketDeleteLabelConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_remove_ticket", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_remove_ticket", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketDeleteTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketDeleteTicketConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_set_current_ticket", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_set_current_ticket", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketFilterTicketsJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketFilterTicketsJson", returnType: "string" }, "", "", "", "");
   });
 
-  test("ticket_set_board_columns", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_set_board_columns", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketGetActiveTicketsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketGetActiveTicketsConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_append_column_tickets", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_append_column_tickets", "", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketGetBoardConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketGetBoardConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_set_labels", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_set_labels", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketGetSubTicketsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketGetSubTicketsConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticket_add_label", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_add_label", "").catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketGetTicketBySlugJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketGetTicketBySlugJson", returnType: "string" }, "");
   });
 
-  test("ticket_remove_label", async ({ sharedPage }) => {
-    // Smoke: the bridge accepts the call. Result may be a valid response OR a typed error —
-    // both prove the IPC route is wired. A crashed bridge would throw an unrelated runtime error.
-    const result = await invokeIpc(sharedPage, "ticket_remove_label", 0).catch((err: Error) => ({ __ipcError: err.message }));
-    expect(result).toBeDefined();
+  test("ticketGetTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketGetTicketConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketGetTicketPods", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketGetTicketPods", returnType: "string" }, "", false);
+  });
+
+  test("ticketLabelsJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketLabelsJson", returnType: "string" });
+  });
+
+  test("ticketListLabelsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketListLabelsConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketListTicketsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketListTicketsConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketRemoveAssigneeConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketRemoveAssigneeConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketRemoveLabel", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketRemoveLabel", returnType: "void" }, 0);
+  });
+
+  test("ticketRemoveLabelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketRemoveLabelConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketRemoveTicket", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketRemoveTicket", returnType: "void" }, "");
+  });
+
+  test("ticketSetBoardColumns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketSetBoardColumns", returnType: "void" }, "");
+  });
+
+  test("ticketSetCurrentTicket", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketSetCurrentTicket", returnType: "void" }, "");
+  });
+
+  test("ticketSetLabels", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketSetLabels", returnType: "void" }, "");
+  });
+
+  test("ticketSetTickets", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketSetTickets", returnType: "void" }, "");
+  });
+
+  test("ticketTicketPodsJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketTicketPodsJson", returnType: "string" }, "");
+  });
+
+  test("ticketTicketsJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketTicketsJson", returnType: "string" });
+  });
+
+  test("ticketUpdateLabelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketUpdateLabelConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketUpdateTicketConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketUpdateTicketConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketUpdateTicketLocal", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketUpdateTicketLocal", returnType: "void" }, "", "");
+  });
+
+  test("ticketUpdateTicketStatusConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketUpdateTicketStatusConnect", returnType: "Array<number>" }, []);
+  });
+
+  test("ticketUpdateTicketStatusLocal", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "ticketUpdateTicketStatusLocal", returnType: "void" }, "", "");
   });
 });

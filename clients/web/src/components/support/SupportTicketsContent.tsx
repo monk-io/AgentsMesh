@@ -14,8 +14,8 @@ import { CreateTicketDialog } from "@/components/support/create-ticket-dialog";
 import type {
   SupportTicket,
   SupportTicketListResponse,
-} from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+} from "@/lib/api/facade/supportTicketConnect";
+import { listSupportTickets } from "@/lib/api/facade/supportTicketConnect";
 import { formatTimeAgo } from "@/lib/utils/time";
 
 interface SupportTicketsContentProps {
@@ -36,13 +36,11 @@ export function SupportTicketsContent({ variant = "wide" }: SupportTicketsConten
     setIsLoading(true);
     setError(null);
     try {
-      const result: SupportTicketListResponse = JSON.parse(
-        await getSupportTicketService().list(
-          statusFilter || null,
-          page,
-          20,
-        )
-      );
+      const result: SupportTicketListResponse = await listSupportTickets({
+        status: statusFilter || undefined,
+        page,
+        pageSize: 20,
+      });
       setData(result);
     } catch {
       setError(t("support.error.loadFailed"));
@@ -55,8 +53,8 @@ export function SupportTicketsContent({ variant = "wide" }: SupportTicketsConten
     fetchTickets();
   }, [fetchTickets]);
 
-  const tickets = data?.data || [];
-  const totalPages = data?.total_pages || 1;
+  const tickets = data?.items || [];
+  const totalPages = data?.totalPages || 1;
 
   const statusOptions = [
     { value: "", label: t("support.filter.all") },
@@ -139,13 +137,16 @@ export function SupportTicketsContent({ variant = "wide" }: SupportTicketsConten
             </Button>
           </div>
         ) : (
-          tickets.map((ticket) => (
+          tickets.map((ticket) => {
+            const id = Number(ticket.id);
+            return (
             <TicketCard
-              key={ticket.id}
+              key={id}
               ticket={ticket}
-              onClick={() => router.push(`/support/${ticket.id}`)}
+              onClick={() => router.push(`/support/${id}`)}
             />
-          ))
+          );
+          })
         )}
       </div>
 
@@ -208,7 +209,7 @@ function TicketCard({
           </div>
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {formatTimeAgo(ticket.created_at, t)}
+          {formatTimeAgo(ticket.createdAt, t)}
         </span>
       </div>
     </button>

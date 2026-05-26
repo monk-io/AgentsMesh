@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getLocalRunnerService, getRunnerService } from "@agentsmesh/service-runtime";
-import { getApiClient } from "@/lib/wasm-core";
+import { getLocalRunnerService } from "@agentsmesh/service-runtime";
+import { createRunnerToken } from "@/lib/api/facade/runnerConnect";
+import { useCurrentOrg } from "@/stores/auth";
 import type { ILocalRunnerService, LocalRunnerStatus } from "@agentsmesh/service-interface";
 
 export type StepKey =
@@ -28,32 +29,19 @@ export type Phase =
 
 const STATUS_REFRESH_MS = 30_000;
 
-type ReleaseInfo = { version: string; sha256?: Record<string, string> };
-
-async function fetchReleaseInfo(svc: ILocalRunnerService): Promise<ReleaseInfo> {
-  try {
-    const raw = await getApiClient().get("/api/v1/runners/latest-release");
-    const data = JSON.parse(raw);
-    if (typeof data?.version === "string" && data.version) {
-      return { version: data.version, sha256: data.sha256 };
-    }
-  } catch (err) {
-    console.warn("[LocalRunner] backend latest-release unavailable, using bundled fallback", err);
-  }
-  return { version: await svc.fallback_version() };
-}
-
 async function buildArchiveSpec(
   svc: ILocalRunnerService,
 ): Promise<{ url: string; sha256: string | null } | null> {
   const target = await svc.host_target();
   if (!target) return null;
   const ext = target.startsWith("windows_") ? "zip" : "tar.gz";
-  const release = await fetchReleaseInfo(svc);
-  const filename = `agentsmesh-runner_${release.version}_${target}.${ext}`;
-  const url = `https://github.com/AgentsMesh/AgentsMesh/releases/download/v${release.version}/${filename}`;
-  const sha256 = release.sha256?.[`${target}.${ext}`] ?? release.sha256?.[target] ?? null;
-  return { url, sha256 };
+  // Runner release metadata lives in the bundled service runtime — the
+  // backend has no `/runners/latest-release` endpoint, so there's nothing
+  // to RPC. New release versions land via a service-runtime bump.
+  const version = await svc.fallback_version();
+  const filename = `agentsmesh-runner_${version}_${target}.${ext}`;
+  const url = `https://github.com/AgentsMesh/AgentsMesh/releases/download/v${version}/${filename}`;
+  return { url, sha256: null };
 }
 
 export interface UseLocalRunnerOnboarding {
@@ -69,6 +57,7 @@ export interface UseLocalRunnerOnboarding {
 
 export function useLocalRunnerOnboarding(): UseLocalRunnerOnboarding {
   const svc = getLocalRunnerService() as ILocalRunnerService | undefined;
+  const currentOrg = useCurrentOrg();
   const [phase, setPhase] = useState<Phase>(svc ? { kind: "loading" } : { kind: "idle", status: "not_installed" });
   const [localNodeId, setLocalNodeId] = useState<string | null>(null);
   const phaseRef = useRef(phase);
@@ -115,10 +104,8 @@ export function useLocalRunnerOnboarding(): UseLocalRunnerOnboarding {
       if (!(await svc.is_registered())) {
         currentStep = "token";
         setPhase({ kind: "installing", step: currentStep });
-        const tokenResp = JSON.parse(
-          await getRunnerService().create_token(JSON.stringify({ name: "Desktop" })),
-        );
-        const token: string | undefined = tokenResp?.token;
+        const tokenResp = await createRunnerToken(currentOrg?.slug ?? "", { name: "Desktop" });
+        const token: string | undefined = tokenResp.token;
         if (!token) throw new Error("backend returned empty registration token");
 
         currentStep = "register";
@@ -147,7 +134,7 @@ export function useLocalRunnerOnboarding(): UseLocalRunnerOnboarding {
       setLocalNodeId(nodeId);
       setPhase({ kind: "error", status, step: currentStep, message });
     }
-  }, [svc, refresh]);
+  }, [svc, refresh, currentOrg]);
 
   return { unsupported: !svc, localNodeId, isRegistered: localNodeId !== null, phase, onRegister, refresh };
 }

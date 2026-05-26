@@ -13,7 +13,7 @@ import {
   listSupportTickets,
   SupportTicket,
   SupportTicketListResponse,
-} from "@/lib/api/support-ticket";
+} from "@/lib/api/facade/support-ticket";
 import { formatTimeAgo } from "@/lib/utils/time";
 import { useEffect } from "react";
 

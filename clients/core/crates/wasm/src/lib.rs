@@ -9,19 +9,21 @@ mod protocol;
 mod relay_manager;
 mod service_agent;
 mod service_apikey;
-mod service_auth_api;
+mod service_auth_connect;
 mod service_autopilot;
 mod service_billing;
 mod service_binding;
+mod service_binding_connect;
 mod service_blockstore;
 mod service_channel;
+mod service_channel_connect;
 mod service_extension;
 mod service_file;
 mod service_grant;
 mod service_invitation;
 mod service_loop;
 mod service_mesh;
-mod service_message;
+mod service_mesh_connect;
 mod service_notification;
 mod service_org;
 mod service_pod;
@@ -55,7 +57,7 @@ pub use protocol::*;
 pub use relay_manager::*;
 pub use service_agent::*;
 pub use service_apikey::*;
-pub use service_auth_api::*;
+pub use service_auth_connect::*;
 pub use service_autopilot::*;
 pub use service_billing::*;
 pub use service_binding::*;
@@ -67,7 +69,6 @@ pub use service_grant::*;
 pub use service_invitation::*;
 pub use service_loop::*;
 pub use service_mesh::*;
-pub use service_message::*;
 pub use service_notification::*;
 pub use service_org::*;
 pub use service_pod::*;
@@ -93,10 +94,6 @@ pub use state_pod::*;
 pub use state_repo::*;
 pub use state_runner::*;
 pub use state_ticket::*;
-
-pub(crate) fn parse_status<T: serde::de::DeserializeOwned + Default>(s: &str) -> T {
-    serde_json::from_value(serde_json::Value::String(s.to_string())).unwrap_or_default()
-}
 
 pub(crate) fn new_memory_backend() -> Arc<dyn agentsmesh_persistence::StorageBackend> {
     use agentsmesh_persistence::StorageBackend;

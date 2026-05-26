@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -10,8 +11,16 @@ test.describe("Repository Branches & Webhook API", () => {
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     if (!id) return;
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/repositories/${id}/branches`);
-    expect([200, 400, 500]).toContain(res.status);
+    const cc = await api.connect();
+    // Branch listing depends on upstream Git provider; accept success or upstream error.
+    await cc.repository.listRepositoryBranches({
+      orgSlug: TEST_ORG_SLUG,
+      id: Number(id),
+      accessToken: "",
+    }).catch((err: { status?: number }) => {
+      // 400/500 acceptable: no provider token / upstream unreachable in dev.
+      expect([400, 500]).toContain(err.status ?? 500);
+    });
   });
 
   test("get webhook status", async ({ api, db }) => {
@@ -19,8 +28,14 @@ test.describe("Repository Branches & Webhook API", () => {
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     if (!id) return;
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/repositories/${id}/webhook/status`);
-    expect([200, 404]).toContain(res.status);
+    const cc = await api.connect();
+    await cc.repository.getRepositoryWebhookStatus({
+      orgSlug: TEST_ORG_SLUG,
+      id: Number(id),
+    }).catch((err: { status?: number }) => {
+      // 404 acceptable when no webhook registered.
+      expect(err.status).toBe(404);
+    });
   });
 
   test("list merge requests", async ({ api, db }) => {
@@ -28,7 +43,13 @@ test.describe("Repository Branches & Webhook API", () => {
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
     if (!id) return;
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/repositories/${id}/merge-requests`);
-    expect([200, 400, 500]).toContain(res.status);
+    const cc = await api.connect();
+    await cc.repository.listRepositoryMergeRequests({
+      orgSlug: TEST_ORG_SLUG,
+      id: Number(id),
+    }).catch((err: { status?: number }) => {
+      // 400/500 acceptable: provider unreachable in dev.
+      expect([400, 500]).toContain(err.status ?? 500);
+    });
   });
 });

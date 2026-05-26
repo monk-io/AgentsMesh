@@ -1,11 +1,33 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getEnvBundleService, getAgentService } from "@/lib/wasm-core";
+import * as envBundleConnect from "@/lib/api/facade/envBundleConnect";
+import * as agentConnect from "@/lib/api/facade/agentConnect";
 
-const mockList = vi.fn();
+vi.mock("@/lib/api/facade/envBundleConnect", () => ({
+  listEnvBundles: vi.fn(),
+  createEnvBundle: vi.fn(),
+  updateEnvBundle: vi.fn(),
+  deleteEnvBundle: vi.fn(),
+  setPrimaryEnvBundle: vi.fn(),
+  getEnvBundle: vi.fn(),
+}));
+const mockListEnvBundles = vi.mocked(envBundleConnect.listEnvBundles);
+const mockCreateEnvBundle = vi.mocked(envBundleConnect.createEnvBundle);
+const mockUpdateEnvBundle = vi.mocked(envBundleConnect.updateEnvBundle);
+
 const mockListAgents = vi.fn();
-const mockCreate = vi.fn();
-const mockUpdate = vi.fn();
+
+// Keep useCurrentOrg stable across renders — returning a fresh object on
+// every call breaks the useCallback memoization in useAgentCredentials and
+// causes an infinite re-render loop in the test.
+const STABLE_ORG = { slug: "test-org" };
+vi.mock("@/stores/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/stores/auth")>();
+  return {
+    ...actual,
+    useCurrentOrg: () => STABLE_ORG,
+  };
+});
 
 import { useAgentCredentials } from "../useAgentCredentials";
 import type { CredentialFormData } from "../types";
@@ -15,28 +37,18 @@ const mockTranslate = (key: string) => key;
 describe("useAgentCredentials - handleSaveProfile error handling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue(JSON.stringify({ items: [] }));
-    mockListAgents.mockResolvedValue(
-      JSON.stringify({ agents: [{ name: "Claude", slug: "claude-code" }] })
-    );
+    mockListEnvBundles.mockResolvedValue({ items: [], total: 0 });
+    mockListAgents.mockResolvedValue({
+      builtin_agents: [{ name: "Claude", slug: "claude-code", is_builtin: true, is_active: true }],
+      custom_agents: [],
+      agents: [],
+    });
 
-    vi.mocked(getEnvBundleService).mockReturnValue({
-      ...getEnvBundleService(),
-      list: mockList,
-      create: mockCreate,
-      update: mockUpdate,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
-
-    vi.mocked(getAgentService).mockReturnValue({
-      ...getAgentService(),
-      list_agents: mockListAgents,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    vi.spyOn(agentConnect, "listAgents").mockImplementation(mockListAgents);
   });
 
   it("should propagate API errors from create to caller", async () => {
-    mockCreate.mockRejectedValue(new Error("Network error"));
+    mockCreateEnvBundle.mockRejectedValue(new Error("Network error"));
 
     const { result } = renderHook(() => useAgentCredentials(mockTranslate));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -55,7 +67,7 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
   });
 
   it("should propagate API errors from update to caller", async () => {
-    mockUpdate.mockRejectedValue(new Error("Unauthorized"));
+    mockUpdateEnvBundle.mockRejectedValue(new Error("Unauthorized"));
 
     const { result } = renderHook(() => useAgentCredentials(mockTranslate));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -86,7 +98,16 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
   });
 
   it("should set success message and call loadData on successful create", async () => {
-    mockCreate.mockResolvedValue(JSON.stringify({ id: 1 }));
+    // The hook reads back `EnvBundle` shape after a successful create — give it
+    // a minimal one that satisfies the projection.
+    mockCreateEnvBundle.mockResolvedValue({
+      $typeName: "proto.env_bundle.v1.EnvBundle",
+      id: BigInt(1), ownerScope: "user", ownerId: BigInt(1), name: "New Bundle",
+      agentSlug: "claude-code",
+      kind: "credential", kindPrimary: false, isActive: true,
+      configuredFields: [], configuredValues: {},
+      createdAt: "x", updatedAt: "x",
+    });
 
     const { result } = renderHook(() => useAgentCredentials(mockTranslate));
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -101,9 +122,9 @@ describe("useAgentCredentials - handleSaveProfile error handling", () => {
       await result.current.handleSaveProfile("claude-code", formData, null);
     });
 
-    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreateEnvBundle).toHaveBeenCalledTimes(1);
     expect(result.current.success).toBe("settings.agentCredentials.profileCreated");
     // Loaded once at mount + once after save.
-    expect(mockList).toHaveBeenCalledTimes(2);
+    expect(mockListEnvBundles).toHaveBeenCalledTimes(2);
   });
 });

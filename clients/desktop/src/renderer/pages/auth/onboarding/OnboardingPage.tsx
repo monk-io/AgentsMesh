@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth";
-import { organizationApi } from "@/lib/api/organization";
+import { organizationApi } from "@/lib/api/facade/organization";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";

@@ -178,6 +178,12 @@ start_backend_host() {
     export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${OTEL_GRPC_PORT}"
     export OTEL_SERVICE_NAME=agentsmesh-backend
     export OTEL_TRACES_SAMPLER_ARG=1.0
+    # dev/e2e backends include is_internal builtin agents (e.g. e2e-echo)
+    # in ListBuiltinAgents so the user-facing agent picker can target them
+    # during EnvBundle / cascade specs. Production never sets this flag,
+    # so prod ListAgents responses stay clean of test fixtures.
+    # See ADR 2026-05-26-test-fixture-isolation.
+    export AGENTSMESH_INCLUDE_INTERNAL_AGENTS=true
 
     info "构建 backend 二进制 (bazel build)..."
     # Include the go_proto_library so protoc + protoc-gen-go-grpc C++

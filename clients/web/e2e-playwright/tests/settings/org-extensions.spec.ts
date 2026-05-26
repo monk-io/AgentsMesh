@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
@@ -7,17 +8,15 @@ test.describe("Organization Extensions Settings", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("API: list skill registries", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/skill-registries`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.skill_registries).toBeDefined();
+    const cc = await api.connect();
+    const { items } = await cc.skillRegistry.listSkillRegistries({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 
   test("API: list skill registry overrides", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/skill-registry-overrides`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.overrides).toBeDefined();
+    const cc = await api.connect();
+    const { items } = await cc.skillRegistry.listSkillRegistryOverrides({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 
   test("UI: extensions settings page loads without errors", async ({ page }) => {

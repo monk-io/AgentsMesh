@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -63,16 +64,38 @@ func (c *ACPClient) watchExit() {
 }
 
 // readStderr reads plain text lines from the agent's stderr and
-// forwards them to the OnLog callback.
+// forwards them to the OnLog callback. Lines prefixed with
+// "warn:" / "error:" are tagged with the matching level so the
+// frontend (which suppresses level=stderr) can render them; we
+// also feed warn/error into c.logs so late-subscribing snapshots
+// surface them.
 func (c *ACPClient) readStderr(r io.Reader) {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
+		level, message := classifyStderrLine(line)
+		c.addLog(LogEntry{Level: level, Message: message})
 		if c.cfg.Callbacks.OnLog != nil {
-			c.cfg.Callbacks.OnLog("stderr", line)
+			c.cfg.Callbacks.OnLog(level, message)
 		}
 	}
+}
+
+// classifyStderrLine inspects a stderr line for an explicit level prefix
+// ("warn:" / "error:", case-insensitive). When none is found it falls back
+// to the historical "stderr" level so existing consumers keep their tagging.
+func classifyStderrLine(line string) (level, message string) {
+	trimmed := strings.TrimLeft(line, " \t")
+	lower := strings.ToLower(trimmed)
+	switch {
+	case strings.HasPrefix(lower, "error:"):
+		return "error", strings.TrimSpace(trimmed[len("error:"):])
+	case strings.HasPrefix(lower, "warn:"), strings.HasPrefix(lower, "warning:"):
+		idx := strings.IndexByte(trimmed, ':')
+		return "warn", strings.TrimSpace(trimmed[idx+1:])
+	}
+	return "stderr", line
 }
 
 // addMessage appends a content chunk to the message history,

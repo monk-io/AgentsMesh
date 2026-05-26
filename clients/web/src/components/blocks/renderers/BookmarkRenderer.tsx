@@ -3,7 +3,7 @@
 import React from "react";
 import { ExternalLink, Link2 } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
 import { isSafeURL, sanitizeURL } from "@/lib/blockstore/urlGuard";
 
 import { BlockChrome } from "../editor/BlockChrome";

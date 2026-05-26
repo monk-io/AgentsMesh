@@ -52,14 +52,14 @@ test.describe("Desktop · Claude Code (XOR auth)", () => {
     );
 
     await api.login(TEST_USER.email, TEST_USER.password);
-    const res = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: "claude-code",
+    const cc = await api.connect();
+    await cc.envBundle.createEnvBundle({
+      agentSlug: "claude-code",
       name: bundleName,
       description: "seeded by desktop e2e",
       kind: "credential",
       data: { ANTHROPIC_API_KEY: "sk-ant-desktop-seeded" },
     });
-    expect([200, 201]).toContain(res.status);
 
     try {
       await gotoAgentSettings(page, "claude-code");

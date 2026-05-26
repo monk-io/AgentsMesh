@@ -1,3 +1,4 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
@@ -6,30 +7,30 @@ test.describe("Channel Page", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("API: list channels", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/channels`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.channels).toBeDefined();
+    const cc = await api.connect();
+    const { items } = await cc.channel.listChannels({ orgSlug: TEST_ORG_SLUG }) as {
+      items: unknown[];
+    };
+    expect(Array.isArray(items)).toBe(true);
   });
 
   test("API: create and get channel detail", async ({ api }) => {
+    const cc = await api.connect();
     const name = `e2e-ch-${Date.now()}`;
-    const createRes = await api.post(`/api/v1/orgs/${TEST_ORG_SLUG}/channels`, {
+    const created = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name,
       description: "E2E channel detail test",
-    });
-    expect([200, 201]).toContain(createRes.status);
-    const data = await createRes.json();
-    const id = data.channel?.id || data.id;
-    expect(id).toBeTruthy();
+    }) as { id: bigint };
+    expect(created.id).toBeTruthy();
 
-    const detailRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/channels/${id}`);
-    expect(detailRes.status).toBe(200);
-    const detail = await detailRes.json();
-    expect(detail.channel).toBeTruthy();
-    expect(detail.channel.name).toBe(name);
+    const detail = await cc.channel.getChannel({
+      orgSlug: TEST_ORG_SLUG,
+      id: created.id,
+    }) as { id: bigint; name: string };
+    expect(detail.name).toBe(name);
 
-    await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/channels/${id}`);
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: created.id });
   });
 
   test("UI: channels page loads without errors", async ({ page }) => {
@@ -39,7 +40,7 @@ test.describe("Channel Page", () => {
     });
 
     await page.goto(`/${TEST_ORG_SLUG}/channels`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
 
     const jsonErrors = consoleErrors.filter(
       (e) => e.includes("missing field") || e.includes("is not valid JSON")

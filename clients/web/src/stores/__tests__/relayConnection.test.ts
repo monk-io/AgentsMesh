@@ -1,6 +1,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/wasm-core", () => import("@/test/__mocks__/wasm-core"));
+vi.mock("@/lib/api/facade/podConnect", () => ({
+  getPodConnection: vi.fn().mockResolvedValue({
+    relay_url: "wss://relay.example.com",
+    token: "test-token",
+    pod_key: "pod-1",
+  }),
+}));
 
 // Mock WebSocket
 class MockWebSocket {

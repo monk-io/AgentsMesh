@@ -2,14 +2,15 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
+use agentsmesh_api_client::ApiClient;
 use agentsmesh_transport::runtime::{PlatformRuntime, Runtime};
 use futures::channel::mpsc;
 use parking_lot::RwLock;
 
 use crate::event_types::EventType;
 use crate::types::{
-    ConnectionState, EventHandler, EventSubscriptionManagerOptions, RealtimeEvent,
-    StateListener, SubscriptionId,
+    ConnectionState, EventHandler, EventSubscriptionManagerOptions, RealtimeEvent, StateListener,
+    SubscriptionId,
 };
 
 static NEXT_SUB_ID: AtomicU64 = AtomicU64::new(1);
@@ -30,25 +31,25 @@ pub(crate) struct Inner {
 pub struct EventSubscriptionManager<R: Runtime = PlatformRuntime> {
     pub(crate) inner: Arc<RwLock<Inner>>,
     pub(crate) options: EventSubscriptionManagerOptions,
-    ws_url: String,
+    api_client: Arc<ApiClient>,
     shutdown_tx: Option<mpsc::UnboundedSender<()>>,
     runtime: R,
 }
 
 impl EventSubscriptionManager<PlatformRuntime> {
-    pub fn new(ws_url: String, options: EventSubscriptionManagerOptions) -> Self {
-        Self::with_runtime(PlatformRuntime, ws_url, options)
+    pub fn new(api_client: Arc<ApiClient>, options: EventSubscriptionManagerOptions) -> Self {
+        Self::with_runtime(PlatformRuntime, api_client, options)
     }
 
-    pub fn with_default_options(ws_url: String) -> Self {
-        Self::new(ws_url, EventSubscriptionManagerOptions::default())
+    pub fn with_default_options(api_client: Arc<ApiClient>) -> Self {
+        Self::new(api_client, EventSubscriptionManagerOptions::default())
     }
 }
 
 impl<R: Runtime> EventSubscriptionManager<R> {
     pub fn with_runtime(
         runtime: R,
-        ws_url: String,
+        api_client: Arc<ApiClient>,
         options: EventSubscriptionManagerOptions,
     ) -> Self {
         Self {
@@ -59,7 +60,7 @@ impl<R: Runtime> EventSubscriptionManager<R> {
                 connection_state: ConnectionState::Disconnected,
             })),
             options,
-            ws_url,
+            api_client,
             shutdown_tx: None,
             runtime,
         }
@@ -75,12 +76,12 @@ impl<R: Runtime> EventSubscriptionManager<R> {
         self.shutdown_tx = Some(shutdown_tx);
 
         let inner = Arc::clone(&self.inner);
-        let url = self.ws_url.clone();
+        let api_client = Arc::clone(&self.api_client);
         let opts = crate::connection_loop::ManagerOpts::from_options(&self.options);
         let rt = self.runtime.clone();
 
         self.runtime.spawn(Box::pin(
-            crate::connection_loop::connection_loop(rt, inner, url, opts, shutdown_rx),
+            crate::connection_loop::connection_loop(rt, inner, api_client, opts, shutdown_rx),
         ));
     }
 

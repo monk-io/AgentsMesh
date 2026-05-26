@@ -1,12 +1,51 @@
 use std::collections::HashMap;
 
-use agentsmesh_types::{AutopilotController, AutopilotIteration};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 const MAX_ITERATIONS: usize = 200;
 const MAX_THINKING_HISTORY: usize = 100;
 
 const ACTIVE_PHASES: &[&str] = &["initializing", "running", "paused", "user_takeover", "waiting_approval"];
+
+/// Client-side aggregated view of an Autopilot controller. Lives in the state
+/// crate because the cache shape carries fields the proto wire never had
+/// (status, iteration_timeout_sec, no_progress_threshold, same_error_threshold,
+/// approval_timeout_min, control_agent_slug, circuit_breaker_state/reason)
+/// alongside the proto-mapped core. Renderer state slots project to/from JSON
+/// through this struct's serde derives.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutopilotController {
+    #[serde(alias = "key")]
+    pub autopilot_controller_key: String,
+    pub pod_key: String,
+    #[serde(default)]
+    pub status: Option<String>,
+    pub phase: Option<String>,
+    pub prompt: Option<String>,
+    pub max_iterations: Option<i64>,
+    pub iteration_timeout_sec: Option<i64>,
+    pub no_progress_threshold: Option<i64>,
+    pub same_error_threshold: Option<i64>,
+    pub approval_timeout_min: Option<i64>,
+    pub current_iteration: Option<i64>,
+    pub control_agent_slug: Option<String>,
+    pub circuit_breaker_state: Option<String>,
+    pub circuit_breaker_reason: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutopilotIteration {
+    pub id: i64,
+    pub controller_key: String,
+    pub iteration_number: Option<i64>,
+    pub status: Option<String>,
+    pub result: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+}
 
 #[derive(Debug, Default)]
 pub struct AutopilotState {
@@ -107,3 +146,4 @@ impl AutopilotState {
         })
     }
 }
+

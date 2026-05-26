@@ -58,22 +58,24 @@ test.describe("Desktop pod realtime", () => {
   });
 
   test("opening a pod from sidebar keeps it listed and shows non-unknown status", async ({ page }) => {
-    // Skip if no runner / no agent — same gate as pod-lifecycle.spec.
+    // Assert prerequisites — same gate as pod-lifecycle.spec, but as a hard
+    // fail rather than a silent skip. The dev env contract is "at least one
+    // online runner + one builtin agent".
     const runners = await invokeIpc<string>(page, "runnerFetchRunners");
     const runnerList = JSON.parse(runners) as { runners?: { id: number; status: string }[] } | { id: number; status: string }[];
     const onlineRunner = (Array.isArray(runnerList) ? runnerList : runnerList.runners ?? [])
       .find((r) => r.status === "online");
-    if (!onlineRunner) { test.skip(); return; }
+    expect(onlineRunner, "dev env must have an online runner").toBeTruthy();
 
     const agentsJson = await invokeIpc<string>(page, "agentListAgents");
     const agents = JSON.parse(agentsJson) as { builtin_agents?: { slug: string }[] };
     const agent = agents.builtin_agents?.[0];
-    if (!agent) { test.skip(); return; }
+    expect(agent, "dev env must have a builtin agent").toBeTruthy();
 
     // Seed a running pod via the same IPC the renderer uses.
     const created = await invokeIpc<string>(page, "podCreatePod", JSON.stringify({
-      agent_slug: agent.slug,
-      runner_id: onlineRunner.id,
+      agent_slug: agent!.slug,
+      runner_id: onlineRunner!.id,
       cols: 142,
       rows: 34,
     }));
@@ -84,6 +86,32 @@ test.describe("Desktop pod realtime", () => {
 
     try {
       await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
+
+      // Desktop's electron-adapter ships a `NoopEventsManager` (see
+      // packages/electron-adapter/src/provider.ts): realtime `pod:created`
+      // events are not delivered to the renderer until a main-process
+      // Connect ServerStream bridge lands. The seed `podCreatePod` above
+      // bypasses the renderer entirely (direct IPC → Connect → DB), so
+      // there is no event to dispatch and no React handler to flush.
+      // After auth restore the renderer's hash is already at
+      // `/{org}/workspace`, so `gotoHash` does not remount the sidebar
+      // either (the useEffect's `[currentOrg, ...]` deps stay stable).
+      // Reload the page so WorkspaceSidebarContent mounts fresh and
+      // `fetchSidebarPods` runs against the post-create DB state.
+      await page.reload();
+      await page.waitForLoadState("domcontentloaded");
+      await invokeIpc(page, "authBootstrap");
+      await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
+
+      // DEBUG: inspect what pods the sidebar fetched + which DOM nodes contain "1-standa".
+      await page.waitForTimeout(3000);
+      const dbg = await page.evaluate(() => {
+        try {
+          const html = document.body.innerText.slice(0, 2000);
+          return { html };
+        } catch { return { html: "(eval failed)" }; }
+      });
+      console.log("DEBUG body text head:", dbg.html);
 
       // Sidebar should render the new pod entry. PodListItem renders the
       // display name through `getPodDisplayName`, which truncates pod_key

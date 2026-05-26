@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { FileText, Upload, Download, Loader2 } from "lucide-react";
-import { getRunnerService } from "@/lib/wasm-core";
-import type { RunnerLogData } from "@/lib/api/runnerTypes";
+import { listRunnerLogs, requestLogUpload } from "@/lib/api/connect/runnerConnect";
+import type { RunnerLogData } from "@/lib/viewModels/runner";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
@@ -19,22 +20,22 @@ const POLL_INTERVAL = 5000;
 
 export function RunnerLogsCard({ runnerId, runnerStatus }: RunnerLogsCardProps) {
   const t = useTranslations();
+  const params = useParams();
+  const orgSlug = String(params.org ?? "");
   const [logs, setLogs] = useState<RunnerLogData[]>([]);
   const [uploading, setUploading] = useState(false);
   const mountedRef = useRef(true);
 
   const loadLogs = useCallback(async () => {
     try {
-      const res: { logs: RunnerLogData[] } = JSON.parse(
-        await getRunnerService().list_runner_logs(BigInt(runnerId))
-      );
+      const res = await listRunnerLogs(orgSlug, runnerId);
       if (mountedRef.current) {
-        setLogs(res.logs || []);
+        setLogs(res.items || []);
       }
     } catch {
       // Silently ignore polling errors
     }
-  }, [runnerId]);
+  }, [orgSlug, runnerId]);
 
   const hasActiveLogs = logs.some((log) => ACTIVE_STATUSES.includes(log.status));
 
@@ -58,7 +59,7 @@ export function RunnerLogsCard({ runnerId, runnerStatus }: RunnerLogsCardProps) 
   const handleUpload = async () => {
     setUploading(true);
     try {
-      await getRunnerService().request_log_upload(BigInt(runnerId));
+      await requestLogUpload(orgSlug, runnerId);
       toast.success(t("runners.logs.uploadSuccess"));
       await loadLogs();
     } catch {

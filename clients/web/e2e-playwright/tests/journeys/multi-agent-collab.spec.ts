@@ -1,12 +1,15 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 import { pollUntil } from "../../helpers/retry";
-import { textContent } from "../../helpers/test-data";
 import { terminateAllPods } from "../../helpers/pod-cleanup";
 
-const PODS = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
-const CHANNELS = `/api/v1/orgs/${TEST_ORG_SLUG}/channels`;
+type Runner = { id: bigint };
+type Agent = { slug: string };
+type Channel = { id: bigint };
+type ChannelMessage = { id: bigint };
+type Pod = { podKey: string; status: string };
 
 /**
  * Journey: Multi-Agent Collaboration
@@ -20,95 +23,89 @@ test.describe("Journey: Multi-Agent Collaboration", () => {
   });
 
   test("channel-based multi-pod collaboration flow", async ({ api }) => {
-    // ── Step 1: Check runner availability ──
-    const runnerRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnerRes.json()).runners;
-    if (!runners?.length) { test.skip(); return; }
+    const cc = await api.connect();
 
-    const agentRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentRes.json()).builtin_agents;
-    if (!agents?.length) { test.skip(); return; }
+    // ── Step 1: Check runner availability ──
+    const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
+
+    const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
     // ── Step 2: Create collaboration channel ──
     const chName = "E2E Collab " + Date.now();
-    const chRes = await api.post(CHANNELS, {
+    const ch = await cc.channel.createChannel({
+      orgSlug: TEST_ORG_SLUG,
       name: chName,
       description: "Multi-agent collaboration test",
-    });
-    expect([200, 201]).toContain(chRes.status);
-    const ch = await chRes.json();
-    const chId = ch.channel?.id || ch.id;
+    }) as Channel;
+    const chId = ch.id;
     expect(chId).toBeTruthy();
 
     // ── Step 3: Create Pod A (analyst) ──
-    const podARes = await api.post(PODS, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E Collab Pod A - Analyst",
-    });
-    const podAData = await podARes.json();
-    const podAKey = podAData.pod_key || podAData.pod?.pod_key;
+    const podAResp = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+      alias: "E2E Collab Pod A - Analyst",
+    }) as { pod: Pod };
+    const podAKey = podAResp.pod?.podKey;
 
     // ── Step 4: Create Pod B (implementer) ──
-    const podBRes = await api.post(PODS, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E Collab Pod B - Implementer",
-    });
-    const podBData = await podBRes.json();
-    const podBKey = podBData.pod_key || podBData.pod?.pod_key;
+    const podBResp = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+      alias: "E2E Collab Pod B - Implementer",
+    }) as { pod: Pod };
+    const podBKey = podBResp.pod?.podKey;
 
     // ── Step 5: Wait for both pods running ──
-    for (const key of [podAKey, podBKey].filter(Boolean)) {
+    for (const podKey of [podAKey, podBKey].filter((k): k is string => Boolean(k))) {
       await pollUntil(
         async () => {
-          const r = await api.get(`${PODS}/${key}`);
-          const d = await r.json();
-          return (d.pod?.status || d.status) === "running";
+          const pod = await cc.pod.getPod({ orgSlug: TEST_ORG_SLUG, podKey }) as Pod;
+          return pod.status === "running";
         },
-        { maxAttempts: 10, intervalMs: 3000, label: `pod-${key}-running` }
+        { maxAttempts: 10, intervalMs: 3000, label: `pod-${podKey}-running` }
       ).catch(() => {});
     }
 
     // ── Step 6: Add pods to channel ──
     if (podAKey) {
-      await api.post(`${CHANNELS}/${chId}/pods`, { pod_key: podAKey });
+      await cc.channel.joinChannelPod({ orgSlug: TEST_ORG_SLUG, id: chId, podKey: podAKey });
     }
     if (podBKey) {
-      await api.post(`${CHANNELS}/${chId}/pods`, { pod_key: podBKey });
+      await cc.channel.joinChannelPod({ orgSlug: TEST_ORG_SLUG, id: chId, podKey: podBKey });
     }
 
     // ── Step 7: Verify channel members ──
-    const membersRes = await api.get(`${CHANNELS}/${chId}/members`);
-    if (membersRes.status === 200) {
-      const members = await membersRes.json();
-      expect(members).toBeTruthy();
-    }
+    // Connect throws on failure — list succeeding is the assertion.
+    await cc.channel.listChannelMembers({ orgSlug: TEST_ORG_SLUG, id: chId });
 
     // ── Step 8: Send message to channel ──
-    const msgRes = await api.post(`${CHANNELS}/${chId}/messages`, {
-      content: textContent("Pod A found a bug in the auth module. Pod B, please fix it."),
-    });
-    expect([200, 201]).toContain(msgRes.status);
+    const msg = await cc.channel.sendChannelMessage({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: chId,
+      source: "Pod A found a bug in the auth module. Pod B, please fix it.",
+    }) as ChannelMessage;
+    expect(msg.id).toBeTruthy();
 
     // ── Step 9: Verify message appears in history ──
-    const histRes = await api.get(`${CHANNELS}/${chId}/messages`);
-    expect(histRes.status).toBe(200);
-    const messages = await histRes.json();
-    expect(messages.messages?.length || messages.length).toBeGreaterThan(0);
+    const { items: messages } = await cc.channel.listChannelMessages({
+      orgSlug: TEST_ORG_SLUG,
+      channelId: chId,
+    }) as { items: ChannelMessage[] };
+    expect(messages.length).toBeGreaterThan(0);
 
     // ── Step 10: Verify mesh topology shows pods and channel ──
-    const topoRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/mesh/topology`
-    );
-    expect(topoRes.status).toBe(200);
+    // Connect throws on failure — successful read is the assertion.
+    await cc.mesh.getMeshTopology({ orgSlug: TEST_ORG_SLUG });
 
     // ── Step 11: Cleanup — terminate pods, archive channel ──
-    for (const key of [podAKey, podBKey].filter(Boolean)) {
-      await api.post(`${PODS}/${key}/terminate`, {});
+    for (const podKey of [podAKey, podBKey].filter((k): k is string => Boolean(k))) {
+      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
     }
-    await api.post(`${CHANNELS}/${chId}/archive`, {});
+    await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: chId });
   });
 });

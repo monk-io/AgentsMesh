@@ -10,25 +10,28 @@ import { setupAcpScenarioPage } from "../../helpers/acp-spec-setup";
 //   2. accept a prompt and echo it back as an agent_message_chunk
 //   3. surface that chunk through AcpActivityStream's rendered DOM
 //   4. transition through processing → idle without leaving the panel stuck
-test.describe.fixme("ACP UI: e2e-echo agent (ACP mode)", () => {
+// Pre-r6 used REST /pods; mock-agent.ts now uses Connect-RPC. R6 deep-link
+// fix (auth.ts setCurrentOrg same-org guard): DashboardShell+OrgLayout
+// unconditionally called setCurrentOrg on every mount, which wiped
+// workspace panes that /workspace?pod=<key> just added via addPane.
+// Guard added so same-org calls no longer clear the workspace.
+test.describe("ACP UI: e2e-echo agent (ACP mode)", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });
 
-  test.fixme("ACP echo scenario surfaces prompt as assistant chunk in activity stream", async ({ page, api }) => {
+  test("ACP echo scenario surfaces prompt as assistant chunk in activity stream", async ({ page, api }) => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "echo", prompt: "hello world",
     });
-    if (!ctx) { test.skip(); return; }
 
     await expect(page.getByText("echo: hello world")).toBeVisible({ timeout: 10_000 });
     ctx.assertWasmHealthy();
   });
 
-  test.fixme("ACP pod creation does not require a real LLM CLI on the runner", async ({ page, api }) => {
+  test("ACP pod creation does not require a real LLM CLI on the runner", async ({ page, api }) => {
     const ctx = await setupAcpScenarioPage(page, api, {
       mode: "acp", scenario: "echo", prompt: "no-llm probe",
     });
-    if (!ctx) { test.skip(); return; }
     expect(ctx.pod.podKey).toBeTruthy();
     expect(ctx.pod.podKey.length).toBeGreaterThan(0);
   });

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use agentsmesh_types::Pod;
+use agentsmesh_types::proto_pod_v1::Pod;
 
 use crate::backend::StorageBackend;
 use crate::error::Result;
@@ -16,10 +16,9 @@ impl PodRepo {
 
     pub fn save_pod(&self, pod: &Pod) -> Result<()> {
         let data = serde_json::to_vec(pod)?;
-        let status_str = pod.status.to_string();
         let runner_id_str = pod.runner_id.map(|v| v.to_string()).unwrap_or_default();
-        let indexed: Vec<(&str, &str)> = vec![("status", &status_str), ("runner_id", &runner_id_str)];
-        self.backend.put_raw("pods", &pod.key, &indexed, &data)
+        let indexed: Vec<(&str, &str)> = vec![("status", pod.status.as_str()), ("runner_id", &runner_id_str)];
+        self.backend.put_raw("pods", &pod.pod_key, &indexed, &data)
     }
 
     pub fn get_pod(&self, key: &str) -> Result<Option<Pod>> {
@@ -50,25 +49,27 @@ impl PodRepo {
 mod tests {
     use super::*;
     use crate::backend::InMemoryBackend;
-    use agentsmesh_types::PodStatus;
 
     fn make_repo() -> PodRepo {
         PodRepo::new(Arc::new(InMemoryBackend::new()))
     }
 
-    fn make_pod(key: &str, status: PodStatus, runner_id: Option<i64>) -> Pod {
+    fn make_pod(key: &str, status: &str, runner_id: Option<i64>) -> Pod {
         Pod {
-            key: key.into(), status, agent_slug: "claude".into(),
-            runner_id, ..Default::default()
+            pod_key: key.into(),
+            status: status.into(),
+            agent_slug: "claude".into(),
+            runner_id,
+            ..Default::default()
         }
     }
 
     #[test]
     fn save_and_get_roundtrip() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
         let loaded = repo.get_pod("p1").unwrap().unwrap();
-        assert_eq!(loaded.status, PodStatus::Running);
+        assert_eq!(loaded.status, "running");
     }
 
     #[test]
@@ -80,7 +81,7 @@ mod tests {
     #[test]
     fn delete_roundtrip() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
         repo.delete_pod("p1").unwrap();
         assert!(repo.get_pod("p1").unwrap().is_none());
     }
@@ -94,8 +95,8 @@ mod tests {
     #[test]
     fn list_pods() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
-        repo.save_pod(&make_pod("p2", PodStatus::Terminated, Some(2))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
+        repo.save_pod(&make_pod("p2", "terminated", Some(2))).unwrap();
         assert_eq!(repo.list_pods().unwrap().len(), 2);
     }
 
@@ -108,9 +109,9 @@ mod tests {
     #[test]
     fn filter_by_status() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
-        repo.save_pod(&make_pod("p2", PodStatus::Terminated, Some(2))).unwrap();
-        repo.save_pod(&make_pod("p3", PodStatus::Running, Some(3))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
+        repo.save_pod(&make_pod("p2", "terminated", Some(2))).unwrap();
+        repo.save_pod(&make_pod("p3", "running", Some(3))).unwrap();
         assert_eq!(repo.get_by_status("running").unwrap().len(), 2);
         assert_eq!(repo.get_by_status("terminated").unwrap().len(), 1);
     }
@@ -118,25 +119,25 @@ mod tests {
     #[test]
     fn filter_by_status_no_match() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
         assert!(repo.get_by_status("error").unwrap().is_empty());
     }
 
     #[test]
     fn save_overwrites_existing() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
-        repo.save_pod(&make_pod("p1", PodStatus::Terminated, Some(1))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
+        repo.save_pod(&make_pod("p1", "terminated", Some(1))).unwrap();
         let loaded = repo.get_pod("p1").unwrap().unwrap();
-        assert_eq!(loaded.status, PodStatus::Terminated);
+        assert_eq!(loaded.status, "terminated");
         assert_eq!(repo.list_pods().unwrap().len(), 1);
     }
 
     #[test]
     fn clear_removes_all() {
         let repo = make_repo();
-        repo.save_pod(&make_pod("p1", PodStatus::Running, Some(1))).unwrap();
-        repo.save_pod(&make_pod("p2", PodStatus::Terminated, Some(2))).unwrap();
+        repo.save_pod(&make_pod("p1", "running", Some(1))).unwrap();
+        repo.save_pod(&make_pod("p2", "terminated", Some(2))).unwrap();
         repo.clear().unwrap();
         assert!(repo.list_pods().unwrap().is_empty());
     }

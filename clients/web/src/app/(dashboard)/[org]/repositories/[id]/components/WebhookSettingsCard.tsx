@@ -3,8 +3,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
-import { getRepositoryService } from "@/lib/wasm-core";
-import type { WebhookStatus, RepositoryData, WebhookSecretResponse } from "@/lib/api/repositoryTypes";
+import {
+  getRepositoryWebhookStatus,
+  registerRepositoryWebhook,
+  deleteRepositoryWebhook,
+  markRepositoryWebhookConfigured,
+  getRepositoryWebhookSecret,
+} from "@/lib/api/connect/repositoryConnect";
+import { useCurrentOrg } from "@/stores/auth";
+import type { WebhookStatus, RepositoryData } from "@/lib/viewModels/repository";
 import { cn } from "@/lib/utils";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { toast } from "sonner";
@@ -29,6 +36,8 @@ export function WebhookSettingsCard({
   onStatusChange,
 }: WebhookSettingsCardProps) {
   const t = useTranslations();
+  const currentOrg = useCurrentOrg();
+  const orgSlug = currentOrg?.slug ?? "";
   const [status, setStatus] = useState<WebhookStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<WebhookActionType>(null);
@@ -38,13 +47,12 @@ export function WebhookSettingsCard({
   const [copied, setCopied] = useState<CopiedField>(null);
 
   const loadStatus = useCallback(async () => {
+    if (!orgSlug) return;
     try {
       setLoading(true);
       setError(null);
-      const res: { webhook_status: WebhookStatus } = JSON.parse(
-        await getRepositoryService().get_webhook_status(BigInt(repository.id))
-      );
-      setStatus(res.webhook_status);
+      const res = await getRepositoryWebhookStatus(orgSlug, repository.id);
+      setStatus(res);
     } catch (err) {
       const msg = getLocalizedErrorMessage(err, t, t("repositories.webhook.retry"));
       setError(msg);
@@ -52,17 +60,18 @@ export function WebhookSettingsCard({
     } finally {
       setLoading(false);
     }
-  }, [repository.id, t]);
+  }, [repository.id, t, orgSlug]);
 
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
 
   const handleRegister = useCallback(async () => {
+    if (!orgSlug) return;
     try {
       setActionLoading("register");
       setError(null);
-      await getRepositoryService().register_webhook(BigInt(repository.id));
+      await registerRepositoryWebhook(orgSlug, repository.id);
       await loadStatus();
       onStatusChange?.();
     } catch (err) {
@@ -72,13 +81,14 @@ export function WebhookSettingsCard({
     } finally {
       setActionLoading(null);
     }
-  }, [repository.id, loadStatus, onStatusChange, t]);
+  }, [repository.id, loadStatus, onStatusChange, t, orgSlug]);
 
   const handleDelete = useCallback(async () => {
+    if (!orgSlug) return;
     try {
       setActionLoading("delete");
       setError(null);
-      await getRepositoryService().delete_webhook(BigInt(repository.id));
+      await deleteRepositoryWebhook(orgSlug, repository.id);
       setSecretInfo(null);
       setShowSecret(false);
       await loadStatus();
@@ -90,13 +100,14 @@ export function WebhookSettingsCard({
     } finally {
       setActionLoading(null);
     }
-  }, [repository.id, loadStatus, onStatusChange, t]);
+  }, [repository.id, loadStatus, onStatusChange, t, orgSlug]);
 
   const handleMarkConfigured = useCallback(async () => {
+    if (!orgSlug) return;
     try {
       setActionLoading("markConfigured");
       setError(null);
-      await getRepositoryService().mark_webhook_configured(BigInt(repository.id));
+      await markRepositoryWebhookConfigured(orgSlug, repository.id);
       setShowSecret(false);
       await loadStatus();
       onStatusChange?.();
@@ -107,16 +118,14 @@ export function WebhookSettingsCard({
     } finally {
       setActionLoading(null);
     }
-  }, [repository.id, loadStatus, onStatusChange, t]);
+  }, [repository.id, loadStatus, onStatusChange, t, orgSlug]);
 
   const handleGetSecret = useCallback(async () => {
+    if (!orgSlug) return;
     try {
       setActionLoading("getSecret");
       setError(null);
-      const res: WebhookSecretResponse = JSON.parse(
-        await getRepositoryService().get_webhook_secret(BigInt(repository.id))
-      );
-      // Transform API response to component format
+      const res = await getRepositoryWebhookSecret(orgSlug, repository.id);
       setSecretInfo({
         url: res.webhook_url,
         secret: res.webhook_secret,
@@ -130,7 +139,7 @@ export function WebhookSettingsCard({
     } finally {
       setActionLoading(null);
     }
-  }, [repository.id, t]);
+  }, [repository.id, t, orgSlug]);
 
   const handleCopy = useCallback(
     async (text: string, type: "url" | "secret") => {

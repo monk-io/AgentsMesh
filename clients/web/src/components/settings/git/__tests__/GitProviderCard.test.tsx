@@ -1,38 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { GitProviderCard } from "../GitProviderCard";
-import type { RepositoryProviderData } from "@/lib/api/userRepositoryProviderTypes";
+import type { RepositoryProvider } from "@/lib/api/facade/userRepositoryProvider";
 
 const mockT = vi.fn((key: string) => key);
 
-const baseProvider: RepositoryProviderData = {
-  id: 1,
-  user_id: 10,
-  provider_type: "github",
+const baseProvider: RepositoryProvider = {
+  $typeName: "proto.user_credential.v1.RepositoryProvider",
+  id: BigInt(1),
+  providerType: "github",
   name: "GitHub",
-  base_url: "https://github.com",
-  has_client_id: false,
-  has_bot_token: false,
-  has_identity: true,
-  is_default: false,
-  is_active: true,
-  created_at: "2026-05-06T00:00:00Z",
-  updated_at: "2026-05-06T00:00:00Z",
+  baseUrl: "https://github.com",
+  hasClientId: false,
+  hasBotToken: false,
+  hasIdentity: true,
+  isDefault: false,
+  isActive: true,
+  createdAt: "2026-05-06T00:00:00Z",
+  updatedAt: "2026-05-06T00:00:00Z",
 };
 
 describe("GitProviderCard", () => {
-  let onEdit: ReturnType<typeof vi.fn>;
-  let onDelete: ReturnType<typeof vi.fn>;
-  let onTestConnection: ReturnType<typeof vi.fn>;
+  let onEdit: () => void;
+  let onDelete: () => void;
+  let onTestConnection: () => void;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onEdit = vi.fn();
-    onDelete = vi.fn();
-    onTestConnection = vi.fn();
+    onEdit = vi.fn<() => void>();
+    onDelete = vi.fn<() => void>();
+    onTestConnection = vi.fn<() => void>();
   });
 
-  function renderCard(provider: RepositoryProviderData = baseProvider) {
+  function renderCard(provider: RepositoryProvider = baseProvider) {
     return render(
       <GitProviderCard
         provider={provider}
@@ -45,15 +45,15 @@ describe("GitProviderCard", () => {
   }
 
   describe("disabled badge visibility", () => {
-    it("should NOT show disabled badge when is_active=true", () => {
-      renderCard({ ...baseProvider, is_active: true });
+    it("should NOT show disabled badge when isActive=true", () => {
+      renderCard({ ...baseProvider, isActive: true });
       expect(
         screen.queryByText("settings.gitSettings.providers.disabled")
       ).not.toBeInTheDocument();
     });
 
-    it("should show disabled badge when is_active=false", () => {
-      renderCard({ ...baseProvider, is_active: false });
+    it("should show disabled badge when isActive=false", () => {
+      renderCard({ ...baseProvider, isActive: false });
       expect(
         screen.getByText("settings.gitSettings.providers.disabled")
       ).toBeInTheDocument();
@@ -61,8 +61,8 @@ describe("GitProviderCard", () => {
   });
 
   describe("regression — wasm-core field-stripping bug", () => {
-    it("should NOT show disabled badge when is_active is undefined (defensive)", () => {
-      renderCard({ ...baseProvider, is_active: undefined as unknown as boolean });
+    it("should NOT show disabled badge when isActive is undefined (defensive)", () => {
+      renderCard({ ...baseProvider, isActive: undefined as unknown as boolean });
       expect(
         screen.queryByText("settings.gitSettings.providers.disabled")
       ).not.toBeInTheDocument();
@@ -70,15 +70,15 @@ describe("GitProviderCard", () => {
   });
 
   describe("default badge", () => {
-    it("should show default badge when is_default=true", () => {
-      renderCard({ ...baseProvider, is_default: true });
+    it("should show default badge when isDefault=true", () => {
+      renderCard({ ...baseProvider, isDefault: true });
       expect(
         screen.getByText("settings.gitSettings.providers.default")
       ).toBeInTheDocument();
     });
 
-    it("should not show default badge when is_default=false", () => {
-      renderCard({ ...baseProvider, is_default: false });
+    it("should not show default badge when isDefault=false", () => {
+      renderCard({ ...baseProvider, isDefault: false });
       expect(
         screen.queryByText("settings.gitSettings.providers.default")
       ).not.toBeInTheDocument();
@@ -86,8 +86,8 @@ describe("GitProviderCard", () => {
   });
 
   describe("provider info rendering", () => {
-    it("renders the provider name and base_url", () => {
-      renderCard({ ...baseProvider, name: "My GitLab", base_url: "https://gitlab.x" });
+    it("renders the provider name and baseUrl", () => {
+      renderCard({ ...baseProvider, name: "My GitLab", baseUrl: "https://gitlab.x" });
       expect(screen.getByText("My GitLab")).toBeInTheDocument();
       expect(screen.getByText("https://gitlab.x")).toBeInTheDocument();
     });
@@ -108,14 +108,14 @@ describe("GitProviderCard", () => {
   });
 });
 
-describe("GitProviderCard — visual styling reflects is_active", () => {
+describe("GitProviderCard — visual styling reflects isActive", () => {
   it("applies dimmed style when disabled", () => {
     const { container } = render(
       <GitProviderCard
-        provider={{ ...baseProvider, is_active: false }}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onTestConnection={vi.fn()}
+        provider={{ ...baseProvider, isActive: false }}
+        onEdit={vi.fn<() => void>()}
+        onDelete={vi.fn<() => void>()}
+        onTestConnection={vi.fn<() => void>()}
         t={mockT}
       />
     );
@@ -125,10 +125,10 @@ describe("GitProviderCard — visual styling reflects is_active", () => {
   it("does NOT apply dimmed style when active", () => {
     const { container } = render(
       <GitProviderCard
-        provider={{ ...baseProvider, is_active: true }}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onTestConnection={vi.fn()}
+        provider={{ ...baseProvider, isActive: true }}
+        onEdit={vi.fn<() => void>()}
+        onDelete={vi.fn<() => void>()}
+        onTestConnection={vi.fn<() => void>()}
         t={mockT}
       />
     );

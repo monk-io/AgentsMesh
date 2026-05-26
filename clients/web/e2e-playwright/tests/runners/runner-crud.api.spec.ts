@@ -1,58 +1,49 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 test.describe("Runner API CRUD", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  /**
-   * TC-RUNNER-001: List runners
-   */
   test("list runners returns array", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(Array.isArray(data.runners)).toBe(true);
+    const cc = await api.connect();
+    const { items } = await cc.runner.listRunners({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 
-  test("list runners without auth returns 401", async ({ api }) => {
-    const res = await api.getWithToken(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners`, "bad-token"
-    );
-    expect(res.status).toBe(401);
+  test("list runners without auth returns 401", async () => {
+    const cc = makeConnectClient("bad-token");
+    await expect(
+      cc.runner.listRunners({ orgSlug: TEST_ORG_SLUG }),
+    ).rejects.toMatchObject({ status: 401 });
   });
 
-  /**
-   * TC-RUNNER-002: List available runners
-   */
   test("list available runners", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const res = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(res.items)).toBe(true);
   });
 
-  /**
-   * TC-RUNNER-003: Get single runner detail
-   */
   test("get runner by id", async ({ api, db }) => {
     const id = db.queryValue(
       `SELECT id FROM runners WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`
     );
-    if (!id) { test.skip(); return; }
+    expect(id, "dev seed must include at least one runner").toBeTruthy();
 
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.runner.id).toBeTruthy();
+    const cc = await api.connect();
+    const res = await cc.runner.getRunner({ orgSlug: TEST_ORG_SLUG, id: Number(id) }) as { runner: { id?: number } };
+    expect(res.runner?.id).toBeTruthy();
   });
 
   test("get non-existent runner returns 404", async ({ api }) => {
-    const res = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/999999`);
-    expect(res.status).toBe(404);
+    const cc = await api.connect();
+    await expect(
+      cc.runner.getRunner({ orgSlug: TEST_ORG_SLUG, id: 999999 }),
+    ).rejects.toMatchObject({ status: 404 });
   });
 
-  /**
-   * TC-CONFIG-001: Update runner config
-   */
   test("update runner description", async ({ api, db }) => {
     db.setup(`
       INSERT INTO runners (organization_id, node_id, description, status, max_concurrent_pods, is_enabled)
@@ -64,10 +55,12 @@ test.describe("Runner API CRUD", () => {
       `SELECT id FROM runners WHERE node_id = 'test-runner-config'`
     );
 
-    const res = await api.put(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}`, {
+    const cc = await api.connect();
+    await cc.runner.updateRunner({
+      orgSlug: TEST_ORG_SLUG,
+      id: Number(id),
       description: "Updated by E2E test",
     });
-    expect(res.status).toBe(200);
 
     const desc = db.queryValue(
       `SELECT description FROM runners WHERE node_id = 'test-runner-config'`
@@ -77,9 +70,6 @@ test.describe("Runner API CRUD", () => {
     db.cleanup(`DELETE FROM runners WHERE node_id = 'test-runner-config'`);
   });
 
-  /**
-   * TC-CONFIG-002: Disable and enable runner
-   */
   test("disable and enable runner", async ({ api, db }) => {
     db.setup(`
       INSERT INTO runners (organization_id, node_id, description, status, max_concurrent_pods, is_enabled)
@@ -91,22 +81,15 @@ test.describe("Runner API CRUD", () => {
       `SELECT id FROM runners WHERE node_id = 'test-runner-disable'`
     );
 
-    // Disable (set is_enabled to false)
-    const disableRes = await api.put(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}`, { is_enabled: false }
-    );
-    expect(disableRes.status).toBe(200);
+    const cc = await api.connect();
+    await cc.runner.updateRunner({ orgSlug: TEST_ORG_SLUG, id: Number(id), isEnabled: false });
 
     let flag = db.queryValue(
       `SELECT is_enabled::text FROM runners WHERE node_id = 'test-runner-disable'`
     );
     expect(flag).toBe("false");
 
-    // Enable (set is_enabled to true)
-    const enableRes = await api.put(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}`, { is_enabled: true }
-    );
-    expect(enableRes.status).toBe(200);
+    await cc.runner.updateRunner({ orgSlug: TEST_ORG_SLUG, id: Number(id), isEnabled: true });
 
     flag = db.queryValue(
       `SELECT is_enabled::text FROM runners WHERE node_id = 'test-runner-disable'`
@@ -116,9 +99,6 @@ test.describe("Runner API CRUD", () => {
     db.cleanup(`DELETE FROM runners WHERE node_id = 'test-runner-disable'`);
   });
 
-  /**
-   * TC-DELETE-001: Delete runner
-   */
   test("delete runner", async ({ api, db }) => {
     db.setup(`
       INSERT INTO runners (organization_id, node_id, description, status, max_concurrent_pods, is_enabled)
@@ -130,10 +110,11 @@ test.describe("Runner API CRUD", () => {
       `SELECT id FROM runners WHERE node_id = 'test-runner-delete'`
     );
 
-    const delRes = await api.delete(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}`);
-    expect([200, 204]).toContain(delRes.status);
+    const cc = await api.connect();
+    await cc.runner.deleteRunner({ orgSlug: TEST_ORG_SLUG, id: Number(id) });
 
-    const getRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/runners/${id}`);
-    expect(getRes.status).toBe(404);
+    await expect(
+      cc.runner.getRunner({ orgSlug: TEST_ORG_SLUG, id: Number(id) }),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });

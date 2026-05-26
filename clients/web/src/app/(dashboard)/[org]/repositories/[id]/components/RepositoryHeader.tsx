@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Share2 } from "lucide-react";
 import { ShareDialog } from "@/components/shared/ShareDialog";
-import type { RepositoryData } from "@/lib/api/repositoryTypes";
+import type { RepositoryData } from "@/lib/viewModels/repository";
 import { useTranslations } from "next-intl";
 import { GitProviderIcon } from "@/components/icons/GitProviderIcon";
 

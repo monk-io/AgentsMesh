@@ -19,15 +19,10 @@ export interface IAcpSessionManager {
 export interface IAgentService {
   create_provider(json: string): Promise<string>;
   delete_provider(id: bigint): Promise<void>;
-  delete_user_config(agent_slug: string): Promise<void>;
   get_agentpod_settings(): Promise<string>;
-  get_config_schema(agent_slug: string): Promise<string>;
-  get_user_config(agent_slug: string): Promise<string>;
   list_agents(): Promise<string>;
   list_providers(): Promise<string>;
-  list_user_configs(): Promise<string>;
   set_default_provider(id: bigint): Promise<void>;
-  set_user_config(agent_slug: string, json: string): Promise<string>;
   update_agentpod_settings(json: string): Promise<string>;
   update_provider(id: bigint, json: string): Promise<string>;
 }
@@ -35,7 +30,6 @@ export interface IAgentService {
 export interface IApiClient {
   create_agent_service(): IAgentService;
   create_apikey_service(): IApiKeyService;
-  create_auth_api_service(): IAuthApiService;
   create_autopilot_service(): IAutopilotService;
   create_billing_service(): IBillingService;
   create_binding_service(): IBindingService;
@@ -45,7 +39,6 @@ export interface IApiClient {
   create_invitation_service(): IInvitationService;
   create_loop_service(): ILoopService;
   create_mesh_service(): IMeshService;
-  create_message_service(): IMessageService;
   create_notification_service(): INotificationService;
   create_org_api_service(): IOrgApiService;
   create_pod_service(): IPodService;
@@ -79,12 +72,17 @@ export interface IApiKeyService {
   update(id: bigint, json: string): Promise<string>;
 }
 
-export interface IAuthApiService {
-  forgot_password(email: string): Promise<string>;
-  register(json: string): Promise<string>;
-  resend_verification(email: string): Promise<string>;
-  reset_password(json: string): Promise<string>;
-  verify_email(token: string): Promise<string>;
+export interface IAuthConnectService {
+  loginConnect(request: Uint8Array): Promise<Uint8Array>;
+  registerConnect(request: Uint8Array): Promise<Uint8Array>;
+  refreshTokenConnect(request: Uint8Array): Promise<Uint8Array>;
+  verifyEmailConnect(request: Uint8Array): Promise<Uint8Array>;
+  resendVerificationConnect(request: Uint8Array): Promise<Uint8Array>;
+  forgotPasswordConnect(request: Uint8Array): Promise<Uint8Array>;
+  resetPasswordConnect(request: Uint8Array): Promise<Uint8Array>;
+  oauthRedirectConnect(request: Uint8Array): Promise<Uint8Array>;
+  oauthCallbackConnect(request: Uint8Array): Promise<Uint8Array>;
+  logoutConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IAuthManager {
@@ -181,16 +179,19 @@ export interface IBillingService {
 }
 
 export interface IBindingService {
-  accept_binding(json: string): Promise<string>;
-  approve_scopes(binding_id: bigint, json: string): Promise<string>;
-  check_binding(target_pod: string): Promise<string>;
-  get_bound_pods(): Promise<string>;
-  get_pending_bindings(): Promise<string>;
-  list_bindings(status?: string | null): Promise<string>;
-  reject_binding(json: string): Promise<void>;
-  request_binding(json: string, pod_key?: string | null): Promise<string>;
-  request_scopes(binding_id: bigint, json: string): Promise<string>;
-  unbind(json: string): Promise<void>;
+  // Connect-RPC: proto.binding.v1.BindingService. Binary wire (Uint8Array
+  // in, Uint8Array out). Callers encode/decode via @bufbuild/protobuf
+  // — see clients/web/src/lib/api/bindingConnect.ts for the adapter.
+  acceptBindingConnect(request: Uint8Array): Promise<Uint8Array>;
+  approveScopesConnect(request: Uint8Array): Promise<Uint8Array>;
+  checkBindingConnect(request: Uint8Array): Promise<Uint8Array>;
+  getBoundPodsConnect(request: Uint8Array): Promise<Uint8Array>;
+  getPendingBindingsConnect(request: Uint8Array): Promise<Uint8Array>;
+  listBindingsConnect(request: Uint8Array): Promise<Uint8Array>;
+  rejectBindingConnect(request: Uint8Array): Promise<Uint8Array>;
+  requestBindingConnect(request: Uint8Array): Promise<Uint8Array>;
+  requestScopesConnect(request: Uint8Array): Promise<Uint8Array>;
+  unbindConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IChannelService {
@@ -300,7 +301,8 @@ export interface IExtensionService {
   install_mcp_from_market(repo_id: bigint, json: string): Promise<string>;
   install_skill_from_github(repo_id: bigint, json: string): Promise<string>;
   install_skill_from_market(repo_id: bigint, json: string): Promise<string>;
-  install_skill_from_upload(repo_id: bigint, file_data: Uint8Array, file_name: string, scope?: string | null): Promise<string>;
+  presignSkillUploadConnect(request: Uint8Array): Promise<Uint8Array>;
+  installSkillFromUploadedFileConnect(request: Uint8Array): Promise<Uint8Array>;
   list_market_mcp_servers(query?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   list_market_skills(query?: string | null, category?: string | null): Promise<string>;
   list_repo_mcp_servers(repo_id: bigint, scope?: string | null): Promise<string>;
@@ -321,14 +323,18 @@ export interface IFileService {
 }
 
 export interface IInvitationService {
-  accept(token: string): Promise<void>;
-  create(json: string): Promise<string>;
-  get_by_token(token: string): Promise<string>;
-  list(): Promise<string>;
-  list_pending(): Promise<string>;
-  resend(id: bigint): Promise<void>;
-  revoke(id: bigint): Promise<void>;
+  listInvitationsConnect(request: Uint8Array): Promise<Uint8Array>;
+  createInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  revokeInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  resendInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  acceptInvitationConnect(request: Uint8Array): Promise<Uint8Array>;
+  listPendingInvitationsConnect(request: Uint8Array): Promise<Uint8Array>;
+  getInvitationByTokenConnect(request: Uint8Array): Promise<Uint8Array>;
 }
+
+// Alias for the same surface — desktop adapter file uses this name to mirror
+// the auth_connect.ts / *_connect.ts naming convention.
+export type IInvitationConnectService = IInvitationService;
 
 export type LocalRunnerStatus = "running" | "stopped" | "unknown" | "not_installed" | "stale";
 
@@ -402,6 +408,13 @@ export interface IMeshService {
   selected_node(): any;
   set_topology(json: string): void;
   topology_json(): any;
+  // Connect-RPC: proto.mesh.v1.MeshService. Binary wire (Uint8Array in,
+  // Uint8Array out). Callers encode/decode via @bufbuild/protobuf — see
+  // clients/web/src/lib/api/meshConnect.ts for the adapter.
+  batchGetTicketPodsConnect(request: Uint8Array): Promise<Uint8Array>;
+  createPodForTicketConnect(request: Uint8Array): Promise<Uint8Array>;
+  getMeshTopologyConnect(request: Uint8Array): Promise<Uint8Array>;
+  getTicketPodsConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IMeshState {
@@ -416,19 +429,6 @@ export interface IMeshState {
   selected_node(): any;
   set_topology(json: string): void;
   topology_json(): any;
-}
-
-export interface IMessageService {
-  get_conversation(correlation_id: string, limit?: number | null): Promise<string>;
-  get_dead_letters(limit?: number | null, offset?: number | null): Promise<string>;
-  get_message(id: bigint): Promise<string>;
-  get_messages(unread_only?: boolean | null, limit?: number | null, offset?: number | null): Promise<string>;
-  get_sent_messages(limit?: number | null, offset?: number | null): Promise<string>;
-  get_unread_count(): Promise<string>;
-  mark_all_read(): Promise<string>;
-  mark_read(json: string): Promise<string>;
-  replay_dead_letter(entry_id: bigint): Promise<string>;
-  send_message(json: string, pod_key?: string | null): Promise<string>;
 }
 
 export interface INotificationService {
@@ -486,9 +486,9 @@ export interface IPodState {
 }
 
 export interface IPromoCodeService {
-  get_history(): Promise<string>;
-  redeem(json: string): Promise<void>;
-  validate(json: string): Promise<string>;
+  validatePromoCodeConnect(request: Uint8Array): Promise<Uint8Array>;
+  redeemPromoCodeConnect(request: Uint8Array): Promise<Uint8Array>;
+  getRedemptionHistoryConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IRelayManager {
@@ -577,52 +577,45 @@ export interface IRunnerState {
 }
 
 export interface ISSOService {
-  discover(email: string): Promise<string>;
-  ldap_auth(domain: string, json: string): Promise<string>;
+  discoverConnect(request: Uint8Array): Promise<Uint8Array>;
+  ldapAuthConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ISupportTicketService {
   add_message(ticket_id: bigint, content: string, file_data: Uint8Array[], file_names: string[]): Promise<string>;
   create_ticket(title: string, category: string, content: string, priority: string | null | undefined, file_data: Uint8Array[], file_names: string[]): Promise<string>;
-  get_attachment_url(id: bigint): Promise<string>;
-  get_detail(id: bigint): Promise<string>;
-  list(status?: string | null, page?: number | null, page_size?: number | null): Promise<string>;
+  listSupportTicketsConnect(request: Uint8Array): Promise<Uint8Array>;
+  getSupportTicketConnect(request: Uint8Array): Promise<Uint8Array>;
+  getAttachmentUrlConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ITicketRelationsService {
-  create_comment(slug: string, json: string): Promise<string>;
-  create_relation(slug: string, json: string): Promise<string>;
-  delete_comment(slug: string, comment_id: bigint): Promise<void>;
-  delete_relation(slug: string, relation_id: bigint): Promise<void>;
-  link_commit(slug: string, json: string): Promise<string>;
-  list_comments(slug: string, limit?: number | null, offset?: number | null): Promise<string>;
-  list_commits(slug: string): Promise<string>;
-  list_merge_requests(slug: string): Promise<string>;
-  list_relations(slug: string): Promise<string>;
-  unlink_commit(slug: string, commit_id: bigint): Promise<void>;
-  update_comment(slug: string, comment_id: bigint, json: string): Promise<string>;
+  // Connect-RPC binary wire — each method takes prost-encoded request bytes
+  // and returns prost-encoded response bytes. Encoders / decoders live in
+  // clients/web/src/lib/api/ticketRelations.ts.
+  list_relations_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_relation_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_relation_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_commits_connect(request: Uint8Array): Promise<Uint8Array>;
+  link_commit_connect(request: Uint8Array): Promise<Uint8Array>;
+  unlink_commit_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_merge_requests_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_comments_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_comment_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_comment_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_comment_connect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ITicketService {
+  // Local state mutators (in-memory cache) — wasm/electron both back these.
   add_label(json: string): void;
   add_ticket(json: string): void;
   append_column_tickets(status: string, json: string): void;
   board_columns_json(): string;
-  create_label(name: string, color: string, repository_id?: bigint | null): Promise<string>;
-  create_ticket(request_json: string): Promise<string>;
   current_ticket_json(): any;
-  delete_label(id: number): Promise<void>;
-  delete_ticket(slug: string): Promise<void>;
-  fetch_board(repository_id?: bigint | null): Promise<string>;
-  fetch_labels(repository_id?: bigint | null): Promise<string>;
-  fetch_ticket(slug: string): Promise<string>;
-  fetch_tickets(status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   filter_tickets_json(search: string, statuses_json: string, priorities_json: string, repository_ids_json: string): string;
-  get_sub_tickets(slug: string): Promise<string>;
   get_ticket_by_slug_json(slug: string): any;
-  get_ticket_pods(slug: string, active_only?: boolean | null): Promise<string>;
   labels_json(): string;
-  load_more_column(status: string, offset: number, limit: number): Promise<string>;
   remove_label(id: number): void;
   remove_ticket(slug: string): void;
   set_board_columns(json: string): void;
@@ -630,10 +623,31 @@ export interface ITicketService {
   set_labels(json: string): void;
   set_tickets(json: string): void;
   tickets_json(): string;
-  update_ticket(slug: string, request_json: string): Promise<string>;
   update_ticket_local(slug: string, json: string): void;
-  update_ticket_status(slug: string, status: string): Promise<string>;
   update_ticket_status_local(slug: string, status: string): void;
+  // REST-only (proto.ticket.v1 doesn't own ticket→pod lookup — MeshService does).
+  get_ticket_pods(slug: string, active_only?: boolean | null): Promise<string>;
+  ticket_pods_json(slug: string): string;
+  // Connect-RPC binary wire — each method takes prost-encoded request bytes
+  // and returns prost-encoded response bytes. Encoders / decoders live in
+  // clients/web/src/lib/api/ticketConnect.ts.
+  list_tickets_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_ticket_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_ticket_status_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_active_tickets_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_board_connect(request: Uint8Array): Promise<Uint8Array>;
+  get_sub_tickets_connect(request: Uint8Array): Promise<Uint8Array>;
+  add_assignee_connect(request: Uint8Array): Promise<Uint8Array>;
+  remove_assignee_connect(request: Uint8Array): Promise<Uint8Array>;
+  list_labels_connect(request: Uint8Array): Promise<Uint8Array>;
+  create_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  update_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  delete_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  add_label_connect(request: Uint8Array): Promise<Uint8Array>;
+  remove_label_connect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface ITicketState {
@@ -661,8 +675,12 @@ export interface ITokenUsageService {
 }
 
 export interface IUserApiService {
-  get_me(): Promise<string>;
-  get_organizations(): Promise<string>;
+  getMeConnect(request: Uint8Array): Promise<Uint8Array>;
+  updateMeConnect(request: Uint8Array): Promise<Uint8Array>;
+  changePasswordConnect(request: Uint8Array): Promise<Uint8Array>;
+  listIdentitiesConnect(request: Uint8Array): Promise<Uint8Array>;
+  deleteIdentityConnect(request: Uint8Array): Promise<Uint8Array>;
+  searchUsersConnect(request: Uint8Array): Promise<Uint8Array>;
 }
 
 export interface IUserCredentialService {

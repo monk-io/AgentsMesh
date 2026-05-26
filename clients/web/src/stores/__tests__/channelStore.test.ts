@@ -1,11 +1,50 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { act } from "@testing-library/react";
+
+const orgSlug = "test-org";
+
+vi.mock("@/stores/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/stores/auth")>("@/stores/auth");
+  return {
+    ...actual,
+    readCurrentOrg: () => ({ id: 1, slug: orgSlug, name: "Test Org" }),
+  };
+});
+
+const mocks = vi.hoisted(() => ({
+  listChannels: vi.fn(),
+  getChannel: vi.fn(),
+  createChannel: vi.fn(),
+  updateChannel: vi.fn(),
+  archiveChannel: vi.fn(),
+  unarchiveChannel: vi.fn(),
+  joinChannelPod: vi.fn(),
+  leaveChannelPod: vi.fn(),
+  inviteChannelMembers: vi.fn(),
+  listChannelMembers: vi.fn(),
+  joinChannelConnect: vi.fn(),
+  leaveChannelConnect: vi.fn(),
+}));
+
+vi.mock("@/lib/api/facade/channelConnect", () => ({
+  listChannels: mocks.listChannels,
+  getChannel: mocks.getChannel,
+  createChannel: mocks.createChannel,
+  updateChannel: mocks.updateChannel,
+  archiveChannel: mocks.archiveChannel,
+  unarchiveChannel: mocks.unarchiveChannel,
+  joinChannelPod: mocks.joinChannelPod,
+  leaveChannelPod: mocks.leaveChannelPod,
+  inviteChannelMembers: mocks.inviteChannelMembers,
+  listChannelMembers: mocks.listChannelMembers,
+  joinChannel: mocks.joinChannelConnect,
+  leaveChannel: mocks.leaveChannelConnect,
+}));
+
 import { useChannelStore, useChannelMessageStore, Channel } from "../channel";
-import type { ChannelMessage } from "@/lib/api";
 import { getChannelService } from "@/lib/wasm-core";
 
 const svc = () => getChannelService();
-
 const getChannels = (): Channel[] => JSON.parse(svc().channels_json());
 const getCurrentChannel = (): Channel | null => {
   const v = svc().current_channel_json();
@@ -13,40 +52,17 @@ const getCurrentChannel = (): Channel | null => {
 };
 
 const mockChannel: Channel = {
-  id: 1,
-  name: "general",
-  description: "General discussion channel",
-  visibility: "public",
-  is_archived: false,
-  is_member: true,
-  member_count: 1,
-  organization_id: 1,
-  created_at: "2024-01-01T00:00:00Z",
-  updated_at: "2024-01-01T00:00:00Z",
+  id: 1, name: "general", description: "General discussion channel",
+  visibility: "public", is_archived: false, is_member: true, member_count: 1,
+  organization_id: 1, created_at: "2024-01-01T00:00:00Z", updated_at: "2024-01-01T00:00:00Z",
 };
-
 const mockChannel2: Channel = {
-  id: 2,
-  name: "dev-chat",
-  description: "Development discussion",
-  visibility: "public",
-  is_archived: false,
-  is_member: true,
-  member_count: 1,
-  organization_id: 1,
-  created_at: "2024-01-02T00:00:00Z",
-  updated_at: "2024-01-02T00:00:00Z",
+  id: 2, name: "dev-chat", description: "Development discussion",
+  visibility: "public", is_archived: false, is_member: true, member_count: 1,
+  organization_id: 1, created_at: "2024-01-02T00:00:00Z", updated_at: "2024-01-02T00:00:00Z",
 };
 
-const mockMessage: ChannelMessage = {
-  id: 1,
-  channel_id: 1,
-  body: "Hello, world!",
-  message_type: "text",
-  created_at: "2024-01-01T00:00:00Z",
-};
-
-describe("Channel Store", () => {
+describe("Channel Store (Connect adapter)", () => {
   const seedChannels = (channels: Channel[], currentChannel: Channel | null = null) => {
     svc().set_channels(JSON.stringify(channels));
     if (currentChannel) svc().set_current_channel(BigInt(currentChannel.id));
@@ -54,14 +70,10 @@ describe("Channel Store", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.values(mocks).forEach((m) => m.mockReset());
     useChannelStore.setState({
-      _tick: 0,
-      loading: false,
-      channelLoading: false,
-      error: null,
-      selectedChannelId: null,
-      searchQuery: "",
-      showArchived: false,
+      _tick: 0, loading: false, channelLoading: false, error: null,
+      selectedChannelId: null, searchQuery: "", showArchived: false, currentChannel: null,
     });
     useChannelMessageStore.setState({ cache: {}, _unreadTick: 0 });
   });
@@ -78,23 +90,23 @@ describe("Channel Store", () => {
 
   describe("fetchChannels", () => {
     it("should fetch channels successfully", async () => {
-      vi.mocked(svc().fetch_channels).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([mockChannel, mockChannel2]));
-        return JSON.stringify({ channels: [mockChannel, mockChannel2] });
+      mocks.listChannels.mockResolvedValue({
+        items: [mockChannel, mockChannel2], total: 2, limit: 0, offset: 0,
       });
       await act(async () => { await useChannelStore.getState().fetchChannels(); });
+      expect(mocks.listChannels).toHaveBeenCalledWith(orgSlug, { includeArchived: undefined });
       expect(getChannels()).toHaveLength(2);
       expect(getChannels()[0].name).toBe("general");
     });
 
     it("should pass filters to service", async () => {
-      vi.mocked(svc().fetch_channels).mockResolvedValue(JSON.stringify({ channels: [] }));
+      mocks.listChannels.mockResolvedValue({ items: [], total: 0, limit: 0, offset: 0 });
       await act(async () => { await useChannelStore.getState().fetchChannels({ includeArchived: true }); });
-      expect(svc().fetch_channels).toHaveBeenCalledWith(true);
+      expect(mocks.listChannels).toHaveBeenCalledWith(orgSlug, { includeArchived: true });
     });
 
     it("should handle fetch error", async () => {
-      vi.mocked(svc().fetch_channels).mockRejectedValue(new Error("Network error"));
+      mocks.listChannels.mockRejectedValue(new Error("Network error"));
       await act(async () => { await useChannelStore.getState().fetchChannels(); });
       expect(useChannelStore.getState().error).toBe("Network error");
     });
@@ -102,17 +114,14 @@ describe("Channel Store", () => {
 
   describe("fetchChannel", () => {
     it("should fetch single channel", async () => {
-      svc().set_channels(JSON.stringify([mockChannel]));
-      vi.mocked(svc().fetch_channel).mockImplementation(async () => {
-        svc().set_current_channel(BigInt(1));
-        return JSON.stringify(mockChannel);
-      });
+      seedChannels([mockChannel]);
+      mocks.getChannel.mockResolvedValue(mockChannel);
       await act(async () => { await useChannelStore.getState().fetchChannel(1); });
-      expect(getCurrentChannel()).toEqual(mockChannel);
+      expect(mocks.getChannel).toHaveBeenCalledWith(orgSlug, 1);
     });
 
     it("should handle error", async () => {
-      vi.mocked(svc().fetch_channel).mockRejectedValue({ message: "Channel not found" });
+      mocks.getChannel.mockRejectedValue({ message: "Channel not found" });
       await act(async () => { await useChannelStore.getState().fetchChannel(999); });
       expect(useChannelStore.getState().error).toBe("Channel not found");
     });
@@ -120,24 +129,28 @@ describe("Channel Store", () => {
 
   describe("createChannel", () => {
     it("should create and add to list", async () => {
-      vi.mocked(svc().create_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([mockChannel]));
-        return JSON.stringify(mockChannel);
-      });
+      mocks.createChannel.mockResolvedValue(mockChannel);
       let result: Channel;
-      await act(async () => { result = await useChannelStore.getState().createChannel({ name: "general", description: "General discussion channel" }); });
+      await act(async () => {
+        result = await useChannelStore.getState().createChannel({ name: "general", description: "General discussion channel" });
+      });
       expect(result!).toEqual(mockChannel);
       expect(getChannels()).toContainEqual(mockChannel);
     });
 
     it("should convert camelCase to snake_case", async () => {
-      vi.mocked(svc().create_channel).mockResolvedValue(JSON.stringify(mockChannel));
-      await act(async () => { await useChannelStore.getState().createChannel({ name: "test", repositoryId: 1, ticketSlug: "PROJ-2" }); });
-      expect(svc().create_channel).toHaveBeenCalledWith(JSON.stringify({ name: "test", description: undefined, document: undefined, repository_id: 1, ticket_slug: "PROJ-2" }));
+      mocks.createChannel.mockResolvedValue(mockChannel);
+      await act(async () => {
+        await useChannelStore.getState().createChannel({ name: "test", repositoryId: 1, ticketSlug: "PROJ-2" });
+      });
+      expect(mocks.createChannel).toHaveBeenCalledWith(orgSlug, {
+        name: "test", description: undefined, document: undefined,
+        repository_id: 1, ticket_slug: "PROJ-2", visibility: undefined, member_ids: undefined,
+      });
     });
 
     it("should handle error", async () => {
-      vi.mocked(svc().create_channel).mockRejectedValue(new Error("Create failed"));
+      mocks.createChannel.mockRejectedValue(new Error("Create failed"));
       await expect(act(async () => { await useChannelStore.getState().createChannel({ name: "test" }); })).rejects.toThrow("Create failed");
     });
   });
@@ -147,10 +160,7 @@ describe("Channel Store", () => {
 
     it("should update channel and currentChannel", async () => {
       const updated = { ...mockChannel, name: "updated" };
-      vi.mocked(svc().update_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([updated]));
-        return JSON.stringify(updated);
-      });
+      mocks.updateChannel.mockResolvedValue(updated);
       await act(async () => { await useChannelStore.getState().updateChannel(1, { name: "updated" }); });
       expect(getChannels()[0].name).toBe("updated");
       expect(getCurrentChannel()?.name).toBe("updated");
@@ -158,10 +168,7 @@ describe("Channel Store", () => {
 
     it("should not update currentChannel if different id", async () => {
       const updated = { ...mockChannel2, name: "updated-dev" };
-      vi.mocked(svc().update_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([mockChannel, updated]));
-        return JSON.stringify(updated);
-      });
+      mocks.updateChannel.mockResolvedValue(updated);
       seedChannels([mockChannel, mockChannel2], mockChannel);
       await act(async () => { await useChannelStore.getState().updateChannel(2, { name: "updated-dev" }); });
       expect(getCurrentChannel()?.name).toBe("general");
@@ -171,9 +178,7 @@ describe("Channel Store", () => {
   describe("archive/unarchive", () => {
     it("should archive", async () => {
       seedChannels([mockChannel], mockChannel);
-      vi.mocked(svc().archive_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([{ ...mockChannel, is_archived: true }]));
-      });
+      mocks.archiveChannel.mockResolvedValue("ok");
       await act(async () => { await useChannelStore.getState().archiveChannel(1); });
       expect(getChannels()[0].is_archived).toBe(true);
     });
@@ -181,9 +186,7 @@ describe("Channel Store", () => {
     it("should unarchive", async () => {
       const archived = { ...mockChannel, is_archived: true };
       seedChannels([archived], archived);
-      vi.mocked(svc().unarchive_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([{ ...mockChannel, is_archived: false }]));
-      });
+      mocks.unarchiveChannel.mockResolvedValue("ok");
       await act(async () => { await useChannelStore.getState().unarchiveChannel(1); });
       expect(getChannels()[0].is_archived).toBe(false);
     });
@@ -193,22 +196,20 @@ describe("Channel Store", () => {
     it("should join and refresh", async () => {
       seedChannels([mockChannel], mockChannel);
       const updated = { ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] };
-      vi.mocked(svc().join_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([updated]));
-        return JSON.stringify(updated);
-      });
+      mocks.joinChannelPod.mockResolvedValue(undefined);
+      mocks.getChannel.mockResolvedValue(updated);
       await act(async () => { await useChannelStore.getState().joinChannel(1, "pod-123"); });
+      expect(mocks.joinChannelPod).toHaveBeenCalledWith(orgSlug, 1, "pod-123");
       expect(getChannels()[0].pods).toHaveLength(1);
     });
 
     it("should leave and refresh", async () => {
       seedChannels([{ ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] }], mockChannel);
       const updated = { ...mockChannel, pods: [] };
-      vi.mocked(svc().leave_channel).mockImplementation(async () => {
-        svc().set_channels(JSON.stringify([updated]));
-        return JSON.stringify(updated);
-      });
+      mocks.leaveChannelPod.mockResolvedValue(undefined);
+      mocks.getChannel.mockResolvedValue(updated);
       await act(async () => { await useChannelStore.getState().leaveChannel(1, "pod-123"); });
+      expect(mocks.leaveChannelPod).toHaveBeenCalledWith(orgSlug, 1, "pod-123");
       expect(getChannels()[0].pods).toHaveLength(0);
     });
   });

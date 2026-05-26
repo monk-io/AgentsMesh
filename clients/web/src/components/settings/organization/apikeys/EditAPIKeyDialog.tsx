@@ -13,14 +13,21 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScopeSelector } from "./ScopeSelector";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
+import type { ApiKey } from "@/lib/api/facade/apikey";
 import type { TranslationFn } from "../GeneralSettings";
 
+interface UpdateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  isEnabled?: boolean;
+}
+
 interface EditAPIKeyDialogProps {
-  apiKey: APIKeyData;
+  apiKey: ApiKey;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (id: number, data: UpdateAPIKeyRequest) => Promise<void>;
+  onSave: (id: bigint, data: UpdateInput) => Promise<void>;
   t: TranslationFn;
 }
 
@@ -30,7 +37,7 @@ export function EditAPIKeyDialog({ apiKey, open, onOpenChange, onSave, t }: Edit
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(
     new Set(apiKey.scopes)
   );
-  const [isEnabled, setIsEnabled] = useState(apiKey.is_enabled);
+  const [isEnabled, setIsEnabled] = useState(apiKey.isEnabled);
   const [saving, setSaving] = useState(false);
 
   const toggleScope = (scope: string) => {
@@ -51,7 +58,7 @@ export function EditAPIKeyDialog({ apiKey, open, onOpenChange, onSave, t }: Edit
         name: name.trim(),
         description: description.trim() || undefined,
         scopes: Array.from(selectedScopes),
-        is_enabled: isEnabled,
+        isEnabled,
       });
       onOpenChange(false);
     } catch (err) {
@@ -67,12 +74,11 @@ export function EditAPIKeyDialog({ apiKey, open, onOpenChange, onSave, t }: Edit
         <DialogHeader>
           <DialogTitle>{t("settings.apiKeys.editDialog.title")}</DialogTitle>
           <DialogDescription>
-            <code className="bg-muted px-2 py-0.5 rounded text-xs">{apiKey.key_prefix}...</code>
+            <code className="bg-muted px-2 py-0.5 rounded text-xs">{apiKey.keyPrefix}...</code>
           </DialogDescription>
         </DialogHeader>
 
         <div className="px-6 py-4 space-y-4">
-          {/* Name */}
           <div>
             <label htmlFor="edit-apikey-name" className="block text-sm font-medium mb-2">
               {t("settings.apiKeys.createDialog.nameLabel")}
@@ -84,7 +90,6 @@ export function EditAPIKeyDialog({ apiKey, open, onOpenChange, onSave, t }: Edit
             />
           </div>
 
-          {/* Description */}
           <div>
             <label htmlFor="edit-apikey-description" className="block text-sm font-medium mb-2">
               {t("settings.apiKeys.createDialog.descriptionLabel")}
@@ -96,7 +101,6 @@ export function EditAPIKeyDialog({ apiKey, open, onOpenChange, onSave, t }: Edit
             />
           </div>
 
-          {/* Scopes */}
           <div>
             <label className="block text-sm font-medium mb-2">
               {t("settings.apiKeys.createDialog.scopesLabel")}
@@ -108,7 +112,6 @@ export function EditAPIKeyDialog({ apiKey, open, onOpenChange, onSave, t }: Edit
             />
           </div>
 
-          {/* Enabled Toggle */}
           <div className="flex items-center justify-between">
             <label htmlFor="edit-apikey-enabled" className="text-sm font-medium">
               {t("settings.apiKeys.enabled")}

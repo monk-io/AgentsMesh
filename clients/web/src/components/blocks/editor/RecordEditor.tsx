@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { Block, BlockTypeSpec, ColumnSpec, JSONMap } from "@/lib/api/blockstoreTypes";
+import type { Block, BlockTypeSpec, ColumnSpec, JSONMap } from "@/lib/viewModels/blockstore";
 import { computeColumn } from "@/lib/blockstore/computeColumn";
 
 import { NestChildren } from "../BlockRenderer";

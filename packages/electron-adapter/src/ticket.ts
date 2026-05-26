@@ -6,6 +6,7 @@ export class ElectronTicketService implements ITicketService {
   private _labelsCache = "[]";
   private _boardColumnsCache = "[]";
   private _currentTicketCache: string | null = null;
+  private _ticketPodsCache: Record<string, string> = {};
 
   tickets_json(): string { return this._ticketsCache; }
   labels_json(): string { return this._labelsCache; }
@@ -18,7 +19,7 @@ export class ElectronTicketService implements ITicketService {
     return t ? JSON.stringify(t) : null;
   }
 
-  filter_tickets_json(search: string, statusesJson: string, prioritiesJson: string, repoIdsJson: string): string {
+  filter_tickets_json(_search: string, _statusesJson: string, _prioritiesJson: string, _repoIdsJson: string): string {
     return this._ticketsCache;
   }
 
@@ -70,83 +71,107 @@ export class ElectronTicketService implements ITicketService {
     this._boardColumnsCache = JSON.stringify(cols);
   }
 
-  async fetch_tickets(status?: string | null, limit?: number | null, offset?: number | null): Promise<string> {
-    const result = await invoke<string>("ticketFetchTickets", status, limit, offset);
-    const parsed = JSON.parse(result);
-    this._ticketsCache = JSON.stringify(parsed.tickets ?? []);
-    return result;
-  }
-
-  async fetch_ticket(slug: string): Promise<string> {
-    const result = await invoke<string>("ticketFetchTicket", slug);
-    this._currentTicketCache = result;
-    return result;
-  }
-
-  async fetch_board(repositoryId?: bigint | null): Promise<string> {
-    const result = await invoke<string>("ticketFetchBoard", repositoryId ? Number(repositoryId) : null);
-    const parsed = JSON.parse(result) as { columns?: Array<{ tickets?: unknown[]; total_count?: number; count?: number }> };
-    const columns = (parsed.columns ?? []).map((c) => ({
-      ...c,
-      count: c.count ?? c.total_count ?? (c.tickets?.length ?? 0),
-    }));
-    this._boardColumnsCache = JSON.stringify(columns);
-    this._ticketsCache = JSON.stringify(columns.flatMap((c) => c.tickets ?? []));
-    return JSON.stringify({ ...parsed, columns });
-  }
-
-  async fetch_labels(repositoryId?: bigint | null): Promise<string> {
-    const result = await invoke<string>("ticketFetchLabels", repositoryId ? Number(repositoryId) : null);
-    const parsed = JSON.parse(result);
-    this._labelsCache = JSON.stringify(parsed.labels ?? []);
-    return result;
-  }
-
-  async create_ticket(json: string): Promise<string> {
-    const result = await invoke<string>("ticketCreateTicket", json);
-    this.add_ticket(result);
-    this._currentTicketCache = result;
-    return result;
-  }
-
-  async update_ticket(slug: string, json: string): Promise<string> {
-    const result = await invoke<string>("ticketUpdateTicket", slug, json);
-    this.update_ticket_local(slug, result);
-    this._currentTicketCache = result;
-    return result;
-  }
-
-  async update_ticket_status(slug: string, status: string): Promise<string> {
-    const result = await invoke<string>("ticketUpdateTicketStatus", slug, status);
-    this.update_ticket_status_local(slug, status);
-    return result;
-  }
-
-  async delete_ticket(slug: string): Promise<void> {
-    await invoke<void>("ticketDeleteTicket", slug);
-    this.remove_ticket(slug);
-  }
-
-  async create_label(name: string, color: string, repositoryId?: bigint | null): Promise<string> {
-    const result = await invoke<string>("ticketCreateLabel", name, color, repositoryId ? Number(repositoryId) : null);
-    this.add_label(result);
-    return result;
-  }
-
-  async delete_label(id: number): Promise<void> {
-    await invoke<void>("ticketDeleteLabel", id);
-    this.remove_label(id);
-  }
-
-  async get_sub_tickets(slug: string): Promise<string> {
-    return invoke<string>("ticketGetSubTickets", slug);
-  }
-
   async get_ticket_pods(slug: string, activeOnly?: boolean | null): Promise<string> {
-    return invoke<string>("ticketGetTicketPods", slug, activeOnly);
+    const result = await invoke<string>("ticketGetTicketPods", slug, activeOnly);
+    this._ticketPodsCache[slug] = result;
+    return result;
   }
 
-  async load_more_column(status: string, offset: number, limit: number): Promise<string> {
-    return invoke<string>("ticketLoadMoreColumn", status, offset, limit);
+  ticket_pods_json(slug: string): string {
+    const raw = this._ticketPodsCache[slug];
+    if (!raw) return "[]";
+    try {
+      const parsed = JSON.parse(raw) as { pods?: unknown[] };
+      return JSON.stringify(parsed.pods ?? []);
+    } catch {
+      return "[]";
+    }
+  }
+
+  // ─── Connect-RPC bridges (Uint8Array round-trip) ──────────────────
+
+  async list_tickets_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketListTicketsConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async get_ticket_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketGetTicketConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async create_ticket_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketCreateTicketConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async update_ticket_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketUpdateTicketConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async delete_ticket_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketDeleteTicketConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async update_ticket_status_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketUpdateTicketStatusConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async get_active_tickets_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketGetActiveTicketsConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async get_board_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketGetBoardConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async get_sub_tickets_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketGetSubTicketsConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async add_assignee_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketAddAssigneeConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async remove_assignee_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketRemoveAssigneeConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async list_labels_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketListLabelsConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async create_label_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketCreateLabelConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async update_label_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketUpdateLabelConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async delete_label_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketDeleteLabelConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async add_label_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketAddLabelConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  }
+
+  async remove_label_connect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>("ticketRemoveLabelConnect", Array.from(request));
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 }

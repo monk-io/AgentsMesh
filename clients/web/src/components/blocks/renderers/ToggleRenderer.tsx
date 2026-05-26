@@ -3,8 +3,8 @@
 import React from "react";
 import { ChevronRight } from "lucide-react";
 
-import type { Block } from "@/lib/api/blockstoreTypes";
-import { BLOCK_TYPE_PARAGRAPH } from "@/lib/api/blockstoreTypes";
+import type { Block } from "@/lib/viewModels/blockstore";
+import { BLOCK_TYPE_PARAGRAPH } from "@/lib/viewModels/blockstore";
 import { cn } from "@/lib/utils";
 
 import { NestChildren } from "../BlockRenderer";

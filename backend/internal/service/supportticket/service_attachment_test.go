@@ -40,6 +40,10 @@ func (m *mockStorage) Delete(_ context.Context, key string) error {
 	return m.deleteErr
 }
 
+func (m *mockStorage) Download(_ context.Context, _ string) (io.ReadCloser, int64, error) {
+	return io.NopCloser(strings.NewReader("")), 0, nil
+}
+
 func (m *mockStorage) GetURL(_ context.Context, _ string, _ time.Duration) (string, error) {
 	if m.getURLErr != nil {
 		return "", m.getURLErr

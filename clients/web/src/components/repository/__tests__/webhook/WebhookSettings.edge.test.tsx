@@ -52,7 +52,7 @@ describe("WebhookSettings - Edge Cases", () => {
       needs_manual_setup: false,
     };
 
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: statusWithNoEvents }));
+    mockGetWebhookStatus.mockResolvedValue(statusWithNoEvents);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -70,7 +70,7 @@ describe("WebhookSettings - Edge Cases", () => {
       needs_manual_setup: false,
     };
 
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: statusWithUndefinedEvents }));
+    mockGetWebhookStatus.mockResolvedValue(statusWithUndefinedEvents);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -89,7 +89,7 @@ describe("WebhookSettings - Edge Cases", () => {
       needs_manual_setup: false,
     };
 
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: inactiveStatus }));
+    mockGetWebhookStatus.mockResolvedValue(inactiveStatus);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -108,8 +108,8 @@ describe("WebhookSettings - Edge Cases", () => {
       events: ["merge_request", "pipeline"],
     };
 
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: manualSetupStatus }));
-    mockGetWebhookSecret.mockResolvedValue(JSON.stringify(secretResponse));
+    mockGetWebhookStatus.mockResolvedValue(manualSetupStatus);
+    mockGetWebhookSecret.mockResolvedValue(secretResponse);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -134,10 +134,13 @@ describe("WebhookSettings - Edge Cases", () => {
       resolveRegister = resolve;
     });
 
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
+    mockGetWebhookStatus.mockResolvedValue(registeredStatus);
     mockRegisterWebhook.mockImplementation(() => {
-      return registerPromise.then(() => JSON.stringify({
-        result: { repo_id: 1, registered: true, webhook_id: "wh_new" },
+      return registerPromise.then(() => ({
+        repo_id: 1,
+        registered: true,
+        webhook_id: "wh_new",
+        needs_manual_setup: false,
       }));
     });
 

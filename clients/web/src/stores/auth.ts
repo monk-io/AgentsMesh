@@ -43,7 +43,10 @@ interface AuthState {
   switchOrg: (slug: string) => void;
   refreshSession: () => Promise<void>;
 
-  // Callers MUST await — Electron IPC round-trip to Rust SSOT (v0.31.x OAuth deep-link bug).
+  // setAuth / setOrganizations / logout return Promise: on Electron the
+  // underlying adapter awaits an IPC round-trip to the Rust SSOT. Callers
+  // MUST await — fire-and-forget leaves the main process without the token
+  // (the v0.31.x OAuth deep-link bug). Wasm path resolves synchronously.
   setAuth: (token: string, user: User, refreshToken?: string) => Promise<void>;
   setOrganizations: (orgs: Organization[]) => Promise<void>;
   setCurrentOrg: (org: Organization) => Promise<void>;
@@ -55,6 +58,10 @@ interface AuthState {
 
 const mgr = () => getAuthManager();
 const bump = () => useAuthStore.setState((s) => ({ _tick: s._tick + 1 }));
+
+// Selector helpers: Rust is SSOT — these read from AuthManager on every tick.
+// ApiClient shares AuthManager's token store (Plan I6), so token writes
+// propagate without TS-side `client.set_token()` synchronization.
 
 function parseJson<T>(raw: unknown): T | null {
   if (raw == null) return null;
@@ -123,7 +130,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       const json = await mgr().bootstrap();
       result = JSON.parse(json) as BootstrapResult;
     } catch (e) {
-      console.warn("auth bootstrap failed:", getErrorMessage(e));
+      // Bootstrap call itself failed (network down before any storage hit).
+      // Treat as anonymous; storage is untouched so retry on reload is safe.
+      console.warn("auth bootstrap failed:", getErrorMessage(e, "bootstrap"));
       result = { kind: "anonymous" };
     }
     if (result.kind === "anonymous_after_cleanup") {
@@ -188,17 +197,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setCurrentOrg: async (org) => {
+    // Guard against same-org re-set: DashboardShell/OrgLayout both call this
+    // on every mount/hydrate to mirror the URL slug into Rust SSOT. A same-org
+    // call must be a no-op — otherwise it wipes workspace panes that
+    // /workspace?pod=<key> just added via addPane, leaving the user with an
+    // empty workspace on deep-link navigation.
+    const previousSlug = readCurrentOrg()?.slug;
     try { await mgr().set_current_org(JSON.stringify(org)); } catch { /* noop */ }
-    try {
-      useWorkspaceStore.getState().clearAllPanes();
-      useWorkspaceStore.persist.clearStorage?.();
-    } catch { /* noop */ }
-    resetOrgScopedServices();
+    if (previousSlug !== org.slug) {
+      try {
+        useWorkspaceStore.getState().clearAllPanes();
+        useWorkspaceStore.persist.clearStorage?.();
+      } catch { /* noop */ }
+      resetOrgScopedServices();
+    }
     bump();
   },
 
   logout: async () => {
+    // Sync local cleanup first — guarantees post-call state is logged-out
+    // even if the network POST below fails or hangs.
     try { await mgr().clear_session(); } catch { /* noop */ }
+    // Best-effort API logout (informs server, doesn't block UI).
     try { mgr().logout().catch(() => {}); } catch { /* noop */ }
     set({ error: null });
     bump();

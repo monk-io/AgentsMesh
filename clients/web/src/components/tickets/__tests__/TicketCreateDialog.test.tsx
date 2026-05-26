@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@/test/test-utils";
-import { getTicketService } from "@/lib/wasm-core";
+import * as ticketConnect from "@/lib/api/facade/ticketConnect";
 
 // Mock useBreakpoint
 const mockUseBreakpoint = vi.fn();
@@ -12,6 +12,10 @@ vi.mock("@/lib/wasm-getters", async () => {
   const wasmCore = await vi.importMock<typeof import("@/lib/wasm-core")>("@/lib/wasm-core");
   return { ...wasmCore };
 });
+
+vi.mock("@/lib/api/facade/ticketConnect", () => ({
+  createTicket: vi.fn(),
+}));
 
 // Mock BlockEditor (lazy loaded)
 vi.mock("@/components/ui/block-editor", () => ({
@@ -87,9 +91,15 @@ describe("TicketCreateDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setDesktop();
-    vi.mocked(getTicketService().create_ticket).mockResolvedValue(
-      JSON.stringify({ id: 1, slug: "TICKET-1" })
-    );
+    vi.mocked(ticketConnect.createTicket).mockResolvedValue({
+      id: 1,
+      number: 1,
+      slug: "TICKET-1",
+      title: "Test Ticket",
+      content: "",
+      status: "todo" as const,
+      priority: "medium" as const,
+    });
   });
 
   describe("Rendering", () => {
@@ -140,7 +150,7 @@ describe("TicketCreateDialog", () => {
       await waitFor(() => {
         expect(screen.getByText("Title is required")).toBeInTheDocument();
       });
-      expect(getTicketService().create_ticket).not.toHaveBeenCalled();
+      expect(ticketConnect.createTicket).not.toHaveBeenCalled();
     });
 
     it("shows error when submitting without repository", async () => {
@@ -159,7 +169,7 @@ describe("TicketCreateDialog", () => {
           screen.getByText("Repository is required")
         ).toBeInTheDocument();
       });
-      expect(getTicketService().create_ticket).not.toHaveBeenCalled();
+      expect(ticketConnect.createTicket).not.toHaveBeenCalled();
     });
 
     it("clears error when user starts typing", async () => {
@@ -197,12 +207,12 @@ describe("TicketCreateDialog", () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(getTicketService().create_ticket).toHaveBeenCalledTimes(1);
+        expect(ticketConnect.createTicket).toHaveBeenCalledTimes(1);
       });
 
-      const rawArg = vi.mocked(getTicketService().create_ticket).mock.calls[0][0];
-      const parsed = JSON.parse(rawArg);
-      expect(parsed).toEqual(
+      const callArgs = vi.mocked(ticketConnect.createTicket).mock.calls[0];
+      const input = callArgs[1];
+      expect(input).toEqual(
         expect.objectContaining({
           title: "Test Ticket",
           repository_id: 1,
@@ -246,12 +256,12 @@ describe("TicketCreateDialog", () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(getTicketService().create_ticket).toHaveBeenCalledTimes(1);
+        expect(ticketConnect.createTicket).toHaveBeenCalledTimes(1);
       });
 
-      const rawArg = vi.mocked(getTicketService().create_ticket).mock.calls[0][0];
-      const parsed = JSON.parse(rawArg);
-      expect(parsed).toEqual(
+      const callArgs = vi.mocked(ticketConnect.createTicket).mock.calls[0];
+      const input = callArgs[1];
+      expect(input).toEqual(
         expect.objectContaining({
           title: "Sub-task",
           parent_ticket_slug: "PROJ-42",
@@ -260,7 +270,7 @@ describe("TicketCreateDialog", () => {
     });
 
     it("shows error message on API failure", async () => {
-      vi.mocked(getTicketService().create_ticket).mockRejectedValue(
+      vi.mocked(ticketConnect.createTicket).mockRejectedValue(
         new Error("Network error")
       );
 

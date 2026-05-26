@@ -2,15 +2,24 @@ import { invoke } from "./invoke";
 import type { IPromoCodeService } from "@agentsmesh/service-interface";
 
 export class ElectronPromoCodeService implements IPromoCodeService {
-  async validate(json: string): Promise<string> {
-    return invoke<string>("promocodeValidate", json);
+  async validatePromoCodeConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "promocodeValidatePromoCodeConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async redeem(json: string): Promise<void> {
-    await invoke<void>("promocodeRedeem", json);
+  async redeemPromoCodeConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "promocodeRedeemPromoCodeConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 
-  async get_history(): Promise<string> {
-    return invoke<string>("promocodeGetHistory");
+  async getRedemptionHistoryConnect(request: Uint8Array): Promise<Uint8Array> {
+    const bytes = await invoke<number[] | Uint8Array>(
+      "promocodeGetRedemptionHistoryConnect", Array.from(request),
+    );
+    return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   }
 }

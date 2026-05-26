@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { OrganizationData } from "@/lib/api/organization";
+import type { OrganizationData } from "@/lib/api/facade/organization";
 
 interface AuthFormProps {
   isAuthenticated: boolean;

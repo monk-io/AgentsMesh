@@ -54,6 +54,21 @@ func (s *S3Storage) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (s *S3Storage) Download(ctx context.Context, key string) (io.ReadCloser, int64, error) {
+	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get object %s: %w", key, err)
+	}
+	size := int64(-1)
+	if out.ContentLength != nil {
+		size = *out.ContentLength
+	}
+	return out.Body, size, nil
+}
+
 func (s *S3Storage) GetURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
 	presigner := s.presign
 	if s.publicPresign != nil {

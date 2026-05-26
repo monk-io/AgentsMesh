@@ -45,48 +45,8 @@ impl WasmRunnerService {
 
     pub fn remove_runner_local(&self, id: i64) { self.0.remove_runner_local(id); }
 
-    pub async fn fetch_runners(&self, status: Option<String>) -> Result<String, String> {
-        self.0.fetch_runners(status).await
-    }
-
-    pub async fn fetch_available_runners(&self) -> Result<String, String> {
-        self.0.fetch_available_runners().await
-    }
-
-    pub async fn fetch_runner(&self, id: i64) -> Result<String, String> {
-        self.0.fetch_runner(id).await
-    }
-
     pub async fn update_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
         self.0.update_runner(id, request_json).await
-    }
-
-    pub async fn delete_runner(&self, id: i64) -> Result<(), String> {
-        self.0.delete_runner(id).await
-    }
-
-    pub async fn create_token(&self, request_json: &str) -> Result<String, String> {
-        self.0.create_token(request_json).await
-    }
-
-    pub async fn fetch_tokens(&self) -> Result<String, String> {
-        self.0.fetch_tokens().await
-    }
-
-    pub async fn delete_token(&self, id: i64) -> Result<(), String> {
-        self.0.delete_token(id).await
-    }
-
-    pub async fn list_runner_logs(&self, id: i64) -> Result<String, String> {
-        self.0.list_runner_logs(id).await
-    }
-
-    pub async fn request_log_upload(&self, id: i64) -> Result<(), String> {
-        self.0.request_log_upload(id).await
-    }
-
-    pub async fn upgrade_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
-        self.0.upgrade_runner(id, request_json).await
     }
 
     pub async fn list_runner_pods(
@@ -95,15 +55,81 @@ impl WasmRunnerService {
         self.0.list_runner_pods(id, status, limit, offset).await
     }
 
-    pub async fn query_runner_sandboxes(&self, id: i64, request_json: &str) -> Result<String, String> {
-        self.0.query_runner_sandboxes(id, request_json).await
-    }
-
     pub async fn get_auth_status(&self, auth_key: &str) -> Result<String, String> {
         self.0.get_auth_status(auth_key).await
     }
 
     pub async fn authorize_runner(&self, request_json: &str) -> Result<String, String> {
         self.0.authorize_runner(request_json).await
+    }
+
+    // -------- Connect-RPC (binary wire) --------
+    //
+    // TS encodes the request via @bufbuild/protobuf .toBinary(), passes the
+    // Uint8Array in, receives a Uint8Array back, decodes via .fromBinary().
+    // No JSON intermediate; conventions §2.5 forbids it on the client.
+    //
+    // js_name is camelCase to match the existing JS-side conventions; the
+    // `_connect` suffix marks the migration lane so the legacy JSON methods
+    // can coexist until all 26 services flip.
+
+    #[wasm_bindgen(js_name = listRunnersConnect)]
+    pub async fn list_runners_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_runners_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listAvailableRunnersConnect)]
+    pub async fn list_available_runners_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_available_runners_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = getRunnerConnect)]
+    pub async fn get_runner_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_runner_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = updateRunnerConnect)]
+    pub async fn update_runner_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.update_runner_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = deleteRunnerConnect)]
+    pub async fn delete_runner_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_runner_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = upgradeRunnerConnect)]
+    pub async fn upgrade_runner_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.upgrade_runner_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = requestLogUploadConnect)]
+    pub async fn request_log_upload_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.request_log_upload_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listRunnerLogsConnect)]
+    pub async fn list_runner_logs_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_runner_logs_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = querySandboxesConnect)]
+    pub async fn query_sandboxes_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.query_sandboxes_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = createRunnerTokenConnect)]
+    pub async fn create_runner_token_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.create_runner_token_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = listRunnerTokensConnect)]
+    pub async fn list_runner_tokens_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.list_runner_tokens_connect(request).await
+    }
+
+    #[wasm_bindgen(js_name = deleteRunnerTokenConnect)]
+    pub async fn delete_runner_token_connect(&self, request: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.delete_runner_token_connect(request).await
     }
 }

@@ -4,7 +4,9 @@ import {
   AgentData,
   RepositoryData,
 } from "@/lib/api";
-import { getRunnerService, getAgentService } from "@/lib/wasm-core";
+import { listRunners } from "@/lib/api/facade/runnerConnect";
+import { listAgents } from "@/lib/api/facade/agentConnect";
+import { readCurrentOrg } from "@/stores/auth";
 import { useRepositories, useRepositoryStore } from "@/stores/repository";
 
 export interface PodCreationData {
@@ -40,21 +42,22 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
       setLoading(true);
       setError(null);
       try {
+        const orgSlug = readCurrentOrg()?.slug ?? "";
         const [runnersRes, agentsRes] = await Promise.allSettled([
-          getRunnerService().fetch_runners(null).then((j: string) => JSON.parse(j)),
-          getAgentService().list_agents().then((j: string) => JSON.parse(j)),
+          listRunners(orgSlug),
+          listAgents(orgSlug),
         ]);
 
         if (cancelled) return;
 
         if (runnersRes.status === "fulfilled") {
-          const allRunners: RunnerData[] = runnersRes.value.runners || [];
+          const allRunners: RunnerData[] = runnersRes.value.items;
           const onlineRunners = allRunners.filter((r: RunnerData) => r.status === "online");
           setRunners(onlineRunners);
         }
         if (agentsRes.status === "fulfilled") {
           const res = agentsRes.value;
-          const agentList = [...(res.builtin_agents || []), ...(res.custom_agents || []), ...(res.agents || [])];
+          const agentList = [...res.builtin_agents, ...res.custom_agents, ...res.agents];
           setAgents(agentList);
         }
       } catch (err) {

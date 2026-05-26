@@ -14,9 +14,9 @@ import {
 import { MessageList } from "@/components/support/message-list";
 import {
   addSupportTicketMessage,
-} from "@/lib/api/support-ticket";
-import type { SupportTicketDetail } from "@/lib/api/supportTicketTypes";
-import { getSupportTicketService } from "@/lib/wasm-core";
+} from "@/lib/api/facade/support-ticket";
+import type { SupportTicketDetail } from "@/lib/api/connect/supportTicketConnect";
+import { getSupportTicketDetail } from "@/lib/api/connect/supportTicketConnect";
 
 export default function SupportTicketDetailPage() {
   const params = useParams();
@@ -37,9 +37,7 @@ export default function SupportTicketDetailPage() {
 
   const fetchDetail = useCallback(async () => {
     try {
-      const result: SupportTicketDetail = JSON.parse(
-        await getSupportTicketService().get_detail(BigInt(ticketId))
-      );
+      const result: SupportTicketDetail = await getSupportTicketDetail(ticketId);
       setData(result);
       setError(null);
     } catch {
@@ -160,7 +158,7 @@ export default function SupportTicketDetailPage() {
             <TicketCategoryBadge category={ticket.category} />
             <TicketPriorityBadge priority={ticket.priority} />
             <span className="text-xs text-muted-foreground">
-              #{ticket.id} · {new Date(ticket.created_at).toLocaleDateString()}
+              #{Number(ticket.id)} · {new Date(ticket.createdAt).toLocaleDateString()}
             </span>
           </div>
         </div>

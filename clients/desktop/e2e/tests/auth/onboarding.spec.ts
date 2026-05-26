@@ -28,9 +28,12 @@ test.describe("Desktop · onboarding personal workspace", () => {
     email = `desktop-onboard-${Date.now()}@test.local`;
     cleanupUser(email);
     const username = `desktoponboard${Date.now()}`;
-    const res = await fetch(`${getApiBaseUrl()}/api/v1/auth/register`, {
+    const res = await fetch(`${getApiBaseUrl()}/proto.auth.v1.AuthService/Register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Connect-Protocol-Version": "1",
+      },
       body: JSON.stringify({ email, username, password, name: "Desktop Onboard" }),
     });
     if (!res.ok) throw new Error(`register failed: ${res.status}`);
@@ -83,16 +86,26 @@ function cleanupUser(email: string): void {
 }
 
 async function fetchUserOrgs(email: string): Promise<Array<{ slug: string; id: number; name: string }>> {
-  const loginRes = await fetch(`${getApiBaseUrl()}/api/v1/auth/login`, {
+  const loginRes = await fetch(`${getApiBaseUrl()}/proto.auth.v1.AuthService/Login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
+    },
     body: JSON.stringify({ email, password: "TestPass123!" }),
   });
   if (!loginRes.ok) throw new Error(`login failed: ${loginRes.status}`);
   const { token } = await loginRes.json();
-  const orgsRes = await fetch(`${getApiBaseUrl()}/api/v1/orgs`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const orgsRes = await fetch(`${getApiBaseUrl()}/proto.org.v1.OrgService/ListMyOrgs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
+      Authorization: `Bearer ${token}`,
+    },
+    body: "{}",
   });
   const data = await orgsRes.json();
-  return data.organizations || [];
+  // ListMyOrgsResponse → { items: [...] }; legacy REST used { organizations: [...] }.
+  return data.items || data.organizations || [];
 }

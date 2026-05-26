@@ -8,7 +8,7 @@ import { MessageActions } from "./MessageActions";
 import { StructuredContent } from "./StructuredContent";
 import { extractMentionMap } from "./mention-map";
 import type { TransformedMessage } from "./types";
-import type { MessageEditPayload } from "@/lib/api/channel-message-types";
+import type { MessageEditPayload } from "@/lib/viewModels/channelMessage";
 
 interface MessageBubbleProps {
   message: TransformedMessage;

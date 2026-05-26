@@ -47,9 +47,14 @@ interface ApiClient {
 }
 
 async function login(): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+  // Connect-RPC JSON wire — see api.fixture.ts:16 for why we use
+  // application/json + Connect-Protocol-Version here.
+  const res = await fetch(`${API_BASE}/proto.auth.v1.AuthService/Login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
+    },
     body: JSON.stringify({ email: DEV_EMAIL, password: DEV_PASSWORD }),
   });
   if (!res.ok) throw new Error(`login failed: ${res.status}`);
@@ -77,13 +82,16 @@ function sharedEnsureWorkspace(token: string): Promise<string> {
 
 async function ensureWorkspace(token: string): Promise<string> {
   const res = await fetch(
-    `${API_BASE}/api/v1/orgs/${ORG_SLUG}/blocks/workspaces/default`,
+    `${API_BASE}/proto.blockstore.v1.BlockstoreService/EnsureDefaultWorkspace`,
     {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "X-Organization-Slug": ORG_SLUG,
+        "Content-Type": "application/json",
+        "Connect-Protocol-Version": "1",
       },
+      body: JSON.stringify({ orgSlug: ORG_SLUG }),
     },
   );
   if (!res.ok) throw new Error(`ensureWorkspace failed: ${res.status}`);
@@ -99,18 +107,19 @@ async function provisionIsolatedWorkspace(
   token: string,
 ): Promise<{ id: string; rootID: string }> {
   const slug = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const res = await fetch(`${API_BASE}/api/v1/orgs/${ORG_SLUG}/blocks/workspaces`, {
+  const res = await fetch(`${API_BASE}/proto.blockstore.v1.BlockstoreService/CreateWorkspace`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "X-Organization-Slug": ORG_SLUG,
       "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
     },
-    body: JSON.stringify({ slug, name: slug }),
+    body: JSON.stringify({ orgSlug: ORG_SLUG, slug, name: slug }),
   });
   if (!res.ok) throw new Error(`provisionIsolatedWorkspace failed: ${res.status}: ${await res.text()}`);
-  const json = (await res.json()) as { id: string; root_block_id: string };
-  return { id: json.id, rootID: json.root_block_id };
+  const json = (await res.json()) as { id: string; rootBlockId?: string; root_block_id?: string };
+  return { id: json.id, rootID: json.rootBlockId ?? json.root_block_id ?? "" };
 }
 
 // tearDownIsolatedWorkspace deletes the workspace + every row it owns via
@@ -120,12 +129,15 @@ async function provisionIsolatedWorkspace(
 // periodic resets still catch it.
 async function tearDownIsolatedWorkspace(token: string, wsID: string): Promise<void> {
   try {
-    await fetch(`${API_BASE}/api/v1/orgs/${ORG_SLUG}/blocks/workspaces/${wsID}`, {
-      method: "DELETE",
+    await fetch(`${API_BASE}/proto.blockstore.v1.BlockstoreService/DeleteWorkspace`, {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
         "X-Organization-Slug": ORG_SLUG,
+        "Content-Type": "application/json",
+        "Connect-Protocol-Version": "1",
       },
+      body: JSON.stringify({ orgSlug: ORG_SLUG, id: wsID }),
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -134,29 +146,72 @@ async function tearDownIsolatedWorkspace(token: string, wsID: string): Promise<v
 }
 
 function makeApi(token: string): ApiClient {
+  // Legacy ApiClient surface for blockstore specs that still use REST-shaped
+  // path-based calls. R5 removed the REST routes — this shim forwards the
+  // call to the corresponding Connect-RPC procedure. `path` must be one of
+  // the patterns the BlockstoreService exposes; other paths throw.
+  //
+  // New blockstore specs should call `api.connect()` (from the top-level
+  // fixture) and use the typed Connect client directly. This shim stays
+  // until those legacy specs migrate.
   const headers = {
     Authorization: `Bearer ${token}`,
-    "X-Organization-Slug": ORG_SLUG,
     "Content-Type": "application/json",
+    "Connect-Protocol-Version": "1",
   };
+  async function connectCall(rpc: string, body: unknown): Promise<unknown> {
+    const res = await fetch(`${API_BASE}/proto.blockstore.v1.BlockstoreService/${rpc}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      throw new Error(`${rpc} → ${res.status}: ${await res.text()}`);
+    }
+    return res.json();
+  }
   return {
     async post<T>(path: string, body: unknown): Promise<T> {
-      const res = await fetch(`${API_BASE}${path}`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body ?? {}),
-      });
-      if (!res.ok) {
-        throw new Error(`${path} → ${res.status}: ${await res.text()}`);
+      const b = (body ?? {}) as Record<string, unknown>;
+      // /blocks/ops → ApplyOps
+      if (path.endsWith("/blocks/ops")) {
+        const rawOps = (b.ops ?? []) as Array<Record<string, unknown>>;
+        const ops = rawOps.map((op) => ({
+          op: op.op,
+          payload_json:
+            typeof op.payload_json === "string"
+              ? op.payload_json
+              : JSON.stringify(op.payload ?? {}),
+        }));
+        return connectCall("ApplyOps", {
+          orgSlug: ORG_SLUG,
+          workspaceId: b.workspace_id ?? b.workspaceId,
+          ops,
+          idempotencyKey: b.idempotency_key ?? b.idempotencyKey,
+          parentOpId: b.parent_op_id ?? b.parentOpId,
+        }) as Promise<T>;
       }
-      return res.json() as Promise<T>;
+      // /blocks/workspaces (create) and /blocks/workspaces/default (ensure)
+      if (path.endsWith("/blocks/workspaces/default")) {
+        return connectCall("EnsureDefaultWorkspace", { orgSlug: ORG_SLUG }) as Promise<T>;
+      }
+      if (path.endsWith("/blocks/workspaces")) {
+        return connectCall("CreateWorkspace", { orgSlug: ORG_SLUG, ...(b as object) }) as Promise<T>;
+      }
+      throw new Error(`blockstore api.post: no Connect mapping for ${path}`);
     },
     async get<T>(path: string): Promise<T> {
-      const res = await fetch(`${API_BASE}${path}`, { headers });
-      if (!res.ok) {
-        throw new Error(`${path} → ${res.status}: ${await res.text()}`);
+      // /blocks/workspaces/{id}/subtree
+      const sub = path.match(/\/blocks\/workspaces\/([^/?]+)\/subtree/);
+      if (sub) {
+        return connectCall("GetSubtree", { orgSlug: ORG_SLUG, workspaceId: sub[1] }) as Promise<T>;
       }
-      return res.json() as Promise<T>;
+      // /blocks/workspaces/{id}/blocks/{block_id}
+      const blk = path.match(/\/blocks\/workspaces\/([^/?]+)\/blocks\/([^/?]+)/);
+      if (blk) {
+        return connectCall("GetBlock", { orgSlug: ORG_SLUG, workspaceId: blk[1], id: blk[2] }) as Promise<T>;
+      }
+      throw new Error(`blockstore api.get: no Connect mapping for ${path}`);
     },
   };
 }
@@ -168,11 +223,14 @@ function makeApi(token: string): ApiClient {
 // route.continue({url:…}) for cross-origin redirect — same-origin requests
 // blocked by the browser as ERR_BLOCKED_BY_CLIENT.
 async function installApiProxy(target: BrowserContext | Page): Promise<void> {
-  // Match /api/* but EXCLUDE the realtime WS endpoint. WS upgrades can't
-  // be handled by route.fulfill (no body), and Playwright's route.continue
-  // for WS is unreliable — letting the request pass through unintercepted
-  // is the only way to keep the in-page WebSocket constructor patch (below)
-  // in charge of redirecting the upgrade to the backend host.
+  // Routes only `/api/*` (legacy REST shape for /api/v1/files presign etc).
+  // `/proto.*` Connect-RPC calls are handled by Next.js dev rewrites
+  // (next.config.ts has a `has: Connect-Protocol-Version` rewrite to the
+  // backend) — proxying them through Playwright route.fulfill corrupts the
+  // application/proto binary body if `postData()` is used (it returns a
+  // UTF-8 string and silently mangles non-UTF-8 bytes). EXCLUDE the
+  // realtime WS endpoint (see below) — route.continue for WS upgrades is
+  // unreliable.
   await target.route(/\/api\/(?!.*\/ws\/).+/, async (route) => {
     const orig = route.request();
     const url = new URL(orig.url());
@@ -182,12 +240,20 @@ async function installApiProxy(target: BrowserContext | Page): Promise<void> {
     delete headers["origin"];
     delete headers["referer"];
     try {
+      // CRITICAL: use postDataBuffer() not postData() — wasm Connect-RPC
+      // sends application/proto binary bodies (Uint8Array); postData()
+      // returns a UTF-8 string and silently mangles non-UTF-8 bytes,
+      // producing "cannot parse invalid wire-format data" 400s on the
+      // backend and a stuck "Loading workspace…" in the UI.
+      const isReadOnly = ["GET", "HEAD"].includes(orig.method());
+      const rawBody = isReadOnly ? undefined : (orig.postDataBuffer() ?? undefined);
+      // Buffer<ArrayBufferLike> is not assignable to fetch BodyInit under TS5+;
+      // wrap as Uint8Array (concrete ArrayBuffer-backed) to satisfy the overload.
+      const body = rawBody ? new Uint8Array(rawBody) : undefined;
       const res = await fetch(upstream, {
         method: orig.method(),
         headers,
-        body: ["GET", "HEAD"].includes(orig.method())
-          ? undefined
-          : orig.postData() ?? undefined,
+        body,
       });
       const respHeaders: Record<string, string> = {};
       res.headers.forEach((v, k) => {
@@ -253,13 +319,24 @@ function urlSlug(url: string): string {
 }
 
 async function seedAuth(target: BrowserContext | Page, token: string): Promise<void> {
-  const me = await fetch(`${API_BASE}/api/v1/users/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+  // Connect-RPC JSON wire — see api.fixture.ts for the contract.
+  const connectHeaders = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "Connect-Protocol-Version": "1",
+  };
+  const me = await fetch(`${API_BASE}/proto.user.v1.UserService/GetMe`, {
+    method: "POST",
+    headers: connectHeaders,
+    body: "{}",
   }).then((r) => r.json());
-  const orgs = await fetch(`${API_BASE}/api/v1/orgs`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const orgs = await fetch(`${API_BASE}/proto.org.v1.OrgService/ListMyOrgs`, {
+    method: "POST",
+    headers: connectHeaders,
+    body: "{}",
   }).then((r) => r.json());
-  const current = (orgs.organizations ?? []).find((o: { slug: string }) => o.slug === ORG_SLUG);
+  const orgList = (orgs.items ?? orgs.organizations ?? []) as { slug: string }[];
+  const current = orgList.find((o) => o.slug === ORG_SLUG);
 
   // Page-side base_url is window.location.origin (the web port, not the API
   // port) — that's what wasm-core.ts feeds into `new WasmAuthManager(baseUrl)`.

@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import type { RepositoryProviderData } from "@/lib/api";
-import { getUserCredentialService } from "@/lib/wasm-core";
+import type { RepositoryProvider } from "@/lib/api/facade/userRepositoryProvider";
+import { updateRepositoryProvider } from "@/lib/api/facade/userRepositoryProvider";
 import { useTranslations } from "next-intl";
 
 interface EditProviderDialogProps {
-  provider: RepositoryProviderData;
+  provider: RepositoryProvider;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -17,9 +17,9 @@ interface EditProviderDialogProps {
 export function EditProviderDialog({ provider, onClose, onSuccess }: EditProviderDialogProps) {
   const t = useTranslations();
   const [name, setName] = useState(provider.name);
-  const [baseUrl, setBaseUrl] = useState(provider.base_url);
+  const [baseUrl, setBaseUrl] = useState(provider.baseUrl);
   const [botToken, setBotToken] = useState("");
-  const [isActive, setIsActive] = useState(provider.is_active);
+  const [isActive, setIsActive] = useState(provider.isActive);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,15 +28,12 @@ export function EditProviderDialog({ provider, onClose, onSuccess }: EditProvide
     setError(null);
 
     try {
-      await getUserCredentialService().update_repo_provider(
-        BigInt(provider.id),
-        JSON.stringify({
-          name: name || undefined,
-          base_url: baseUrl || undefined,
-          bot_token: botToken || undefined,
-          is_active: isActive,
-        })
-      );
+      await updateRepositoryProvider(Number(provider.id), {
+        name: name || undefined,
+        baseUrl: baseUrl || undefined,
+        botToken: botToken || undefined,
+        isActive,
+      });
       onSuccess();
     } catch (err) {
       console.error("Failed to update provider:", err);

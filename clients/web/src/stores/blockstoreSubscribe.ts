@@ -1,6 +1,6 @@
 import { reconnectRegistry } from "@/lib/realtime";
 import type { RealtimeEvent } from "@/lib/realtime";
-import type { BlockOp } from "@/lib/api/blockstoreTypes";
+import type { BlockOp } from "@/lib/viewModels/blockstore";
 import { getBlockstoreService } from "@/lib/wasm-core";
 import { useBlockstoreStore, readLastOpIds } from "./blockstore";
 

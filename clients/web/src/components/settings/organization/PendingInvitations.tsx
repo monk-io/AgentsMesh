@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import type { Invitation } from "@/lib/api/invitationTypes";
+import type { Invitation } from "@/lib/api/facade/invitationConnect";
 import type { TranslationFn } from "./GeneralSettings";
 
 interface PendingInvitationsProps {
@@ -22,8 +22,10 @@ export function PendingInvitations({
         {t("settings.members.pendingInvitations")}
       </h3>
       <div className="space-y-3">
-        {invitations.map((invitation) => (
-          <div key={invitation.id}
+        {invitations.map((invitation) => {
+          const id = Number(invitation.id);
+          return (
+          <div key={id}
             className="flex items-center justify-between p-4 border border-dashed border-border rounded-lg">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center text-sm font-medium text-muted-foreground">
@@ -40,24 +42,25 @@ export function PendingInvitations({
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {t("settings.members.pendingExpires", { date: formatExpiryDate(invitation.expires_at) })}
+                  {t("settings.members.pendingExpires", { date: formatExpiryDate(invitation.expiresAt) })}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => onResend(invitation.id)}
-                disabled={resendingId === invitation.id}>
-                {resendingId === invitation.id
+              <Button variant="ghost" size="sm" onClick={() => onResend(id)}
+                disabled={resendingId === id}>
+                {resendingId === id
                   ? t("settings.members.resending")
                   : t("settings.members.resend")}
               </Button>
               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
-                onClick={() => onRevoke(invitation.id)}>
+                onClick={() => onRevoke(id)}>
                 {t("settings.members.revoke")}
               </Button>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

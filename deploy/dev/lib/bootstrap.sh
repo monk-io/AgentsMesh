@@ -84,19 +84,27 @@ init_seed() {
         "SELECT COUNT(*) FROM users WHERE email = 'dev@agentsmesh.local'" 2>/dev/null | tr -d ' ')
 
     if [[ "$user_exists" -gt 0 ]]; then
-        info "Seed 数据已存在，跳过"
-        return 0
+        info "Seed 数据已存在，跳过基础 seed"
+    else
+        info "初始化 seed 数据..."
+        docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$SEED_FILE" &>/dev/null
+
+        if [[ -f "$LEMONSQUEEZY_SEED_FILE" ]]; then
+            info "配置 LemonSqueezy Variant IDs..."
+            docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$LEMONSQUEEZY_SEED_FILE" &>/dev/null
+        fi
+        success "基础 seed 数据初始化完成"
     fi
 
-    info "初始化 seed 数据..."
-    docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$SEED_FILE" &>/dev/null
-
-    if [[ -f "$LEMONSQUEEZY_SEED_FILE" ]]; then
-        info "配置 LemonSqueezy Variant IDs..."
-        docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$LEMONSQUEEZY_SEED_FILE" &>/dev/null
+    # e2e-echo mock agent — always apply (idempotent via ON CONFLICT DO
+    # UPDATE) so that test agentfile / scenario tweaks land on existing
+    # dev DBs without forcing a full reset. Production migrations never
+    # touch this row (see ADR 2026-05-26-test-fixture-isolation).
+    if [[ -f "$E2E_ECHO_SEED_FILE" ]]; then
+        info "初始化 e2e-echo 测试 agent seed..."
+        docker exec -i "$pg_container" psql -U agentsmesh -d agentsmesh < "$E2E_ECHO_SEED_FILE" &>/dev/null
+        success "e2e-echo seed 应用完成"
     fi
-
-    success "Seed 数据初始化完成"
 }
 
 # Gitea-side bootstrap: admin user + dev-org + 2 demo repos + register the

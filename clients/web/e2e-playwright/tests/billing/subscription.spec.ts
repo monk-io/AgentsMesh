@@ -1,8 +1,7 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-
-const BILLING = `/api/v1/orgs/${TEST_ORG_SLUG}/billing`;
 
 test.describe("Billing Subscription", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
@@ -11,10 +10,9 @@ test.describe("Billing Subscription", () => {
    * TC-SUB-001: Get subscription status
    */
   test("get subscription status", async ({ api }) => {
-    const res = await api.get(`${BILLING}/subscription`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.subscription || data.plan).toBeTruthy();
+    const cc = await api.connect();
+    const sub = await cc.billing.getSubscription({ orgSlug: TEST_ORG_SLUG }) as { id?: number };
+    expect(sub).toBeTruthy();
   });
 
   /**
@@ -24,7 +22,7 @@ test.describe("Billing Subscription", () => {
     await page.goto(
       `/${TEST_ORG_SLUG}/settings?scope=organization&tab=billing`
     );
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("load");
     const body = await page.textContent("body");
     expect(body).toMatch(/pro|free|enterprise|plan|订阅|方案/i);
   });
@@ -33,27 +31,32 @@ test.describe("Billing Subscription", () => {
    * TC-SUB-002: Get available plans
    */
   test("list available plans", async ({ api }) => {
-    const res = await api.get(`${BILLING}/plans`);
-    expect(res.status).toBe(200);
+    const cc = await api.connect();
+    const { items } = await cc.billing.listPlans({ orgSlug: TEST_ORG_SLUG }) as { items: unknown[] };
+    expect(Array.isArray(items)).toBe(true);
   });
 
   /**
    * TC-SUB-005: Reactivate subscription (may fail if not cancelled)
    */
   test("reactivate returns appropriate status", async ({ api }) => {
-    const res = await api.post(`${BILLING}/subscription/reactivate`, {});
-    // 200 if was cancelled, 400 if active — both are valid
-    expect([200, 400]).toContain(res.status);
+    const cc = await api.connect();
+    // 200 if was cancelled, 400 if active — both valid.
+    await cc.billing.reactivateSubscription({ orgSlug: TEST_ORG_SLUG }).catch((err: { status?: number }) => {
+      expect(err.status).toBe(400);
+    });
   });
 
   /**
    * TC-SUB-007: Auto-renew toggle
    */
   test("toggle auto-renew setting", async ({ api }) => {
-    const res = await api.put(`${BILLING}/subscription/auto-renew`, {
-      auto_renew: true,
+    const cc = await api.connect();
+    await cc.billing.updateAutoRenew({
+      orgSlug: TEST_ORG_SLUG,
+      autoRenew: true,
+    }).catch((err: { status?: number }) => {
+      expect([400, 404]).toContain(err.status);
     });
-    // May succeed or return error depending on plan
-    expect([200, 400, 404]).toContain(res.status);
   });
 });

@@ -1,7 +1,14 @@
+// proto.binding.v1.BindingService Connect-RPC bridge. Thin owner of the
+// shared ApiClient that forwards binary prost requests to the api-client
+// `*_connect` methods.
+
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_types::*;
+use agentsmesh_types::proto_binding_v1 as bp;
+use prost::Message;
+
+use crate::wire;
 
 pub struct BindingService {
     client: Arc<ApiClient>,
@@ -12,73 +19,67 @@ impl BindingService {
         Self { client }
     }
 
-    pub async fn request_binding(
-        &self, json: &str, pod_key: Option<String>,
-    ) -> Result<String, String> {
-        let req: CreateBindingRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .request_binding(&req, pod_key.as_deref())
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
+    pub(crate) fn client(&self) -> &ApiClient {
+        &self.client
     }
+}
 
-    pub async fn accept_binding(&self, json: &str) -> Result<String, String> {
-        let req: AcceptBindingRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client.accept_binding(&req).await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
+macro_rules! connect_bridge {
+    ($name:ident, $req:ident, $client_call:ident) => {
+        pub async fn $name(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+            let req = bp::$req::decode(request_bytes)
+                .map_err(|e| format!("decode {}: {e}", stringify!($req)))?;
+            let resp = self.client().$client_call(&req).await.map_err(wire)?;
+            Ok(resp.encode_to_vec())
+        }
+    };
+}
 
-    pub async fn reject_binding(&self, json: &str) -> Result<(), String> {
-        let req: RejectBindingRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        self.client.reject_binding(&req).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
-    pub async fn request_scopes(
-        &self, binding_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: RequestScopesBody = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .request_binding_scopes(binding_id, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn approve_scopes(
-        &self, binding_id: i64, json: &str,
-    ) -> Result<String, String> {
-        let req: ApproveScopesBody = serde_json::from_str(json).map_err(crate::wire)?;
-        let resp = self.client
-            .approve_binding_scopes(binding_id, &req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn unbind(&self, json: &str) -> Result<(), String> {
-        let req: UnbindRequest = serde_json::from_str(json).map_err(crate::wire)?;
-        self.client.unbind(&req).await.map_err(crate::wire)?;
-        Ok(())
-    }
-
-    pub async fn list_bindings(&self, status: Option<String>) -> Result<String, String> {
-        let resp = self.client
-            .list_bindings(status.as_deref())
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn get_pending_bindings(&self) -> Result<String, String> {
-        let resp = self.client.get_pending_bindings().await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn get_bound_pods(&self) -> Result<String, String> {
-        let resp = self.client.get_bound_pods().await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn check_binding(&self, target_pod: &str) -> Result<String, String> {
-        let resp = self.client.check_binding(target_pod).await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
+impl BindingService {
+    connect_bridge!(
+        request_binding_connect,
+        RequestBindingRequest,
+        request_binding_connect
+    );
+    connect_bridge!(
+        accept_binding_connect,
+        AcceptBindingRequest,
+        accept_binding_connect
+    );
+    connect_bridge!(
+        reject_binding_connect,
+        RejectBindingRequest,
+        reject_binding_connect
+    );
+    connect_bridge!(unbind_connect, UnbindRequest, unbind_connect);
+    connect_bridge!(
+        request_scopes_connect,
+        RequestScopesRequest,
+        request_binding_scopes_connect
+    );
+    connect_bridge!(
+        approve_scopes_connect,
+        ApproveScopesRequest,
+        approve_binding_scopes_connect
+    );
+    connect_bridge!(
+        list_bindings_connect,
+        ListBindingsRequest,
+        list_bindings_connect
+    );
+    connect_bridge!(
+        get_pending_bindings_connect,
+        GetPendingBindingsRequest,
+        get_pending_bindings_connect
+    );
+    connect_bridge!(
+        get_bound_pods_connect,
+        GetBoundPodsRequest,
+        get_bound_pods_connect
+    );
+    connect_bridge!(
+        check_binding_connect,
+        CheckBindingRequest,
+        check_binding_connect
+    );
 }

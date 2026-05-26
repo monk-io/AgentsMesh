@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useLoopStore } from "@/stores/loop";
 import { toast } from "sonner";
-import type { LoopData } from "@/lib/api/loopTypes";
+import type { LoopData } from "@/lib/viewModels/loop";
 
 /**
  * useLoopForm — owns every per-field useState for the LoopCreateDialog, plus
@@ -108,7 +108,12 @@ export function useLoopForm(args: {
   const [maxConcurrentRuns, setMaxConcurrentRuns] = useState(editLoop?.max_concurrent_runs || 1);
   const [maxRetainedRuns, setMaxRetainedRuns] = useState(editLoop?.max_retained_runs || 0);
 
-  // Sync form state when dialog opens or editLoop changes.
+  // Sync form state when the dialog opens. We deliberately depend on `open`
+  // only — `editLoop` reference can churn (useCurrentLoop returns a fresh
+  // JSON.parse on every store tick), and re-running this effect on every
+  // churn would clobber user edits (or the LoopCreateDialog reconcile that
+  // patches credential/runtime picks from `used_env_bundles` after bundles
+  // load). Capture the snapshot once at open time.
   useEffect(() => {
     if (!open) return;
     setName(editLoop?.name || "");
@@ -132,7 +137,8 @@ export function useLoopForm(args: {
     setMaxConcurrentRuns(editLoop?.max_concurrent_runs || 1);
     setMaxRetainedRuns(editLoop?.max_retained_runs || 0);
     setLoading(false);
-  }, [open, editLoop]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const submit = useCallback(
     async (configValues: Record<string, unknown>) => {

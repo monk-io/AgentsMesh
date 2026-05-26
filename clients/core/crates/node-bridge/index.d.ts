@@ -23,12 +23,6 @@ export declare class AppState {
   authSetOrganizations(orgsJson: string): void
   authSetCurrentOrg(orgJson: string): void
   authClearSession(): void
-  agentListAgents(): Promise<string>
-  agentGetConfigSchema(agentSlug: string): Promise<string>
-  agentListUserConfigs(): Promise<string>
-  agentGetUserConfig(agentSlug: string): Promise<string>
-  agentSetUserConfig(agentSlug: string, json: string): Promise<string>
-  agentDeleteUserConfig(agentSlug: string): Promise<void>
   agentGetAgentpodSettings(): Promise<string>
   agentUpdateAgentpodSettings(json: string): Promise<string>
   agentListProviders(): Promise<string>
@@ -42,11 +36,16 @@ export declare class AppState {
   apikeyUpdate(id: number, json: string): Promise<string>
   apikeyDelete(id: number): Promise<void>
   apikeyRevoke(id: number): Promise<void>
-  authApiRegister(json: string): Promise<string>
-  authApiVerifyEmail(token: string): Promise<string>
-  authApiResendVerification(email: string): Promise<string>
-  authApiForgotPassword(email: string): Promise<string>
-  authApiResetPassword(json: string): Promise<string>
+  authConnectLoginConnect(request: Array<number>): Promise<Array<number>>
+  authConnectRegisterConnect(request: Array<number>): Promise<Array<number>>
+  authConnectRefreshTokenConnect(request: Array<number>): Promise<Array<number>>
+  authConnectVerifyEmailConnect(request: Array<number>): Promise<Array<number>>
+  authConnectResendVerificationConnect(request: Array<number>): Promise<Array<number>>
+  authConnectForgotPasswordConnect(request: Array<number>): Promise<Array<number>>
+  authConnectResetPasswordConnect(request: Array<number>): Promise<Array<number>>
+  authConnectOauthRedirectConnect(request: Array<number>): Promise<Array<number>>
+  authConnectOauthCallbackConnect(request: Array<number>): Promise<Array<number>>
+  authConnectLogoutConnect(request: Array<number>): Promise<Array<number>>
   autopilotControllersJson(): Promise<string>
   autopilotCurrentControllerJson(): Promise<string>
   autopilotGetControllerByPodKeyJson(podKey: string): Promise<string>
@@ -190,6 +189,8 @@ export declare class AppState {
   extensionListRepoSkills(repoId: number, scope?: string | undefined | null): Promise<string>
   extensionInstallSkillFromMarket(repoId: number, json: string): Promise<string>
   extensionInstallSkillFromGithub(repoId: number, json: string): Promise<string>
+  extensionPresignSkillUploadConnect(request: Array<number>): Promise<Array<number>>
+  extensionInstallSkillFromUploadedFileConnect(request: Array<number>): Promise<Array<number>>
   extensionUpdateSkill(repoId: number, installId: number, json: string): Promise<string>
   extensionUninstallSkill(repoId: number, installId: number): Promise<void>
   extensionListRepoMcpServers(repoId: number, scope?: string | undefined | null): Promise<string>
@@ -197,19 +198,18 @@ export declare class AppState {
   extensionInstallCustomMcpServer(repoId: number, json: string): Promise<string>
   extensionUpdateMcpServer(repoId: number, installId: number, json: string): Promise<string>
   extensionUninstallMcpServer(repoId: number, installId: number): Promise<void>
-  extensionInstallSkillFromUpload(repoId: number, fileData: Array<number>, fileName: string, scope?: string | undefined | null): Promise<string>
   filePresignUpload(json: string): Promise<string>
   fileUploadFile(fileData: Array<number>, filename: string, contentType: string): Promise<string>
   grantList(resourceType: string, resourceId: string): Promise<string>
   grantCreate(resourceType: string, resourceId: string, userId: number): Promise<string>
   grantRevoke(resourceType: string, resourceId: string, grantId: number): Promise<void>
-  invitationList(): Promise<string>
-  invitationCreate(json: string): Promise<string>
-  invitationRevoke(id: number): Promise<void>
-  invitationResend(id: number): Promise<void>
-  invitationGetByToken(token: string): Promise<string>
-  invitationAccept(token: string): Promise<void>
-  invitationListPending(): Promise<string>
+  invitationListInvitationsConnect(request: Array<number>): Promise<Array<number>>
+  invitationCreateInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationRevokeInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationResendInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationAcceptInvitationConnect(request: Array<number>): Promise<Array<number>>
+  invitationListPendingInvitationsConnect(request: Array<number>): Promise<Array<number>>
+  invitationGetInvitationByTokenConnect(request: Array<number>): Promise<Array<number>>
   localRunnerBinaryPath(): Promise<string>
   localRunnerHostTarget(): Promise<string | null>
   localRunnerIsInstalled(): Promise<boolean>
@@ -336,11 +336,11 @@ export declare class AppState {
   runnerQueryRunnerSandboxes(id: number, requestJson: string): Promise<string>
   runnerGetAuthStatus(authKey: string): Promise<string>
   runnerAuthorizeRunner(requestJson: string): Promise<string>
-  supportTicketList(status?: string | undefined | null, page?: number | undefined | null, pageSize?: number | undefined | null): Promise<string>
-  supportTicketGetDetail(id: number): Promise<string>
-  supportTicketGetAttachmentUrl(id: number): Promise<string>
   supportTicketCreateTicket(title: string, category: string, content: string, priority: string | undefined | null, fileData: Array<Array<number>>, fileNames: Array<string>): Promise<string>
   supportTicketAddMessage(ticketId: number, content: string, fileData: Array<Array<number>>, fileNames: Array<string>): Promise<string>
+  supportTicketListSupportTicketsConnect(request: Array<number>): Promise<Array<number>>
+  supportTicketGetSupportTicketConnect(request: Array<number>): Promise<Array<number>>
+  supportTicketGetAttachmentUrlConnect(request: Array<number>): Promise<Array<number>>
   ticketTicketsJson(): Promise<string>
   ticketGetTicketBySlugJson(slug: string): Promise<string>
   ticketCurrentTicketJson(): Promise<string>
@@ -358,34 +358,43 @@ export declare class AppState {
   ticketSetLabels(json: string): Promise<void>
   ticketAddLabel(json: string): Promise<void>
   ticketRemoveLabel(id: number): Promise<void>
-  ticketFetchTickets(status?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  ticketFetchBoard(repositoryId?: number | undefined | null): Promise<string>
-  ticketLoadMoreColumn(status: string, offset: number, limit: number): Promise<string>
-  ticketFetchTicket(slug: string): Promise<string>
-  ticketCreateTicket(requestJson: string): Promise<string>
-  ticketUpdateTicket(slug: string, requestJson: string): Promise<string>
-  ticketDeleteTicket(slug: string): Promise<void>
-  ticketUpdateTicketStatus(slug: string, status: string): Promise<string>
-  ticketFetchLabels(repositoryId?: number | undefined | null): Promise<string>
-  ticketCreateLabel(name: string, color: string, repositoryId?: number | undefined | null): Promise<string>
-  ticketDeleteLabel(id: number): Promise<void>
+  ticketListTicketsConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketCreateTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketUpdateTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketDeleteTicketConnect(request: Array<number>): Promise<Array<number>>
+  ticketUpdateTicketStatusConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetActiveTicketsConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetBoardConnect(request: Array<number>): Promise<Array<number>>
+  ticketGetSubTicketsConnect(request: Array<number>): Promise<Array<number>>
+  ticketAddAssigneeConnect(request: Array<number>): Promise<Array<number>>
+  ticketRemoveAssigneeConnect(request: Array<number>): Promise<Array<number>>
+  ticketListLabelsConnect(request: Array<number>): Promise<Array<number>>
+  ticketCreateLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketUpdateLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketDeleteLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketAddLabelConnect(request: Array<number>): Promise<Array<number>>
+  ticketRemoveLabelConnect(request: Array<number>): Promise<Array<number>>
   ticketGetTicketPods(slug: string, activeOnly?: boolean | undefined | null): Promise<string>
   ticketTicketPodsJson(slug: string): Promise<string>
-  ticketGetSubTickets(slug: string): Promise<string>
-  ticketRelationsListRelations(slug: string): Promise<string>
-  ticketRelationsCreateRelation(slug: string, json: string): Promise<string>
-  ticketRelationsDeleteRelation(slug: string, relationId: number): Promise<void>
-  ticketRelationsListCommits(slug: string): Promise<string>
-  ticketRelationsLinkCommit(slug: string, json: string): Promise<string>
-  ticketRelationsUnlinkCommit(slug: string, commitId: number): Promise<void>
-  ticketRelationsListMergeRequests(slug: string): Promise<string>
-  ticketRelationsListComments(slug: string, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  ticketRelationsCreateComment(slug: string, json: string): Promise<string>
-  ticketRelationsUpdateComment(slug: string, commentId: number, json: string): Promise<string>
-  ticketRelationsDeleteComment(slug: string, commentId: number): Promise<void>
+  ticketRelationsListRelationsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsCreateRelationConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsDeleteRelationConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsListCommitsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsLinkCommitConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsUnlinkCommitConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsListMergeRequestsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsListCommentsConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsCreateCommentConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsUpdateCommentConnect(request: Array<number>): Promise<Array<number>>
+  ticketRelationsDeleteCommentConnect(request: Array<number>): Promise<Array<number>>
   tokenUsageGetDashboard(startTime?: string | undefined | null, endTime?: string | undefined | null, agentSlug?: string | undefined | null, userId?: number | undefined | null, model?: string | undefined | null, granularity?: string | undefined | null): Promise<string>
-  userGetMe(): Promise<string>
-  userGetOrganizations(): Promise<string>
+  userGetMeConnect(request: Array<number>): Promise<Array<number>>
+  userUpdateMeConnect(request: Array<number>): Promise<Array<number>>
+  userChangePasswordConnect(request: Array<number>): Promise<Array<number>>
+  userListIdentitiesConnect(request: Array<number>): Promise<Array<number>>
+  userDeleteIdentityConnect(request: Array<number>): Promise<Array<number>>
+  userSearchUsersConnect(request: Array<number>): Promise<Array<number>>
   userCredentialListGitCredentials(): Promise<string>
   userCredentialCreateGitCredential(json: string): Promise<string>
   userCredentialGetGitCredential(id: number): Promise<string>
@@ -409,6 +418,9 @@ export declare class AppState {
   userCredentialSetDefaultRepoProvider(id: number): Promise<void>
   userCredentialTestRepoProvider(id: number): Promise<void>
   userCredentialListProviderRepositories(id: number, page?: number | undefined | null, perPage?: number | undefined | null, search?: string | undefined | null): Promise<string>
-  ssoDiscover(email: string): Promise<string>
-  ssoLdapAuth(domain: string, json: string): Promise<string>
+  ssoDiscoverConnect(request: Array<number>): Promise<Array<number>>
+  ssoLdapAuthConnect(request: Array<number>): Promise<Array<number>>
+  promocodeValidatePromoCodeConnect(request: Array<number>): Promise<Array<number>>
+  promocodeRedeemPromoCodeConnect(request: Array<number>): Promise<Array<number>>
+  promocodeGetRedemptionHistoryConnect(request: Array<number>): Promise<Array<number>>
 }

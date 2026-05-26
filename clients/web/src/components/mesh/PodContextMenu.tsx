@@ -16,7 +16,7 @@ import {
   useConfirmDialog,
 } from "@/components/ui/confirm-dialog";
 import { RenameDialog } from "@/components/shared/RenameDialog";
-import { getPodService } from "@/lib/wasm-core";
+import { terminatePod } from "@/lib/api/facade/podConnect";
 import type { MeshNode } from "@/stores/mesh";
 import { useMeshStore } from "@/stores/mesh";
 import { usePodStore } from "@/stores/pod";
@@ -58,11 +58,11 @@ export default function PodContextMenu({ node, children }: PodContextMenuProps) 
       variant: "destructive",
     });
     if (confirmed) {
-      await getPodService().terminate_pod(node.pod_key);
+      await terminatePod(orgSlug, node.pod_key);
       removePaneByPodKey(node.pod_key);
       fetchTopology();
     }
-  }, [confirm, t, node.pod_key, removePaneByPodKey, fetchTopology]);
+  }, [confirm, t, node.pod_key, orgSlug, removePaneByPodKey, fetchTopology]);
 
   const handleRenameConfirm = useCallback(
     async (newName: string) => {

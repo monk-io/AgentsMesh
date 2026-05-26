@@ -28,13 +28,9 @@ pub struct AppState {
     mesh: Arc<Mutex<MeshService>>,
     billing: Arc<Mutex<BillingService>>,
     extension: Arc<Mutex<ExtensionService>>,
-    repository: Arc<Mutex<RepositoryService>>,
     invitation: Arc<Mutex<InvitationService>>,
-    grant: Arc<Mutex<GrantService>>,
     apikey: Arc<Mutex<ApiKeyService>>,
     binding: Arc<Mutex<BindingService>>,
-    message: Arc<Mutex<MessageService>>,
-    notification: Arc<Mutex<NotificationService>>,
     org: Arc<Mutex<OrgApiService>>,
     user: Arc<Mutex<UserApiService>>,
     user_credential: Arc<Mutex<UserCredentialService>>,
@@ -43,8 +39,8 @@ pub struct AppState {
     file: Arc<Mutex<FileService>>,
     support_ticket: Arc<Mutex<SupportTicketService>>,
     ticket_relations: Arc<Mutex<TicketRelationsService>>,
-    token_usage: Arc<Mutex<TokenUsageService>>,
-    auth_api: Arc<Mutex<AuthApiService>>,
+    auth_connect: Arc<Mutex<AuthConnectService>>,
+    promocode: Arc<Mutex<PromoCodeService>>,
     blockstore: Arc<Mutex<BlockstoreService>>,
     sso: Arc<Mutex<SSOService>>,
     local_runner: Arc<LocalRunnerManager>,
@@ -73,13 +69,9 @@ impl AppState {
             mesh: Arc::new(Mutex::new(MeshService::new(c.clone(), mesh_state::MeshState::new()))),
             billing: Arc::new(Mutex::new(BillingService::new(c.clone()))),
             extension: Arc::new(Mutex::new(ExtensionService::new(c.clone()))),
-            repository: Arc::new(Mutex::new(RepositoryService::new(c.clone()))),
             invitation: Arc::new(Mutex::new(InvitationService::new(c.clone()))),
-            grant: Arc::new(Mutex::new(GrantService::new(c.clone()))),
             apikey: Arc::new(Mutex::new(ApiKeyService::new(c.clone()))),
             binding: Arc::new(Mutex::new(BindingService::new(c.clone()))),
-            message: Arc::new(Mutex::new(MessageService::new(c.clone()))),
-            notification: Arc::new(Mutex::new(NotificationService::new(c.clone()))),
             org: Arc::new(Mutex::new(OrgApiService::new(c.clone()))),
             user: Arc::new(Mutex::new(UserApiService::new(c.clone()))),
             user_credential: Arc::new(Mutex::new(UserCredentialService::new(c.clone()))),
@@ -88,8 +80,8 @@ impl AppState {
             file: Arc::new(Mutex::new(FileService::new(c.clone()))),
             support_ticket: Arc::new(Mutex::new(SupportTicketService::new(c.clone()))),
             ticket_relations: Arc::new(Mutex::new(TicketRelationsService::new(c.clone()))),
-            token_usage: Arc::new(Mutex::new(TokenUsageService::new(c.clone()))),
-            auth_api: Arc::new(Mutex::new(AuthApiService::new(c.clone()))),
+            auth_connect: Arc::new(Mutex::new(AuthConnectService::new(c.clone()))),
+            promocode: Arc::new(Mutex::new(PromoCodeService::new(c.clone()))),
             blockstore: Arc::new(Mutex::new(BlockstoreService::new(
                 c.clone(),
                 blockstore_state::BlockstoreState::new(),
@@ -98,56 +90,6 @@ impl AppState {
             local_runner,
             client: c,
         })
-    }
-
-    #[napi]
-    pub async fn api_get(&self, endpoint: String) -> napi::Result<String> {
-        let v: serde_json::Value = self.client.get(&endpoint).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_post(&self, endpoint: String, body: String) -> napi::Result<String> {
-        let payload: serde_json::Value = if body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::from_str(&body).map_err(err)?
-        };
-        let v: serde_json::Value = self.client.post(&endpoint, &payload).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_put(&self, endpoint: String, body: String) -> napi::Result<String> {
-        let payload: serde_json::Value = if body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::from_str(&body).map_err(err)?
-        };
-        let v: serde_json::Value = self.client.put(&endpoint, &payload).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_patch(&self, endpoint: String, body: String) -> napi::Result<String> {
-        let payload: serde_json::Value = if body.is_empty() {
-            serde_json::Value::Null
-        } else {
-            serde_json::from_str(&body).map_err(err)?
-        };
-        let v: serde_json::Value = self.client.patch(&endpoint, &payload).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub async fn api_delete(&self, endpoint: String) -> napi::Result<String> {
-        let v: serde_json::Value = self.client.delete(&endpoint).await.map_err(err)?;
-        serde_json::to_string(&v).map_err(err)
-    }
-
-    #[napi]
-    pub fn api_org_path(&self, path: String) -> String {
-        self.client.org_path(&path)
     }
 
     #[napi]
@@ -216,14 +158,14 @@ impl AppState {
 
     #[napi]
     pub fn auth_apply_session(&self, session_json: String) -> napi::Result<()> {
-        let session: agentsmesh_types::AuthSession = serde_json::from_str(&session_json).map_err(err)?;
+        let session: agentsmesh_state::auth_types::AuthSession = serde_json::from_str(&session_json).map_err(err)?;
         self.auth.apply_session(&session);
         Ok(())
     }
 
     #[napi]
     pub fn auth_set_organizations(&self, orgs_json: String) -> napi::Result<()> {
-        let orgs: Vec<agentsmesh_types::Organization> = serde_json::from_str(&orgs_json).map_err(err)?;
+        let orgs: Vec<agentsmesh_state::auth_types::Organization> = serde_json::from_str(&orgs_json).map_err(err)?;
         self.auth.replace_organizations(orgs);
         Ok(())
     }
@@ -233,7 +175,7 @@ impl AppState {
         if org_json.is_empty() {
             self.auth.set_current_org(None);
         } else {
-            let org: agentsmesh_types::Organization = serde_json::from_str(&org_json).map_err(err)?;
+            let org: agentsmesh_state::auth_types::Organization = serde_json::from_str(&org_json).map_err(err)?;
             self.auth.set_current_org(Some(org));
         }
         Ok(())

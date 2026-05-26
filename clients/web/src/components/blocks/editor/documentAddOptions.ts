@@ -29,7 +29,7 @@ import {
   BLOCK_TYPE_VIEW,
   type BlockTypeSpec,
   type ViewLayout,
-} from "@/lib/api/blockstoreTypes";
+} from "@/lib/viewModels/blockstore";
 
 import {
   CHART_SUB_TYPES,

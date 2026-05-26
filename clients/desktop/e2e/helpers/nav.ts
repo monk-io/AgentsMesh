@@ -26,15 +26,27 @@ export async function gotoHash(page: Page, path: string): Promise<void> {
       { timeout: 10_000 },
     );
   } catch {
-    // Retry: some routes race with store hydration and bounce to /workspace
-    // on cold navigate. Re-setting the hash after a small delay gives the
-    // dashboard shell time to accept the target route.
-    await page.waitForTimeout(500);
-    await setOnce();
+    // Retry loop: dashboard routes can bounce back to /workspace on cold
+    // boot when the Connect-RPC adapters race with the route guard. Hammer
+    // the hash a few times — once the cache populator settles, the next
+    // setHash sticks. Empirically 3 attempts at 500 ms covers it.
+    for (let i = 0; i < 4; i++) {
+      await page.waitForTimeout(800);
+      await setOnce();
+      try {
+        await page.waitForFunction(
+          (sub) => window.location.hash.includes(sub),
+          substring,
+          { timeout: 5_000 },
+        );
+        return;
+      } catch { /* try again */ }
+    }
+    // Final attempt — let it throw with the diagnostic message.
     await page.waitForFunction(
       (sub) => window.location.hash.includes(sub),
       substring,
-      { timeout: 20_000 },
+      { timeout: 5_000 },
     );
   }
 }

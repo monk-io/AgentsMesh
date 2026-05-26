@@ -1,10 +1,11 @@
 mod agent;
 mod apikey;
-mod auth_api;
+mod auth_connect;
 mod autopilot;
 mod billing;
 mod binding;
 mod blockstore;
+mod blockstore_proto_convert;
 mod channel;
 mod env_bundle;
 mod error;
@@ -14,7 +15,6 @@ mod grant;
 mod invitation;
 mod loop_service;
 mod mesh;
-mod message;
 mod notification;
 mod org;
 mod pod;
@@ -25,13 +25,12 @@ mod sso;
 mod support_ticket;
 mod ticket;
 mod ticket_relations;
-mod token_usage;
 mod user;
 mod user_credential;
 
 pub use agent::AgentService;
 pub use apikey::ApiKeyService;
-pub use auth_api::AuthApiService;
+pub use auth_connect::AuthConnectService;
 pub use autopilot::AutopilotService;
 pub use billing::BillingService;
 pub use binding::BindingService;
@@ -45,7 +44,6 @@ pub use grant::GrantService;
 pub use invitation::InvitationService;
 pub use loop_service::LoopService;
 pub use mesh::MeshService;
-pub use message::MessageService;
 pub use notification::NotificationService;
 pub use org::OrgApiService;
 pub use pod::PodService;
@@ -56,10 +54,5 @@ pub use sso::SSOService;
 pub use support_ticket::SupportTicketService;
 pub use ticket::TicketService;
 pub use ticket_relations::TicketRelationsService;
-pub use token_usage::TokenUsageService;
 pub use user::UserApiService;
 pub use user_credential::UserCredentialService;
-
-pub fn parse_status<T: serde::de::DeserializeOwned + Default>(s: &str) -> T {
-    serde_json::from_value(serde_json::Value::String(s.to_string())).unwrap_or_default()
-}

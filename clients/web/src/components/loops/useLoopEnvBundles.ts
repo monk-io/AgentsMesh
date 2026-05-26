@@ -1,17 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getEnvBundleService } from "@/lib/wasm-core";
-import type { EnvBundleSummary } from "@/lib/api";
-
-interface WireEnvBundle {
-  id: number;
-  agent_slug?: string | null;
-  name: string;
-  kind: string;
-  kind_primary: boolean;
-  configured_fields?: string[];
-}
+import { listEnvBundles, type EnvBundle } from "@/lib/api/facade/envBundleConnect";
+import type { EnvBundleSummary } from "@/lib/viewModels/envBundleSummary";
 
 /**
  * useLoopEnvBundles — fetch credential + runtime EnvBundles for the selected
@@ -41,19 +32,19 @@ export function useLoopEnvBundles(args: {
     const load = async () => {
       setLoadingBundles(true);
       try {
-        const svc = getEnvBundleService();
         const [credRes, runtimeRes] = await Promise.all([
-          svc.list("credential", agentSlug).then((j: string) => JSON.parse(j)).catch(() => ({ items: [] })),
-          svc.list("runtime", agentSlug).then((j: string) => JSON.parse(j)).catch(() => ({ items: [] })),
+          listEnvBundles({ kind: "credential", agentSlug }).catch(() => ({ items: [] })),
+          listEnvBundles({ kind: "runtime", agentSlug }).catch(() => ({ items: [] })),
         ]);
         if (cancelled) return;
-        const mapBundle = (b: WireEnvBundle): EnvBundleSummary => ({
-          id: b.id,
+        const mapBundle = (b: EnvBundle): EnvBundleSummary => ({
+          id: Number(b.id),
           name: b.name,
-          agent_slug: b.agent_slug ?? agentSlug,
+          agent_slug: b.agentSlug ?? agentSlug,
           kind: b.kind,
-          kind_primary: b.kind_primary,
-          configured_fields: b.configured_fields,
+          kind_primary: b.kindPrimary,
+          configured_fields:
+            b.configuredFields.length > 0 ? b.configuredFields : undefined,
         });
         const credBundles: EnvBundleSummary[] = (credRes.items ?? []).map(mapBundle);
         const runtimeBundles: EnvBundleSummary[] = (runtimeRes.items ?? []).map(mapBundle);

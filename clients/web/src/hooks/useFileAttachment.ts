@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { uploadImage } from "@/lib/api/file";
+import { uploadImage } from "@/lib/api/facade/file";
 
 export interface AttachmentState {
   key: string | null;

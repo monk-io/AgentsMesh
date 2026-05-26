@@ -2,8 +2,8 @@
 
 import { toast } from "sonner";
 
-import type { ApplyOpsResult, OpEnvelope } from "@/lib/api/blockstoreTypes";
-import { blockstoreApi } from "@/lib/api/blockstoreApi";
+import type { ApplyOpsResult, OpEnvelope } from "@/lib/viewModels/blockstore";
+import { blockstoreApi } from "@/lib/api/facade/blockstoreApi";
 import { ApiError } from "@/lib/api/api-types";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";

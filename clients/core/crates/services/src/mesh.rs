@@ -3,7 +3,7 @@ use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::mesh_state::MeshState;
-use agentsmesh_types::MeshTopology;
+use agentsmesh_types::proto_mesh_v1 as mp;
 
 pub struct MeshService {
     client: Arc<ApiClient>,
@@ -13,6 +13,12 @@ pub struct MeshService {
 impl MeshService {
     pub fn new(client: Arc<ApiClient>, state: MeshState) -> Self {
         Self { client, state: RwLock::new(state) }
+    }
+
+    /// Crate-local accessor used by mesh_connect.rs to forward to the
+    /// underlying api-client `*_connect` methods.
+    pub(crate) fn client_ref(&self) -> &ApiClient {
+        &self.client
     }
 
     pub fn topology_json(&self) -> Option<String> {
@@ -58,12 +64,6 @@ impl MeshService {
             .map(|r| serde_json::to_string(r).unwrap_or_default())
     }
 
-    pub fn set_topology(&self, json: &str) {
-        if let Ok(t) = serde_json::from_str::<MeshTopology>(json) {
-            self.state.write().unwrap().set_topology(t);
-        }
-    }
-
     pub fn clear_topology(&self) {
         self.state.write().unwrap().clear_topology();
     }
@@ -73,10 +73,54 @@ impl MeshService {
     }
 
     pub async fn fetch_topology(&self) -> Result<String, String> {
-        let topo: MeshTopology = self.client
-            .get_mesh_topology()
+        let req = mp::GetMeshTopologyRequest {
+            org_slug: self.client.current_org_slug(),
+        };
+        let topo = self.client
+            .get_mesh_topology_connect(&req)
             .await.map_err(crate::wire)?;
         self.state.write().unwrap().set_topology(topo.clone());
         serde_json::to_string(&topo).map_err(crate::wire)
     }
+}
+
+// =============================================================================
+// Connect-RPC bridge methods. Binary in (prost-encoded), binary out — same wire
+// the wasm/node-bridge layers speak.
+// =============================================================================
+
+use prost::Message;
+
+macro_rules! connect_bridge {
+    ($name:ident, $req:ident, $client_call:ident) => {
+        pub async fn $name(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+            let req = mp::$req::decode(request_bytes)
+                .map_err(|e| format!("decode {}: {e}", stringify!($req)))?;
+            let resp = self.client_ref().$client_call(&req).await.map_err(crate::wire)?;
+            Ok(resp.encode_to_vec())
+        }
+    };
+}
+
+impl MeshService {
+    connect_bridge!(
+        get_mesh_topology_connect,
+        GetMeshTopologyRequest,
+        get_mesh_topology_connect
+    );
+    connect_bridge!(
+        get_ticket_pods_connect,
+        GetTicketPodsRequest,
+        get_ticket_pods_connect
+    );
+    connect_bridge!(
+        batch_get_ticket_pods_connect,
+        BatchGetTicketPodsRequest,
+        batch_get_ticket_pods_connect
+    );
+    connect_bridge!(
+        create_pod_for_ticket_connect,
+        CreatePodForTicketRequest,
+        create_pod_for_ticket_connect
+    );
 }

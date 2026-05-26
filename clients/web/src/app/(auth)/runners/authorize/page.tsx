@@ -10,7 +10,7 @@ import {
   type LightOrganization,
 } from "@/lib/light-auth";
 import { useLightSession } from "@/hooks/useLightSession";
-import type { RunnerAuthStatus } from "@/lib/api/runnerTypes";
+import type { RunnerAuthStatus } from "@/lib/viewModels/runner";
 import { ApiError } from "@/lib/api/api-types";
 import { isApiErrorCode } from "@/lib/api/errors";
 import { useTranslations } from "next-intl";

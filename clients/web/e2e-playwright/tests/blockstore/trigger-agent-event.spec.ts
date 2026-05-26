@@ -1,6 +1,8 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { randomUUID } from "crypto";
 
 import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
+import { makeConnectClient } from "../../helpers/connect-client";
 
 // Trigger fire chain into agent_event blocks: a trigger_def with kind=agent
 // matches an op, fireAgentAction writes an agent_event under the trigger
@@ -9,10 +11,6 @@ import { test, expect, orgSlug } from "../../fixtures/blockstore.fixture";
 // the agent path needs its own e2e because it touches different code:
 // fireAgentAction goes through ApplyOps (recursive into the same service)
 // whereas the webhook path uses a plain HTTP client.
-//
-// Without this spec a regression that breaks the agent_event write — but
-// keeps the webhook fire working — would slip past the existing trigger
-// e2e and silently make agent triggers no-ops.
 
 interface SubtreeBlock {
   id: string;
@@ -41,19 +39,21 @@ async function pollUntil<T>(
 }
 
 test("agent trigger writes an agent_event block on matching task.create", async ({
-  api,
+  token,
   isolatedWorkspace,
 }) => {
+  const cc = makeConnectClient(token);
   const { id: workspaceID, rootID } = isolatedWorkspace;
   const triggerName = `e2e-agent-trigger-${Date.now()}`;
 
   // Define an agent trigger. No predicate — every task.create fires.
-  await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    workspace_id: workspaceID,
+  await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
     ops: [
       {
         op: "createBlock",
-        payload: {
+        payloadJson: JSON.stringify({
           type: "trigger_def",
           data: {
             name: triggerName,
@@ -63,41 +63,45 @@ test("agent trigger writes an agent_event block on matching task.create", async 
             enabled: true,
           },
           text: triggerName,
-        },
+        }),
       },
     ],
-    idempotency_key: `e2e-agent-trigger-def-${triggerName}`,
+    idempotencyKey: `e2e-agent-trigger-def-${triggerName}`,
   });
 
   // Create the matching task. fireAgentAction runs in a goroutine after
-  // the originating ApplyOps commits, so we poll the workspace subtree
+  // the originating ApplyOps commits, so we poll the workspace export
   // until the agent_event block surfaces.
   const taskID = randomUUID();
-  await api.post(`/api/v1/orgs/${orgSlug}/blocks/ops`, {
-    workspace_id: workspaceID,
+  await cc.blockstore.applyOps({
+    orgSlug,
+    workspaceId: workspaceID,
     ops: [
       {
         op: "createBlock",
-        payload: { id: taskID, type: "task", data: { title: "trigger me", status: "todo" } },
+        payloadJson: JSON.stringify({ id: taskID, type: "task", data: { title: "trigger me", status: "todo" } }),
       },
       {
         op: "addRef",
-        payload: { from: rootID, to: taskID, rel: "nest", order_key: `tr${Date.now().toString(36)}` },
+        payloadJson: JSON.stringify({ from: rootID, to: taskID, rel: "nest", order_key: `tr${Date.now().toString(36)}` }),
       },
     ],
-    idempotency_key: `e2e-agent-trigger-task-${taskID}`,
+    idempotencyKey: `e2e-agent-trigger-task-${taskID}`,
   });
 
   const ev = await pollUntil(
     async () => {
       // agent_event blocks are written WITHOUT a nest ref to root
       // (fireAgentAction only emits a createBlock op, no addRef), so the
-      // /subtree endpoint won't surface them. Use /export which returns
-      // every block in the workspace regardless of graph attachment.
-      const res = await api.get<{ blocks: SubtreeBlock[] }>(
-        `/api/v1/orgs/${orgSlug}/blocks/workspaces/${workspaceID}/export`,
-      );
-      return res.blocks.find(
+      // /subtree endpoint won't surface them. Use ExportWorkspace which
+      // returns every block in the workspace regardless of graph attachment.
+      const res = await cc.blockstore.exportWorkspace({
+        orgSlug,
+        workspaceId: workspaceID,
+      }) as { exportJson: string };
+      const dump = JSON.parse(res.exportJson) as { blocks?: SubtreeBlock[] };
+      const blocks = dump.blocks ?? [];
+      return blocks.find(
         (b) => b.type === "agent_event" && b.data?.trigger_name === triggerName,
       );
     },

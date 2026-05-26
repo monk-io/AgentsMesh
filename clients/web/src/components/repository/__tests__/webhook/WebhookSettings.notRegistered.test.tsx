@@ -34,7 +34,7 @@ describe("WebhookSettings - Not Registered State", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    mockGetWebhookStatus.mockResolvedValue(JSON.stringify({ webhook_status: notRegisteredStatus }));
+    mockGetWebhookStatus.mockResolvedValue(notRegisteredStatus);
   });
 
   afterEach(() => {
@@ -66,12 +66,15 @@ describe("WebhookSettings - Not Registered State", () => {
   });
 
   it("should handle register click - successful auto registration", async () => {
-    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
-      result: { repo_id: 1, registered: true, webhook_id: "wh_new" },
-    }));
+    mockRegisterWebhook.mockResolvedValue({
+      repo_id: 1,
+      registered: true,
+      webhook_id: "wh_new",
+      needs_manual_setup: false,
+    });
     mockGetWebhookStatus
-      .mockResolvedValueOnce(JSON.stringify({ webhook_status: notRegisteredStatus }))
-      .mockResolvedValue(JSON.stringify({ webhook_status: registeredStatus }));
+      .mockResolvedValueOnce(notRegisteredStatus)
+      .mockResolvedValue(registeredStatus);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 
@@ -89,20 +92,18 @@ describe("WebhookSettings - Not Registered State", () => {
   });
 
   it("should handle register click - needs manual setup", async () => {
-    mockRegisterWebhook.mockResolvedValue(JSON.stringify({
-      result: {
-        repo_id: 1,
-        registered: false,
-        needs_manual_setup: true,
-        manual_webhook_url: "https://example.com/webhooks/org/gitlab/1",
-        manual_webhook_secret: "new_secret",
-        error: "OAuth token not available",
-      },
-    }));
+    mockRegisterWebhook.mockResolvedValue({
+      repo_id: 1,
+      registered: false,
+      needs_manual_setup: true,
+      manual_webhook_url: "https://example.com/webhooks/org/gitlab/1",
+      manual_webhook_secret: "new_secret",
+      error: "OAuth token not available",
+    });
 
     mockGetWebhookStatus
-      .mockResolvedValueOnce(JSON.stringify({ webhook_status: notRegisteredStatus }))
-      .mockResolvedValue(JSON.stringify({ webhook_status: manualSetupStatus }));
+      .mockResolvedValueOnce(notRegisteredStatus)
+      .mockResolvedValue(manualSetupStatus);
 
     render(<WebhookSettings repository={mockRepository} onUpdate={mockOnUpdate} />);
 

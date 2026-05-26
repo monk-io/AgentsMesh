@@ -1,5 +1,5 @@
 use agentsmesh_api_client::AuthTokenStore;
-use agentsmesh_types::AuthTokens;
+use agentsmesh_state::auth_types::AuthTokens;
 
 use crate::manager::{now_unix_secs, AuthManager};
 

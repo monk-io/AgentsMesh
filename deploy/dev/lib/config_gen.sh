@@ -122,7 +122,7 @@ http:
     backend-api:
       entryPoints:
         - web
-      rule: "PathPrefix(\`/api\`) || PathPrefix(\`/health\`)"
+      rule: "PathPrefix(\`/api\`) || PathPrefix(\`/health\`) || PathPrefix(\`/proto.\`)"
       service: backend-api
       priority: 100
 

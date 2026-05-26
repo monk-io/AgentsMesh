@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock createSupportTicket
 const mockCreateSupportTicket = vi.fn();
-vi.mock("@/lib/api/support-ticket", () => ({
+vi.mock("@/lib/api/facade/support-ticket", () => ({
   createSupportTicket: (...args: unknown[]) => mockCreateSupportTicket(...args),
 }));
 

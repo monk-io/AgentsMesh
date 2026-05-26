@@ -1,4 +1,4 @@
-import type { JSONMap } from "@/lib/api/blockstoreTypes";
+import type { JSONMap } from "@/lib/viewModels/blockstore";
 
 export function computeColumn(expr: string, data: JSONMap): number | null {
   try {

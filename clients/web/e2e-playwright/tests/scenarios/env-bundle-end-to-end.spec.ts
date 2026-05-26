@@ -183,13 +183,13 @@ test.describe("EnvBundle end-to-end (Settings UI → Pod → child env)", () => 
     const envKey = "E2E_TEST_CRED_KEY";
     const envValue = `should-not-appear-${Date.now()}`;
 
-    const seedRes = await api.post(`/api/v1/users/env-bundles`, {
-      agent_slug: AGENT_SLUG,
+    const cc = await api.connect();
+    await cc.envBundle.createEnvBundle({
+      agentSlug: AGENT_SLUG,
       name: bundleName,
       kind: KIND_CREDENTIAL,
       data: { [envKey]: envValue },
     });
-    expect([200, 201]).toContain(seedRes.status);
     clearCredentialPrimary(db);
 
     // Empty string explicitly selects "Use Agent default auth", overriding
@@ -216,15 +216,16 @@ test.describe("EnvBundle end-to-end (Settings UI → Pod → child env)", () => 
     const valueA = `cred-A-value-${Date.now()}`;
     const valueB = `cred-B-value-${Date.now()}`;
 
+    const cc = await api.connect();
     await Promise.all([
-      api.post(`/api/v1/users/env-bundles`, {
-        agent_slug: AGENT_SLUG,
+      cc.envBundle.createEnvBundle({
+        agentSlug: AGENT_SLUG,
         name: bundleAName,
         kind: KIND_CREDENTIAL,
         data: { [envKey]: valueA },
       }),
-      api.post(`/api/v1/users/env-bundles`, {
-        agent_slug: AGENT_SLUG,
+      cc.envBundle.createEnvBundle({
+        agentSlug: AGENT_SLUG,
         name: bundleBName,
         kind: KIND_CREDENTIAL,
         data: { [envKey]: valueB },

@@ -8,8 +8,35 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { APIKeysSettings } from "../APIKeysSettings";
-import type { APIKeyData, UpdateAPIKeyRequest } from "@/lib/api/apikeyTypes";
-import { getApiKeyService } from "@/lib/wasm-core";
+import type { ApiKey } from "@/lib/api/facade/apikey";
+import { create } from "@bufbuild/protobuf";
+import { ApiKeySchema } from "@proto/apikey/v1/api_key_pb";
+
+interface UpdateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  isEnabled?: boolean;
+}
+
+const { mockListApiKeys, mockUpdateApiKey, mockRevokeApiKey } = vi.hoisted(() => ({
+  mockListApiKeys: vi.fn(),
+  mockUpdateApiKey: vi.fn(),
+  mockRevokeApiKey: vi.fn(),
+}));
+vi.mock("@/lib/api/facade/apikey", () => ({
+  listApiKeys: mockListApiKeys,
+  createApiKey: vi.fn(),
+  updateApiKey: mockUpdateApiKey,
+  revokeApiKey: mockRevokeApiKey,
+}));
+
+const { stableOrg } = vi.hoisted(() => ({
+  stableOrg: { id: 10, slug: "test-org", name: "Test Org", role: "owner" },
+}));
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => stableOrg,
+}));
 
 const mockConfirm = vi.fn();
 vi.mock("@/components/ui/confirm-dialog", () => ({
@@ -32,9 +59,9 @@ vi.mock("../apikeys", () => ({
     onEdit,
     onRevoke,
   }: {
-    apiKey: APIKeyData;
-    onEdit: (key: APIKeyData) => void;
-    onRevoke: (id: number) => void;
+    apiKey: ApiKey;
+    onEdit: (key: ApiKey) => void;
+    onRevoke: (id: bigint) => void;
     t: unknown;
   }) => (
     <div data-testid={`api-key-card-${apiKey.id}`}>
@@ -58,10 +85,10 @@ vi.mock("../apikeys", () => ({
     onOpenChange,
     onSave,
   }: {
-    apiKey: APIKeyData;
+    apiKey: ApiKey;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (id: number, data: UpdateAPIKeyRequest) => Promise<void>;
+    onSave: (id: bigint, data: UpdateInput) => Promise<void>;
     t: unknown;
   }) => {
     if (!open) return null;
@@ -87,21 +114,6 @@ vi.mock("../apikeys", () => ({
 
 const mockT = vi.fn((key: string) => key);
 
-const mockList = vi.fn();
-const mockUpdate = vi.fn();
-const mockRevoke = vi.fn();
-
-function setupServiceMock() {
-  vi.mocked(getApiKeyService).mockReturnValue({
-    list: mockList,
-    get: vi.fn(),
-    create: vi.fn(),
-    update: mockUpdate,
-    delete: vi.fn(),
-    revoke: mockRevoke,
-  } as unknown as ReturnType<typeof getApiKeyService>);
-}
-
 async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   let result: ReturnType<typeof render>;
   await act(async () => {
@@ -110,39 +122,36 @@ async function renderAndWaitForLoad(): Promise<ReturnType<typeof render>> {
   return result!;
 }
 
-const sampleKeys: APIKeyData[] = [
-  {
-    id: 1,
-    organization_id: 10,
+const sampleKeys: ApiKey[] = [
+  create(ApiKeySchema, {
+    id: BigInt(1),
+    organizationId: BigInt(10),
     name: "CI/CD Key",
-    key_prefix: "am_ci",
+    keyPrefix: "am_ci",
     scopes: ["pods:read", "pods:write"],
-    is_enabled: true,
-    created_by: 1,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 2,
-    organization_id: 10,
+    isEnabled: true,
+    createdBy: BigInt(1),
+    createdAt: "2024-01-01T00:00:00Z",
+    updatedAt: "2024-01-01T00:00:00Z",
+  }),
+  create(ApiKeySchema, {
+    id: BigInt(2),
+    organizationId: BigInt(10),
     name: "Monitoring Key",
-    key_prefix: "am_mon",
+    keyPrefix: "am_mon",
     scopes: ["tickets:read"],
-    is_enabled: false,
-    created_by: 1,
-    created_at: "2024-02-01T00:00:00Z",
-    updated_at: "2024-02-01T00:00:00Z",
-  },
+    isEnabled: false,
+    createdBy: BigInt(1),
+    createdAt: "2024-02-01T00:00:00Z",
+    updatedAt: "2024-02-01T00:00:00Z",
+  }),
 ];
 
 describe("APIKeysSettings - edit & revoke flows", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
-    setupServiceMock();
-    mockList.mockResolvedValue(
-      JSON.stringify({ api_keys: sampleKeys, total: 2 })
-    );
+    mockListApiKeys.mockResolvedValue({ items: sampleKeys, total: 2, limit: 50, offset: 0 });
     mockConfirm.mockResolvedValue(true);
   });
 
@@ -183,9 +192,11 @@ describe("APIKeysSettings - edit & revoke flows", () => {
     });
 
     it("should refresh key list after saving edit", async () => {
-      vi.mocked(mockUpdate).mockResolvedValue(
-        JSON.stringify({ api_key: { id: 1, name: "Updated" } })
-      );
+      vi.mocked(mockUpdateApiKey).mockResolvedValue(create(ApiKeySchema, {
+        id: BigInt(1), organizationId: BigInt(10), name: "Updated", keyPrefix: "am_ci",
+        scopes: [], isEnabled: true, createdBy: BigInt(1),
+        createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-02T00:00:00Z",
+      }));
 
       await renderAndWaitForLoad();
 
@@ -193,14 +204,14 @@ describe("APIKeysSettings - edit & revoke flows", () => {
         fireEvent.click(screen.getByTestId("edit-1"));
       });
 
-      const initialCallCount = mockList.mock.calls.length;
+      const initialCallCount = mockListApiKeys.mock.calls.length;
 
       await act(async () => {
         fireEvent.click(screen.getByTestId("edit-dialog-save"));
       });
 
       await waitFor(() => {
-        expect(mockList).toHaveBeenCalledTimes(initialCallCount + 1);
+        expect(mockListApiKeys).toHaveBeenCalledTimes(initialCallCount + 1);
       });
     });
   });
@@ -226,9 +237,7 @@ describe("APIKeysSettings - edit & revoke flows", () => {
 
     it("should call revoke API when confirmed", async () => {
       mockConfirm.mockResolvedValue(true);
-      vi.mocked(mockRevoke).mockResolvedValue(
-        JSON.stringify({ message: "Revoked" })
-      );
+      vi.mocked(mockRevokeApiKey).mockResolvedValue(undefined);
 
       await renderAndWaitForLoad();
 
@@ -237,7 +246,7 @@ describe("APIKeysSettings - edit & revoke flows", () => {
       });
 
       await waitFor(() => {
-        expect(mockRevoke).toHaveBeenCalledWith(BigInt(1));
+        expect(mockRevokeApiKey).toHaveBeenCalledWith("test-org", BigInt(1));
       });
     });
 
@@ -250,31 +259,29 @@ describe("APIKeysSettings - edit & revoke flows", () => {
         fireEvent.click(screen.getByTestId("revoke-1"));
       });
 
-      expect(mockRevoke).not.toHaveBeenCalled();
+      expect(mockRevokeApiKey).not.toHaveBeenCalled();
     });
 
     it("should refresh key list after successful revoke", async () => {
       mockConfirm.mockResolvedValue(true);
-      vi.mocked(mockRevoke).mockResolvedValue(
-        JSON.stringify({ message: "Revoked" })
-      );
+      vi.mocked(mockRevokeApiKey).mockResolvedValue(undefined);
 
       await renderAndWaitForLoad();
 
-      const callCountBefore = mockList.mock.calls.length;
+      const callCountBefore = mockListApiKeys.mock.calls.length;
 
       await act(async () => {
         fireEvent.click(screen.getByTestId("revoke-1"));
       });
 
       await waitFor(() => {
-        expect(mockList).toHaveBeenCalledTimes(callCountBefore + 1);
+        expect(mockListApiKeys).toHaveBeenCalledTimes(callCountBefore + 1);
       });
     });
 
     it("should handle revoke API failure gracefully", async () => {
       mockConfirm.mockResolvedValue(true);
-      vi.mocked(mockRevoke).mockRejectedValue(new Error("Revoke failed"));
+      vi.mocked(mockRevokeApiKey).mockRejectedValue(new Error("Revoke failed"));
       const consoleSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});

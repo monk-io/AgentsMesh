@@ -10,17 +10,44 @@ export const NOOP_PROXY = new Proxy({} as any, {
   },
 });
 
-let ready = false;
-const i: Record<string, any> = {};
+// Service registry storage. On the browser we promote the storage onto
+// `globalThis` so it survives Next.js dev-chunk re-evaluations — multiple
+// module instances of this file would otherwise each carry their own
+// (empty) `i`/`ready`, and a chunk that did NOT receive `markServiceReady`
+// would return NOOP_PROXY for wasm-backed reads (root block resolves to
+// `null` → DocumentView wedges on "Loading workspace…"). On the server we
+// keep module-scoped state — globalThis on the SSR side leaks between
+// requests and we'd hand a half-initialised client store to the next
+// renderer pass.
+interface ServiceRegistry {
+  ready: boolean;
+  instances: Record<string, any>;
+}
 
-export function isServiceReady(): boolean { return ready; }
-export function markServiceReady(): void { ready = true; }
+function makeRegistry(): ServiceRegistry { return { ready: false, instances: {} }; }
 
-const g = <T>(k: string): T => (ready ? i[k] : NOOP_PROXY) as T;
+const isBrowser = typeof window !== "undefined";
+const moduleRegistry: ServiceRegistry = makeRegistry();
+
+function registry(): ServiceRegistry {
+  if (!isBrowser) return moduleRegistry;
+  const g = globalThis as unknown as { __amesh_svc_registry?: ServiceRegistry };
+  if (!g.__amesh_svc_registry) g.__amesh_svc_registry = moduleRegistry;
+  return g.__amesh_svc_registry;
+}
+
+export function isServiceReady(): boolean { return registry().ready; }
+export function markServiceReady(): void { registry().ready = true; }
+
+const g = <T>(k: string): T => {
+  const reg = registry();
+  return (reg.ready ? reg.instances[k] : NOOP_PROXY) as T;
+};
 
 export function registerServiceProvider(provider: Record<string, any>) {
+  const reg = registry();
   for (const [key, value] of Object.entries(provider)) {
-    i[key] = value;
+    reg.instances[key] = value;
   }
 }
 
@@ -46,7 +73,6 @@ export const getInvitationService = () => g<any>("invitationService");
 export const getGrantService = () => g<any>("grantService");
 export const getApiKeyService = () => g<any>("apiKeyService");
 export const getBindingService = () => g<any>("bindingService");
-export const getMessageService = () => g<any>("messageService");
 export const getNotificationService = () => g<any>("notificationService");
 export const getPromoCodeService = () => g<any>("promoCodeService");
 export const getTokenUsageService = () => g<any>("tokenUsageService");
@@ -59,7 +85,7 @@ export const getAgentService = () => g<any>("agentService");
 export const getTicketRelationsService = () => g<any>("ticketRelationsService");
 export const getFileService = () => g<any>("fileService");
 export const getSupportTicketService = () => g<any>("supportTicketService");
-export const getAuthApiService = () => g<any>("authApiService");
+export const getAuthConnectService = () => g<any>("authConnectService");
 export const getRunnerState = () => g<any>("runnerState");
 export const getMeshState = () => g<any>("meshState");
 export const getTicketState = () => g<any>("ticketState");
@@ -77,5 +103,7 @@ export const getBlockstoreService = () => g<any>("blockstoreService");
  * Renderer UI uses this to feature-detect and hide onboarding cards on
  * platforms that can't host a local runner.
  */
-export const getLocalRunnerService = () =>
-  ready ? (i["localRunnerService"] as any | undefined) : undefined;
+export const getLocalRunnerService = () => {
+  const reg = registry();
+  return reg.ready ? (reg.instances["localRunnerService"] as any | undefined) : undefined;
+};

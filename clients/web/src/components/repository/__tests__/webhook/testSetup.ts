@@ -1,12 +1,36 @@
 import { vi } from "vitest";
-import type { RepositoryData, WebhookStatus, WebhookSecretResponse } from "@/lib/api";
-import { getRepositoryService, getApiClient } from "@/lib/wasm-core";
+import type { RepositoryData, WebhookStatus, WebhookSecretResponse, WebhookResult } from "@/lib/api";
 
-export const mockGetWebhookStatus = vi.fn();
-export const mockGetWebhookSecret = vi.fn();
-export const mockRegisterWebhook = vi.fn();
-export const mockDeleteWebhook = vi.fn();
-export const mockMarkWebhookConfigured = vi.fn();
+vi.mock("@/lib/api/facade/repositoryConnect", () => ({
+  getRepositoryWebhookStatus: vi.fn(),
+  getRepositoryWebhookSecret: vi.fn(),
+  registerRepositoryWebhook: vi.fn(),
+  deleteRepositoryWebhook: vi.fn(),
+  markRepositoryWebhookConfigured: vi.fn(),
+}));
+
+vi.mock("@/stores/auth", () => ({
+  useCurrentOrg: () => ({ id: 1, name: "TestOrg", slug: "test-org" }),
+  readCurrentOrg: () => ({ id: 1, name: "TestOrg", slug: "test-org" }),
+}));
+
+import {
+  getRepositoryWebhookStatus,
+  getRepositoryWebhookSecret,
+  registerRepositoryWebhook,
+  deleteRepositoryWebhook,
+  markRepositoryWebhookConfigured,
+} from "@/lib/api/facade/repositoryConnect";
+
+// Each helper is the vi.fn() bound to the connect adapter symbol the
+// component-under-test imports. Tests can .mockResolvedValue(WebhookStatus)
+// directly — no JSON wrapping, no double parse — matching the real adapter
+// surface (binary-in / parsed-snake_case-out).
+export const mockGetWebhookStatus = vi.mocked(getRepositoryWebhookStatus);
+export const mockGetWebhookSecret = vi.mocked(getRepositoryWebhookSecret);
+export const mockRegisterWebhook = vi.mocked(registerRepositoryWebhook);
+export const mockDeleteWebhook = vi.mocked(deleteRepositoryWebhook);
+export const mockMarkWebhookConfigured = vi.mocked(markRepositoryWebhookConfigured);
 
 export const mockClipboardWriteText = vi.fn();
 Object.assign(navigator, {
@@ -62,46 +86,32 @@ export const secretResponse: WebhookSecretResponse = {
   events: ["merge_request", "pipeline"],
 };
 
-const stableRepoSvc = {
-  get_webhook_status: mockGetWebhookStatus,
-  get_webhook_secret: mockGetWebhookSecret,
-  delete_webhook: mockDeleteWebhook,
-  register_webhook: mockRegisterWebhook,
-  mark_webhook_configured: mockMarkWebhookConfigured,
-  list: vi.fn().mockResolvedValue('{"repositories":[]}'),
-  get: vi.fn().mockResolvedValue('{}'),
-  create: vi.fn().mockResolvedValue('{}'),
-  update: vi.fn().mockResolvedValue('{}'),
-  delete: vi.fn().mockResolvedValue(undefined),
-  list_branches: vi.fn().mockResolvedValue('{"branches":[]}'),
-  sync_branches: vi.fn().mockResolvedValue('{"branches":[]}'),
-  get_webhook_secret_for_setup: vi.fn().mockResolvedValue('{}'),
-  list_merge_requests: vi.fn().mockResolvedValue('{"merge_requests":[]}'),
+export const registeredWebhookResult: WebhookResult = {
+  repo_id: 1,
+  registered: true,
+  webhook_id: "wh_new",
+  needs_manual_setup: false,
 };
 
-const stableClient = {
-  get: vi.fn().mockResolvedValue('{}'),
-  post: vi.fn().mockResolvedValue('{}'),
-  put: vi.fn().mockResolvedValue('{}'),
-  delete: vi.fn().mockResolvedValue('{}'),
-  patch: vi.fn().mockResolvedValue('{}'),
-  org_path: vi.fn((p: string) => `/api/v1/orgs/test-org${p}`),
+export const manualSetupWebhookResult: WebhookResult = {
+  repo_id: 1,
+  registered: false,
+  needs_manual_setup: true,
+  manual_webhook_url: "https://example.com/webhooks/org/gitlab/1",
+  manual_webhook_secret: "new_secret",
+  error: "OAuth token not available",
 };
 
 export function setupWebhookMocks() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(getRepositoryService).mockReturnValue(stableRepoSvc as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  vi.mocked(getApiClient).mockReturnValue(stableClient as any);
-}
-
-export function resetAllMocks() {
   mockGetWebhookStatus.mockReset();
   mockGetWebhookSecret.mockReset();
   mockRegisterWebhook.mockReset();
   mockDeleteWebhook.mockReset();
   mockMarkWebhookConfigured.mockReset();
+}
+
+export function resetAllMocks() {
+  setupWebhookMocks();
   mockClipboardWriteText.mockReset();
   mockClipboardWriteText.mockResolvedValue(undefined);
-  setupWebhookMocks();
 }

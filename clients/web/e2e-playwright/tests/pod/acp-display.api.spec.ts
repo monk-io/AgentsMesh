@@ -1,8 +1,11 @@
+// Migrated R5+: Connect-RPC only (no REST middle layer).
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
-const PODS_BASE = `/api/v1/orgs/${TEST_ORG_SLUG}/pods`;
+type Runner = { id: bigint };
+type Agent = { slug: string };
+type Pod = { podKey: string };
 
 /**
  * ACP (Agent Control Protocol) display tests.
@@ -16,30 +19,23 @@ test.describe("ACP Pod API", () => {
    * TC-ACP-001: Create ACP pod (API portion)
    */
   test("create ACP pod with agent_slug", async ({ api }) => {
-    const runnersRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnersRes.json()).runners;
-    if (!runners?.length) { test.skip(); return; }
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
-    // Get agents and find one supporting ACP
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentsRes.json()).builtin_agents;
-    if (!agents?.length) { test.skip(); return; }
+    const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
-    const res = await api.post(PODS_BASE, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E ACP Test - Hello",
-    });
-    expect([200, 201]).toContain(res.status);
-    const data = await res.json();
-    const podKey = data.pod_key || data.pod?.pod_key;
+    const resp = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+    }) as { pod: Pod };
+    const podKey = resp.pod?.podKey;
     expect(podKey).toBeTruthy();
 
-    // Cleanup
     if (podKey) {
-      await api.post(`${PODS_BASE}/${podKey}/terminate`, {});
+      await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
     }
   });
 
@@ -47,37 +43,36 @@ test.describe("ACP Pod API", () => {
    * TC-ACP-007: Send prompt to running pod via API
    */
   test("send prompt to pod via API", async ({ api }) => {
-    const runnersRes = await api.get(
-      `/api/v1/orgs/${TEST_ORG_SLUG}/runners/available`
-    );
-    const runners = (await runnersRes.json()).runners;
-    if (!runners?.length) { test.skip(); return; }
+    const cc = await api.connect();
+    const { items: runners } = await cc.runner.listAvailableRunners({ orgSlug: TEST_ORG_SLUG }) as { items: Runner[] };
+    expect(runners.length, "dev env must have an online runner").toBeGreaterThan(0);
 
-    const agentsRes = await api.get(`/api/v1/orgs/${TEST_ORG_SLUG}/agents`);
-    const agents = (await agentsRes.json()).builtin_agents;
-    if (!agents?.length) { test.skip(); return; }
+    const { builtinAgents: agents } = await cc.agent.listAgents({ orgSlug: TEST_ORG_SLUG }) as { builtinAgents: Agent[] };
+    expect(agents.length, "dev env must have a builtin agent").toBeGreaterThan(0);
 
-    // Create pod
-    const createRes = await api.post(PODS_BASE, {
-      runner_id: runners[0].id,
-      agent_slug: agents[0].slug,
-      prompt: "E2E ACP Prompt Test",
-    });
-    const data = await createRes.json();
-    const podKey = data.pod_key || data.pod?.pod_key;
-    if (!podKey) { test.skip(); return; }
+    const created = await cc.pod.createPod({
+      orgSlug: TEST_ORG_SLUG,
+      runnerId: runners[0].id,
+      agentSlug: agents[0].slug,
+    }) as { pod: Pod };
+    const podKey = created.pod?.podKey;
+    expect(podKey, "createPod must return a pod_key").toBeTruthy();
 
-    // Wait a bit for pod to initialize
     await new Promise((r) => setTimeout(r, 3000));
 
-    // Send prompt (may fail if pod isn't fully running yet — that's OK)
-    const promptRes = await api.post(`${PODS_BASE}/${podKey}/prompt`, {
-      prompt: "Hello from E2E test",
-    });
-    // Accept various statuses — pod may not be ready
-    expect([200, 400, 404, 409]).toContain(promptRes.status);
+    // Send prompt (may fail if pod isn't fully running yet — that's OK).
+    // Connect throws on non-OK status, so we catch and accept various codes.
+    try {
+      await cc.pod.sendPodPrompt({
+        orgSlug: TEST_ORG_SLUG,
+        podKey,
+        prompt: "Hello from E2E test",
+      });
+    } catch (e) {
+      const err = e as { status?: number };
+      expect([400, 404, 409]).toContain(err.status);
+    }
 
-    // Cleanup
-    await api.post(`${PODS_BASE}/${podKey}/terminate`, {});
+    await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey });
   });
 });

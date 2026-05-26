@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use agentsmesh_state::channel_state::{ChannelSortMode, ChannelState};
-use agentsmesh_types::{Channel, ChannelMessage, MessagePreview, User};
+use agentsmesh_state::channel_types::{Channel, ChannelMessage, MessagePreview, User};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -201,7 +201,8 @@ impl WasmChannelState {
     }
 
     pub fn unread_counts_json(&self) -> String {
-        serde_json::to_string(self.inner.get_all_unread_counts()).unwrap_or_else(|_| "{}".to_string())
+        let counts = self.inner.get_all_unread_counts();
+        serde_json::to_string(&counts).unwrap_or_else(|_| "{}".to_string())
     }
 
     pub fn increment_mention(&mut self, channel_id: i64) {
@@ -227,6 +228,7 @@ impl WasmChannelState {
     }
 
     pub fn mention_counts_json(&self) -> String {
-        serde_json::to_string(self.inner.get_all_mention_counts()).unwrap_or_else(|_| "{}".to_string())
+        let counts = self.inner.get_all_mention_counts();
+        serde_json::to_string(&counts).unwrap_or_else(|_| "{}".to_string())
     }
 }

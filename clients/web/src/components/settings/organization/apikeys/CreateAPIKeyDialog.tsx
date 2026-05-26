@@ -21,15 +21,17 @@ const EXPIRATION_OPTIONS = [
   { value: 365 * 86400, labelKey: "settings.apiKeys.createDialog.expiration1y" },
 ];
 
+interface CreateInput {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  expiresIn?: bigint;
+}
+
 interface CreateAPIKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (data: {
-    name: string;
-    description?: string;
-    scopes: string[];
-    expires_in?: number;
-  }) => Promise<void>;
+  onCreate: (data: CreateInput) => Promise<void>;
   t: TranslationFn;
 }
 
@@ -68,7 +70,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onCreate, t }: CreateAP
         name: name.trim(),
         description: description.trim() || undefined,
         scopes: Array.from(selectedScopes),
-        expires_in: expiresIn > 0 ? expiresIn : undefined,
+        expiresIn: expiresIn > 0 ? BigInt(expiresIn) : undefined,
       });
     } catch (err) {
       console.error("Failed to create API key:", err);
