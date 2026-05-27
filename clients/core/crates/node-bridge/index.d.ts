@@ -28,6 +28,9 @@ export declare class AppState {
   authFetchOrganizationsProto(): Promise<Array<number>>
   authBootstrapProto(): Promise<Array<number>>
   authGetCurrentUserProto(): Array<number> | null
+  authApplySessionProto(reqBytes: Array<number>): void
+  authSetOrganizationsProto(reqBytes: Array<number>): void
+  authSetCurrentOrgProto(reqBytes: Array<number>): void
   agentGetAgentpodSettings(): Promise<string>
   agentUpdateAgentpodSettings(json: string): Promise<string>
   agentListProviders(): Promise<string>

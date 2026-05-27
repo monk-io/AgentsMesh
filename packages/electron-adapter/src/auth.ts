@@ -1,4 +1,10 @@
 import { invoke } from "./invoke";
+import { fromBinary } from "@bufbuild/protobuf";
+import {
+  ApplySessionRequestSchema,
+  SetCurrentOrgRequestSchema,
+  SetOrganizationsRequestSchema,
+} from "@agentsmesh/proto/auth_state/v1/auth_state_pb";
 import type { IAuthManager } from "@agentsmesh/service-interface";
 
 // Mirrors clients/core/crates/auth/src/token_store.rs `REFRESH_FALLBACK_TTL_SECS`.
@@ -130,21 +136,27 @@ export class ElectronAuthService implements IAuthManager {
   // `userGetMe` IPC 401'd and surfaced as `{"kind":"auth_expired"}`.
   // Callers MUST `await` because the IAuthManager signature now returns
   // Promise<void> | void; on the wasm side this is a no-op `await`.
-  async apply_session(sessionJson: string): Promise<void> {
+  async apply_session(reqBytes: Uint8Array): Promise<void> {
+    const req = fromBinary(ApplySessionRequestSchema, reqBytes);
     // Push to Rust first so any IPC issued after `apply_session` returns
     // (e.g. userGetMe in OAuthCallbackPage) sees the token on the main side.
-    await invoke("authApplySession", sessionJson);
-    this.applySessionPayload(sessionJson);
+    await invoke("authApplySessionProto", Array.from(reqBytes));
+    this._token = req.token || undefined;
+    if (req.refreshToken) this._refreshToken = req.refreshToken;
+    this._expiresAt = Math.floor(Date.now() / 1000) + REFRESH_FALLBACK_TTL_SECS;
+    if (req.user) this._currentUserCache = JSON.stringify(req.user);
   }
 
-  async set_organizations(orgsJson: string): Promise<void> {
-    await invoke("authSetOrganizations", orgsJson);
-    this._organizationsCache = orgsJson;
+  async set_organizations(reqBytes: Uint8Array): Promise<void> {
+    const req = fromBinary(SetOrganizationsRequestSchema, reqBytes);
+    await invoke("authSetOrganizationsProto", Array.from(reqBytes));
+    this._organizationsCache = JSON.stringify(req.items);
   }
 
-  async set_current_org(orgJson: string): Promise<void> {
-    this._currentOrgCache = orgJson;
-    await invoke("authSetCurrentOrg", orgJson);
+  async set_current_org(reqBytes: Uint8Array): Promise<void> {
+    const req = fromBinary(SetCurrentOrgRequestSchema, reqBytes);
+    this._currentOrgCache = req.org ? JSON.stringify(req.org) : null;
+    await invoke("authSetCurrentOrgProto", Array.from(reqBytes));
   }
 
   async clear_session(): Promise<void> {

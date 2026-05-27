@@ -9,6 +9,10 @@ test.describe("IPC · auth", () => {
     await invokeIpcContract(sharedPage, { method: "authApplySession", returnType: "void" }, "");
   });
 
+  test("authApplySessionProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authApplySessionProto", returnType: "void" }, []);
+  });
+
   test("authBootstrap", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authBootstrap", returnType: "any" });
   });
@@ -81,8 +85,16 @@ test.describe("IPC · auth", () => {
     await invokeIpcContract(sharedPage, { method: "authSetCurrentOrg", returnType: "void" }, "");
   });
 
+  test("authSetCurrentOrgProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authSetCurrentOrgProto", returnType: "void" }, []);
+  });
+
   test("authSetOrganizations", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authSetOrganizations", returnType: "void" }, "");
+  });
+
+  test("authSetOrganizationsProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authSetOrganizationsProto", returnType: "void" }, []);
   });
 
   test("authSwitchOrg", async ({ sharedPage }) => {

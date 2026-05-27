@@ -12,6 +12,11 @@ import {
   ApplyChannelMessageEditedEventRequestSchema,
   ReplaceChannelUnreadCountsRequestSchema,
 } from '@proto/channel_state/v1/mutations_pb'
+import {
+  ApplySessionRequestSchema,
+  SetCurrentOrgRequestSchema,
+  SetOrganizationsRequestSchema,
+} from '@proto/auth_state/v1/auth_state_pb'
 import { createAcpManager } from './wasm-mock-acp'
 
 const h = vi.hoisted(() => {
@@ -68,6 +73,21 @@ vi.mock('@/lib/wasm-core', () => {
   const authBox: { user: unknown; current_org: unknown; organizations: unknown[] } = {
     user: null, current_org: null, organizations: [],
   };
+  // Mirror Rust auth_types::Organization: drop empty string fields so test
+  // expectations matching the wasm path's serde-Default skip semantics pass.
+  function orgProtoToDto(o: { id: bigint; name: string; slug: string; role?: string;
+    logoUrl?: string; subscriptionPlan: string; subscriptionStatus: string }): Record<string, unknown> {
+    const dto: Record<string, unknown> = {
+      id: Number(o.id),
+      name: o.name,
+      slug: o.slug,
+    };
+    if (o.role !== undefined) dto.role = o.role;
+    if (o.logoUrl !== undefined) dto.logo_url = o.logoUrl;
+    if (o.subscriptionPlan) dto.subscription_plan = o.subscriptionPlan;
+    if (o.subscriptionStatus) dto.subscription_status = o.subscriptionStatus;
+    return dto;
+  }
   const mockAuth = {
     login: fn().mockResolvedValue('{"token":"t","refresh_token":"r","user":{"id":1,"email":"test@test.com","username":"test"}}'),
     logout: fn().mockResolvedValue(undefined),
@@ -79,24 +99,34 @@ vi.mock('@/lib/wasm-core', () => {
     get_current_user_json: fn(() => authBox.user ? JSON.stringify(authBox.user) : null),
     get_current_org_json: fn(() => authBox.current_org ? JSON.stringify(authBox.current_org) : null),
     get_organizations_json: fn(() => JSON.stringify(authBox.organizations)),
-    apply_session: fn((sessionJson: string) => {
+    apply_session: fn((reqBytes: Uint8Array) => {
       try {
-        const s = JSON.parse(sessionJson);
-        authBox.user = s.user ?? null;
+        const req = fromBinary(ApplySessionRequestSchema, reqBytes);
+        if (!req.user) { authBox.user = null; return; }
+        const u: Record<string, unknown> = {
+          id: Number(req.user.id),
+          email: req.user.email,
+          username: req.user.username,
+        };
+        if (req.user.name !== undefined) u.name = req.user.name;
+        if (req.user.avatarUrl !== undefined) u.avatar_url = req.user.avatarUrl;
+        authBox.user = u;
       } catch { /* noop */ }
     }),
-    set_organizations: fn((orgsJson: string) => {
+    set_organizations: fn((reqBytes: Uint8Array) => {
       try {
-        const orgs = JSON.parse(orgsJson);
-        authBox.organizations = Array.isArray(orgs) ? orgs : [];
+        const req = fromBinary(SetOrganizationsRequestSchema, reqBytes);
+        authBox.organizations = (req.items ?? []).map((o) => orgProtoToDto(o));
         if (authBox.current_org == null && authBox.organizations.length > 0) {
           authBox.current_org = authBox.organizations[0];
         }
       } catch { /* noop */ }
     }),
-    set_current_org: fn((orgJson: string) => {
-      if (orgJson === '') { authBox.current_org = null; return; }
-      try { authBox.current_org = JSON.parse(orgJson); } catch { /* noop */ }
+    set_current_org: fn((reqBytes: Uint8Array) => {
+      try {
+        const req = fromBinary(SetCurrentOrgRequestSchema, reqBytes);
+        authBox.current_org = req.org ? orgProtoToDto(req.org) : null;
+      } catch { /* noop */ }
     }),
     clear_session: fn(() => {
       authBox.user = null; authBox.current_org = null; authBox.organizations = [];

@@ -31,7 +31,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file auth_state/v1/auth_state.proto.
  */
 export const file_auth_state_v1_auth_state: GenFile = /*@__PURE__*/
-  fileDesc("Ch5hdXRoX3N0YXRlL3YxL2F1dGhfc3RhdGUucHJvdG8SE3Byb3RvLmF1dGhfc3RhdGUudjEixgEKD0Jvb3RzdHJhcFJlc3VsdBIMCgRraW5kGAEgASgJEhsKDmNsZWFudXBfcmVhc29uGAIgASgJSACIAQESJgoEdXNlchgDIAEoCzITLnByb3RvLmF1dGgudjEuVXNlckgBiAEBEjQKC2N1cnJlbnRfb3JnGAQgASgLMhoucHJvdG8ub3JnLnYxLk9yZ2FuaXphdGlvbkgCiAEBQhEKD19jbGVhbnVwX3JlYXNvbkIHCgVfdXNlckIOCgxfY3VycmVudF9vcmciPgoRT3JnYW5pemF0aW9uc0xpc3QSKQoFaXRlbXMYASADKAsyGi5wcm90by5vcmcudjEuT3JnYW5pemF0aW9uQklaR2dpdGh1Yi5jb20vYW50aHJvcGljcy9hZ2VudHNtZXNoL3Byb3RvL2dlbi9nby9hdXRoX3N0YXRlL3YxO2F1dGhzdGF0ZXYxYgZwcm90bzM", [file_auth_v1_auth, file_org_v1_org]);
+  fileDesc("Ch5hdXRoX3N0YXRlL3YxL2F1dGhfc3RhdGUucHJvdG8SE3Byb3RvLmF1dGhfc3RhdGUudjEixgEKD0Jvb3RzdHJhcFJlc3VsdBIMCgRraW5kGAEgASgJEhsKDmNsZWFudXBfcmVhc29uGAIgASgJSACIAQESJgoEdXNlchgDIAEoCzITLnByb3RvLmF1dGgudjEuVXNlckgBiAEBEjQKC2N1cnJlbnRfb3JnGAQgASgLMhoucHJvdG8ub3JnLnYxLk9yZ2FuaXphdGlvbkgCiAEBQhEKD19jbGVhbnVwX3JlYXNvbkIHCgVfdXNlckIOCgxfY3VycmVudF9vcmciPgoRT3JnYW5pemF0aW9uc0xpc3QSKQoFaXRlbXMYASADKAsyGi5wcm90by5vcmcudjEuT3JnYW5pemF0aW9uIl4KE0FwcGx5U2Vzc2lvblJlcXVlc3QSDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRIhCgR1c2VyGAMgASgLMhMucHJvdG8uYXV0aC52MS5Vc2VyIkQKF1NldE9yZ2FuaXphdGlvbnNSZXF1ZXN0EikKBWl0ZW1zGAEgAygLMhoucHJvdG8ub3JnLnYxLk9yZ2FuaXphdGlvbiJMChRTZXRDdXJyZW50T3JnUmVxdWVzdBIsCgNvcmcYASABKAsyGi5wcm90by5vcmcudjEuT3JnYW5pemF0aW9uSACIAQFCBgoEX29yZ0JJWkdnaXRodWIuY29tL2FudGhyb3BpY3MvYWdlbnRzbWVzaC9wcm90by9nZW4vZ28vYXV0aF9zdGF0ZS92MTthdXRoc3RhdGV2MWIGcHJvdG8z", [file_auth_v1_auth, file_org_v1_org]);
 
 /**
  * AuthManager::bootstrap() outcome. Mirrors the Rust enum
@@ -102,4 +102,78 @@ export type OrganizationsList = Message<"proto.auth_state.v1.OrganizationsList">
  */
 export const OrganizationsListSchema: GenMessage<OrganizationsList> = /*@__PURE__*/
   messageDesc(file_auth_state_v1_auth_state, 1);
+
+/**
+ * AuthManager::apply_session() input. Carries the freshly-issued tokens +
+ * user identity into the Rust SSOT after the renderer obtains them
+ * out-of-band (OAuth deep-link, magic-link verify, etc.). Mirrors the
+ * shape of `proto.auth.v1.LoginResponse` minus `expires_in` (the wasm
+ * path's apply_session DTO has no expires_in field).
+ *
+ * @generated from message proto.auth_state.v1.ApplySessionRequest
+ */
+export type ApplySessionRequest = Message<"proto.auth_state.v1.ApplySessionRequest"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+
+  /**
+   * @generated from field: proto.auth.v1.User user = 3;
+   */
+  user?: User | undefined;
+};
+
+/**
+ * Describes the message proto.auth_state.v1.ApplySessionRequest.
+ * Use `create(ApplySessionRequestSchema)` to create a new message.
+ */
+export const ApplySessionRequestSchema: GenMessage<ApplySessionRequest> = /*@__PURE__*/
+  messageDesc(file_auth_state_v1_auth_state, 2);
+
+/**
+ * AuthManager::replace_organizations() input. The renderer pushes the
+ * full org list after an OAuth callback or an org-create flow so the
+ * in-process Rust cache stays in lock-step with the server view.
+ *
+ * @generated from message proto.auth_state.v1.SetOrganizationsRequest
+ */
+export type SetOrganizationsRequest = Message<"proto.auth_state.v1.SetOrganizationsRequest"> & {
+  /**
+   * @generated from field: repeated proto.org.v1.Organization items = 1;
+   */
+  items: Organization[];
+};
+
+/**
+ * Describes the message proto.auth_state.v1.SetOrganizationsRequest.
+ * Use `create(SetOrganizationsRequestSchema)` to create a new message.
+ */
+export const SetOrganizationsRequestSchema: GenMessage<SetOrganizationsRequest> = /*@__PURE__*/
+  messageDesc(file_auth_state_v1_auth_state, 3);
+
+/**
+ * AuthManager::set_current_org() input. `org` absent means "clear the
+ * current org" (matches the legacy JSON path's empty-string convention).
+ *
+ * @generated from message proto.auth_state.v1.SetCurrentOrgRequest
+ */
+export type SetCurrentOrgRequest = Message<"proto.auth_state.v1.SetCurrentOrgRequest"> & {
+  /**
+   * @generated from field: optional proto.org.v1.Organization org = 1;
+   */
+  org?: Organization | undefined;
+};
+
+/**
+ * Describes the message proto.auth_state.v1.SetCurrentOrgRequest.
+ * Use `create(SetCurrentOrgRequestSchema)` to create a new message.
+ */
+export const SetCurrentOrgRequestSchema: GenMessage<SetCurrentOrgRequest> = /*@__PURE__*/
+  messageDesc(file_auth_state_v1_auth_state, 4);
 

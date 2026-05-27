@@ -60,6 +60,17 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
+    "name": "authApplySessionProto",
+    "group": "auth",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
     "name": "authBootstrap",
     "group": "auth",
     "params": [],
@@ -191,12 +202,34 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
+    "name": "authSetCurrentOrgProto",
+    "group": "auth",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
     "name": "authSetOrganizations",
     "group": "auth",
     "params": [
       {
         "name": "orgsJson",
         "type": "string"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "authSetOrganizationsProto",
+    "group": "auth",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"

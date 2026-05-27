@@ -202,3 +202,4 @@ pub fn log_event(level: String, target: String, msg: String) {
 
 mod commands;
 mod auth_proto;
+mod auth_proto_convert;
