@@ -6,7 +6,7 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · mesh", () => {
   test("meshBatchGetTicketPodsConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "meshBatchGetTicketPodsConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "meshBatchGetTicketPodsConnect", returnType: "Uint8Array" }, []);
   });
 
   test("meshClearTopology", async ({ sharedPage }) => {
@@ -14,7 +14,7 @@ test.describe("IPC · mesh", () => {
   });
 
   test("meshCreatePodForTicketConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "meshCreatePodForTicketConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "meshCreatePodForTicketConnect", returnType: "Uint8Array" }, []);
   });
 
   test("meshFetchTopology", async ({ sharedPage }) => {
@@ -34,7 +34,7 @@ test.describe("IPC · mesh", () => {
   });
 
   test("meshGetMeshTopologyConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "meshGetMeshTopologyConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "meshGetMeshTopologyConnect", returnType: "Uint8Array" }, []);
   });
 
   test("meshGetNodeJson", async ({ sharedPage }) => {
@@ -50,7 +50,7 @@ test.describe("IPC · mesh", () => {
   });
 
   test("meshGetTicketPodsConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "meshGetTicketPodsConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "meshGetTicketPodsConnect", returnType: "Uint8Array" }, []);
   });
 
   test("meshReplaceTopology", async ({ sharedPage }) => {

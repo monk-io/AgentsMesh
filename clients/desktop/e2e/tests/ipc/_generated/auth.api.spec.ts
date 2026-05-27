@@ -10,7 +10,7 @@ test.describe("IPC · auth", () => {
   });
 
   test("authBootstrap", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authBootstrap", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "authBootstrap", returnType: "string" });
   });
 
   test("authBootstrapProto", async ({ sharedPage }) => {
@@ -30,19 +30,19 @@ test.describe("IPC · auth", () => {
   });
 
   test("authGetCurrentOrgJson", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authGetCurrentOrgJson", returnType: "string | null" });
+    await invokeIpcContract(sharedPage, { method: "authGetCurrentOrgJson", returnType: "string | undefined | null" });
   });
 
   test("authGetCurrentUserJson", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authGetCurrentUserJson", returnType: "string | null" });
+    await invokeIpcContract(sharedPage, { method: "authGetCurrentUserJson", returnType: "string | undefined | null" });
   });
 
   test("authGetCurrentUserProto", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authGetCurrentUserProto", returnType: "Array<number> | null" });
+    await invokeIpcContract(sharedPage, { method: "authGetCurrentUserProto", returnType: "Array<number> | undefined | null" });
   });
 
   test("authGetExpiresAt", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authGetExpiresAt", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "authGetExpiresAt", returnType: "number | undefined | null" });
   });
 
   test("authGetOrganizationsJson", async ({ sharedPage }) => {
@@ -50,7 +50,7 @@ test.describe("IPC · auth", () => {
   });
 
   test("authGetToken", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authGetToken", returnType: "string | null" });
+    await invokeIpcContract(sharedPage, { method: "authGetToken", returnType: "string | undefined | null" });
   });
 
   test("authIsAuthenticated", async ({ sharedPage }) => {

@@ -21,32 +21,57 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "apikeyDeleteConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "apikeyGetConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "apikeyListConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "apikeyRevokeConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "apikeyUpdateConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "authApplySessionProto",
@@ -63,7 +88,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "authBootstrap",
     "group": "auth",
     "params": [],
-    "returnType": "any"
+    "returnType": "string"
   },
   {
     "name": "authBootstrapProto",
@@ -93,25 +118,25 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "authGetCurrentOrgJson",
     "group": "auth",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "authGetCurrentUserJson",
     "group": "auth",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "authGetCurrentUserProto",
     "group": "auth",
     "params": [],
-    "returnType": "Array<number> | null"
+    "returnType": "Array<number> | undefined | null"
   },
   {
     "name": "authGetExpiresAt",
     "group": "auth",
     "params": [],
-    "returnType": "any"
+    "returnType": "number | undefined | null"
   },
   {
     "name": "authGetOrganizationsJson",
@@ -123,7 +148,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "authGetToken",
     "group": "auth",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "authIsAuthenticated",
@@ -469,62 +494,112 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "bindingAcceptBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingApproveScopesConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingCheckBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingGetBoundPodsConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingGetPendingBindingsConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingListBindingsConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingRejectBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingRequestBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingRequestScopesConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "bindingUnbindConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "blockstoreApplyRemoteOp",
@@ -575,7 +650,7 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "blockstoreLastOpId",
@@ -660,7 +735,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -677,7 +752,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -714,7 +789,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -725,7 +800,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -736,7 +811,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -750,20 +825,35 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelApplyChannelMessageEditedEvent",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelApplyIncomingChannelMessage",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "boolean"
   },
   {
     "name": "channelArchiveChannelConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelChannelMembersJson",
@@ -818,8 +908,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelCreateChannelConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelCurrentChannelJson",
@@ -830,14 +925,24 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelDeleteChannelMessageConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelEditChannelMessageConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelFilterChannelsJson",
@@ -857,8 +962,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelGetChannelConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelGetChannelJson",
@@ -874,8 +984,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelGetChannelUnreadCountsConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelGetLastMessageJson",
@@ -949,7 +1064,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -957,32 +1072,57 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelInsertChannelMessage",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelListChannelMembersConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelListChannelMessagesConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelListChannelsConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelMarkChannelReadConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelMentionCountsJson",
@@ -996,7 +1136,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1004,20 +1144,21 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelPrependCachedChannelMessages",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelRemoveChannelMember",
     "group": "channel",
     "params": [
       {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "userId",
-        "type": "number"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1025,14 +1166,28 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelRemoveMessage",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      },
+      {
+        "name": "messageId",
+        "type": "number"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelReplaceCachedChannelMessages",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelReplaceCachedChannels",
@@ -1040,7 +1195,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1051,7 +1206,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1062,7 +1217,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1070,8 +1225,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelReplaceChannelUnreadCounts",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelSelectChannel",
@@ -1087,8 +1247,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelSendChannelMessageConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelSetCurrentChannel",
@@ -1142,8 +1307,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelUnarchiveChannelConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "channelUnreadCountsJson",
@@ -1154,80 +1324,145 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelUpdateChannelConnect",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "envBundleCreateEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "envBundleDeleteEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "envBundleGetEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "envBundleListEnvBundlesConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "envBundleSetPrimaryEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "envBundleUpdateEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionCreateSkillRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionDeleteSkillRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionInstallCustomMcpServerConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionInstallMcpFromMarketConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionInstallSkillFromGithubConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionInstallSkillFromMarketConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionInstallSkillFromUploadedFileConnect",
@@ -1243,38 +1478,68 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "extensionListMarketMcpServersConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionListMarketSkillsConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionListRepoMcpServersConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionListRepoSkillsConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionListSkillRegistriesConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionListSkillRegistryOverridesConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionPresignSkillUploadConnect",
@@ -1290,38 +1555,68 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "extensionSyncSkillRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionTogglePlatformRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionUninstallMcpServerConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionUninstallSkillConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionUpdateMcpServerConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "extensionUpdateSkillConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "fileUploadFile",
@@ -1429,13 +1724,13 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "localRunnerFallbackVersion",
     "group": "local_runner",
     "params": [],
-    "returnType": "any"
+    "returnType": "string"
   },
   {
     "name": "localRunnerHostTarget",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "localRunnerInstallBinary",
@@ -1456,7 +1751,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "localRunnerInstalledVersion",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "localRunnerIsInstalled",
@@ -1474,7 +1769,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "localRunnerLocalNodeId",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null"
   },
   {
     "name": "localRunnerRegister",
@@ -1523,7 +1818,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1534,7 +1829,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1545,7 +1840,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1573,7 +1868,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1590,7 +1885,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1601,7 +1896,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1612,7 +1907,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1623,7 +1918,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1640,7 +1935,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1648,8 +1943,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "meshBatchGetTicketPodsConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "meshClearTopology",
@@ -1660,8 +1960,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "meshCreatePodForTicketConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "meshFetchTopology",
@@ -1700,8 +2005,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "meshGetMeshTopologyConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "meshGetNodeJson",
@@ -1739,8 +2049,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "meshGetTicketPodsConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array"
   },
   {
     "name": "meshReplaceTopology",
@@ -1748,7 +2063,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "reqBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1838,10 +2153,10 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "requestBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Array<number>"
   },
   {
     "name": "runnerAvailableRunnersJson",
@@ -1861,10 +2176,10 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "requestBytes",
-        "type": "Uint8Array"
+        "type": "Array<number>"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Array<number>"
   },
   {
     "name": "runnerGetRunnerJson",
@@ -1978,20 +2293,35 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "supportTicketAddSupportTicketMessageConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "supportTicketAssociateAttachmentsConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "supportTicketCreateSupportTicketConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "supportTicketGetAttachmentUrlConnect",
@@ -2029,8 +2359,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "supportTicketPresignAttachmentUploadConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>"
   },
   {
     "name": "ticketAddAssigneeConnect",

@@ -6,42 +6,42 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · binding", () => {
   test("bindingAcceptBindingConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingAcceptBindingConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingAcceptBindingConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingApproveScopesConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingApproveScopesConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingApproveScopesConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingCheckBindingConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingCheckBindingConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingCheckBindingConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingGetBoundPodsConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingGetBoundPodsConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingGetBoundPodsConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingGetPendingBindingsConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingGetPendingBindingsConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingGetPendingBindingsConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingListBindingsConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingListBindingsConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingListBindingsConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingRejectBindingConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingRejectBindingConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingRejectBindingConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingRequestBindingConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingRequestBindingConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingRequestBindingConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingRequestScopesConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingRequestScopesConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingRequestScopesConnect", returnType: "Uint8Array" }, []);
   });
 
   test("bindingUnbindConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "bindingUnbindConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "bindingUnbindConnect", returnType: "Uint8Array" }, []);
   });
 });

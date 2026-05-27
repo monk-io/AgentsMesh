@@ -326,6 +326,17 @@ test.describe("IPC · ${group}", () => {
 }
 
 function main(): void {
+  // Step 1: parse Rust source for #[napi] signatures BEFORE the binary
+  // introspection so we can emit a fresh index.d.ts using authoritative
+  // type info (binary only reveals method names + arity).
+  const rustSignatures = parseNapiSignaturesFromRust();
+  console.log(`[gen-ipc-tests] Parsed ${rustSignatures.size} #[napi] signatures from Rust source`);
+
+  // Step 2: emit index.d.ts FIRST so the next-step binary introspection
+  // can read the freshly-generated signatures via loadIndexDtsSignatures().
+  writeFileSync(INDEX_DTS, emitIndexDts(rustSignatures), "utf-8");
+  console.log(`[gen-ipc-tests] index.d.ts → ${INDEX_DTS}`);
+
   const methods = extractMethodsFromBinary();
   console.log(`[gen-ipc-tests] Extracted ${methods.length} handlers from ${NAPI_BINARY}`);
 
@@ -379,6 +390,167 @@ export const IPC_ALLOWLIST: ReadonlyArray<string> = ${JSON.stringify(
 
 export const IPC_ALLOWLIST_SET: ReadonlySet<string> = new Set(IPC_ALLOWLIST);
 `;
+}
+
+// ============================================================================
+// Rust source parsing — extracts every `#[napi]` function signature so we
+// can auto-emit index.d.ts. The previously hand-maintained d.ts drifted by
+// 71 untyped methods + 202 stale entries (pass-4 audit). This eliminates
+// the drift surface entirely.
+// ============================================================================
+
+const NODE_BRIDGE_SRC = resolve(REPO_ROOT, "clients/core/crates/node-bridge/src");
+
+interface RustSig {
+  name: string;
+  isAsync: boolean;
+  isMethod: boolean; // true if first arg is &self → AppState method
+  params: Array<{ name: string; tsType: string }>;
+  tsReturn: string;
+}
+
+function parseNapiSignaturesFromRust(): Map<string, RustSig> {
+  const out = new Map<string, RustSig>();
+  for (const file of walkRsFiles(NODE_BRIDGE_SRC)) {
+    const src = readFileSync(file, "utf-8");
+    // Match `#[napi]` (optionally with attr params) followed by
+    // `pub (async) fn <name>(<params>) [-> <ret>] {`. Params chunk
+    // forbids `)` so we don't accidentally span across functions; return
+    // arrow is optional (sync `fn(&self) {}` returns `()` implicitly).
+    const re = /#\[napi(?:\([^)]*\))?\]\s*pub\s+(async\s+)?fn\s+(\w+)\s*\(([^)]*)\)(?:\s*->\s*([^{]+))?\s*\{/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) {
+      const isAsync = !!m[1];
+      const name = m[2];
+      if (out.has(name)) continue; // skip duplicates if any
+      // Skip the AppState::new constructor — the d.ts emits an explicit
+      // `constructor(baseUrl, storageDir)` line and `Self` doesn't map to
+      // a TypeScript type.
+      if (name === "new") continue;
+      const rawParams = m[3];
+      const rawRet = (m[4] ?? "()").trim().replace(/\s+/g, " ").replace(/;$/, "");
+      const isMethod = /^\s*&(?:mut\s+)?self\b/.test(rawParams);
+      const params = parseRustParams(rawParams);
+      const tsReturn = rustReturnToTs(rawRet, isAsync);
+      const camel = snakeToCamel(name);
+      out.set(camel, { name: camel, isAsync, isMethod, params, tsReturn });
+    }
+  }
+  return out;
+}
+
+function walkRsFiles(dir: string): string[] {
+  const result: string[] = [];
+  function walk(d: string) {
+    for (const entry of readdirSync(d, { withFileTypes: true })) {
+      const p = resolve(d, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (entry.isFile() && entry.name.endsWith(".rs")) result.push(p);
+    }
+  }
+  walk(dir);
+  return result;
+}
+
+function parseRustParams(raw: string): RustSig["params"] {
+  // Strip the leading `&self,` / `&mut self,` and tokenize the rest by
+  // top-level commas (skipping nested `<>` / `()`).
+  const trimmed = raw.replace(/^\s*&(?:mut\s+)?self\s*,?\s*/, "").trim();
+  if (!trimmed) return [];
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    const c = trimmed[i];
+    if (c === "<" || c === "(" || c === "[" || c === "{") depth++;
+    else if (c === ">" || c === ")" || c === "]" || c === "}") depth--;
+    else if (c === "," && depth === 0) {
+      parts.push(trimmed.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  parts.push(trimmed.slice(start).trim());
+  const out: RustSig["params"] = [];
+  for (const p of parts) {
+    if (!p) continue;
+    const colon = p.indexOf(":");
+    if (colon < 0) continue;
+    const pname = p.slice(0, colon).trim();
+    const ptype = p.slice(colon + 1).trim();
+    if (pname && ptype) {
+      out.push({ name: snakeToCamel(pname), tsType: rustTypeToTs(ptype) });
+    }
+  }
+  return out;
+}
+
+function rustTypeToTs(rust: string): string {
+  const t = rust.trim();
+  // Option<T> → T | undefined | null
+  const optMatch = t.match(/^Option<([\s\S]+)>$/);
+  if (optMatch) return `${rustTypeToTs(optMatch[1])} | undefined | null`;
+  // Vec<u8> → Array<number> (NAPI convention for proto bytes)
+  if (t === "Vec<u8>" || t === "&[u8]") return "Array<number>";
+  // Vec<T> → Array<T>
+  const vecMatch = t.match(/^Vec<([\s\S]+)>$/);
+  if (vecMatch) return `Array<${rustTypeToTs(vecMatch[1])}>`;
+  // Scalars
+  if (t === "String" || t === "&str" || t === "&String") return "string";
+  if (t === "bool") return "boolean";
+  if (t === "i64" || t === "u64") return "number";
+  if (t === "i32" || t === "u32" || t === "f32" || t === "f64" || t === "usize" || t === "isize") return "number";
+  if (t === "Buffer" || t === "napi::bindgen_prelude::Buffer") return "Uint8Array";
+  // Fallback — propagate raw Rust type; reviewer will see drift if any
+  return t;
+}
+
+function rustReturnToTs(rust: string, isAsync: boolean): string {
+  let t = rust.trim().replace(/;$/, "");
+  // napi::Result<T> → T (Promise wrap handled separately for async)
+  const resMatch = t.match(/^napi::Result<([\s\S]*)>$/);
+  if (resMatch) t = resMatch[1].trim();
+  const inner = t === "()" ? "void" : rustTypeToTs(t);
+  return isAsync ? `Promise<${inner}>` : inner;
+}
+
+function snakeToCamel(s: string): string {
+  return s.replace(/_([a-zA-Z])/g, (_, c) => c.toUpperCase());
+}
+
+function emitIndexDts(sigs: Map<string, RustSig>): string {
+  const all = [...sigs.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const free = all.filter((s) => !s.isMethod);
+  const methods = all.filter((s) => s.isMethod);
+  const lines: string[] = [];
+  lines.push("/* eslint-disable */");
+  lines.push("/* prettier-ignore */");
+  lines.push("/**");
+  lines.push(" * AUTO-GENERATED by clients/desktop/scripts/gen-ipc-tests.ts.");
+  lines.push(" *");
+  lines.push(" * Source of truth: `#[napi]` annotations in");
+  lines.push(" * clients/core/crates/node-bridge/src/.");
+  lines.push(" *");
+  lines.push(" * Regenerate:");
+  lines.push(" *   bazel build //clients/core/crates/node-bridge:node_bridge");
+  lines.push(" *   pnpm --filter desktop e2e:gen");
+  lines.push(" *");
+  lines.push(" * Do NOT edit by hand — changes will be overwritten on next regen.");
+  lines.push(" */");
+  lines.push("");
+  for (const s of free) {
+    const ps = s.params.map((p) => `${p.name}: ${p.tsType}`).join(", ");
+    lines.push(`export function ${s.name}(${ps}): ${s.tsReturn};`);
+  }
+  lines.push("");
+  lines.push("export class AppState {");
+  lines.push("  constructor(baseUrl: string, storageDir: string);");
+  for (const s of methods) {
+    const ps = s.params.map((p) => `${p.name}: ${p.tsType}`).join(", ");
+    lines.push(`  ${s.name}(${ps}): ${s.tsReturn}`);
+  }
+  lines.push("}");
+  lines.push("");
+  return lines.join("\n");
 }
 
 main();

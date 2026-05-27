@@ -26,7 +26,7 @@ test.describe("IPC · blockstore", () => {
   });
 
   test("blockstoreGetBlockJson", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreGetBlockJson", returnType: "string | null" }, "");
+    await invokeIpcContract(sharedPage, { method: "blockstoreGetBlockJson", returnType: "string | undefined | null" }, "");
   });
 
   test("blockstoreLastOpId", async ({ sharedPage }) => {
