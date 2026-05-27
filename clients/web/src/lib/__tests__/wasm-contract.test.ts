@@ -142,7 +142,7 @@ type _LoopState_set_runs       = _Sig<WasmLoopState["set_runs"]>;
 
 // ── MeshState (production callers: stores/mesh.ts + topology hooks) ──
 type _MeshState_topology       = _Sig<WasmMeshState["topology_json"]>;
-type _MeshState_set_topology   = _Sig<WasmMeshState["set_topology"]>;
+type _MeshState_replace        = _Sig<WasmMeshState["replace_topology"]>;
 type _MeshState_clear          = _Sig<WasmMeshState["clear_topology"]>;
 type _MeshState_select         = _Sig<WasmMeshState["select_node"]>;
 type _MeshState_get_node       = _Sig<WasmMeshState["get_node_json"]>;

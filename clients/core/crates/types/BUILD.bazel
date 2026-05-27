@@ -41,6 +41,7 @@ rust_library(
         "//proto/loop/v1:loop_rust_proto",
         "//proto/loop_state/v1:loop_state_rust_proto",
         "//proto/mesh/v1:mesh_rust_proto",
+        "//proto/mesh_state/v1:mesh_state_rust_proto",
         "//proto/notification/v1:notification_rust_proto",
         "//proto/org/v1:org_rust_proto",
         "//proto/pod/v1:pod_rust_proto",

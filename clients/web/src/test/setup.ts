@@ -602,6 +602,8 @@ vi.mock('@/lib/wasm-core', () => {
     get_active_nodes_json: fn(() => '[]'),
     get_runner_info_json: fn(),
     fetch_topology: fn().mockResolvedValue(JSON.stringify({ nodes: [], edges: [], channels: [], runners: [] })),
+    // Proto-bytes mutator (mirror state_mesh.rs).
+    replace_topology: fn((_b: Uint8Array) => undefined),
     // Connect-RPC bridge — empty Uint8Array decodes to default-valued proto.
     getMeshTopologyConnect: fn().mockResolvedValue(new Uint8Array()),
     getTicketPodsConnect: fn().mockResolvedValue(new Uint8Array()),

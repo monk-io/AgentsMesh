@@ -1,5 +1,7 @@
 import { invoke } from "./invoke";
 import type { IMeshService } from "@agentsmesh/service-interface";
+import { fromBinary } from "@bufbuild/protobuf";
+import { ReplaceTopologyRequestSchema } from "@agentsmesh/proto/mesh_state/v1/mesh_state_pb";
 
 export class ElectronMeshService implements IMeshService {
   private _topologyCache: string | null = null;
@@ -46,7 +48,12 @@ export class ElectronMeshService implements IMeshService {
     return r ? JSON.stringify(r) : null;
   }
 
-  set_topology(json: string): void { this._topologyCache = json; }
+  replace_topology(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceTopologyRequestSchema, reqBytes);
+    this._topologyCache = req.topologyJson || null;
+    void invoke<void>("meshReplaceTopology", Array.from(reqBytes)).catch(() => undefined);
+  }
+
   clear_topology(): void { this._topologyCache = null; }
 
   select_node(podKey?: string | null): void {

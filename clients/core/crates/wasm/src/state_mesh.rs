@@ -1,10 +1,16 @@
 use agentsmesh_state::mesh_state::MeshState;
+use agentsmesh_types::proto_mesh_state_v1::ReplaceTopologyRequest;
 use agentsmesh_types::proto_mesh_v1::MeshTopology;
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmMeshState {
     inner: MeshState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -30,10 +36,12 @@ impl WasmMeshState {
         }
     }
 
-    pub fn set_topology(&mut self, json: &str) {
-        if let Ok(topology) = serde_json::from_str::<MeshTopology>(json) {
+    pub fn replace_topology(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceTopologyRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Ok(topology) = serde_json::from_str::<MeshTopology>(&req.topology_json) {
             self.inner.set_topology(topology);
         }
+        Ok(())
     }
 
     pub fn clear_topology(&mut self) {

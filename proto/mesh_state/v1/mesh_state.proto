@@ -1,0 +1,26 @@
+// proto.mesh_state.v1 — client-side mesh state mutation contract.
+//
+// Mesh topology carries a deeply-nested AST (nodes / edges / channels /
+// runners with their own sub-shapes). The UI consumes this opaquely
+// (rendering Cytoscape graphs, runner panels, etc.) — Rust state just
+// stores and forwards. Mirrors the ChannelMessage.content_json carry-
+// through pattern: renderer encodes via JSON.stringify, Rust state
+// decodes via serde_json::from_str before storing into MeshTopology.
+//
+// Why not flatten to proto fields: the proto.mesh.v1.MeshTopology
+// wire schema already exists with the full nested shape. Cloning that
+// 200+ field structure into a state-side schema would be churn without
+// gain — the opaque carry-through respects the YAGNI line.
+
+syntax = "proto3";
+
+package proto.mesh_state.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/mesh_state/v1;meshstatev1";
+
+// Replace the cached mesh topology — used after MeshService.fetch_topology
+// returns. The embedded JSON blob is a serialised `proto.mesh.v1.MeshTopology`
+// (carried through opaquely by Rust state).
+message ReplaceTopologyRequest {
+  string topology_json = 1;
+}

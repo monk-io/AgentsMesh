@@ -409,8 +409,11 @@ export interface IMeshService {
   get_runner_info_json(runner_id: bigint): any;
   select_node(pod_key?: string | null): void;
   selected_node(): any;
-  set_topology(json: string): void;
   topology_json(): any;
+  // Proto-bytes mutator (mirror state_mesh.rs). Carries an opaque
+  // serialised proto.mesh.v1.MeshTopology JSON blob — UI owns the
+  // schema, Rust state stores it verbatim.
+  replace_topology(req_bytes: Uint8Array): void;
   // Connect-RPC: proto.mesh.v1.MeshService. Binary wire (Uint8Array in,
   // Uint8Array out). Callers encode/decode via @bufbuild/protobuf — see
   // clients/web/src/lib/api/meshConnect.ts for the adapter.
@@ -430,7 +433,8 @@ export interface IMeshState {
   get_runner_info_json(runner_id: bigint): any;
   select_node(pod_key?: string | null): void;
   selected_node(): any;
-  set_topology(json: string): void;
+  // Proto-bytes mutator (mirror state_mesh.rs).
+  replace_topology(req_bytes: Uint8Array): void;
   topology_json(): any;
 }
 

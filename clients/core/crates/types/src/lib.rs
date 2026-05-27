@@ -107,6 +107,10 @@ pub mod proto_mesh_v1 {
     pub use ::mesh_proto::proto::mesh::v1::*;
 }
 
+pub mod proto_mesh_state_v1 {
+    pub use ::mesh_state_proto::proto::mesh_state::v1::*;
+}
+
 pub mod proto_notification_v1 {
     pub use ::notification_proto::proto::notification::v1::*;
 }
