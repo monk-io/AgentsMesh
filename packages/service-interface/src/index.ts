@@ -511,15 +511,16 @@ export interface IRelayManager {
 }
 
 export interface IRepoState {
-  add_repository(json: string): void;
   branches_json(): string;
   current_repo_json(): any;
   remove_repository(id: string): void;
   repositories_json(): string;
-  set_branches(json: string): void;
-  set_current_repo(json: string): void;
-  set_repositories(json: string): void;
-  update_repository(id: string, json: string): void;
+  // Proto-bytes mutators (mirror state_repo.rs).
+  replace_cached_repositories(req_bytes: Uint8Array): void;
+  set_current_repo_proto(req_bytes: Uint8Array): void;
+  replace_branches(req_bytes: Uint8Array): void;
+  insert_repository(req_bytes: Uint8Array): void;
+  patch_repository(req_bytes: Uint8Array): void;
 }
 
 export interface IRepositoryService {

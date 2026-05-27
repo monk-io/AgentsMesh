@@ -131,6 +131,10 @@ pub mod proto_repository_v1 {
     pub use ::repository_proto::proto::repository::v1::*;
 }
 
+pub mod proto_repo_state_v1 {
+    pub use ::repo_state_proto::proto::repo_state::v1::*;
+}
+
 pub mod proto_runner_api_v1 {
     pub use ::runner_api_proto::proto::runner_api::v1::*;
 }

@@ -1,10 +1,18 @@
 use agentsmesh_state::repo_state::RepoState;
-use agentsmesh_types::proto_repository_v1::{Branch, Repository};
+use agentsmesh_types::proto_repo_state_v1::{
+    InsertRepositoryRequest, PatchRepositoryRequest, ReplaceBranchesRequest,
+    ReplaceCachedRepositoriesRequest, SetCurrentRepoRequest,
+};
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmRepoState {
     inner: RepoState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -29,33 +37,38 @@ impl WasmRepoState {
         serde_json::to_string(self.inner.branches()).unwrap_or_default()
     }
 
-    pub fn set_repositories(&mut self, json: &str) {
-        if let Ok(repos) = serde_json::from_str::<Vec<Repository>>(json) {
-            self.inner.set_repositories(repos);
-        }
+    pub fn replace_cached_repositories(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceCachedRepositoriesRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_repositories(req.repositories);
+        Ok(())
     }
 
-    pub fn set_current_repo(&mut self, json: &str) {
-        let repo = if json.is_empty() { None } else { serde_json::from_str::<Repository>(json).ok() };
-        self.inner.set_current_repo(repo);
+    pub fn set_current_repo_proto(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = SetCurrentRepoRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_current_repo(req.repository);
+        Ok(())
     }
 
-    pub fn set_branches(&mut self, json: &str) {
-        if let Ok(branches) = serde_json::from_str::<Vec<Branch>>(json) {
-            self.inner.set_branches(branches);
-        }
+    pub fn replace_branches(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceBranchesRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_branches(req.branches);
+        Ok(())
     }
 
-    pub fn add_repository(&mut self, json: &str) {
-        if let Ok(repo) = serde_json::from_str::<Repository>(json) {
+    pub fn insert_repository(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = InsertRepositoryRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Some(repo) = req.repository {
             self.inner.add_repository(repo);
         }
+        Ok(())
     }
 
-    pub fn update_repository(&mut self, id: &str, json: &str) {
-        if let Ok(repo) = serde_json::from_str::<Repository>(json) {
-            self.inner.update_repository(id, repo);
+    pub fn patch_repository(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = PatchRepositoryRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Some(repo) = req.repository {
+            self.inner.update_repository(&req.id, repo);
         }
+        Ok(())
     }
 
     pub fn remove_repository(&mut self, id: &str) {

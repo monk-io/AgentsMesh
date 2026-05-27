@@ -47,6 +47,7 @@ rust_library(
         "//proto/pod_state/v1:pod_state_rust_proto",
         "//proto/promocode/v1:promocode_rust_proto",
         "//proto/repository/v1:repository_rust_proto",
+        "//proto/repo_state/v1:repo_state_rust_proto",
         "//proto/runner_api/v1:runner_api_rust_proto",
         "//proto/runner_state/v1:runner_state_rust_proto",
         "//proto/autopilot_state/v1:autopilot_state_rust_proto",

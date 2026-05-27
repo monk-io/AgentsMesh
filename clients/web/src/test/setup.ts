@@ -655,6 +655,12 @@ vi.mock('@/lib/wasm-core', () => {
     set_current_repo: fn(), current_repo_json: fn(() => h.repo.current || undefined),
     add_repository: fn(), update_repository: fn(), remove_repository: fn(),
     set_branches: fn(), branches_json: fn(() => h.repo.branches),
+    // Proto-bytes mutators (mirror state_repo.rs).
+    replace_cached_repositories: fn((_b: Uint8Array) => undefined),
+    set_current_repo_proto: fn((_b: Uint8Array) => undefined),
+    replace_branches: fn((_b: Uint8Array) => undefined),
+    insert_repository: fn((_b: Uint8Array) => undefined),
+    patch_repository: fn((_b: Uint8Array) => undefined),
   }
 
   const autopilotState = {

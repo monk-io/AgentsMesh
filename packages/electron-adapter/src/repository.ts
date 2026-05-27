@@ -1,5 +1,14 @@
 import { invoke } from "./invoke";
 import type { IRepositoryService, IRepoState } from "@agentsmesh/service-interface";
+import { fromBinary } from "@bufbuild/protobuf";
+import {
+  ReplaceCachedRepositoriesRequestSchema,
+  SetCurrentRepoRequestSchema,
+  ReplaceBranchesRequestSchema,
+  InsertRepositoryRequestSchema,
+  PatchRepositoryRequestSchema,
+} from "@agentsmesh/proto/repo_state/v1/repo_state_pb";
+import type { Repository as ProtoRepository, Branch as ProtoBranch } from "@agentsmesh/proto/repository/v1/repository_pb";
 
 // Web's wasm-side `WasmRepositoryService` exposes `<verb>Connect(bytes)`
 // methods. RepositoryService in Rust core is a thin proxy (no cache, no
@@ -19,6 +28,45 @@ async function connectCall(method: string, request: Uint8Array): Promise<Uint8Ar
   return resp instanceof Uint8Array ? resp : new Uint8Array(resp);
 }
 
+function repositoryToCache(r: ProtoRepository): Record<string, unknown> {
+  const ZERO = BigInt(0);
+  return {
+    id: Number(r.id),
+    organization_id: Number(r.organizationId),
+    provider_type: r.providerType,
+    provider_base_url: r.providerBaseUrl,
+    http_clone_url: r.httpCloneUrl || undefined,
+    ssh_clone_url: r.sshCloneUrl || undefined,
+    external_id: r.externalId,
+    name: r.name,
+    slug: r.slug,
+    default_branch: r.defaultBranch,
+    ticket_prefix: r.ticketPrefix,
+    visibility: r.visibility,
+    imported_by_user_id:
+      r.importedByUserId !== undefined && r.importedByUserId !== ZERO
+        ? Number(r.importedByUserId) : undefined,
+    is_active: r.isActive,
+    webhook_config: r.webhookConfig
+      ? {
+          id: r.webhookConfig.id,
+          url: r.webhookConfig.url,
+          events: r.webhookConfig.events ?? [],
+          is_active: r.webhookConfig.isActive,
+          needs_manual_setup: r.webhookConfig.needsManualSetup,
+          last_error: r.webhookConfig.lastError,
+          created_at: r.webhookConfig.createdAt,
+        }
+      : undefined,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+  };
+}
+
+function branchToCache(b: ProtoBranch): Record<string, unknown> {
+  return { name: b.name };
+}
+
 // Service-is-State-superset 模式（对齐 ElectronPodService）：内部 cache 由 Service 持有，
 // provider 让 repoState 别名同一实例，renderer 端 useRepositories() 读到的就是这里的 cache。
 export class ElectronRepositoryService implements IRepositoryService, IRepoState {
@@ -32,28 +80,52 @@ export class ElectronRepositoryService implements IRepositoryService, IRepoState
   current_repo_json(): unknown { return this._currentRepoCache; }
   branches_json(): string { return this._branchesCache; }
 
-  set_repositories(json: string): void { this._repositoriesCache = json || "[]"; }
-  set_current_repo(json: string): void { this._currentRepoCache = json || null; }
-  set_branches(json: string): void { this._branchesCache = json || "[]"; }
-
-  add_repository(json: string): void {
-    const repo = JSON.parse(json) as { id: number };
-    const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
-    repos.push(repo);
-    this._repositoriesCache = JSON.stringify(repos);
-  }
-
-  update_repository(id: string, json: string): void {
-    const updated = JSON.parse(json) as { id: number };
-    const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
-    const idx = repos.findIndex(r => String(r.id) === id);
-    if (idx >= 0) repos[idx] = updated;
-    this._repositoriesCache = JSON.stringify(repos);
-  }
-
   remove_repository(id: string): void {
     const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
     this._repositoriesCache = JSON.stringify(repos.filter(r => String(r.id) !== id));
+  }
+
+  // Proto-bytes mutators — decode locally + update JS cache synchronously,
+  // then fire-and-forget NAPI sync. Mirrors ElectronRunnerService.
+
+  replace_cached_repositories(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceCachedRepositoriesRequestSchema, reqBytes);
+    this._repositoriesCache = JSON.stringify(req.repositories.map(repositoryToCache));
+    void invoke<void>("repoReplaceCachedRepositories", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  set_current_repo_proto(reqBytes: Uint8Array): void {
+    const req = fromBinary(SetCurrentRepoRequestSchema, reqBytes);
+    this._currentRepoCache = req.repository ? JSON.stringify(repositoryToCache(req.repository)) : null;
+    void invoke<void>("repoSetCurrentRepoProto", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  replace_branches(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceBranchesRequestSchema, reqBytes);
+    this._branchesCache = JSON.stringify(req.branches.map(branchToCache));
+    void invoke<void>("repoReplaceBranches", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  insert_repository(reqBytes: Uint8Array): void {
+    const req = fromBinary(InsertRepositoryRequestSchema, reqBytes);
+    if (req.repository) {
+      const repos = JSON.parse(this._repositoriesCache) as Record<string, unknown>[];
+      repos.push(repositoryToCache(req.repository));
+      this._repositoriesCache = JSON.stringify(repos);
+    }
+    void invoke<void>("repoInsertRepository", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  patch_repository(reqBytes: Uint8Array): void {
+    const req = fromBinary(PatchRepositoryRequestSchema, reqBytes);
+    if (req.repository) {
+      const patched = repositoryToCache(req.repository);
+      const repos = JSON.parse(this._repositoriesCache) as { id: number }[];
+      const idx = repos.findIndex(r => String(r.id) === req.id);
+      if (idx >= 0) repos[idx] = patched as { id: number };
+      this._repositoriesCache = JSON.stringify(repos);
+    }
+    void invoke<void>("repoPatchRepository", Array.from(reqBytes)).catch(() => undefined);
   }
 
   // ===== IRepositoryService =====

@@ -1,0 +1,61 @@
+// proto.repo_state.v1 — client-side repository state mutation contract.
+//
+// Companion to proto.repository.v1 (wire schema for Connect-RPC). This package
+// describes the SRP-shaped mutations renderer code issues against the Rust
+// repo cache via wasm-bindgen.
+//
+// Rust state's `RepoState` (clients/core/crates/state/src/repo_state.rs) stores
+// `proto.repository.v1.Repository` directly — the wire schema *is* the
+// in-memory model. We import it here rather than re-define a snapshot, so
+// every field a renderer would set lands in the cache verbatim.
+
+syntax = "proto3";
+
+package proto.repo_state.v1;
+
+import "repository/v1/repository.proto";
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/repo_state/v1;repostatev1";
+
+// ---------------------------------------------------------------------------
+// Replace the cached "all repositories" view — used by the repositories page
+// after ListRepositories returns. Wholesale replacement so the displayed
+// list matches the current org / filter combination.
+// ---------------------------------------------------------------------------
+message ReplaceCachedRepositoriesRequest {
+  repeated proto.repository.v1.Repository repositories = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Set / clear the "current repository" used by repo-detail page. Absent
+// `repository` means clear.
+// ---------------------------------------------------------------------------
+message SetCurrentRepoRequest {
+  optional proto.repository.v1.Repository repository = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Replace the cached branches view for a repository — used after
+// ListRepositoryBranches / SyncRepositoryBranches. Single-list cache today
+// (no per-repo keying on the Rust side); follow the wire contract.
+// ---------------------------------------------------------------------------
+message ReplaceBranchesRequest {
+  repeated proto.repository.v1.Branch branches = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Append a freshly-created repository to the cache — used by
+// CreateRepository after-success path.
+// ---------------------------------------------------------------------------
+message InsertRepositoryRequest {
+  proto.repository.v1.Repository repository = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Patch a single repository in-place after GetRepository / UpdateRepository
+// returns. Idempotent on `repository.id`; replaces the matching entry.
+// ---------------------------------------------------------------------------
+message PatchRepositoryRequest {
+  string id = 1;
+  proto.repository.v1.Repository repository = 2;
+}
