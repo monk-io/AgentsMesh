@@ -5,11 +5,19 @@ import { useTicketStore } from "@/stores/ticket";
 import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
 import { readCurrentUser } from "@/stores/auth";
 import type { PodData } from "@/lib/api/facade/pod";
-import type {
-  RealtimeEvent, RunnerStatusData, TicketStatusChangedData,
-  ChannelMessageData, ChannelMessageEditedData, ChannelMessageDeletedData,
-  ChannelMemberChangedData, MREventData, PipelineEventData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  RunnerStatusEventDataSchema,
+  TicketStatusChangedEventDataSchema,
+  ChannelMessageEventDataSchema,
+  ChannelMessageEditedEventDataSchema,
+  ChannelMessageDeletedEventDataSchema,
+  ChannelMemberChangedEventDataSchema,
+  MrEventDataSchema,
+  PipelineEventDataSchema,
 } from "@/lib/realtime";
+import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
 
 export { handlePodEvent } from "./realtimePodHandlers";
 export { handleAutopilotEvent, handleLoopEvent } from "./realtimeFeatureHandlers";
@@ -17,52 +25,77 @@ export { handleBlockstoreEvent } from "@/stores/blockstoreSubscribe";
 
 export type DebounceRef = React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 
+function parseMaybe<T>(json: string | undefined): T | undefined {
+  if (!json) return undefined;
+  try { return JSON.parse(json) as T; } catch { return undefined; }
+}
+
 export function handleChannelEvent(event: RealtimeEvent, channelDebounceRef?: DebounceRef) {
   const msgState = useChannelMessageStore.getState();
   switch (event.type) {
     case "channel:message": {
-      const data = event.data as ChannelMessageData;
-      msgState.addMessage(data.channel_id, {
-        id: data.id, channel_id: data.channel_id, sender_pod: data.sender_pod,
-        sender_user_id: data.sender_user_id,
-        message_type: data.message_type,
-        body: data.body, content: data.content, mentions: data.mentions,
-        reply_to: data.reply_to, created_at: data.created_at,
-        ...(data.sender_pod_info ? { sender_pod_info: data.sender_pod_info } : {}),
-        ...(data.sender_user_id && data.sender_name ? {
-          sender_user: { id: data.sender_user_id, username: data.sender_name, name: data.sender_name },
+      const data = decodeEventData(ChannelMessageEventDataSchema, event.data);
+      const channelId = Number(data.channelId);
+      const senderUserId = data.senderUserId != null ? Number(data.senderUserId) : undefined;
+      msgState.addMessage(channelId, {
+        id: Number(data.id),
+        channel_id: channelId,
+        sender_pod: data.senderPod,
+        sender_user_id: senderUserId,
+        message_type: data.messageType,
+        body: data.body,
+        content: parseMaybe<MessageContent>(data.contentJson),
+        mentions: parseMaybe<MessageMentions>(data.mentionsJson),
+        reply_to: data.replyTo != null ? Number(data.replyTo) : undefined,
+        created_at: data.createdAt,
+        ...(data.senderPodInfo ? {
+          sender_pod_info: {
+            pod_key: data.senderPodInfo.podKey,
+            ...(data.senderPodInfo.alias != null ? { alias: data.senderPodInfo.alias } : {}),
+            ...(data.senderPodInfo.agent ? { agent: { name: data.senderPodInfo.agent.name } } : {}),
+          },
+        } : {}),
+        ...(senderUserId != null && data.senderName ? {
+          sender_user: { id: senderUserId, username: data.senderName, name: data.senderName },
         } : {}),
       });
       const currentUserId = readCurrentUser()?.id;
       const viewingChannelId = useChannelStore.getState().selectedChannelId;
-      const isSelf = currentUserId != null && data.sender_user_id === currentUserId;
-      const isViewing = viewingChannelId === data.channel_id;
+      const isSelf = currentUserId != null && senderUserId === currentUserId;
+      const isViewing = viewingChannelId === channelId;
       if (!isSelf && !isViewing) {
-        msgState.incrementUnread(data.channel_id);
+        msgState.incrementUnread(channelId);
       }
       break;
     }
     case "channel:message_edited": {
-      const data = event.data as ChannelMessageEditedData;
-      msgState.updateMessage(data.channel_id, { id: data.id, body: data.body, content: data.content, mentions: data.mentions, edited_at: data.edited_at });
+      const data = decodeEventData(ChannelMessageEditedEventDataSchema, event.data);
+      msgState.updateMessage(Number(data.channelId), {
+        id: Number(data.id),
+        body: data.body,
+        content: parseMaybe<MessageContent>(data.contentJson),
+        mentions: parseMaybe<MessageMentions>(data.mentionsJson),
+        edited_at: data.editedAt,
+      });
       break;
     }
     case "channel:message_deleted": {
-      const data = event.data as ChannelMessageDeletedData;
-      msgState.removeMessage(data.channel_id, data.id);
+      const data = decodeEventData(ChannelMessageDeletedEventDataSchema, event.data);
+      msgState.removeMessage(Number(data.channelId), Number(data.id));
       break;
     }
     case "channel:member_added":
     case "channel:member_removed": {
-      const data = event.data as ChannelMemberChangedData;
+      const data = decodeEventData(ChannelMemberChangedEventDataSchema, event.data);
+      const channelId = Number(data.channelId);
       const chState = useChannelStore.getState();
       const delta = event.type === "channel:member_added" ? 1 : -1;
-      chState.patchChannelMemberCount?.(data.channel_id, delta);
-      if (chState.currentChannel?.id === data.channel_id && channelDebounceRef) {
+      chState.patchChannelMemberCount?.(channelId, delta);
+      if (chState.currentChannel?.id === channelId && channelDebounceRef) {
         if (channelDebounceRef.current) clearTimeout(channelDebounceRef.current);
         channelDebounceRef.current = setTimeout(() => {
           channelDebounceRef.current = null;
-          useChannelStore.getState().fetchChannel?.(data.channel_id);
+          useChannelStore.getState().fetchChannel?.(channelId);
         }, 300);
       }
       break;
@@ -75,8 +108,8 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
     case "runner:online":
     case "runner:offline":
     case "runner:updated": {
-      const data = event.data as RunnerStatusData;
-      useRunnerStore.getState().updateRunnerStatus(data.runner_id, data.status as "online" | "offline" | "maintenance" | "busy");
+      const data = decodeEventData(RunnerStatusEventDataSchema, event.data);
+      useRunnerStore.getState().updateRunnerStatus(Number(data.runnerId), data.status as "online" | "offline" | "maintenance" | "busy");
       break;
     }
     case "ticket:created":
@@ -84,11 +117,11 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
     case "ticket:status_changed":
     case "ticket:moved":
     case "ticket:deleted": {
-      const data = event.data as TicketStatusChangedData;
+      const data = decodeEventData(TicketStatusChangedEventDataSchema, event.data);
       const ticketState = useTicketStore.getState();
 
       if (event.type === "ticket:status_changed" && data.slug && data.status) {
-        ticketState.updateTicketStatusFromEvent?.(data.slug, data.status, data.previous_status);
+        ticketState.updateTicketStatusFromEvent?.(data.slug, data.status, data.previousStatus);
       } else if (event.type === "ticket:deleted" && data.slug) {
         ticketState.removeTicketFromEvent?.(data.slug);
       }
@@ -100,21 +133,23 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
     case "mr:updated":
     case "mr:merged":
     case "mr:closed": {
-      const data = event.data as MREventData;
-      if (data.ticket_slug) useTicketStore.getState().fetchTicket?.(data.ticket_slug);
-      if (data.pod_id) {
+      const data = decodeEventData(MrEventDataSchema, event.data);
+      if (data.ticketSlug) useTicketStore.getState().fetchTicket?.(data.ticketSlug);
+      if (data.podId != null) {
+        const podId = Number(data.podId);
         const pods = JSON.parse(getPodState().pods_json()) as PodData[];
-        const pod = pods.find((p) => p.id === data.pod_id);
+        const pod = pods.find((p) => p.id === podId);
         if (pod) usePodStore.getState().fetchPod?.(pod.pod_key);
       }
       break;
     }
     case "pipeline:updated": {
-      const data = event.data as PipelineEventData;
-      if (data.ticket_slug) useTicketStore.getState().fetchTicket?.(data.ticket_slug);
-      if (data.pod_id) {
+      const data = decodeEventData(PipelineEventDataSchema, event.data);
+      if (data.ticketSlug) useTicketStore.getState().fetchTicket?.(data.ticketSlug);
+      if (data.podId != null) {
+        const podId = Number(data.podId);
         const pods = JSON.parse(getPodState().pods_json()) as PodData[];
-        const pod = pods.find((p) => p.id === data.pod_id);
+        const pod = pods.find((p) => p.id === podId);
         if (pod) usePodStore.getState().fetchPod?.(pod.pod_key);
       }
       break;

@@ -33,6 +33,7 @@ go_library(
         "//backend/internal/infra/git",
         "//backend/internal/service/blockstore",
         "//backend/pkg/blocknote",
+        "//proto/events/v1:events_go_proto",
         "@com_github_google_uuid//:uuid",
     ],
 )

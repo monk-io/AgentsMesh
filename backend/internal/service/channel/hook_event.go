@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 type MemberIDProvider interface {
@@ -20,32 +21,32 @@ func NewEventPublishHook(eb *eventbus.EventBus, userNames UserNameResolver, memb
 			return nil
 		}
 
-		msgData := eventbus.ChannelMessageData{
-			ID:           mc.Message.ID,
-			ChannelID:    mc.Message.ChannelID,
+		msgData := &eventsv1.ChannelMessageEventData{
+			Id:           mc.Message.ID,
+			ChannelId:    mc.Message.ChannelID,
 			SenderPod:    mc.Message.SenderPod,
-			SenderUserID: mc.Message.SenderUserID,
+			SenderUserId: mc.Message.SenderUserID,
 			SenderName:   resolveSenderName(ctx, mc, userNames),
 			MessageType:  mc.Message.MessageType,
 			Body:         mc.Message.Body,
-			Content:      mc.Message.Content,
-			Mentions:     mc.Message.Mentions,
+			ContentJson:  marshalJSONField(mc.Message.Content),
+			MentionsJson: marshalJSONField(mc.Message.Mentions),
 			ReplyTo:      mc.Message.ReplyTo,
 			CreatedAt:    mc.Message.CreatedAt.Format(time.RFC3339),
 		}
 
 		if mc.Message.SenderPodInfo != nil {
-			info := &eventbus.SenderPodInfo{PodKey: mc.Message.SenderPodInfo.PodKey}
+			info := &eventsv1.SenderPodInfoEventData{PodKey: mc.Message.SenderPodInfo.PodKey}
 			if mc.Message.SenderPodInfo.Alias != nil {
 				info.Alias = mc.Message.SenderPodInfo.Alias
 			}
 			if mc.Message.SenderPodInfo.Agent != nil {
-				info.Agent = &eventbus.SenderPodAgent{Name: mc.Message.SenderPodInfo.Agent.Name}
+				info.Agent = &eventsv1.SenderPodAgentEventData{Name: mc.Message.SenderPodInfo.Agent.Name}
 			}
 			msgData.SenderPodInfo = info
 		}
 
-		data, err := json.Marshal(msgData)
+		data, err := eventbus.MarshalEventData(msgData)
 		if err != nil {
 			slog.ErrorContext(ctx, "failed to marshal channel message event", "error", err)
 			return err
@@ -68,4 +69,18 @@ func NewEventPublishHook(eb *eventbus.EventBus, userNames UserNameResolver, memb
 
 		return nil
 	}
+}
+
+// marshalJSONField serialises arbitrary JSONMap fields (Content/Mentions
+// ASTs whose per-node-type schemas are renderer-owned) to the JSON string
+// the proto carries opaquely. Empty in / empty out.
+func marshalJSONField(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }

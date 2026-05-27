@@ -4,41 +4,75 @@ import { useTicketStore } from "@/stores/ticket";
 import { useChannelMessageStore } from "@/stores/channel";
 import { useAutopilotStore } from "@/stores/autopilot";
 import { useLoopStore } from "@/stores/loop";
-import type {
-  RealtimeEvent, RunnerStatusData, TicketStatusChangedData,
-  ChannelMessageData, ChannelMessageEditedData, ChannelMessageDeletedData,
-  AutopilotStatusChangedData, AutopilotIterationData,
-  AutopilotTerminatedData, AutopilotThinkingData, MREventData, PipelineEventData,
-  LoopRunEventData, LoopRunWarningData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  RunnerStatusEventDataSchema,
+  TicketStatusChangedEventDataSchema,
+  ChannelMessageEventDataSchema,
+  ChannelMessageEditedEventDataSchema,
+  ChannelMessageDeletedEventDataSchema,
+  AutopilotStatusChangedEventDataSchema,
+  AutopilotIterationEventDataSchema,
+  AutopilotTerminatedEventDataSchema,
+  AutopilotThinkingEventDataSchema,
+  MrEventDataSchema,
+  PipelineEventDataSchema,
+  LoopRunEventDataSchema,
+  LoopRunWarningEventDataSchema,
 } from "@/lib/realtime";
+import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
 
 export { handlePodEvent } from "./realtimePodHandlers";
+
+type AutopilotDecisionType =
+  | "continue" | "completed" | "need_help" | "give_up"
+  | "CONTINUE" | "TASK_COMPLETED" | "NEED_HUMAN_HELP" | "GIVE_UP";
+
+type AutopilotActionType = "observe" | "send_input" | "wait" | "none";
+
+function parseMaybe<T>(json: string | undefined): T | undefined {
+  if (!json) return undefined;
+  try { return JSON.parse(json) as T; } catch { return undefined; }
+}
 
 export function handleChannelEvent(event: RealtimeEvent) {
   const msgState = useChannelMessageStore.getState();
   switch (event.type) {
     case "channel:message": {
-      const data = event.data as ChannelMessageData;
-      msgState.addMessage(data.channel_id, {
-        id: data.id, channel_id: data.channel_id, sender_pod: data.sender_pod,
-        sender_user_id: data.sender_user_id,
-        message_type: data.message_type as "text" | "system" | "code" | "command",
-        content: data.content, metadata: data.metadata, created_at: data.created_at,
-        ...(data.sender_user_id && data.sender_name ? {
-          sender_user: { id: data.sender_user_id, username: data.sender_name, name: data.sender_name },
+      const data = decodeEventData(ChannelMessageEventDataSchema, event.data);
+      const channelId = Number(data.channelId);
+      const senderUserId = data.senderUserId != null ? Number(data.senderUserId) : undefined;
+      msgState.addMessage(channelId, {
+        id: Number(data.id),
+        channel_id: channelId,
+        sender_pod: data.senderPod,
+        sender_user_id: senderUserId,
+        message_type: data.messageType as "text" | "system" | "code" | "command",
+        content: parseMaybe<MessageContent>(data.contentJson),
+        mentions: parseMaybe<MessageMentions>(data.mentionsJson),
+        created_at: data.createdAt,
+        ...(senderUserId != null && data.senderName ? {
+          sender_user: { id: senderUserId, username: data.senderName, name: data.senderName },
         } : {}),
-      });
-      msgState.incrementUnread(data.channel_id);
+      } as never);
+      msgState.incrementUnread(channelId);
       break;
     }
     case "channel:message_edited": {
-      const data = event.data as ChannelMessageEditedData;
-      msgState.updateMessage(data.channel_id, data);
+      const data = decodeEventData(ChannelMessageEditedEventDataSchema, event.data);
+      msgState.updateMessage(Number(data.channelId), {
+        id: Number(data.id),
+        body: data.body,
+        content: parseMaybe<MessageContent>(data.contentJson),
+        mentions: parseMaybe<MessageMentions>(data.mentionsJson),
+        edited_at: data.editedAt,
+      } as never);
       break;
     }
     case "channel:message_deleted": {
-      const data = event.data as ChannelMessageDeletedData;
-      msgState.removeMessage(data.channel_id, data.id);
+      const data = decodeEventData(ChannelMessageDeletedEventDataSchema, event.data);
+      msgState.removeMessage(Number(data.channelId), Number(data.id));
       break;
     }
   }
@@ -49,8 +83,8 @@ export function handleInfraEvent(event: RealtimeEvent) {
     case "runner:online":
     case "runner:offline":
     case "runner:updated": {
-      const data = event.data as RunnerStatusData;
-      useRunnerStore.getState().updateRunnerStatus(data.runner_id, data.status as "online" | "offline" | "maintenance" | "busy");
+      const data = decodeEventData(RunnerStatusEventDataSchema, event.data);
+      useRunnerStore.getState().updateRunnerStatus(Number(data.runnerId), data.status as "online" | "offline" | "maintenance" | "busy");
       break;
     }
     case "ticket:created":
@@ -58,7 +92,7 @@ export function handleInfraEvent(event: RealtimeEvent) {
     case "ticket:status_changed":
     case "ticket:moved":
     case "ticket:deleted": {
-      const data = event.data as TicketStatusChangedData;
+      const data = decodeEventData(TicketStatusChangedEventDataSchema, event.data);
       const ticketState = useTicketStore.getState();
       ticketState.fetchTickets?.();
       if (event.type !== "ticket:deleted" && data.slug && ticketState.currentTicket?.slug === data.slug) {
@@ -70,15 +104,15 @@ export function handleInfraEvent(event: RealtimeEvent) {
     case "mr:updated":
     case "mr:merged":
     case "mr:closed": {
-      const data = event.data as MREventData;
-      if (data.ticket_slug || data.ticket_id) useTicketStore.getState().fetchTickets?.();
-      if (data.pod_id) usePodStore.getState().fetchPods?.();
+      const data = decodeEventData(MrEventDataSchema, event.data);
+      if (data.ticketSlug || data.ticketId != null) useTicketStore.getState().fetchTickets?.();
+      if (data.podId != null) usePodStore.getState().fetchPods?.();
       break;
     }
     case "pipeline:updated": {
-      const data = event.data as PipelineEventData;
-      if (data.ticket_slug || data.ticket_id) useTicketStore.getState().fetchTickets?.();
-      if (data.pod_id) usePodStore.getState().fetchPods?.();
+      const data = decodeEventData(PipelineEventDataSchema, event.data);
+      if (data.ticketSlug || data.ticketId != null) useTicketStore.getState().fetchTickets?.();
+      if (data.podId != null) usePodStore.getState().fetchPods?.();
       break;
     }
   }
@@ -88,15 +122,27 @@ export function handleAutopilotEvent(event: RealtimeEvent) {
   const store = useAutopilotStore.getState();
   switch (event.type) {
     case "autopilot:status_changed": {
-      const data = event.data as AutopilotStatusChangedData;
-      store.updateAutopilotControllerStatus(data.autopilot_controller_key, data.phase, data.current_iteration, data.max_iterations, data.circuit_breaker_state, data.circuit_breaker_reason);
+      const data = decodeEventData(AutopilotStatusChangedEventDataSchema, event.data);
+      store.updateAutopilotControllerStatus(
+        data.autopilotControllerKey,
+        data.phase,
+        data.currentIteration,
+        data.maxIterations,
+        data.circuitBreakerState,
+        data.circuitBreakerReason,
+      );
       break;
     }
     case "autopilot:iteration": {
-      const data = event.data as AutopilotIterationData;
-      store.addIteration(data.autopilot_controller_key, {
-        id: 0, autopilot_controller_id: 0, iteration: data.iteration, phase: data.phase,
-        summary: data.summary, files_changed: data.files_changed, duration_ms: data.duration_ms,
+      const data = decodeEventData(AutopilotIterationEventDataSchema, event.data);
+      store.addIteration(data.autopilotControllerKey, {
+        id: 0,
+        autopilot_controller_id: 0,
+        iteration: data.iteration,
+        phase: data.phase,
+        summary: data.summary,
+        files_changed: data.filesChanged,
+        duration_ms: Number(data.durationMs),
         created_at: new Date().toISOString(),
       });
       break;
@@ -106,13 +152,42 @@ export function handleAutopilotEvent(event: RealtimeEvent) {
       break;
     }
     case "autopilot:terminated": {
-      const data = event.data as AutopilotTerminatedData;
-      store.removeAutopilotController(data.autopilot_controller_key);
+      const data = decodeEventData(AutopilotTerminatedEventDataSchema, event.data);
+      store.removeAutopilotController(data.autopilotControllerKey);
       break;
     }
     case "autopilot:thinking": {
-      const data = event.data as AutopilotThinkingData;
-      store.updateThinking(data.autopilot_controller_key, data);
+      const data = decodeEventData(AutopilotThinkingEventDataSchema, event.data);
+      store.updateThinking(data.autopilotControllerKey, {
+        autopilot_controller_key: data.autopilotControllerKey,
+        iteration: data.iteration,
+        decision_type: data.decisionType as AutopilotDecisionType,
+        reasoning: data.reasoning,
+        confidence: data.confidence,
+        ...(data.action ? {
+          action: {
+            type: data.action.type as AutopilotActionType,
+            content: data.action.content,
+            reason: data.action.reason,
+          },
+        } : {}),
+        ...(data.progress ? {
+          progress: {
+            summary: data.progress.summary,
+            completed_steps: data.progress.completedSteps,
+            remaining_steps: data.progress.remainingSteps,
+            percent: data.progress.percent,
+          },
+        } : {}),
+        ...(data.helpRequest ? {
+          help_request: {
+            reason: data.helpRequest.reason,
+            context: data.helpRequest.context,
+            terminal_excerpt: data.helpRequest.terminalExcerpt,
+            suggestions: data.helpRequest.suggestions.map((s) => ({ action: s.action, label: s.label })),
+          },
+        } : {}),
+      });
       break;
     }
   }
@@ -133,7 +208,8 @@ export function handleLoopEvent(
         debounceRef.current = null;
         const s = useLoopStore.getState();
         s.fetchLoops?.();
-        if (s.currentLoop?.id === (event.data as LoopRunEventData).loop_id) {
+        const data = decodeEventData(LoopRunEventDataSchema, event.data);
+        if (s.currentLoop?.id === Number(data.loopId)) {
           s.fetchLoop?.(s.currentLoop.slug);
           s.fetchRuns?.(s.currentLoop.slug, { limit: 20, offset: 0 });
         }
@@ -141,8 +217,8 @@ export function handleLoopEvent(
       break;
     }
     case "loop_run:warning": {
-      const data = event.data as LoopRunWarningData;
-      showWarning(t("loops.runWarningTitle", { runNumber: data.run_number }), data.detail || data.warning);
+      const data = decodeEventData(LoopRunWarningEventDataSchema, event.data);
+      showWarning(t("loops.runWarningTitle", { runNumber: data.runNumber }), data.detail || data.warning);
       break;
     }
   }

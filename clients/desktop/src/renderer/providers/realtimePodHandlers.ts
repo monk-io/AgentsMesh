@@ -1,9 +1,15 @@
 import { usePodStore } from "@/stores/pod";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useMeshStore } from "@/stores/mesh";
-import type {
-  RealtimeEvent, PodStatusChangedData, PodCreatedData,
-  PodTitleChangedData, PodAliasChangedData, PodInitProgressData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  PodStatusChangedEventDataSchema,
+  PodCreatedEventDataSchema,
+  PodTitleChangedEventDataSchema,
+  PodAliasChangedEventDataSchema,
+  PodInitProgressEventDataSchema,
+  PodRestartingEventDataSchema,
 } from "@/lib/realtime";
 
 // Debounce burst-y refetches: terminate fires status_changed+terminated back-to-back
@@ -30,57 +36,57 @@ function debouncedFetchTopology() {
 export function handlePodEvent(event: RealtimeEvent) {
   switch (event.type) {
     case "pod:created": {
-      const data = event.data as PodCreatedData;
-      usePodStore.getState().fetchPod?.(data.pod_key);
+      const data = decodeEventData(PodCreatedEventDataSchema, event.data);
+      usePodStore.getState().fetchPod?.(data.podKey);
       debouncedSidebarRefresh();
       debouncedFetchTopology();
       break;
     }
     case "pod:status_changed": {
-      const data = event.data as PodStatusChangedData;
+      const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
       const podState = usePodStore.getState();
-      const existingPod = podState.pods.find(p => p.pod_key === data.pod_key);
+      const existingPod = podState.pods.find(p => p.pod_key === data.podKey);
       if (!existingPod) {
-        podState.fetchPod?.(data.pod_key);
+        podState.fetchPod?.(data.podKey);
       } else if (podState.updatePodStatus) {
-        podState.updatePodStatus(data.pod_key, data.status as "running" | "initializing" | "failed" | "paused" | "terminated" | "error", data.agent_status, data.error_code, data.error_message);
+        podState.updatePodStatus(data.podKey, data.status as "running" | "initializing" | "failed" | "paused" | "terminated" | "error", data.agentStatus, data.errorCode, data.errorMessage);
       }
       if (data.status === "terminated" || data.status === "failed" || data.status === "error") {
-        useWorkspaceStore.getState().removePaneByPodKey(data.pod_key);
+        useWorkspaceStore.getState().removePaneByPodKey(data.podKey);
       }
       debouncedFetchTopology();
       break;
     }
     case "pod:agent_status_changed": {
-      const data = event.data as PodStatusChangedData;
-      if (data.agent_status) usePodStore.getState().updateAgentStatus(data.pod_key, data.agent_status);
+      const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
+      if (data.agentStatus) usePodStore.getState().updateAgentStatus(data.podKey, data.agentStatus);
       break;
     }
     case "pod:terminated": {
-      const data = event.data as PodStatusChangedData;
-      usePodStore.getState().updatePodStatus?.(data.pod_key, "terminated");
-      useWorkspaceStore.getState().removePaneByPodKey(data.pod_key);
+      const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
+      usePodStore.getState().updatePodStatus?.(data.podKey, "terminated");
+      useWorkspaceStore.getState().removePaneByPodKey(data.podKey);
       debouncedFetchTopology();
       break;
     }
     case "pod:title_changed": {
-      const data = event.data as PodTitleChangedData;
-      usePodStore.getState().updatePodTitle(data.pod_key, data.title);
+      const data = decodeEventData(PodTitleChangedEventDataSchema, event.data);
+      usePodStore.getState().updatePodTitle(data.podKey, data.title);
       break;
     }
     case "pod:alias_changed": {
-      const data = event.data as PodAliasChangedData;
-      usePodStore.getState().updatePodAliasFromEvent(data.pod_key, data.alias);
+      const data = decodeEventData(PodAliasChangedEventDataSchema, event.data);
+      usePodStore.getState().updatePodAliasFromEvent(data.podKey, data.alias ?? null);
       break;
     }
     case "pod:init_progress": {
-      const data = event.data as PodInitProgressData;
-      usePodStore.getState().updatePodInitProgress(data.pod_key, data.phase, data.progress, data.message);
+      const data = decodeEventData(PodInitProgressEventDataSchema, event.data);
+      usePodStore.getState().updatePodInitProgress(data.podKey, data.phase, data.progress, data.message);
       break;
     }
     case "pod:restarting": {
-      const data = event.data as { pod_key: string };
-      usePodStore.getState().fetchPod?.(data.pod_key);
+      const data = decodeEventData(PodRestartingEventDataSchema, event.data);
+      usePodStore.getState().fetchPod?.(data.podKey);
       debouncedSidebarRefresh();
       break;
     }

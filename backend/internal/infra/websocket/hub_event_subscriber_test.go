@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func TestHubEventSubscriber_EntityEvent(t *testing.T) {
@@ -16,7 +17,8 @@ func TestHubEventSubscriber_EntityEvent(t *testing.T) {
 
 	NewHubEventSubscriber(hub, nil).Subscribe(eb)
 
-	event, err := eventbus.NewEntityEvent(eventbus.EventPodCreated, 1, "pod", "pod-123", map[string]string{"status": "running"})
+	event, err := eventbus.NewEntityEvent(eventbus.EventPodCreated, 1, "pod", "pod-123",
+		&eventsv1.PodCreatedEventData{PodKey: "pod-123", Status: "running"})
 	if err != nil {
 		t.Fatalf("failed to create event: %v", err)
 	}

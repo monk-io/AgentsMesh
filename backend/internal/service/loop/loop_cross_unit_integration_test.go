@@ -2,11 +2,12 @@ package loop
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	podDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	loopDomain "github.com/anthropics/agentsmesh/backend/internal/domain/loop"
@@ -14,6 +15,7 @@ import (
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	ticketSvc "github.com/anthropics/agentsmesh/backend/internal/service/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/testkit"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -98,8 +100,8 @@ func setupCrossUnit(t *testing.T, opts ...func(*loopDomain.Loop)) crossUnitEnv {
 // wireLoopSubscriptions replicates production subscription wiring.
 func wireLoopSubscriptions(eb *eventbus.EventBus, orchestrator *LoopOrchestrator) {
 	eb.Subscribe(eventbus.EventPodTerminated, func(event *eventbus.Event) {
-		var data eventbus.PodStatusChangedData
-		if err := json.Unmarshal(event.Data, &data); err != nil {
+		var data eventsv1.PodStatusChangedEventData
+		if err := protojson.Unmarshal(event.Data, &data); err != nil {
 			return
 		}
 		now := time.Now()
@@ -107,8 +109,8 @@ func wireLoopSubscriptions(eb *eventbus.EventBus, orchestrator *LoopOrchestrator
 	})
 
 	eb.Subscribe(eventbus.EventPodStatusChanged, func(event *eventbus.Event) {
-		var data eventbus.PodStatusChangedData
-		if err := json.Unmarshal(event.Data, &data); err != nil {
+		var data eventsv1.PodStatusChangedEventData
+		if err := protojson.Unmarshal(event.Data, &data); err != nil {
 			return
 		}
 		switch data.Status {
@@ -119,8 +121,8 @@ func wireLoopSubscriptions(eb *eventbus.EventBus, orchestrator *LoopOrchestrator
 	})
 
 	eb.Subscribe(eventbus.EventAutopilotStatusChanged, func(event *eventbus.Event) {
-		var data eventbus.AutopilotStatusChangedData
-		if err := json.Unmarshal(event.Data, &data); err != nil {
+		var data eventsv1.AutopilotStatusChangedEventData
+		if err := protojson.Unmarshal(event.Data, &data); err != nil {
 			return
 		}
 		switch data.Phase {
@@ -147,7 +149,7 @@ func createRunWithPodKey(t *testing.T, env crossUnitEnv, podKey, autopilotKey st
 func publishPodTerminated(t *testing.T, eb *eventbus.EventBus, podKey, status string, orgID int64) {
 	t.Helper()
 	event, err := eventbus.NewEntityEvent(eventbus.EventPodTerminated, orgID, "pod", podKey,
-		eventbus.PodStatusChangedData{PodKey: podKey, Status: status})
+		&eventsv1.PodStatusChangedEventData{PodKey: podKey, Status: status})
 	require.NoError(t, err)
 	require.NoError(t, eb.Publish(context.Background(), event))
 }
@@ -156,7 +158,7 @@ func publishPodTerminated(t *testing.T, eb *eventbus.EventBus, podKey, status st
 func publishAutopilotStatusChanged(t *testing.T, eb *eventbus.EventBus, autopilotKey, phase, podKey string, orgID int64) {
 	t.Helper()
 	event, err := eventbus.NewEntityEvent(eventbus.EventAutopilotStatusChanged, orgID, "autopilot", autopilotKey,
-		eventbus.AutopilotStatusChangedData{AutopilotControllerKey: autopilotKey, Phase: phase, PodKey: podKey})
+		&eventsv1.AutopilotStatusChangedEventData{AutopilotControllerKey: autopilotKey, Phase: phase, PodKey: podKey})
 	require.NoError(t, err)
 	require.NoError(t, eb.Publish(context.Background(), event))
 }
@@ -282,7 +284,7 @@ func TestCrossUnit_LoopCompletion_PostsTicketComment(t *testing.T) {
 	assert.Contains(t, comments[0].Content, "Loop Run #1")
 	assert.Contains(t, comments[0].Content, "completed")
 	// Success emoji
-	assert.Contains(t, comments[0].Content, "\u2705") // checkmark emoji
+	assert.Contains(t, comments[0].Content, "✅") // checkmark emoji
 }
 
 // mockTicketRepoForCrossUnit is in mock_ticket_repo_test.go

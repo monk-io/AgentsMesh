@@ -13,7 +13,10 @@ rust_prost_transform(
 
 proto_library(
     name = "events_proto",
-    srcs = ["events.proto"],
+    srcs = [
+        "event_data.proto",
+        "events.proto",
+    ],
     data = [":events_serde_transform"],
     visibility = ["//visibility:public"],
 )

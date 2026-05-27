@@ -7,7 +7,11 @@ import { toast } from "sonner";
 import { listRepositoryMergeRequests } from "@/lib/api/facade/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import { useEventSubscription } from "@/hooks/useRealtimeEvents";
-import type { MREventData, PipelineEventData } from "@/lib/realtime";
+import {
+  decodeEventData,
+  MrEventDataSchema,
+  PipelineEventDataSchema,
+} from "@/lib/realtime";
 import type { PodData } from "@/lib/api";
 import { GitPullRequest, RefreshCw, Loader2, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,21 +59,25 @@ export function DeliveryTabContent({ selectedPodKey, pod, t }: DeliveryTabConten
   }, [canShowDelivery, fetchMRs]);
 
   const handleMREvent = useCallback(
-    (event: { data: MREventData }) => {
-      if (event.data.repository_id !== pod?.repository?.id) return;
-      if (event.data.source_branch && event.data.source_branch !== pod?.branch_name) return;
+    (event: { data: unknown }) => {
+      const data = decodeEventData(MrEventDataSchema, event.data);
+      const repoId = Number(data.repositoryId);
+      if (repoId !== pod?.repository?.id) return;
+      if (data.sourceBranch && data.sourceBranch !== pod?.branch_name) return;
       fetchMRs();
     },
     [pod?.repository?.id, pod?.branch_name, fetchMRs]
   );
 
   const handlePipelineEvent = useCallback(
-    (event: { data: PipelineEventData }) => {
-      if (event.data.repository_id !== pod?.repository?.id) return;
+    (event: { data: unknown }) => {
+      const data = decodeEventData(PipelineEventDataSchema, event.data);
+      if (Number(data.repositoryId) !== pod?.repository?.id) return;
+      const mrId = Number(data.mrId);
       setMergeRequests((prev) =>
         prev.map((mr) =>
-          mr.id === event.data.mr_id
-            ? { ...mr, pipeline_status: event.data.pipeline_status, pipeline_url: event.data.pipeline_url }
+          mr.id === mrId
+            ? { ...mr, pipeline_status: data.pipelineStatus, pipeline_url: data.pipelineUrl }
             : mr
         )
       );

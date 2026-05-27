@@ -8,6 +8,7 @@ import (
 
 	channelDomain "github.com/anthropics/agentsmesh/backend/internal/domain/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func TestEditMessage_NotInChannel(t *testing.T) {
@@ -186,8 +187,8 @@ func TestPublishChannelEvent_NilEventBus(t *testing.T) {
 	svc := newTestService(db)
 
 	// No eventBus — publishChannelEvent should return immediately
-	svc.publishChannelEvent(1, 1, eventbus.EventChannelMessageEdited, map[string]interface{}{
-		"channel_id": 1,
+	svc.publishChannelEvent(1, 1, eventbus.EventChannelMessageEdited, &eventsv1.ChannelMessageEditedEventData{
+		ChannelId: 1,
 	})
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	"gorm.io/gorm"
 )
 
@@ -19,7 +20,7 @@ func setupPerpetualPodCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinat
 			return
 		}
 
-		data := &eventbus.PodRestartingData{
+		data := &eventsv1.PodRestartingEventData{
 			PodKey:       podKey,
 			ExitCode:     exitCode,
 			RestartCount: restartCount,

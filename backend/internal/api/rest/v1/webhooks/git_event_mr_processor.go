@@ -1,13 +1,13 @@
 package webhooks
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	ticketsvc "github.com/anthropics/agentsmesh/backend/internal/service/ticket"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func (r *WebhookRouter) processMROrPipelineEvent(ctx *WebhookContext, objectKind string) (map[string]interface{}, error) {
@@ -132,26 +132,30 @@ func (r *WebhookRouter) publishMREvent(ctx *WebhookContext, mrData *ticketsvc.MR
 
 	eventType := r.determineMREventType(mrData.State, action)
 
-	mrEventData := &eventbus.MREventData{
-		MRIID:        mrData.IID,
-		MRURL:        mrData.WebURL,
+	mrEventData := &eventsv1.MrEventData{
+		MrIid:        int32(mrData.IID),
+		MrUrl:        mrData.WebURL,
 		SourceBranch: mrData.SourceBranch,
 		TargetBranch: mrData.TargetBranch,
 		Title:        mrData.Title,
 		State:        mrData.State,
 		Action:       action,
-		TicketID:     ticketID,
-		PodID:        podID,
-		RepositoryID: ctx.RepoID,
+		TicketId:     ticketID,
+		PodId:        podID,
+		RepositoryId: ctx.RepoID,
 	}
 	if mr != nil {
-		mrEventData.MRID = mr.ID
+		mrEventData.MrId = mr.ID
 	}
 	if mrData.PipelineStatus != nil {
 		mrEventData.PipelineStatus = *mrData.PipelineStatus
 	}
 
-	eventData, _ := json.Marshal(mrEventData)
+	eventData, err := eventbus.MarshalEventData(mrEventData)
+	if err != nil {
+		r.logger.Error("failed to marshal MR event data", "error", err)
+		return
+	}
 	r.eventBus.Publish(ctx.Context, &eventbus.Event{
 		Type:           eventType,
 		Category:       eventbus.CategoryEntity,

@@ -31,6 +31,7 @@ go_library(
         "//backend/internal/service/repository",
         "//backend/internal/service/ticket",
         "//backend/pkg/apierr",
+        "//proto/events/v1:events_go_proto",
         "@com_github_gin_gonic_gin//:gin",
         "@io_gorm_gorm//:gorm",
     ],

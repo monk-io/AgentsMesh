@@ -1,5 +1,9 @@
 import { toast } from "sonner";
-import type { RealtimeEvent, NotificationPayloadData } from "@/lib/realtime";
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  NotificationPayloadEventDataSchema,
+} from "@/lib/realtime";
 
 export function handleNotificationEvent(
   event: RealtimeEvent,
@@ -10,7 +14,7 @@ export function handleNotificationEvent(
 ): void {
   if (event.type !== "notification") return;
 
-  const data = event.data as NotificationPayloadData;
+  const data = decodeEventData(NotificationPayloadEventDataSchema, event.data);
   const wantsToast = !!data.channels?.toast;
   const wantsBrowser = !!data.channels?.browser;
   const tabVisible = typeof document !== "undefined" && document.visibilityState === "visible";
@@ -22,7 +26,7 @@ export function handleNotificationEvent(
     toastFn(data.title, {
       description: data.body,
       duration: data.priority === "high" ? 8000 : 4000,
-      ...(data.link ? { action: { label: "→", onClick: () => opts.router.push(data.link!) } } : {}),
+      ...(data.link ? { action: { label: "→", onClick: () => opts.router.push(data.link) } } : {}),
     });
   }
 

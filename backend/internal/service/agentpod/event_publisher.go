@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 type PodEventType string
@@ -55,7 +56,7 @@ func (p *EventBusPublisher) PublishPodEvent(ctx context.Context, eventType PodEv
 		return
 	}
 
-	data := &eventbus.PodStatusChangedData{
+	data := &eventsv1.PodStatusChangedEventData{
 		PodKey:         podKey,
 		Status:         status,
 		PreviousStatus: previousStatus,

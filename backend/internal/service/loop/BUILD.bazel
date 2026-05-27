@@ -36,6 +36,7 @@ go_library(
         "//backend/internal/service/instance",
         "//backend/internal/service/ticket",
         "//backend/pkg/slugkit",
+        "//proto/events/v1:events_go_proto",
         "@com_github_lib_pq//:pq",
         "@com_github_robfig_cron_v3//:cron",
         "@io_opentelemetry_go_contrib_instrumentation_net_http_otelhttp//:otelhttp",
@@ -73,8 +74,10 @@ go_test(
         "//backend/internal/service/agentpod",
         "//backend/internal/service/ticket",
         "//backend/internal/testkit",
+        "//proto/events/v1:events_go_proto",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@io_gorm_gorm//:gorm",
+        "@org_golang_google_protobuf//encoding/protojson",
     ],
 )

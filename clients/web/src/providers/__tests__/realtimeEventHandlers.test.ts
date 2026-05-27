@@ -163,6 +163,8 @@ describe("handleChannelEvent", () => {
 
   describe("channel:message", () => {
     it("adds message to store with body and content", () => {
+      const content = { kind: "text", blocks: [{ type: "paragraph", elements: [{ type: "text", text: "hello" }] }] };
+      const mentions = { users: [3] };
       const event: RealtimeEvent = {
         type: "channel:message",
         data: {
@@ -170,8 +172,8 @@ describe("handleChannelEvent", () => {
           sender_user_id: 2, sender_name: "alice",
           message_type: "text",
           body: "hello",
-          content: { kind: "text", blocks: [{ type: "paragraph", elements: [{ type: "text", text: "hello" }] }] },
-          mentions: { users: [3] },
+          content_json: JSON.stringify(content),
+          mentions_json: JSON.stringify(mentions),
           created_at: "2024-01-01T00:00:00Z",
         },
         category: "entity",
@@ -186,8 +188,8 @@ describe("handleChannelEvent", () => {
       const view = readMessages(1);
       expect(view.messages).toHaveLength(1);
       expect(view.messages[0].body).toBe("hello");
-      expect(view.messages[0].content).toEqual((event.data as Record<string, unknown>).content);
-      expect(view.messages[0].mentions).toEqual({ users: [3] });
+      expect(view.messages[0].content).toEqual(content);
+      expect(view.messages[0].mentions).toEqual(mentions);
     });
 
     it("includes sender_pod_info when present", () => {
@@ -197,6 +199,7 @@ describe("handleChannelEvent", () => {
           id: 11, channel_id: 1,
           sender_pod: "pk-bot",
           sender_pod_info: { pod_key: "pk-bot", alias: "MyBot", agent: { name: "Claude" } },
+          sender_name: "",
           message_type: "text",
           body: "agent message",
           created_at: "2024-01-01T00:00:00Z",
@@ -236,6 +239,7 @@ describe("handleChannelEvent", () => {
         type: "channel:message",
         data: {
           id: 13, channel_id: 1, sender_user_id: 2,
+          sender_name: "",
           message_type: "text", body: "hi",
           created_at: "2024-01-01T00:00:00Z",
         },
@@ -254,6 +258,7 @@ describe("handleChannelEvent", () => {
         type: "channel:message",
         data: {
           id: 14, channel_id: 1, sender_user_id: 1,
+          sender_name: "",
           message_type: "text", body: "self",
           created_at: "2024-01-01T00:00:00Z",
         },
@@ -272,6 +277,7 @@ describe("handleChannelEvent", () => {
         type: "channel:message",
         data: {
           id: 15, channel_id: 1, sender_user_id: 2,
+          sender_name: "",
           message_type: "text", body: "hi",
           created_at: "2024-01-01T00:00:00Z",
         },
@@ -296,8 +302,8 @@ describe("handleChannelEvent", () => {
         data: {
           id: 20, channel_id: 1,
           body: "edited",
-          content: { kind: "text", blocks: [{ type: "paragraph", elements: [{ type: "text", text: "edited" }] }] },
-          mentions: { users: [3] },
+          content_json: JSON.stringify({ kind: "text", blocks: [{ type: "paragraph", elements: [{ type: "text", text: "edited" }] }] }),
+          mentions_json: JSON.stringify({ users: [3] }),
           edited_at: "2024-01-02T00:00:00Z",
         },
         category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),

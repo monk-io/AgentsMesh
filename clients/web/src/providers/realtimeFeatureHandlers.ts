@@ -2,26 +2,48 @@ import { useAutopilotStore } from "@/stores/autopilot";
 import { useLoopStore } from "@/stores/loop";
 import { getLoopService, parseWasmAny } from "@/lib/wasm-core";
 import type { DebounceRef } from "./realtimeEventHandlers";
-import type {
-  RealtimeEvent,
-  AutopilotStatusChangedData, AutopilotIterationData,
-  AutopilotTerminatedData, AutopilotThinkingData,
-  LoopRunEventData, LoopRunWarningData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  AutopilotStatusChangedEventDataSchema,
+  AutopilotIterationEventDataSchema,
+  AutopilotTerminatedEventDataSchema,
+  AutopilotThinkingEventDataSchema,
+  LoopRunEventDataSchema,
+  LoopRunWarningEventDataSchema,
 } from "@/lib/realtime";
+
+type AutopilotDecisionType =
+  | "continue" | "completed" | "need_help" | "give_up"
+  | "CONTINUE" | "TASK_COMPLETED" | "NEED_HUMAN_HELP" | "GIVE_UP";
+
+type AutopilotActionType = "observe" | "send_input" | "wait" | "none";
 
 export function handleAutopilotEvent(event: RealtimeEvent) {
   const store = useAutopilotStore.getState();
   switch (event.type) {
     case "autopilot:status_changed": {
-      const data = event.data as AutopilotStatusChangedData;
-      store.updateAutopilotControllerStatus(data.autopilot_controller_key, data.phase, data.current_iteration, data.max_iterations, data.circuit_breaker_state, data.circuit_breaker_reason);
+      const data = decodeEventData(AutopilotStatusChangedEventDataSchema, event.data);
+      store.updateAutopilotControllerStatus(
+        data.autopilotControllerKey,
+        data.phase,
+        data.currentIteration,
+        data.maxIterations,
+        data.circuitBreakerState,
+        data.circuitBreakerReason,
+      );
       break;
     }
     case "autopilot:iteration": {
-      const data = event.data as AutopilotIterationData;
-      store.addIteration(data.autopilot_controller_key, {
-        id: 0, autopilot_controller_id: 0, iteration: data.iteration, phase: data.phase,
-        summary: data.summary, files_changed: data.files_changed, duration_ms: data.duration_ms,
+      const data = decodeEventData(AutopilotIterationEventDataSchema, event.data);
+      store.addIteration(data.autopilotControllerKey, {
+        id: 0,
+        autopilot_controller_id: 0,
+        iteration: data.iteration,
+        phase: data.phase,
+        summary: data.summary,
+        files_changed: data.filesChanged,
+        duration_ms: Number(data.durationMs),
         created_at: new Date().toISOString(),
       });
       break;
@@ -31,13 +53,42 @@ export function handleAutopilotEvent(event: RealtimeEvent) {
       break;
     }
     case "autopilot:terminated": {
-      const data = event.data as AutopilotTerminatedData;
-      store.removeAutopilotController(data.autopilot_controller_key);
+      const data = decodeEventData(AutopilotTerminatedEventDataSchema, event.data);
+      store.removeAutopilotController(data.autopilotControllerKey);
       break;
     }
     case "autopilot:thinking": {
-      const data = event.data as AutopilotThinkingData;
-      store.updateThinking(data.autopilot_controller_key, data);
+      const data = decodeEventData(AutopilotThinkingEventDataSchema, event.data);
+      store.updateThinking(data.autopilotControllerKey, {
+        autopilot_controller_key: data.autopilotControllerKey,
+        iteration: data.iteration,
+        decision_type: data.decisionType as AutopilotDecisionType,
+        reasoning: data.reasoning,
+        confidence: data.confidence,
+        ...(data.action ? {
+          action: {
+            type: data.action.type as AutopilotActionType,
+            content: data.action.content,
+            reason: data.action.reason,
+          },
+        } : {}),
+        ...(data.progress ? {
+          progress: {
+            summary: data.progress.summary,
+            completed_steps: data.progress.completedSteps,
+            remaining_steps: data.progress.remainingSteps,
+            percent: data.progress.percent,
+          },
+        } : {}),
+        ...(data.helpRequest ? {
+          help_request: {
+            reason: data.helpRequest.reason,
+            context: data.helpRequest.context,
+            terminal_excerpt: data.helpRequest.terminalExcerpt,
+            suggestions: data.helpRequest.suggestions.map((s) => ({ action: s.action, label: s.label })),
+          },
+        } : {}),
+      });
       break;
     }
   }
@@ -60,7 +111,8 @@ export function handleLoopEvent(
         const s = useLoopStore.getState();
         s.fetchLoops?.();
         const currentLoop = parseWasmAny<{ id: number; slug: string }>(getLoopService().current_loop_json());
-        if (currentLoop?.id === (event.data as LoopRunEventData).loop_id) {
+        const loopRunData = decodeEventData(LoopRunEventDataSchema, event.data);
+        if (currentLoop?.id === Number(loopRunData.loopId)) {
           s.fetchLoop?.(currentLoop.slug);
           s.fetchRuns?.(currentLoop.slug, { limit: 20, offset: 0 });
         }
@@ -68,8 +120,8 @@ export function handleLoopEvent(
       break;
     }
     case "loop_run:warning": {
-      const data = event.data as LoopRunWarningData;
-      showWarning(t("loops.runWarningTitle", { runNumber: data.run_number }), data.detail || data.warning);
+      const data = decodeEventData(LoopRunWarningEventDataSchema, event.data);
+      showWarning(t("loops.runWarningTitle", { runNumber: data.runNumber }), data.detail || data.warning);
       break;
     }
   }

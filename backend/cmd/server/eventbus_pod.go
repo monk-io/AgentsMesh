@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	notifDomain "github.com/anthropics/agentsmesh/backend/internal/domain/notification"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	notifDomain "github.com/anthropics/agentsmesh/backend/internal/domain/notification"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	notifService "github.com/anthropics/agentsmesh/backend/internal/service/notification"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"gorm.io/gorm"
 )
@@ -40,11 +41,10 @@ func setupPodEventCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinator, 
 			eventType = eventbus.EventPodStatusChanged
 		}
 
-		data := &eventbus.PodStatusChangedData{
-			PodKey:         podKey,
-			Status:         status,
-			PreviousStatus: "",
-			AgentStatus:    agentStatus,
+		data := &eventsv1.PodStatusChangedEventData{
+			PodKey:      podKey,
+			Status:      status,
+			AgentStatus: agentStatus,
 		}
 		if pod.ErrorCode != nil {
 			data.ErrorCode = *pod.ErrorCode
@@ -61,7 +61,6 @@ func setupPodEventCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinator, 
 			slog.Error("failed to publish pod event", "error", err)
 		}
 
-		// Skip task:completed if OSC 777 already notified for this pod (dedup window: 30s)
 		if status == agentpod.StatusCompleted || status == agentpod.StatusTerminated || status == agentpod.StatusError {
 			if wasOSCNotifRecent(podKey) {
 				slog.Debug("skipping task:completed notification, recent OSC notification exists", "pod_key", podKey)
@@ -89,10 +88,10 @@ func setupPodEventCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinator, 
 			return
 		}
 
-		data := &eventbus.PodInitProgressData{
+		data := &eventsv1.PodInitProgressEventData{
 			PodKey:   podKey,
 			Phase:    phase,
-			Progress: progress,
+			Progress: int32(progress),
 			Message:  message,
 		}
 		event, err := eventbus.NewEntityEvent(eventbus.EventPodInitProgress, pod.OrganizationID, "pod", podKey, data)
@@ -123,7 +122,7 @@ func setupPodEventCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinator, 
 			return
 		}
 
-		data := &eventbus.AutopilotStatusChangedData{
+		data := &eventsv1.AutopilotStatusChangedEventData{
 			AutopilotControllerKey: autopilotKey,
 			PodKey:                 podKey,
 			Phase:                  phase,
@@ -159,7 +158,7 @@ func setupPodEventCallbacks(db *gorm.DB, podCoordinator *runner.PodCoordinator, 
 			return
 		}
 
-		data := &eventbus.AutopilotIterationData{
+		data := &eventsv1.AutopilotIterationEventData{
 			AutopilotControllerKey: autopilotKey,
 			Iteration:              iteration,
 			Phase:                  phase,
