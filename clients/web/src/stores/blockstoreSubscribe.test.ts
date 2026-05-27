@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fromBinary } from "@bufbuild/protobuf";
+import { ApplyRemoteOpRequestSchema } from "@proto/blockstore_state/v1/blockstore_state_pb";
 
 // F5 guard: handleBlockstoreEvent must drop ops whose workspace_id was not
 // seeded into Rust state's last_op_ids via loadSubtree. The org-wide WS broadcast
@@ -25,8 +27,9 @@ vi.mock("@/lib/wasm-core", async () => {
       set_last_op_id: (wsID: string, id: number) => {
         bucket.lastOpIds.set(wsID, id);
       },
-      apply_remote_op: (opJson: string) => {
-        const op = JSON.parse(opJson);
+      apply_remote_op: (reqBytes: Uint8Array) => {
+        const req = fromBinary(ApplyRemoteOpRequestSchema, reqBytes);
+        const op = JSON.parse(req.opJson);
         if (op.op === "createBlock") {
           bucket.blocks.set(op.forward.id, op.forward);
         }

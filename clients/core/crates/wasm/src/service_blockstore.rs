@@ -3,10 +3,16 @@ use std::sync::Arc;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::BlockstoreService;
 use agentsmesh_state::blockstore_state::BlockstoreState;
+use agentsmesh_types::proto_blockstore_state_v1::ApplyRemoteOpRequest;
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmBlockstoreService(pub(crate) BlockstoreService);
+
+fn decode_err<E: std::fmt::Display>(e: E) -> String {
+    format!("decode: {e}")
+}
 
 #[wasm_bindgen]
 impl WasmBlockstoreService {
@@ -135,8 +141,9 @@ impl WasmBlockstoreService {
         self.0.semantic_search(&workspace_id, &req_json).await
     }
 
-    pub fn apply_remote_op(&self, op_json: &str) -> Result<(), String> {
-        self.0.apply_remote_op(op_json)
+    pub fn apply_remote_op(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ApplyRemoteOpRequest::decode(req_bytes).map_err(decode_err)?;
+        self.0.apply_remote_op(&req.op_json)
     }
 
     // ── Sync getters ──

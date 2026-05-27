@@ -14,6 +14,9 @@
  *      so the next zustand selector tick reads the freshest state.
  */
 
+import { fromBinary } from "@bufbuild/protobuf";
+import { ApplyRemoteOpRequestSchema } from "@proto/blockstore_state/v1/blockstore_state_pb";
+
 let nextId = 1;
 const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
 
@@ -155,8 +158,9 @@ export class RpcBlockstoreService {
 
   // ── State-cache mutators (web pushes server bytes into Rust cache via JSON)
 
-  apply_remote_op(opJson: string): void {
-    void rpc("apply_remote_op", { op: JSON.parse(opJson) }).then(() => this.refreshFlatCaches());
+  apply_remote_op(reqBytes: Uint8Array): void {
+    const req = fromBinary(ApplyRemoteOpRequestSchema, reqBytes);
+    void rpc("apply_remote_op", { op: JSON.parse(req.opJson) }).then(() => this.refreshFlatCaches());
   }
 
   set_last_op_id(wsId: string, id: number): void {

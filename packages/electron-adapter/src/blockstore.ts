@@ -1,4 +1,6 @@
 import { invoke } from "./invoke";
+import { fromBinary, toBinary, create as protoCreate } from "@bufbuild/protobuf";
+import { ApplyRemoteOpRequestSchema } from "@agentsmesh/proto/blockstore_state/v1/blockstore_state_pb";
 import { applyOpToCache, safeJsonMap, type CacheState } from "./blockstore-apply";
 import {
   hydrateSubtree, upsertBlocks, upsertRefs, upsertWorkspace, replaceWorkspaces,
@@ -79,11 +81,12 @@ export class ElectronBlockstoreService {
     return invoke<string>("blockstoreSemanticSearch", workspaceId, reqJson);
   }
 
-  apply_remote_op(opJson: string): void {
-    let normalized = opJson;
+  apply_remote_op(reqBytes: Uint8Array): void {
+    const req = fromBinary(ApplyRemoteOpRequestSchema, reqBytes);
+    let normalized = req.opJson;
     let parsed: Record<string, unknown> | null = null;
     try {
-      parsed = JSON.parse(opJson) as Record<string, unknown>;
+      parsed = JSON.parse(req.opJson) as Record<string, unknown>;
       // Backend WS pushes applied_at as Unix ms; Rust BlockOp expects ISO string.
       if (typeof parsed.applied_at === "number") {
         parsed.applied_at = new Date(parsed.applied_at).toISOString();
@@ -94,11 +97,15 @@ export class ElectronBlockstoreService {
       try { applyOpToCache(this.cache, parsed as unknown as Parameters<typeof applyOpToCache>[1]); }
       catch { /* tolerate malformed ops */ }
     }
-    // Fire IPC to keep main-process mirror warm for legacy consumers, but
-    // DO NOT refresh from main afterwards — main is racing the catchup loop
-    // and an in-flight refresh would overwrite the renderer cache with a
-    // stale snapshot before later ops in the same loop apply.
-    void invoke("blockstoreApplyRemoteOp", normalized);
+    // Fire IPC to keep main-process mirror warm for legacy consumers. Renormalise
+    // applied_at into the proto envelope before forwarding so main-side serde
+    // decodes BlockOp.applied_at as string. We don't await — main is racing the
+    // catchup loop and an in-flight refresh would overwrite the renderer cache
+    // with a stale snapshot before later ops in the same loop apply.
+    const outgoing = normalized === req.opJson
+      ? reqBytes
+      : toBinary(ApplyRemoteOpRequestSchema, protoCreate(ApplyRemoteOpRequestSchema, { opJson: normalized }));
+    void invoke("blockstoreApplyRemoteOp", Array.from(outgoing));
   }
 
   // Mirrors services::blockstore::apply_local_ops — skips ref ops (server

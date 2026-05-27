@@ -1,4 +1,6 @@
 use napi_derive::napi;
+use agentsmesh_types::proto_blockstore_state_v1::ApplyRemoteOpRequest;
+use prost::Message;
 use crate::{AppState, err};
 
 #[napi]
@@ -46,9 +48,11 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn blockstore_apply_remote_op(&self, op_json: String) -> napi::Result<()> {
+    pub async fn blockstore_apply_remote_op(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = ApplyRemoteOpRequest::decode(req_bytes.as_slice())
+            .map_err(|e| err(format!("decode ApplyRemoteOpRequest: {e}")))?;
         let svc = self.blockstore.lock().await;
-        svc.apply_remote_op(&op_json).map_err(err)
+        svc.apply_remote_op(&req.op_json).map_err(err)
     }
 
     #[napi]

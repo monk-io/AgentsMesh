@@ -542,8 +542,8 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "blockstore",
     "params": [
       {
-        "name": "opJson",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"

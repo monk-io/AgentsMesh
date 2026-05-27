@@ -114,7 +114,7 @@ export declare class AppState {
   blockstoreLoadTypeDefs(workspaceId: string): Promise<void>
   blockstoreCatchup(workspaceId: string): Promise<void>
   blockstoreSemanticSearch(workspaceId: string, reqJson: string): Promise<string>
-  blockstoreApplyRemoteOp(opJson: string): Promise<void>
+  blockstoreApplyRemoteOp(reqBytes: Array<number>): Promise<void>
   blockstoreWorkspacesJson(): Promise<string>
   blockstoreGetBlockJson(id: string): Promise<string | null>
   blockstoreListChildrenJson(parentId: string): Promise<string>

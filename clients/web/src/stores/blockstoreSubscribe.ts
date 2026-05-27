@@ -1,7 +1,9 @@
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { reconnectRegistry } from "@/lib/realtime";
 import type { RealtimeEvent } from "@/lib/realtime";
 import type { BlockOp } from "@/lib/viewModels/blockstore";
 import { getBlockstoreService } from "@/lib/wasm-core";
+import { ApplyRemoteOpRequestSchema } from "@proto/blockstore_state/v1/blockstore_state_pb";
 import { useBlockstoreStore, readLastOpIds } from "./blockstore";
 
 // Coalesce _tick bumps: per-op bumps during catchup triggered React #185 on Desktop.
@@ -12,6 +14,11 @@ function scheduleBump() {
     bumpTimer = null;
     useBlockstoreStore.setState((s) => ({ _tick: s._tick + 1 }));
   }, 100);
+}
+
+function dispatchApplyRemoteOp(op: BlockOp): void {
+  const req = protoCreate(ApplyRemoteOpRequestSchema, { opJson: JSON.stringify(op) });
+  getBlockstoreService().apply_remote_op(toBinary(ApplyRemoteOpRequestSchema, req));
 }
 
 // Backend fans out ops org-wide; drop ops for workspaces the user has not loaded.
@@ -29,7 +36,7 @@ export function handleBlockstoreEvent(event: RealtimeEvent) {
         : op.applied_at,
   };
   try {
-    getBlockstoreService().apply_remote_op(JSON.stringify(normalized));
+    dispatchApplyRemoteOp(normalized);
   } catch {
     return;
   }

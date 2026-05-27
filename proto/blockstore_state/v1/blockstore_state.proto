@@ -1,0 +1,29 @@
+// proto.blockstore_state.v1 — client-side blockstore state mutation contract.
+//
+// BlockOp carries deeply nested JSON-shaped fields (`payload` / `forward` /
+// `inverse` / `meta`) typed as JSONMap on the renderer side. Rust state
+// stores BlockOp opaquely (the projection logic lives inside
+// BlockstoreState::apply_remote_op). Mirrors the carry-through pattern used
+// by mesh_state.ReplaceTopologyRequest and app_state.DispatchEventRequest:
+// renderer encodes via JSON.stringify, Rust state decodes via
+// serde_json::from_str before applying.
+//
+// Why not flatten to proto fields: BlockOp's `payload`/`forward`/`inverse`
+// are JSONMap with shapes that vary per op kind (createBlock vs addRef vs
+// updateBlock vs …). Encoding that as proto Struct or Any would obscure
+// the op-kind discriminator without making the wire safer — the opaque
+// carry-through respects the YAGNI line.
+
+syntax = "proto3";
+
+package proto.blockstore_state.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/blockstore_state/v1;blockstorestatev1";
+
+// Apply a remote BlockOp to the local SSOT cache — used by
+// blockstoreSubscribe.ts when the realtime WS broadcasts an op for a
+// workspace the user has loaded. The embedded JSON blob is a serialised
+// `BlockOp` (carried through opaquely by Rust state).
+message ApplyRemoteOpRequest {
+  string op_json = 1;
+}

@@ -1,3 +1,4 @@
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { getBlockstoreService, parseWasmAny } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import {
@@ -9,6 +10,7 @@ import {
   listTypeDefs as listTypeDefsConnect,
   semanticSearch as semanticSearchConnect,
 } from "@/lib/api/connect/blockstoreConnect";
+import { ApplyRemoteOpRequestSchema } from "@proto/blockstore_state/v1/blockstore_state_pb";
 import type {
   ApplyOpsRequest,
   ApplyOpsResult,
@@ -24,6 +26,11 @@ const svc = () => getBlockstoreService();
 
 function orgSlug(): string {
   return readCurrentOrg()?.slug ?? "";
+}
+
+function applyRemoteOpProto(op: BlockOp): void {
+  const req = protoCreate(ApplyRemoteOpRequestSchema, { opJson: JSON.stringify(op) });
+  svc().apply_remote_op(toBinary(ApplyRemoteOpRequestSchema, req));
 }
 
 export const blockstoreApi = {
@@ -100,7 +107,7 @@ export const blockstoreApi = {
     // Apply each authoritative op into the SSOT cache so subsequent reads
     // reflect the converged state. apply_remote_op also bumps last_op_id.
     for (const op of ops) {
-      svc().apply_remote_op(JSON.stringify(op));
+      applyRemoteOpProto(op);
     }
     // Callers historically iterated the returned ops to feed applyRemoteOp;
     // with this adapter the cache is already converged, so return empty.

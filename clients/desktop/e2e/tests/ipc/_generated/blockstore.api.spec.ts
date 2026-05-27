@@ -10,7 +10,7 @@ test.describe("IPC · blockstore", () => {
   });
 
   test("blockstoreApplyRemoteOp", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreApplyRemoteOp", returnType: "void" }, "");
+    await invokeIpcContract(sharedPage, { method: "blockstoreApplyRemoteOp", returnType: "void" }, []);
   });
 
   test("blockstoreBacklinksJson", async ({ sharedPage }) => {

@@ -61,6 +61,10 @@ pub mod proto_blockstore_v1 {
     pub use ::blockstore_proto::proto::blockstore::v1::*;
 }
 
+pub mod proto_blockstore_state_v1 {
+    pub use ::blockstore_state_proto::proto::blockstore_state::v1::*;
+}
+
 pub mod proto_channel_v1 {
     pub use ::channel_proto::proto::channel::v1::*;
 }
