@@ -23,6 +23,7 @@ rust_library(
         # with no client-side consumer.
         "//proto/agent/v1:agent_rust_proto",
         "//proto/apikey/v1:apikey_rust_proto",
+        "//proto/app_state/v1:app_state_rust_proto",
         "//proto/auth/v1:auth_rust_proto",
         "//proto/auth_state/v1:auth_state_rust_proto",
         "//proto/autopilot/v1:autopilot_rust_proto",

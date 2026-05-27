@@ -33,6 +33,10 @@ pub mod proto_apikey_v1 {
     pub use ::apikey_proto::proto::apikey::v1::*;
 }
 
+pub mod proto_app_state_v1 {
+    pub use ::app_state_proto::proto::app_state::v1::*;
+}
+
 pub mod proto_auth_v1 {
     pub use ::auth_proto::proto::auth::v1::*;
 }

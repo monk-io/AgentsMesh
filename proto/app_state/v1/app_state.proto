@@ -1,0 +1,21 @@
+// proto.app_state.v1 — client-side app-level state mutation contract.
+//
+// `WasmAppState::dispatch_event(event_json)` is the legacy single-entry
+// realtime-event dispatcher: renderer code forwards a Realtime event AST
+// (Pod / Channel / Ticket / Loop / Mesh / etc.) and Rust state fans it out
+// to the appropriate sub-state manager. The dispatch logic owns the AST
+// shape; carries it through opaquely (mirrors ChannelMessage.content_json
+// and ReplaceTopologyRequest).
+
+syntax = "proto3";
+
+package proto.app_state.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/app_state/v1;appstatev1";
+
+// Dispatch a serialised RealtimeEvent into the app-level fan-out router.
+// `event_json` is an opaque RealtimeEvent AST blob — Rust state decodes
+// via serde_json::from_str and dispatches.
+message DispatchEventRequest {
+  string event_json = 1;
+}

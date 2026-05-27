@@ -1,9 +1,15 @@
 use agentsmesh_state::app_state::AppState;
+use agentsmesh_types::proto_app_state_v1::DispatchEventRequest;
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmAppState {
     inner: AppState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -13,10 +19,12 @@ impl WasmAppState {
         Self { inner: AppState::with_storage(crate::new_memory_backend()) }
     }
 
-    pub fn dispatch_event(&mut self, event_json: &str) {
-        if let Ok(event) = serde_json::from_str(event_json) {
+    pub fn dispatch_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = DispatchEventRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Ok(event) = serde_json::from_str(&req.event_json) {
             self.inner.dispatch(&event);
         }
+        Ok(())
     }
 
     pub fn pods_json(&self) -> String {
