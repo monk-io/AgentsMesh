@@ -118,6 +118,11 @@ export declare class AppState {
   blockstoreCatchup(workspaceId: string): Promise<void>
   blockstoreSemanticSearch(workspaceId: string, reqJson: string): Promise<string>
   blockstoreApplyRemoteOp(reqBytes: Array<number>): Promise<void>
+  blockstoreReplaceWorkspaces(reqBytes: Uint8Array): Promise<void>
+  blockstoreUpsertWorkspace(reqBytes: Uint8Array): Promise<void>
+  blockstoreUpsertBlocks(reqBytes: Uint8Array): Promise<void>
+  blockstoreUpsertRefs(reqBytes: Uint8Array): Promise<void>
+  blockstoreProjectLocalOps(reqBytes: Uint8Array): Promise<void>
   blockstoreWorkspacesJson(): Promise<string>
   blockstoreGetBlockJson(id: string): Promise<string | null>
   blockstoreListChildrenJson(parentId: string): Promise<string>

@@ -7,6 +7,7 @@ use agentsmesh_state::blockstore_types::{
     SearchHit, SemanticSearchRequest, Workspace,
 };
 use agentsmesh_types::proto_blockstore_v1 as blockstore_proto;
+use agentsmesh_types::proto_blockstore_state_v1 as blockstore_state_proto;
 use prost::Message;
 
 use crate::blockstore_proto_convert::{
@@ -200,33 +201,42 @@ impl BlockstoreService {
 
     // ── Bulk state population (consumed by JS Connect adapter callers
     // who fetched via the binary wire and need to push results into the
-    // local cache). Each method accepts a JSON-serialized payload and
-    // upserts into the SSOT state in a single critical section.
+    // local cache). Each method accepts a prost-encoded request envelope
+    // carrying a JSON-serialised payload (opaque carry-through; see
+    // proto/blockstore_state/v1/blockstore_state.proto header for why).
 
-    pub fn replace_workspaces_json(&self, list_json: &str) -> Result<(), String> {
-        let list: Vec<Workspace> = serde_json::from_str(list_json)
+    pub fn replace_workspaces(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::ReplaceWorkspacesRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ReplaceWorkspacesRequest: {e}"))?;
+        let list: Vec<Workspace> = serde_json::from_str(&req.workspaces_json)
             .map_err(|e| format!("invalid workspaces JSON: {e}"))?;
         self.state.write().unwrap().replace_workspaces(list);
         Ok(())
     }
 
-    pub fn upsert_workspace_json(&self, ws_json: &str) -> Result<(), String> {
-        let ws: Workspace = serde_json::from_str(ws_json)
+    pub fn upsert_workspace(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::UpsertWorkspaceRequest::decode(req_bytes)
+            .map_err(|e| format!("decode UpsertWorkspaceRequest: {e}"))?;
+        let ws: Workspace = serde_json::from_str(&req.workspace_json)
             .map_err(|e| format!("invalid workspace JSON: {e}"))?;
         self.state.write().unwrap().upsert_workspace(ws);
         Ok(())
     }
 
-    pub fn upsert_blocks_json(&self, blocks_json: &str) -> Result<(), String> {
-        let blocks: Vec<Block> = serde_json::from_str(blocks_json)
+    pub fn upsert_blocks(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::UpsertBlocksRequest::decode(req_bytes)
+            .map_err(|e| format!("decode UpsertBlocksRequest: {e}"))?;
+        let blocks: Vec<Block> = serde_json::from_str(&req.blocks_json)
             .map_err(|e| format!("invalid blocks JSON: {e}"))?;
         let mut state = self.state.write().unwrap();
         for b in blocks { state.upsert_block(b); }
         Ok(())
     }
 
-    pub fn upsert_refs_json(&self, refs_json: &str) -> Result<(), String> {
-        let refs: Vec<BlockRef> = serde_json::from_str(refs_json)
+    pub fn upsert_refs(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::UpsertRefsRequest::decode(req_bytes)
+            .map_err(|e| format!("decode UpsertRefsRequest: {e}"))?;
+        let refs: Vec<BlockRef> = serde_json::from_str(&req.refs_json)
             .map_err(|e| format!("invalid refs JSON: {e}"))?;
         let mut state = self.state.write().unwrap();
         for r in refs { state.upsert_ref(r); }
@@ -236,10 +246,12 @@ impl BlockstoreService {
     /// Project an ApplyOps envelope/result pair into the local cache.
     /// Mirrors `apply_ops`'s side effect so JS callers using the Connect
     /// path can keep the same local-replay semantics.
-    pub fn project_local_ops(&self, req_json: &str, res_json: &str) -> Result<(), String> {
-        let req: ApplyOpsRequest = serde_json::from_str(req_json)
+    pub fn project_local_ops(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let envelope = blockstore_state_proto::ProjectLocalOpsRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ProjectLocalOpsRequest: {e}"))?;
+        let req: ApplyOpsRequest = serde_json::from_str(&envelope.request_json)
             .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
-        let res: ApplyOpsResult = serde_json::from_str(res_json)
+        let res: ApplyOpsResult = serde_json::from_str(&envelope.result_json)
             .map_err(|e| format!("invalid ApplyOpsResult JSON: {e}"))?;
         self.apply_local_ops(&req, &res);
         Ok(())

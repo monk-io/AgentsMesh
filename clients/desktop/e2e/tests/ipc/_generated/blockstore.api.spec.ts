@@ -65,8 +65,16 @@ test.describe("IPC · blockstore", () => {
     await invokeIpcContract(sharedPage, { method: "blockstoreNestChildrenJson", returnType: "string" });
   });
 
+  test("blockstoreProjectLocalOps", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "blockstoreProjectLocalOps", returnType: "any" });
+  });
+
   test("blockstoreRefsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "blockstoreRefsJson", returnType: "string" });
+  });
+
+  test("blockstoreReplaceWorkspaces", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "blockstoreReplaceWorkspaces", returnType: "any" });
   });
 
   test("blockstoreSemanticSearch", async ({ sharedPage }) => {
@@ -79,6 +87,18 @@ test.describe("IPC · blockstore", () => {
 
   test("blockstoreTypeDefsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "blockstoreTypeDefsJson", returnType: "string" }, "");
+  });
+
+  test("blockstoreUpsertBlocks", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertBlocks", returnType: "any" });
+  });
+
+  test("blockstoreUpsertRefs", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertRefs", returnType: "any" });
+  });
+
+  test("blockstoreUpsertWorkspace", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertWorkspace", returnType: "any" });
   });
 
   test("blockstoreWorkspacesJson", async ({ sharedPage }) => {

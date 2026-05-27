@@ -10,7 +10,14 @@ import {
   listTypeDefs as listTypeDefsConnect,
   semanticSearch as semanticSearchConnect,
 } from "@/lib/api/connect/blockstoreConnect";
-import { ApplyRemoteOpRequestSchema } from "@proto/blockstore_state/v1/blockstore_state_pb";
+import {
+  ApplyRemoteOpRequestSchema,
+  ReplaceWorkspacesRequestSchema,
+  UpsertWorkspaceRequestSchema,
+  UpsertBlocksRequestSchema,
+  UpsertRefsRequestSchema,
+  ProjectLocalOpsRequestSchema,
+} from "@proto/blockstore_state/v1/blockstore_state_pb";
 import type {
   ApplyOpsRequest,
   ApplyOpsResult,
@@ -33,24 +40,63 @@ function applyRemoteOpProto(op: BlockOp): void {
   svc().apply_remote_op(toBinary(ApplyRemoteOpRequestSchema, req));
 }
 
+function replaceWorkspacesProto(workspaces: Workspace[]): void {
+  const req = protoCreate(ReplaceWorkspacesRequestSchema, {
+    workspacesJson: JSON.stringify(workspaces),
+  });
+  void svc().replace_workspaces(toBinary(ReplaceWorkspacesRequestSchema, req));
+}
+
+function upsertWorkspaceProto(ws: Workspace): void {
+  const req = protoCreate(UpsertWorkspaceRequestSchema, {
+    workspaceJson: JSON.stringify(ws),
+  });
+  void svc().upsert_workspace(toBinary(UpsertWorkspaceRequestSchema, req));
+}
+
+function upsertBlocksProto(blocks: Block[]): void {
+  const req = protoCreate(UpsertBlocksRequestSchema, {
+    blocksJson: JSON.stringify(blocks),
+  });
+  void svc().upsert_blocks(toBinary(UpsertBlocksRequestSchema, req));
+}
+
+function upsertRefsProto(refs: BlockRef[]): void {
+  const req = protoCreate(UpsertRefsRequestSchema, {
+    refsJson: JSON.stringify(refs),
+  });
+  void svc().upsert_refs(toBinary(UpsertRefsRequestSchema, req));
+}
+
+function projectLocalOpsProto(req: ApplyOpsRequest, res: ApplyOpsResult): void {
+  // Some test mocks omit project_local_ops; tolerate by guarding.
+  const s = svc() as unknown as { project_local_ops?: (b: Uint8Array) => unknown };
+  if (typeof s.project_local_ops !== "function") return;
+  const envelope = protoCreate(ProjectLocalOpsRequestSchema, {
+    requestJson: JSON.stringify(req),
+    resultJson: JSON.stringify(res),
+  });
+  void s.project_local_ops(toBinary(ProjectLocalOpsRequestSchema, envelope));
+}
+
 export const blockstoreApi = {
   async applyOps(req: ApplyOpsRequest): Promise<ApplyOpsResult> {
     const res = await applyOpsConnect(orgSlug(), req);
     // Project locally so the SSOT cache reflects the optimistic mutation
     // before the WS broadcast / catchup arrives.
-    svcProjectOps(req, res);
+    projectLocalOpsProto(req, res);
     return res;
   },
 
   async listWorkspaces(): Promise<{ workspaces: Workspace[] }> {
     const { workspaces } = await listWorkspacesConnect(orgSlug());
-    svc().replace_workspaces_json(JSON.stringify(workspaces));
+    replaceWorkspacesProto(workspaces);
     return { workspaces };
   },
 
   async ensureDefaultWorkspace(): Promise<Workspace> {
     const ws = await ensureDefaultWorkspaceConnect(orgSlug());
-    svc().upsert_workspace_json(JSON.stringify(ws));
+    upsertWorkspaceProto(ws);
     return ws;
   },
 
@@ -72,8 +118,8 @@ export const blockstoreApi = {
 
   async getSubtree(wsID: string, rootID: string, maxDepth = 64): Promise<ChildrenResult> {
     const { blocks, refs } = await getSubtreeConnect(orgSlug(), wsID, rootID, maxDepth);
-    svc().upsert_blocks_json(JSON.stringify(blocks));
-    svc().upsert_refs_json(JSON.stringify(refs));
+    upsertBlocksProto(blocks);
+    upsertRefsProto(refs);
     if (svc().last_op_id(wsID) === BigInt(0)) {
       // Seed watermark so the WS filter recognises this workspace, mirroring
       // the legacy Rust load_subtree path. `set_last_op_id` is wasm-bindgen
@@ -116,7 +162,7 @@ export const blockstoreApi = {
 
   async listTypeDefs(wsID: string): Promise<{ blocks: Block[] }> {
     const { blocks } = await listTypeDefsConnect(orgSlug(), wsID);
-    svc().upsert_blocks_json(JSON.stringify(blocks));
+    upsertBlocksProto(blocks);
     return { blocks };
   },
 
@@ -128,11 +174,3 @@ export const blockstoreApi = {
     return await semanticSearchConnect(orgSlug(), wsID, query, opts);
   },
 };
-
-function svcProjectOps(req: ApplyOpsRequest, res: ApplyOpsResult): void {
-  // Some test mocks omit project_local_ops; tolerate by guarding.
-  const s = svc() as unknown as { project_local_ops?: (a: string, b: string) => unknown };
-  if (typeof s.project_local_ops === "function") {
-    s.project_local_ops(JSON.stringify(req), JSON.stringify(res));
-  }
-}

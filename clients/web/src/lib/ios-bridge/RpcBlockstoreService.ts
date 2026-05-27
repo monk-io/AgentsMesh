@@ -15,7 +15,14 @@
  */
 
 import { fromBinary } from "@bufbuild/protobuf";
-import { ApplyRemoteOpRequestSchema } from "@proto/blockstore_state/v1/blockstore_state_pb";
+import {
+  ApplyRemoteOpRequestSchema,
+  ReplaceWorkspacesRequestSchema,
+  UpsertWorkspaceRequestSchema,
+  UpsertBlocksRequestSchema,
+  UpsertRefsRequestSchema,
+  ProjectLocalOpsRequestSchema,
+} from "@proto/blockstore_state/v1/blockstore_state_pb";
 
 let nextId = 1;
 const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
@@ -167,17 +174,25 @@ export class RpcBlockstoreService {
     void rpc("set_last_op_id", { wsId, id });
   }
 
-  replace_workspaces_json(json: string): void {
-    void rpc("replace_workspaces_json", { json }).then(() => this.refreshFlatCaches());
+  replace_workspaces(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceWorkspacesRequestSchema, reqBytes);
+    void rpc("replace_workspaces_json", { json: req.workspacesJson }).then(() => this.refreshFlatCaches());
   }
-  upsert_workspace_json(json: string): void {
-    void rpc("upsert_workspace_json", { json }).then(() => this.refreshFlatCaches());
+  upsert_workspace(reqBytes: Uint8Array): void {
+    const req = fromBinary(UpsertWorkspaceRequestSchema, reqBytes);
+    void rpc("upsert_workspace_json", { json: req.workspaceJson }).then(() => this.refreshFlatCaches());
   }
-  upsert_blocks_json(json: string): void {
-    void rpc("upsert_blocks_json", { json }).then(() => this.refreshFlatCaches());
+  upsert_blocks(reqBytes: Uint8Array): void {
+    const req = fromBinary(UpsertBlocksRequestSchema, reqBytes);
+    void rpc("upsert_blocks_json", { json: req.blocksJson }).then(() => this.refreshFlatCaches());
   }
-  upsert_refs_json(json: string): void {
-    void rpc("upsert_refs_json", { json }).then(() => this.refreshFlatCaches());
+  upsert_refs(reqBytes: Uint8Array): void {
+    const req = fromBinary(UpsertRefsRequestSchema, reqBytes);
+    void rpc("upsert_refs_json", { json: req.refsJson }).then(() => this.refreshFlatCaches());
+  }
+  project_local_ops(reqBytes: Uint8Array): void {
+    const env = fromBinary(ProjectLocalOpsRequestSchema, reqBytes);
+    void rpc("project_local_ops", { req: env.requestJson, res: env.resultJson });
   }
 
   // ── Sync flat-map readers (used by zustand selectors)

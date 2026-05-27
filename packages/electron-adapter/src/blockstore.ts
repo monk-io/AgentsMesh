@@ -1,6 +1,13 @@
 import { invoke } from "./invoke";
 import { fromBinary, toBinary, create as protoCreate } from "@bufbuild/protobuf";
-import { ApplyRemoteOpRequestSchema } from "@agentsmesh/proto/blockstore_state/v1/blockstore_state_pb";
+import {
+  ApplyRemoteOpRequestSchema,
+  ReplaceWorkspacesRequestSchema,
+  UpsertWorkspaceRequestSchema,
+  UpsertBlocksRequestSchema,
+  UpsertRefsRequestSchema,
+  ProjectLocalOpsRequestSchema,
+} from "@agentsmesh/proto/blockstore_state/v1/blockstore_state_pb";
 import { applyOpToCache, safeJsonMap, type CacheState } from "./blockstore-apply";
 import {
   hydrateSubtree, upsertBlocks, upsertRefs, upsertWorkspace, replaceWorkspaces,
@@ -110,10 +117,17 @@ export class ElectronBlockstoreService {
 
   // Mirrors services::blockstore::apply_local_ops — skips ref ops (server
   // assigns ref_id) and projects the rest using the server-returned op_ids.
-  project_local_ops(reqJson: string, resJson: string): void {
+  project_local_ops(reqBytes: Uint8Array): void {
+    let envelope: { requestJson: string; resultJson: string };
+    try {
+      envelope = fromBinary(ProjectLocalOpsRequestSchema, reqBytes);
+    } catch { return; }
     let req: { workspace_id?: string; ops?: Array<{ op: string; payload: Record<string, unknown> }> };
     let res: { op_ids?: number[]; was_replay?: boolean };
-    try { req = JSON.parse(reqJson); res = JSON.parse(resJson); } catch { return; }
+    try {
+      req = JSON.parse(envelope.requestJson);
+      res = JSON.parse(envelope.resultJson);
+    } catch { return; }
     if (res.was_replay) return;
     const wsId = req.workspace_id ?? "";
     const ops = req.ops ?? [];
@@ -128,6 +142,7 @@ export class ElectronBlockstoreService {
         forward: env.payload, applied_at: "",
       });
     }
+    void invoke("blockstoreProjectLocalOps", Array.from(reqBytes));
   }
 
   workspaces_json(): string { return this.workspaces.value; }
@@ -148,10 +163,34 @@ export class ElectronBlockstoreService {
     return this.typeDefsCache.get(workspaceId) ?? '{"blocks":[]}';
   }
 
-  upsert_blocks_json(jsonArray: string): void { upsertBlocks(this.cache, this.blockCache, jsonArray); }
-  upsert_refs_json(jsonArray: string): void { upsertRefs(this.cache, jsonArray); }
-  upsert_workspace_json(json: string): void { upsertWorkspace(this.workspaces, json); }
-  replace_workspaces_json(jsonArray: string): void { replaceWorkspaces(this.workspaces, jsonArray); }
+  upsert_blocks(reqBytes: Uint8Array): void {
+    try {
+      const { blocksJson } = fromBinary(UpsertBlocksRequestSchema, reqBytes);
+      upsertBlocks(this.cache, this.blockCache, blocksJson);
+      void invoke("blockstoreUpsertBlocks", Array.from(reqBytes));
+    } catch { /* tolerate malformed bytes */ }
+  }
+  upsert_refs(reqBytes: Uint8Array): void {
+    try {
+      const { refsJson } = fromBinary(UpsertRefsRequestSchema, reqBytes);
+      upsertRefs(this.cache, refsJson);
+      void invoke("blockstoreUpsertRefs", Array.from(reqBytes));
+    } catch { /* tolerate malformed bytes */ }
+  }
+  upsert_workspace(reqBytes: Uint8Array): void {
+    try {
+      const { workspaceJson } = fromBinary(UpsertWorkspaceRequestSchema, reqBytes);
+      upsertWorkspace(this.workspaces, workspaceJson);
+      void invoke("blockstoreUpsertWorkspace", Array.from(reqBytes));
+    } catch { /* tolerate malformed bytes */ }
+  }
+  replace_workspaces(reqBytes: Uint8Array): void {
+    try {
+      const { workspacesJson } = fromBinary(ReplaceWorkspacesRequestSchema, reqBytes);
+      replaceWorkspaces(this.workspaces, workspacesJson);
+      void invoke("blockstoreReplaceWorkspaces", Array.from(reqBytes));
+    } catch { /* tolerate malformed bytes */ }
+  }
 
   // Sync override: stores call set_last_op_id fire-and-forget. Cache the
   // value immediately so the next sync read sees it; IPC mirrors in background.

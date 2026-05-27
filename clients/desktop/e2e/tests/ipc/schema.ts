@@ -699,10 +699,22 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
+    "name": "blockstoreProjectLocalOps",
+    "group": "blockstore",
+    "params": [],
+    "returnType": "any"
+  },
+  {
     "name": "blockstoreRefsJson",
     "group": "blockstore",
     "params": [],
     "returnType": "string"
+  },
+  {
+    "name": "blockstoreReplaceWorkspaces",
+    "group": "blockstore",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "blockstoreSemanticSearch",
@@ -744,6 +756,24 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "string"
+  },
+  {
+    "name": "blockstoreUpsertBlocks",
+    "group": "blockstore",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "blockstoreUpsertRefs",
+    "group": "blockstore",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "blockstoreUpsertWorkspace",
+    "group": "blockstore",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "blockstoreWorkspacesJson",

@@ -177,27 +177,27 @@ impl WasmBlockstoreService {
         self.0.set_last_op_id(workspace_id, id);
     }
 
-    // ── Bulk state population (JS Connect adapter pushes server results
-    // here so the SSOT cache stays warm without the legacy fetch path).
+    // ── Bulk state population (proto-bytes envelopes; JSON internals carried
+    // through opaquely per blockstore_state.proto YAGNI rationale).
 
-    pub fn replace_workspaces_json(&self, list_json: &str) -> Result<(), String> {
-        self.0.replace_workspaces_json(list_json)
+    pub fn replace_workspaces(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_workspaces(req_bytes)
     }
 
-    pub fn upsert_workspace_json(&self, ws_json: &str) -> Result<(), String> {
-        self.0.upsert_workspace_json(ws_json)
+    pub fn upsert_workspace(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.upsert_workspace(req_bytes)
     }
 
-    pub fn upsert_blocks_json(&self, blocks_json: &str) -> Result<(), String> {
-        self.0.upsert_blocks_json(blocks_json)
+    pub fn upsert_blocks(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.upsert_blocks(req_bytes)
     }
 
-    pub fn upsert_refs_json(&self, refs_json: &str) -> Result<(), String> {
-        self.0.upsert_refs_json(refs_json)
+    pub fn upsert_refs(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.upsert_refs(req_bytes)
     }
 
-    pub fn project_local_ops(&self, req_json: &str, res_json: &str) -> Result<(), String> {
-        self.0.project_local_ops(req_json, res_json)
+    pub fn project_local_ops(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.project_local_ops(req_bytes)
     }
 
     pub fn blocks_json(&self) -> String { self.0.blocks_json() }

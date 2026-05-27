@@ -228,6 +228,21 @@ type _AppState_proto_dispatch   = _RequiresU8<WasmAppState["dispatch_event"]>;
 type _BlockstoreSvc_apply_remote_op       = _Sig<WasmBlockstoreService["apply_remote_op"]>;
 type _BlockstoreSvc_proto_apply_remote_op = _RequiresU8<WasmBlockstoreService["apply_remote_op"]>;
 
+// ── BlockstoreService bulk-feed proto-bytes mutators ──
+// production caller: lib/api/facade/blockstoreApi.ts (listWorkspaces /
+// ensureDefaultWorkspace / getSubtree / listTypeDefs / applyOps).
+// 5 mutators flipped from raw JSON-string to proto-bytes envelope.
+type _BlockstoreSvc_replace_workspaces       = _Sig<WasmBlockstoreService["replace_workspaces"]>;
+type _BlockstoreSvc_upsert_workspace         = _Sig<WasmBlockstoreService["upsert_workspace"]>;
+type _BlockstoreSvc_upsert_blocks            = _Sig<WasmBlockstoreService["upsert_blocks"]>;
+type _BlockstoreSvc_upsert_refs              = _Sig<WasmBlockstoreService["upsert_refs"]>;
+type _BlockstoreSvc_project_local_ops        = _Sig<WasmBlockstoreService["project_local_ops"]>;
+type _BlockstoreSvc_proto_replace_workspaces = _RequiresU8<WasmBlockstoreService["replace_workspaces"]>;
+type _BlockstoreSvc_proto_upsert_workspace   = _RequiresU8<WasmBlockstoreService["upsert_workspace"]>;
+type _BlockstoreSvc_proto_upsert_blocks      = _RequiresU8<WasmBlockstoreService["upsert_blocks"]>;
+type _BlockstoreSvc_proto_upsert_refs        = _RequiresU8<WasmBlockstoreService["upsert_refs"]>;
+type _BlockstoreSvc_proto_project_local_ops  = _RequiresU8<WasmBlockstoreService["project_local_ops"]>;
+
 // ── AuthManager proto-bytes mutators (production callers: stores/auth.ts) ──
 // 3 mutators flipped from JSON-string to proto-bytes — `apply_session` /
 // `set_organizations` / `set_current_org`. Signature now requires

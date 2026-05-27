@@ -26,7 +26,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file blockstore_state/v1/blockstore_state.proto.
  */
 export const file_blockstore_state_v1_blockstore_state: GenFile = /*@__PURE__*/
-  fileDesc("CipibG9ja3N0b3JlX3N0YXRlL3YxL2Jsb2Nrc3RvcmVfc3RhdGUucHJvdG8SGXByb3RvLmJsb2Nrc3RvcmVfc3RhdGUudjEiJwoUQXBwbHlSZW1vdGVPcFJlcXVlc3QSDwoHb3BfanNvbhgBIAEoCUJVWlNnaXRodWIuY29tL2FudGhyb3BpY3MvYWdlbnRzbWVzaC9wcm90by9nZW4vZ28vYmxvY2tzdG9yZV9zdGF0ZS92MTtibG9ja3N0b3Jlc3RhdGV2MWIGcHJvdG8z");
+  fileDesc("CipibG9ja3N0b3JlX3N0YXRlL3YxL2Jsb2Nrc3RvcmVfc3RhdGUucHJvdG8SGXByb3RvLmJsb2Nrc3RvcmVfc3RhdGUudjEiJwoUQXBwbHlSZW1vdGVPcFJlcXVlc3QSDwoHb3BfanNvbhgBIAEoCSIzChhSZXBsYWNlV29ya3NwYWNlc1JlcXVlc3QSFwoPd29ya3NwYWNlc19qc29uGAEgASgJIjAKFlVwc2VydFdvcmtzcGFjZVJlcXVlc3QSFgoOd29ya3NwYWNlX2pzb24YASABKAkiKgoTVXBzZXJ0QmxvY2tzUmVxdWVzdBITCgtibG9ja3NfanNvbhgBIAEoCSImChFVcHNlcnRSZWZzUmVxdWVzdBIRCglyZWZzX2pzb24YASABKAkiQwoWUHJvamVjdExvY2FsT3BzUmVxdWVzdBIUCgxyZXF1ZXN0X2pzb24YASABKAkSEwoLcmVzdWx0X2pzb24YAiABKAlCVVpTZ2l0aHViLmNvbS9hbnRocm9waWNzL2FnZW50c21lc2gvcHJvdG8vZ2VuL2dvL2Jsb2Nrc3RvcmVfc3RhdGUvdjE7YmxvY2tzdG9yZXN0YXRldjFiBnByb3RvMw");
 
 /**
  * Apply a remote BlockOp to the local SSOT cache — used by
@@ -49,4 +49,94 @@ export type ApplyRemoteOpRequest = Message<"proto.blockstore_state.v1.ApplyRemot
  */
 export const ApplyRemoteOpRequestSchema: GenMessage<ApplyRemoteOpRequest> = /*@__PURE__*/
   messageDesc(file_blockstore_state_v1_blockstore_state, 0);
+
+/**
+ * @generated from message proto.blockstore_state.v1.ReplaceWorkspacesRequest
+ */
+export type ReplaceWorkspacesRequest = Message<"proto.blockstore_state.v1.ReplaceWorkspacesRequest"> & {
+  /**
+   * @generated from field: string workspaces_json = 1;
+   */
+  workspacesJson: string;
+};
+
+/**
+ * Describes the message proto.blockstore_state.v1.ReplaceWorkspacesRequest.
+ * Use `create(ReplaceWorkspacesRequestSchema)` to create a new message.
+ */
+export const ReplaceWorkspacesRequestSchema: GenMessage<ReplaceWorkspacesRequest> = /*@__PURE__*/
+  messageDesc(file_blockstore_state_v1_blockstore_state, 1);
+
+/**
+ * @generated from message proto.blockstore_state.v1.UpsertWorkspaceRequest
+ */
+export type UpsertWorkspaceRequest = Message<"proto.blockstore_state.v1.UpsertWorkspaceRequest"> & {
+  /**
+   * @generated from field: string workspace_json = 1;
+   */
+  workspaceJson: string;
+};
+
+/**
+ * Describes the message proto.blockstore_state.v1.UpsertWorkspaceRequest.
+ * Use `create(UpsertWorkspaceRequestSchema)` to create a new message.
+ */
+export const UpsertWorkspaceRequestSchema: GenMessage<UpsertWorkspaceRequest> = /*@__PURE__*/
+  messageDesc(file_blockstore_state_v1_blockstore_state, 2);
+
+/**
+ * @generated from message proto.blockstore_state.v1.UpsertBlocksRequest
+ */
+export type UpsertBlocksRequest = Message<"proto.blockstore_state.v1.UpsertBlocksRequest"> & {
+  /**
+   * @generated from field: string blocks_json = 1;
+   */
+  blocksJson: string;
+};
+
+/**
+ * Describes the message proto.blockstore_state.v1.UpsertBlocksRequest.
+ * Use `create(UpsertBlocksRequestSchema)` to create a new message.
+ */
+export const UpsertBlocksRequestSchema: GenMessage<UpsertBlocksRequest> = /*@__PURE__*/
+  messageDesc(file_blockstore_state_v1_blockstore_state, 3);
+
+/**
+ * @generated from message proto.blockstore_state.v1.UpsertRefsRequest
+ */
+export type UpsertRefsRequest = Message<"proto.blockstore_state.v1.UpsertRefsRequest"> & {
+  /**
+   * @generated from field: string refs_json = 1;
+   */
+  refsJson: string;
+};
+
+/**
+ * Describes the message proto.blockstore_state.v1.UpsertRefsRequest.
+ * Use `create(UpsertRefsRequestSchema)` to create a new message.
+ */
+export const UpsertRefsRequestSchema: GenMessage<UpsertRefsRequest> = /*@__PURE__*/
+  messageDesc(file_blockstore_state_v1_blockstore_state, 4);
+
+/**
+ * @generated from message proto.blockstore_state.v1.ProjectLocalOpsRequest
+ */
+export type ProjectLocalOpsRequest = Message<"proto.blockstore_state.v1.ProjectLocalOpsRequest"> & {
+  /**
+   * @generated from field: string request_json = 1;
+   */
+  requestJson: string;
+
+  /**
+   * @generated from field: string result_json = 2;
+   */
+  resultJson: string;
+};
+
+/**
+ * Describes the message proto.blockstore_state.v1.ProjectLocalOpsRequest.
+ * Use `create(ProjectLocalOpsRequestSchema)` to create a new message.
+ */
+export const ProjectLocalOpsRequestSchema: GenMessage<ProjectLocalOpsRequest> = /*@__PURE__*/
+  messageDesc(file_blockstore_state_v1_blockstore_state, 5);
 

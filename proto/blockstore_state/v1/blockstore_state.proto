@@ -27,3 +27,32 @@ option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/blockstore_st
 message ApplyRemoteOpRequest {
   string op_json = 1;
 }
+
+// Bulk state population — used by JS Connect adapter callers
+// (facade/blockstoreApi.ts) after fetching via the binary wire. The
+// embedded *_json fields are JSON-serialised view-model types whose
+// shapes carry JSONMap fields (`data` / `meta` / `payload`) — flattening
+// them onto proto fields would require mirroring 200+ block-type
+// subschemas, which the YAGNI line forbids. Mirrors the
+// ApplyRemoteOpRequest carry-through pattern above.
+
+message ReplaceWorkspacesRequest {
+  string workspaces_json = 1;
+}
+
+message UpsertWorkspaceRequest {
+  string workspace_json = 1;
+}
+
+message UpsertBlocksRequest {
+  string blocks_json = 1;
+}
+
+message UpsertRefsRequest {
+  string refs_json = 1;
+}
+
+message ProjectLocalOpsRequest {
+  string request_json = 1;
+  string result_json = 2;
+}
