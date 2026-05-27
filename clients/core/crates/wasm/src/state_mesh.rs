@@ -1,6 +1,5 @@
 use agentsmesh_state::mesh_state::MeshState;
 use agentsmesh_types::proto_mesh_state_v1::ReplaceTopologyRequest;
-use agentsmesh_types::proto_mesh_v1::MeshTopology;
 use prost::Message;
 use wasm_bindgen::prelude::*;
 
@@ -38,7 +37,7 @@ impl WasmMeshState {
 
     pub fn replace_topology(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = ReplaceTopologyRequest::decode(req_bytes).map_err(decode_err)?;
-        if let Ok(topology) = serde_json::from_str::<MeshTopology>(&req.topology_json) {
+        if let Some(topology) = req.topology {
             self.inner.set_topology(topology);
         }
         Ok(())

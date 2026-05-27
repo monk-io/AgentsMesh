@@ -1,4 +1,4 @@
-import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
+import { create as protoCreate, toBinary, type MessageInitShape } from "@bufbuild/protobuf";
 import { getBlockstoreService, parseWasmAny } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import {
@@ -18,6 +18,13 @@ import {
   UpsertRefsRequestSchema,
   ProjectLocalOpsRequestSchema,
 } from "@proto/blockstore_state/v1/blockstore_state_pb";
+import {
+  WorkspaceSchema,
+  BlockSchema,
+  BlockRefSchema,
+  ApplyOpsRequestSchema,
+  ApplyOpsResponseSchema,
+} from "@proto/blockstore/v1/blockstore_pb";
 import type {
   ApplyOpsRequest,
   ApplyOpsResult,
@@ -28,6 +35,12 @@ import type {
   SearchHit,
   Workspace,
 } from "@/lib/viewModels/blockstore";
+
+type WorkspaceProtoInit = MessageInitShape<typeof WorkspaceSchema>;
+type BlockProtoInit = MessageInitShape<typeof BlockSchema>;
+type BlockRefProtoInit = MessageInitShape<typeof BlockRefSchema>;
+type ApplyOpsRequestProtoInit = MessageInitShape<typeof ApplyOpsRequestSchema>;
+type ApplyOpsResponseProtoInit = MessageInitShape<typeof ApplyOpsResponseSchema>;
 
 const svc = () => getBlockstoreService();
 
@@ -42,28 +55,28 @@ function applyRemoteOpProto(op: BlockOp): void {
 
 function replaceWorkspacesProto(workspaces: Workspace[]): void {
   const req = protoCreate(ReplaceWorkspacesRequestSchema, {
-    workspacesJson: JSON.stringify(workspaces),
+    workspaces: workspaces.map(workspaceToProto),
   });
   void svc().replace_workspaces(toBinary(ReplaceWorkspacesRequestSchema, req));
 }
 
 function upsertWorkspaceProto(ws: Workspace): void {
   const req = protoCreate(UpsertWorkspaceRequestSchema, {
-    workspaceJson: JSON.stringify(ws),
+    workspace: workspaceToProto(ws),
   });
   void svc().upsert_workspace(toBinary(UpsertWorkspaceRequestSchema, req));
 }
 
 function upsertBlocksProto(blocks: Block[]): void {
   const req = protoCreate(UpsertBlocksRequestSchema, {
-    blocksJson: JSON.stringify(blocks),
+    blocks: blocks.map(blockToProto),
   });
   void svc().upsert_blocks(toBinary(UpsertBlocksRequestSchema, req));
 }
 
 function upsertRefsProto(refs: BlockRef[]): void {
   const req = protoCreate(UpsertRefsRequestSchema, {
-    refsJson: JSON.stringify(refs),
+    refs: refs.map(blockRefToProto),
   });
   void svc().upsert_refs(toBinary(UpsertRefsRequestSchema, req));
 }
@@ -73,10 +86,76 @@ function projectLocalOpsProto(req: ApplyOpsRequest, res: ApplyOpsResult): void {
   const s = svc() as unknown as { project_local_ops?: (b: Uint8Array) => unknown };
   if (typeof s.project_local_ops !== "function") return;
   const envelope = protoCreate(ProjectLocalOpsRequestSchema, {
-    requestJson: JSON.stringify(req),
-    resultJson: JSON.stringify(res),
+    request: applyOpsRequestToProto(req),
+    result: applyOpsResultToProto(res),
   });
   void s.project_local_ops(toBinary(ProjectLocalOpsRequestSchema, envelope));
+}
+
+// View-model → typed proto.blockstore.v1.* converters. Outer container
+// fields are flat scalars; only the inner data/meta (per-blocktype JSONMap)
+// stay as JSON strings on the proto.
+function workspaceToProto(w: Workspace): WorkspaceProtoInit {
+  return {
+    id: w.id,
+    organizationId: BigInt(w.organization_id),
+    slug: w.slug,
+    name: w.name,
+    rootBlockId: w.root_block_id ?? undefined,
+    createdAt: w.created_at,
+  };
+}
+
+function blockToProto(b: Block): BlockProtoInit {
+  return {
+    id: b.id,
+    workspaceId: b.workspace_id,
+    type: b.type,
+    dataJson: JSON.stringify(b.data ?? {}),
+    text: b.text ?? undefined,
+    metaJson: JSON.stringify(b.meta ?? {}),
+    createdBy: BigInt(b.created_by),
+    createdAt: b.created_at,
+    updatedAt: b.updated_at,
+    deletedAt: b.deleted_at ?? undefined,
+  };
+}
+
+function blockRefToProto(r: BlockRef): BlockRefProtoInit {
+  return {
+    id: BigInt(r.id),
+    workspaceId: r.workspace_id,
+    fromId: r.from_id,
+    toId: r.to_id,
+    rel: r.rel,
+    orderKey: r.order_key ?? undefined,
+    anchor: r.anchor ?? undefined,
+    metaJson: JSON.stringify(r.meta ?? {}),
+    createdBy: BigInt(r.created_by),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+function applyOpsRequestToProto(req: ApplyOpsRequest): ApplyOpsRequestProtoInit {
+  return {
+    orgSlug: "",
+    workspaceId: req.workspace_id,
+    ops: req.ops.map((e) => ({
+      op: e.op,
+      payloadJson: JSON.stringify(e.payload ?? {}),
+    })),
+    idempotencyKey: req.idempotency_key ?? undefined,
+    parentOpId: req.parent_op_id !== undefined && req.parent_op_id !== null ? BigInt(req.parent_op_id) : undefined,
+  };
+}
+
+function applyOpsResultToProto(res: ApplyOpsResult): ApplyOpsResponseProtoInit {
+  return {
+    opIds: res.op_ids.map((n) => BigInt(n)),
+    wasReplay: res.was_replay,
+    parentOpId: res.parent_op_id !== undefined && res.parent_op_id !== null ? BigInt(res.parent_op_id) : undefined,
+  };
 }
 
 export const blockstoreApi = {

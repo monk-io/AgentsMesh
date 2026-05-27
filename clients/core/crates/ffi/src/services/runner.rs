@@ -143,22 +143,36 @@ impl AgentsMeshCore {
         Ok(runner_log_list_from_proto(resp))
     }
 
-    // Public registration / authorization flow — no proto Connect surface
-    // (the user-facing /runners/auth/* lives outside the org-scoped Runner
-    // service). REST stays.
+    // Public registration / authorization flow. Backend serves both REST
+    // and Connect-RPC handlers for these; the wasm bridge already uses
+    // `*_connect` (proto-bytes), so iOS aligns here too — DTO in, DTO out
+    // on the UniFFI surface, proto-bytes Connect on the wire.
     pub async fn get_runner_auth_status(
         &self,
         auth_key: String,
     ) -> Result<RunnerAuthStatusDto, CoreError> {
-        let status = self.api.get_runner_auth_status(&auth_key).await?;
-        Ok(status.into())
+        use agentsmesh_types::proto_runner_api_v1 as runner_proto;
+        let req = runner_proto::GetRunnerAuthStatusRequest { auth_key };
+        let resp = self.api.get_runner_auth_status_connect(&req).await?;
+        Ok(agentsmesh_types::RunnerAuthStatus {
+            status: resp.status,
+            runner_id: resp.runner_id,
+            organization_slug: resp.org_slug,
+        }.into())
     }
 
     pub async fn authorize_runner(
         &self,
         req: AuthorizeRunnerRequestDto,
     ) -> Result<(), CoreError> {
-        self.api.authorize_runner(&req.into()).await?;
+        use agentsmesh_types::proto_runner_api_v1 as runner_proto;
+        let domain: agentsmesh_types::AuthorizeRunnerRequest = req.into();
+        let proto_req = runner_proto::AuthorizeRunnerRequest {
+            org_slug: self.api.current_org_slug(),
+            auth_key: domain.auth_key,
+            node_id: domain.node_id.unwrap_or_default(),
+        };
+        self.api.authorize_runner_connect(&proto_req).await?;
         Ok(())
     }
 }

@@ -15,7 +15,9 @@ proto_library(
     name = "mesh_state_proto",
     srcs = ["mesh_state.proto"],
     data = [":mesh_state_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/mesh/v1:mesh_proto"],
 )
 
 go_proto_library(
@@ -24,6 +26,7 @@ go_proto_library(
     importpath = "github.com/anthropics/agentsmesh/proto/gen/go/mesh_state/v1",
     proto = ":mesh_state_proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/mesh/v1:mesh_go_proto"],
 )
 
 rust_prost_library(

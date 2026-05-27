@@ -1,58 +1,52 @@
 // proto.blockstore_state.v1 — client-side blockstore state mutation contract.
 //
-// BlockOp carries deeply nested JSON-shaped fields (`payload` / `forward` /
-// `inverse` / `meta`) typed as JSONMap on the renderer side. Rust state
-// stores BlockOp opaquely (the projection logic lives inside
-// BlockstoreState::apply_remote_op). Mirrors the carry-through pattern used
-// by mesh_state.ReplaceTopologyRequest and app_state.DispatchEventRequest:
-// renderer encodes via JSON.stringify, Rust state decodes via
-// serde_json::from_str before applying.
-//
-// Why not flatten to proto fields: BlockOp's `payload`/`forward`/`inverse`
-// are JSONMap with shapes that vary per op kind (createBlock vs addRef vs
-// updateBlock vs …). Encoding that as proto Struct or Any would obscure
-// the op-kind discriminator without making the wire safer — the opaque
-// carry-through respects the YAGNI line.
+// Outer container shapes (Workspace, Block, BlockRef, ApplyOpsRequest /
+// ApplyOpsResult) are fully typed proto messages defined in
+// proto.blockstore.v1 — the state mutations carry them directly. Only
+// BlockOp.{payload,forward,inverse} and Block.{data_json,meta_json} +
+// BlockRef.meta_json stay as opaque JSON strings because their per-op-kind
+// or per-block-type sub-shapes vary across 200+ block-type schemas.
 
 syntax = "proto3";
 
 package proto.blockstore_state.v1;
 
+import "blockstore/v1/blockstore.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/blockstore_state/v1;blockstorestatev1";
 
 // Apply a remote BlockOp to the local SSOT cache — used by
 // blockstoreSubscribe.ts when the realtime WS broadcasts an op for a
-// workspace the user has loaded. The embedded JSON blob is a serialised
-// `BlockOp` (carried through opaquely by Rust state).
+// workspace the user has loaded. BlockOp.payload/forward/inverse are
+// per-op-kind variant JSON, so we carry the whole BlockOp as a JSON
+// blob rather than splitting the typed outer fields.
 message ApplyRemoteOpRequest {
   string op_json = 1;
 }
 
 // Bulk state population — used by JS Connect adapter callers
-// (facade/blockstoreApi.ts) after fetching via the binary wire. The
-// embedded *_json fields are JSON-serialised view-model types whose
-// shapes carry JSONMap fields (`data` / `meta` / `payload`) — flattening
-// them onto proto fields would require mirroring 200+ block-type
-// subschemas, which the YAGNI line forbids. Mirrors the
-// ApplyRemoteOpRequest carry-through pattern above.
+// (facade/blockstoreApi.ts) after fetching via the binary wire. Each
+// request carries the typed proto.blockstore.v1.* container directly;
+// per-blocktype data/meta (inside Block / BlockRef) remain JSON strings
+// because they have 200+ subschemas that flattening would explode.
 
 message ReplaceWorkspacesRequest {
-  string workspaces_json = 1;
+  repeated proto.blockstore.v1.Workspace workspaces = 1;
 }
 
 message UpsertWorkspaceRequest {
-  string workspace_json = 1;
+  proto.blockstore.v1.Workspace workspace = 1;
 }
 
 message UpsertBlocksRequest {
-  string blocks_json = 1;
+  repeated proto.blockstore.v1.Block blocks = 1;
 }
 
 message UpsertRefsRequest {
-  string refs_json = 1;
+  repeated proto.blockstore.v1.BlockRef refs = 1;
 }
 
 message ProjectLocalOpsRequest {
-  string request_json = 1;
-  string result_json = 2;
+  proto.blockstore.v1.ApplyOpsRequest request = 1;
+  proto.blockstore.v1.ApplyOpsResponse result = 2;
 }

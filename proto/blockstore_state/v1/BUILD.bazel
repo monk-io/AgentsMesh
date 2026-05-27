@@ -15,7 +15,9 @@ proto_library(
     name = "blockstore_state_proto",
     srcs = ["blockstore_state.proto"],
     data = [":blockstore_state_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/blockstore/v1:blockstore_proto"],
 )
 
 go_proto_library(
@@ -24,6 +26,7 @@ go_proto_library(
     importpath = "github.com/anthropics/agentsmesh/proto/gen/go/blockstore_state/v1",
     proto = ":blockstore_state_proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/blockstore/v1:blockstore_go_proto"],
 )
 
 rust_prost_library(

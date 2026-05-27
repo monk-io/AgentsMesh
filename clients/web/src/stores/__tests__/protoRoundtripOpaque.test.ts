@@ -73,14 +73,16 @@ describe("proto roundtrip — acp_state.v1", () => {
 });
 
 describe("proto roundtrip — mesh_state.v1", () => {
-  it("ReplaceTopologyRequest carries opaque topology JSON", () => {
-    const blob = JSON.stringify({ nodes: [{ key: "pod-1" }], edges: [], channels: [], runners: [] });
-    const req = create(ReplaceTopologyRequestSchema, { topologyJson: blob });
+  it("ReplaceTopologyRequest carries typed MeshTopology proto", () => {
+    const req = create(ReplaceTopologyRequestSchema, {
+      topology: { nodes: [{ podKey: "pod-1", status: "running" }], edges: [], channels: [], runners: [] },
+    });
     const decoded = fromBinary(
       ReplaceTopologyRequestSchema,
       toBinary(ReplaceTopologyRequestSchema, req),
     );
-    expect(decoded.topologyJson).toBe(blob);
+    expect(decoded.topology?.nodes[0]?.podKey).toBe("pod-1");
+    expect(decoded.topology?.nodes[0]?.status).toBe("running");
   });
 });
 

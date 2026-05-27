@@ -19,6 +19,11 @@ proto_library(
     name = "blockstore_proto",
     srcs = ["blockstore.proto"],
     data = [":blockstore_serde_transform"],
+    # Strip the `proto/` workspace prefix so downstream `proto_library`
+    # targets can `import "blockstore/v1/blockstore.proto"`. Required for
+    # cross-package imports from proto/blockstore_state/v1/ (PASS 3 typed
+    # container alignment).
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
 )
 

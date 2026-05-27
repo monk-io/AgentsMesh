@@ -23,6 +23,44 @@ import {
   UpsertRefsRequestSchema,
   ProjectLocalOpsRequestSchema,
 } from "@proto/blockstore_state/v1/blockstore_state_pb";
+import type {
+  Workspace as ProtoWorkspace,
+  Block as ProtoBlock,
+  BlockRef as ProtoBlockRef,
+} from "@proto/blockstore/v1/blockstore_pb";
+
+// Typed proto.blockstore.v1.* → snake_case JSON cache shape for the iOS
+// RPC bus (which can only carry JSON).
+function protoWorkspaceToCacheJson(w: ProtoWorkspace): Record<string, unknown> {
+  return {
+    id: w.id,
+    organization_id: Number(w.organizationId),
+    slug: w.slug, name: w.name,
+    root_block_id: w.rootBlockId,
+    created_at: w.createdAt,
+  };
+}
+function protoBlockToCacheJson(b: ProtoBlock): Record<string, unknown> {
+  return {
+    id: b.id, workspace_id: b.workspaceId, type: b.type,
+    data: b.dataJson ? JSON.parse(b.dataJson) : {},
+    text: b.text,
+    meta: b.metaJson ? JSON.parse(b.metaJson) : {},
+    created_by: Number(b.createdBy),
+    created_at: b.createdAt, updated_at: b.updatedAt,
+    deleted_at: b.deletedAt,
+  };
+}
+function protoBlockRefToCacheJson(r: ProtoBlockRef): Record<string, unknown> {
+  return {
+    id: Number(r.id), workspace_id: r.workspaceId,
+    from_id: r.fromId, to_id: r.toId, rel: r.rel,
+    order_key: r.orderKey, anchor: r.anchor,
+    meta: r.metaJson ? JSON.parse(r.metaJson) : {},
+    created_by: Number(r.createdBy),
+    created_at: r.createdAt, updated_at: r.updatedAt,
+  };
+}
 
 let nextId = 1;
 const pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
@@ -176,23 +214,47 @@ export class RpcBlockstoreService {
 
   replace_workspaces(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceWorkspacesRequestSchema, reqBytes);
-    void rpc("replace_workspaces_json", { json: req.workspacesJson }).then(() => this.refreshFlatCaches());
+    // iOS RPC bus is JSON-only; serialize the typed proto Workspaces back
+    // to JSON for the Swift FFI side, which decodes into typed proto again
+    // inside Rust (ffi/services/blocks_mesh.rs).
+    void rpc("replace_workspaces_json", { json: JSON.stringify(req.workspaces.map(protoWorkspaceToCacheJson)) })
+      .then(() => this.refreshFlatCaches());
   }
   upsert_workspace(reqBytes: Uint8Array): void {
     const req = fromBinary(UpsertWorkspaceRequestSchema, reqBytes);
-    void rpc("upsert_workspace_json", { json: req.workspaceJson }).then(() => this.refreshFlatCaches());
+    if (!req.workspace) return;
+    void rpc("upsert_workspace_json", { json: JSON.stringify(protoWorkspaceToCacheJson(req.workspace)) })
+      .then(() => this.refreshFlatCaches());
   }
   upsert_blocks(reqBytes: Uint8Array): void {
     const req = fromBinary(UpsertBlocksRequestSchema, reqBytes);
-    void rpc("upsert_blocks_json", { json: req.blocksJson }).then(() => this.refreshFlatCaches());
+    void rpc("upsert_blocks_json", { json: JSON.stringify(req.blocks.map(protoBlockToCacheJson)) })
+      .then(() => this.refreshFlatCaches());
   }
   upsert_refs(reqBytes: Uint8Array): void {
     const req = fromBinary(UpsertRefsRequestSchema, reqBytes);
-    void rpc("upsert_refs_json", { json: req.refsJson }).then(() => this.refreshFlatCaches());
+    void rpc("upsert_refs_json", { json: JSON.stringify(req.refs.map(protoBlockRefToCacheJson)) })
+      .then(() => this.refreshFlatCaches());
   }
   project_local_ops(reqBytes: Uint8Array): void {
     const env = fromBinary(ProjectLocalOpsRequestSchema, reqBytes);
-    void rpc("project_local_ops", { req: env.requestJson, res: env.resultJson });
+    if (!env.request || !env.result) return;
+    void rpc("project_local_ops", {
+      req: JSON.stringify({
+        workspace_id: env.request.workspaceId,
+        ops: env.request.ops.map((o) => ({
+          op: o.op,
+          payload: o.payloadJson ? JSON.parse(o.payloadJson) : {},
+        })),
+        idempotency_key: env.request.idempotencyKey ?? null,
+        parent_op_id: env.request.parentOpId ?? null,
+      }),
+      res: JSON.stringify({
+        op_ids: env.result.opIds.map((id) => Number(id)),
+        was_replay: env.result.wasReplay,
+        parent_op_id: env.result.parentOpId ?? null,
+      }),
+    });
   }
 
   // ── Sync flat-map readers (used by zustand selectors)

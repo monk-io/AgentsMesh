@@ -19,6 +19,11 @@ proto_library(
     name = "mesh_proto",
     srcs = ["mesh.proto"],
     data = [":mesh_serde_transform"],
+    # Strip the `proto/` workspace prefix so downstream `proto_library`
+    # targets can `import "mesh/v1/mesh.proto"`. Required for cross-package
+    # imports from proto/mesh_state/v1/ (ReplaceTopologyRequest carries
+    # the typed MeshTopology directly).
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
     deps = ["//proto/codegen/v1:codegen_proto"],
 )
