@@ -39,14 +39,15 @@ export class ElectronAcpManager {
   get_session_json(_podKey: string): unknown { return null; }
   add_content_chunk(_pk: string, _text: string, _role: string) {}
   mark_last_message_complete(_pk: string) {}
-  update_tool_call(_pk: string, _json: string) {}
+  update_tool_call(_req: Uint8Array) {}
   set_tool_call_result(_pk: string, _id: string, _ok: boolean, _r?: string | null, _e?: string | null) {}
-  update_plan(_pk: string, _json: string) {}
+  update_plan(_req: Uint8Array) {}
   add_thinking(_pk: string, _text: string) {}
-  add_permission_request(_pk: string, _json: string) {}
+  add_permission_request(_req: Uint8Array) {}
   remove_permission_request(_pk: string, _id: string) {}
   update_session_state(_pk: string, _state: string) {}
   add_log(_pk: string, _level: string, _msg: string) {}
+  update_configuration(_req: Uint8Array) {}
   clear_session(_pk: string) {}
 }
 

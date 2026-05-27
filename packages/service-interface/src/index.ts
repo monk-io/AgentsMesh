@@ -4,16 +4,18 @@
 export interface IAcpSessionManager {
   add_content_chunk(pod_key: string, text: string, role: string): void;
   add_log(pod_key: string, level: string, message: string): void;
-  add_permission_request(pod_key: string, request_json: string): void;
   add_thinking(pod_key: string, text: string): void;
   clear_session(pod_key: string): void;
   get_session_json(pod_key: string): any;
   mark_last_message_complete(pod_key: string): void;
   remove_permission_request(pod_key: string, request_id: string): void;
   set_tool_call_result(pod_key: string, tool_call_id: string, success: boolean, result_text?: string | null, error_message?: string | null): void;
-  update_plan(pod_key: string, steps_json: string): void;
   update_session_state(pod_key: string, state_str: string): void;
-  update_tool_call(pod_key: string, tool_call_json: string): void;
+  // Proto-bytes mutators (mirror state_acp.rs).
+  update_tool_call(req_bytes: Uint8Array): void;
+  update_plan(req_bytes: Uint8Array): void;
+  add_permission_request(req_bytes: Uint8Array): void;
+  update_configuration(req_bytes: Uint8Array): void;
 }
 
 export interface IAgentService {

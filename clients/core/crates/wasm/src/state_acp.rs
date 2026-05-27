@@ -1,10 +1,19 @@
 use agentsmesh_state::acp_session::AcpSessionManager;
 use agentsmesh_state::acp_types::*;
+use agentsmesh_types::proto_acp_state_v1::{
+    AddPermissionRequestRequest, UpdateConfigurationRequest, UpdatePlanRequest,
+    UpdateToolCallRequest,
+};
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmAcpSessionManager {
     inner: AcpSessionManager,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -38,10 +47,12 @@ impl WasmAcpSessionManager {
         self.inner.mark_last_message_complete(pod_key);
     }
 
-    pub fn update_tool_call(&mut self, pod_key: &str, tool_call_json: &str) {
-        if let Ok(tc) = serde_json::from_str::<AcpToolCall>(tool_call_json) {
-            self.inner.update_tool_call(pod_key, tc);
+    pub fn update_tool_call(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = UpdateToolCallRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Ok(tc) = serde_json::from_str::<AcpToolCall>(&req.tool_call_json) {
+            self.inner.update_tool_call(&req.pod_key, tc);
         }
+        Ok(())
     }
 
     pub fn set_tool_call_result(
@@ -61,28 +72,24 @@ impl WasmAcpSessionManager {
         );
     }
 
-    pub fn update_plan(&mut self, pod_key: &str, steps_json: &str) {
-        if let Ok(steps) =
-            serde_json::from_str::<Vec<AcpPlanStep>>(steps_json)
-        {
-            self.inner.update_plan(pod_key, steps);
+    pub fn update_plan(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = UpdatePlanRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Ok(steps) = serde_json::from_str::<Vec<AcpPlanStep>>(&req.steps_json) {
+            self.inner.update_plan(&req.pod_key, steps);
         }
+        Ok(())
     }
 
     pub fn add_thinking(&mut self, pod_key: &str, text: &str) {
         self.inner.add_thinking(pod_key, text);
     }
 
-    pub fn add_permission_request(
-        &mut self,
-        pod_key: &str,
-        request_json: &str,
-    ) {
-        if let Ok(req) =
-            serde_json::from_str::<AcpPermissionRequest>(request_json)
-        {
-            self.inner.add_permission_request(pod_key, req);
+    pub fn add_permission_request(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = AddPermissionRequestRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Ok(perm) = serde_json::from_str::<AcpPermissionRequest>(&req.request_json) {
+            self.inner.add_permission_request(&req.pod_key, perm);
         }
+        Ok(())
     }
 
     pub fn remove_permission_request(
@@ -102,10 +109,12 @@ impl WasmAcpSessionManager {
         self.inner.add_log(pod_key, level, message);
     }
 
-    pub fn update_configuration(&mut self, pod_key: &str, config_json: &str) {
-        if let Ok(cfg) = serde_json::from_str::<AcpConfiguration>(config_json) {
-            self.inner.update_configuration(pod_key, cfg);
+    pub fn update_configuration(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = UpdateConfigurationRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Ok(cfg) = serde_json::from_str::<AcpConfiguration>(&req.config_json) {
+            self.inner.update_configuration(&req.pod_key, cfg);
         }
+        Ok(())
     }
 
     pub fn clear_session(&mut self, pod_key: &str) {

@@ -1,10 +1,17 @@
 import { create } from "zustand";
 import { useMemo } from "react";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { getAcpManager } from "@/lib/wasm-core";
 import type {
   AcpToolCall, AcpPlanStep, AcpPermissionRequest, AcpSessionState, AcpThinking, AcpLog, AcpConfiguration,
 } from "./acpSessionTypes";
 import { EMPTY_SESSION, sessionFromWasm, toolCallToWasm, permReqToWasm, wasmFromSession } from "./acpSessionTypes";
+import {
+  UpdateToolCallRequestSchema,
+  UpdatePlanRequestSchema,
+  AddPermissionRequestRequestSchema,
+  UpdateConfigurationRequestSchema,
+} from "@proto/acp_state/v1/acp_state_pb";
 
 export type { AcpToolCall, AcpPlanStep, AcpPermissionRequest, AcpSessionState, AcpThinking, AcpLog, AcpConfiguration };
 
@@ -27,8 +34,6 @@ interface AcpSessionStore {
 
 const mgr = () => getAcpManager();
 
-// WASM reads must stay inside mutators (same sync stack as &mut self write).
-// React render reads cache only — wasm-bindgen borrow flag never sees concurrent borrowers.
 function readSessionFromWasm(podKey: string): AcpSessionState | null {
   try {
     const raw = mgr().get_session_json(podKey);
@@ -74,7 +79,11 @@ export const useAcpSessionStore = create<AcpSessionStore>(() => ({
   },
 
   updateToolCall: (podKey, _sid, tc) => {
-    mgr().update_tool_call(podKey, toolCallToWasm(tc));
+    const req = protoCreate(UpdateToolCallRequestSchema, {
+      podKey,
+      toolCallJson: toolCallToWasm(tc),
+    });
+    mgr().update_tool_call(toBinary(UpdateToolCallRequestSchema, req));
     refreshCache(podKey);
   },
 
@@ -88,7 +97,11 @@ export const useAcpSessionStore = create<AcpSessionStore>(() => ({
   },
 
   updatePlan: (podKey, _sid, steps) => {
-    mgr().update_plan(podKey, JSON.stringify(steps));
+    const req = protoCreate(UpdatePlanRequestSchema, {
+      podKey,
+      stepsJson: JSON.stringify(steps),
+    });
+    mgr().update_plan(toBinary(UpdatePlanRequestSchema, req));
     refreshCache(podKey);
   },
 
@@ -98,7 +111,11 @@ export const useAcpSessionStore = create<AcpSessionStore>(() => ({
   },
 
   addPermissionRequest: (podKey, req) => {
-    mgr().add_permission_request(podKey, permReqToWasm(req));
+    const protoReq = protoCreate(AddPermissionRequestRequestSchema, {
+      podKey,
+      requestJson: permReqToWasm(req),
+    });
+    mgr().add_permission_request(toBinary(AddPermissionRequestRequestSchema, protoReq));
     refreshCache(podKey);
   },
 
@@ -118,13 +135,14 @@ export const useAcpSessionStore = create<AcpSessionStore>(() => ({
   },
 
   updateConfiguration: (podKey, configuration) => {
-    mgr().update_configuration(
+    const req = protoCreate(UpdateConfigurationRequestSchema, {
       podKey,
-      JSON.stringify({
+      configJson: JSON.stringify({
         permission_mode: configuration.permissionMode ?? "",
         model: configuration.model ?? "",
       }),
-    );
+    });
+    mgr().update_configuration(toBinary(UpdateConfigurationRequestSchema, req));
     refreshCache(podKey);
   },
 
