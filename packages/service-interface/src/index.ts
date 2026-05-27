@@ -547,7 +547,7 @@ export interface IRepositoryService {
 }
 
 export interface IRunnerService {
-  authorize_runner(request_json: string): Promise<string>;
+  authorize_runner(request_bytes: Uint8Array): Promise<Uint8Array>;
   available_runners_json(): string;
   create_token(request_json: string): Promise<string>;
   current_runner_json(): any;
@@ -557,7 +557,7 @@ export interface IRunnerService {
   fetch_runner(id: bigint): Promise<string>;
   fetch_runners(status?: string | null): Promise<string>;
   fetch_tokens(): Promise<string>;
-  get_auth_status(auth_key: string): Promise<string>;
+  get_auth_status(request_bytes: Uint8Array): Promise<Uint8Array>;
   get_runner_json(id: bigint): any;
   list_runner_logs(id: bigint): Promise<string>;
   list_runner_pods(id: bigint, status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;

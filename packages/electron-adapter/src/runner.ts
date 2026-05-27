@@ -151,12 +151,20 @@ export class ElectronRunnerService implements IRunnerService {
     return invoke<string>("runnerUpgradeRunner", Number(id), json);
   }
 
-  async authorize_runner(json: string): Promise<string> {
-    return invoke<string>("runnerAuthorizeRunner", json);
+  async authorize_runner(reqBytes: Uint8Array): Promise<Uint8Array> {
+    const result = await invoke<number[] | Uint8Array>(
+      "runnerAuthorizeRunner",
+      Array.from(reqBytes),
+    );
+    return result instanceof Uint8Array ? result : new Uint8Array(result);
   }
 
-  async get_auth_status(authKey: string): Promise<string> {
-    return invoke<string>("runnerGetAuthStatus", authKey);
+  async get_auth_status(reqBytes: Uint8Array): Promise<Uint8Array> {
+    const result = await invoke<number[] | Uint8Array>(
+      "runnerGetAuthStatus",
+      Array.from(reqBytes),
+    );
+    return result instanceof Uint8Array ? result : new Uint8Array(result);
   }
 
   async list_runner_logs(id: bigint): Promise<string> {

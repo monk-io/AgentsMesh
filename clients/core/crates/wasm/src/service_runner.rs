@@ -59,12 +59,12 @@ impl WasmRunnerService {
         self.0.list_runner_pods(id, status, limit, offset).await
     }
 
-    pub async fn get_auth_status(&self, auth_key: &str) -> Result<String, String> {
-        self.0.get_auth_status(auth_key).await
+    pub async fn get_auth_status(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.get_auth_status_connect(request_bytes).await
     }
 
-    pub async fn authorize_runner(&self, request_json: &str) -> Result<String, String> {
-        self.0.authorize_runner(request_json).await
+    pub async fn authorize_runner(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        self.0.authorize_runner_connect(request_bytes).await
     }
 
     // -------- Connect-RPC (binary wire) --------

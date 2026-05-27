@@ -114,24 +114,32 @@ impl RunnerService {
         serde_json::to_string(&resp).map_err(crate::wire)
     }
 
-    pub async fn get_auth_status(&self, auth_key: &str) -> Result<String, String> {
-        // No proto coverage for /runners/auth/<key> — registration flow is
-        // a backend-side bootstrap kept on REST until the runner-mgmt RPCs
-        // land (see runbook §"Service-specific deviations").
+    pub async fn get_auth_status_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        // No proto coverage on the wire for /runners/auth/<key> per se, but
+        // GetRunnerAuthStatus is a Connect RPC — same path the legacy JSON
+        // helper used, just expressed as wire-aligned proto bytes.
+        let req = runner_proto::GetRunnerAuthStatusRequest::decode(request_bytes)
+            .map_err(|e| format!("decode GetRunnerAuthStatusRequest: {e}"))?;
         let resp = self.client
-            .get_runner_auth_status(auth_key)
+            .get_runner_auth_status_connect(&req)
             .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
+        Ok(resp.encode_to_vec())
     }
 
-    pub async fn authorize_runner(&self, request_json: &str) -> Result<String, String> {
-        // Same reason as get_auth_status — registration bootstrap.
-        let req: agentsmesh_types::AuthorizeRunnerRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
+    pub async fn authorize_runner_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        // Same reason as get_auth_status_connect — registration bootstrap.
+        let mut req = runner_proto::AuthorizeRunnerRequest::decode(request_bytes)
+            .map_err(|e| format!("decode AuthorizeRunnerRequest: {e}"))?;
+        // The renderer can't always populate org_slug (registration happens
+        // before the session knows which org the runner will land in). Fill
+        // it from the session here for parity with the legacy helper.
+        if req.org_slug.is_empty() {
+            req.org_slug = self.client.current_org_slug();
+        }
         let resp = self.client
-            .authorize_runner(&req)
+            .authorize_runner_connect(&req)
             .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
+        Ok(resp.encode_to_vec())
     }
 
     // -------- Connect-RPC (binary wire) --------

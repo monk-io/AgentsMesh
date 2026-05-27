@@ -348,8 +348,8 @@ export declare class AppState {
   runnerUpgradeRunner(id: number, requestJson: string): Promise<string>
   runnerListRunnerPods(id: number, status?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
   runnerQueryRunnerSandboxes(id: number, requestJson: string): Promise<string>
-  runnerGetAuthStatus(authKey: string): Promise<string>
-  runnerAuthorizeRunner(requestJson: string): Promise<string>
+  runnerGetAuthStatus(requestBytes: Uint8Array): Promise<Uint8Array>
+  runnerAuthorizeRunner(requestBytes: Uint8Array): Promise<Uint8Array>
   supportTicketCreateTicket(title: string, category: string, content: string, priority: string | undefined | null, fileData: Array<Array<number>>, fileNames: Array<string>): Promise<string>
   supportTicketAddMessage(ticketId: number, content: string, fileData: Array<Array<number>>, fileNames: Array<string>): Promise<string>
   supportTicketListSupportTicketsConnect(request: Array<number>): Promise<Array<number>>

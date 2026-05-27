@@ -212,6 +212,21 @@ impl ApiClient {
         })
     }
 
+    // Proto-bytes flavour of get_runner_auth_status — used by the wasm/NAPI
+    // bridge so the renderer can issue/decode wire-aligned proto rather than
+    // the legacy serde DTO. Backend path is identical to the JSON helper above.
+    pub async fn get_runner_auth_status_connect(
+        &self,
+        req: &runner_proto::GetRunnerAuthStatusRequest,
+    ) -> Result<runner_proto::RunnerAuthStatus, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerPublicService/GetRunnerAuthStatus",
+            req,
+        )
+        .await
+    }
+
     pub async fn authorize_runner(
         &self,
         data: &AuthorizeRunnerRequest,
@@ -232,5 +247,21 @@ impl ApiClient {
             "node_id": resp.node_id,
             "message": resp.message,
         }))
+    }
+
+    // Proto-bytes flavour of authorize_runner. Note: the proto request
+    // carries `org_slug` explicitly, so the caller (wasm bridge) is
+    // responsible for filling it from the current session — matches the
+    // pattern used by the other *_connect methods on this client.
+    pub async fn authorize_runner_connect(
+        &self,
+        req: &runner_proto::AuthorizeRunnerRequest,
+    ) -> Result<runner_proto::AuthorizeRunnerResponse, ApiError> {
+        connect_call(
+            self,
+            "/proto.runner_api.v1.RunnerService/AuthorizeRunner",
+            req,
+        )
+        .await
     }
 }

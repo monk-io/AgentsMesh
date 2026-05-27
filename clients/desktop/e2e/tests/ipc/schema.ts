@@ -701,8 +701,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "blockstoreProjectLocalOps",
     "group": "blockstore",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "blockstoreRefsJson",
@@ -713,8 +718,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "blockstoreReplaceWorkspaces",
     "group": "blockstore",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "blockstoreSemanticSearch",
@@ -760,20 +770,35 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "blockstoreUpsertBlocks",
     "group": "blockstore",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "blockstoreUpsertRefs",
     "group": "blockstore",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "blockstoreUpsertWorkspace",
     "group": "blockstore",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "blockstoreWorkspacesJson",
@@ -1928,11 +1953,11 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "runner",
     "params": [
       {
-        "name": "requestJson",
-        "type": "string"
+        "name": "requestBytes",
+        "type": "Uint8Array"
       }
     ],
-    "returnType": "string"
+    "returnType": "Uint8Array"
   },
   {
     "name": "runnerAvailableRunnersJson",
@@ -1951,11 +1976,11 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "runner",
     "params": [
       {
-        "name": "authKey",
-        "type": "string"
+        "name": "requestBytes",
+        "type": "Uint8Array"
       }
     ],
-    "returnType": "string"
+    "returnType": "Uint8Array"
   },
   {
     "name": "runnerGetRunnerJson",

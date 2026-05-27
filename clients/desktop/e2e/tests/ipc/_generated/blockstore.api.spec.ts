@@ -66,7 +66,7 @@ test.describe("IPC · blockstore", () => {
   });
 
   test("blockstoreProjectLocalOps", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreProjectLocalOps", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "blockstoreProjectLocalOps", returnType: "void" }, []);
   });
 
   test("blockstoreRefsJson", async ({ sharedPage }) => {
@@ -74,7 +74,7 @@ test.describe("IPC · blockstore", () => {
   });
 
   test("blockstoreReplaceWorkspaces", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreReplaceWorkspaces", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "blockstoreReplaceWorkspaces", returnType: "void" }, []);
   });
 
   test("blockstoreSemanticSearch", async ({ sharedPage }) => {
@@ -90,15 +90,15 @@ test.describe("IPC · blockstore", () => {
   });
 
   test("blockstoreUpsertBlocks", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertBlocks", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertBlocks", returnType: "void" }, []);
   });
 
   test("blockstoreUpsertRefs", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertRefs", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertRefs", returnType: "void" }, []);
   });
 
   test("blockstoreUpsertWorkspace", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertWorkspace", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "blockstoreUpsertWorkspace", returnType: "void" }, []);
   });
 
   test("blockstoreWorkspacesJson", async ({ sharedPage }) => {

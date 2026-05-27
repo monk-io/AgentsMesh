@@ -254,6 +254,15 @@ type _AuthMgr_proto_apply_session    = _RequiresU8<WasmAuthManager["apply_sessio
 type _AuthMgr_proto_set_organizations = _RequiresU8<WasmAuthManager["set_organizations"]>;
 type _AuthMgr_proto_set_current_org   = _RequiresU8<WasmAuthManager["set_current_org"]>;
 
+// ── RunnerService auth bootstrap proto-bytes mutators ──
+// production callers: lib/api/facade/runner.ts runnerAuthApi. The wasm
+// bridge now speaks proto.runner_api.v1.{GetRunnerAuthStatus,Authorize
+// Runner}*Request directly — request is bytes-in, response is bytes-out.
+type _RunnerSvc_get_auth_status       = _Sig<WasmRunnerService["get_auth_status"]>;
+type _RunnerSvc_authorize_runner      = _Sig<WasmRunnerService["authorize_runner"]>;
+type _RunnerSvc_proto_get_auth_status = _RequiresU8<WasmRunnerService["get_auth_status"]>;
+type _RunnerSvc_proto_authorize_runner = _RequiresU8<WasmRunnerService["authorize_runner"]>;
+
 
 // Vitest discovery requires the file to contain *something* runnable, but
 // the body is intentionally empty — tsc + the type assertions above are
