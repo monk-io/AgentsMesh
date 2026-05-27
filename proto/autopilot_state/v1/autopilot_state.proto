@@ -1,0 +1,102 @@
+// proto.autopilot_state.v1 — client-side autopilot state mutation contract.
+//
+// Companion to proto.autopilot.v1 (wire schema for Connect-RPC). This package
+// describes the SRP-shaped mutations renderer code issues against the Rust
+// autopilot cache via wasm-bindgen.
+//
+// Why a state-specific schema instead of reusing proto.autopilot.v1.AutopilotController:
+//   The state's AutopilotController struct (clients/core/crates/state/src/
+//   autopilot_state.rs) is the de-facto in-memory model the UI works with —
+//   it has more optional fields and additional state (circuit_breaker_state /
+//   circuit_breaker_reason / iteration_timeout_sec / no_progress_threshold /
+//   etc.) than the wire schema exposes. Reusing the wire proto would force
+//   either (a) lossy mappings on every mutation, or (b) shoehorning state
+//   fields into the wire schema — both bad. Same rationale as the runner_api
+//   ↔ runner_state split.
+//
+// Thinking field (UpdateThinkingRequest): carries an opaque
+// `AutopilotThinkingData` JSON blob (see featureEventTypes.ts). UI owns the
+// AST schema, Rust just carries it through — mirrors ChannelMessage's
+// content_json design.
+
+syntax = "proto3";
+
+package proto.autopilot_state.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/autopilot_state/v1;autopilotstatev1";
+
+// ---------------------------------------------------------------------------
+// In-memory model — mirrors agentsmesh_state::autopilot_state::*
+// ---------------------------------------------------------------------------
+
+message AutopilotControllerSnapshot {
+  string autopilot_controller_key = 1;
+  string pod_key = 2;
+  optional string status = 3;
+  optional string phase = 4;
+  optional string prompt = 5;
+  optional int64 max_iterations = 6;
+  optional int64 iteration_timeout_sec = 7;
+  optional int64 no_progress_threshold = 8;
+  optional int64 same_error_threshold = 9;
+  optional int64 approval_timeout_min = 10;
+  optional int64 current_iteration = 11;
+  optional string control_agent_slug = 12;
+  optional string circuit_breaker_state = 13;
+  optional string circuit_breaker_reason = 14;
+  optional string created_at = 15;
+  optional string updated_at = 16;
+}
+
+message AutopilotIterationSnapshot {
+  int64 id = 1;
+  string controller_key = 2;
+  optional int64 iteration_number = 3;
+  optional string status = 4;
+  optional string result = 5;
+  optional string started_at = 6;
+  optional string completed_at = 7;
+}
+
+// ---------------------------------------------------------------------------
+// Mutation contracts
+// ---------------------------------------------------------------------------
+
+message ReplaceCachedControllersRequest {
+  repeated AutopilotControllerSnapshot controllers = 1;
+}
+
+message SetCurrentControllerRequest {
+  optional AutopilotControllerSnapshot controller = 1;
+}
+
+message InsertControllerRequest {
+  AutopilotControllerSnapshot controller = 1;
+}
+
+message PatchControllerRequest {
+  string autopilot_controller_key = 1;
+  AutopilotControllerSnapshot controller = 2;
+}
+
+message ReplaceCachedIterationsRequest {
+  string autopilot_controller_key = 1;
+  repeated AutopilotIterationSnapshot iterations = 2;
+}
+
+message AppendIterationRequest {
+  string autopilot_controller_key = 1;
+  AutopilotIterationSnapshot iteration = 2;
+}
+
+// UpdateThinkingRequest — thinking_json is the opaque
+// `AutopilotThinkingData` AST (see featureEventTypes.ts). UI owns the
+// schema; Rust carries it through unchanged.
+message UpdateThinkingRequest {
+  string autopilot_controller_key = 1;
+  string thinking_json = 2;
+}
+
+message RemoveControllerRequest {
+  string autopilot_controller_key = 1;
+}

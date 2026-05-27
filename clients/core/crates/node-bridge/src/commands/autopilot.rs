@@ -40,59 +40,51 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn autopilot_set_controllers(&self, json: String) -> napi::Result<()> {
+    pub async fn autopilot_replace_cached_controllers(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.set_controllers(&json);
-            Ok(())
+        svc.replace_cached_controllers(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_set_current_controller(&self, json: String) -> napi::Result<()> {
+    pub async fn autopilot_set_current_controller_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.set_current_controller(&json);
-            Ok(())
+        svc.set_current_controller_proto(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_add_controller(&self, json: String) -> napi::Result<()> {
+    pub async fn autopilot_insert_controller(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.add_controller(&json);
-            Ok(())
+        svc.insert_controller(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_update_controller(&self, key: String, json: String) -> napi::Result<()> {
+    pub async fn autopilot_patch_controller(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.update_controller(&key, &json);
-            Ok(())
+        svc.patch_controller(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_remove_controller(&self, key: String) -> napi::Result<()> {
+    pub async fn autopilot_remove_controller_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.remove_controller(&key);
-            Ok(())
+        svc.remove_controller_proto(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_set_iterations(&self, key: String, json: String) -> napi::Result<()> {
+    pub async fn autopilot_replace_cached_iterations(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.set_iterations(&key, &json);
-            Ok(())
+        svc.replace_cached_iterations(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_add_iteration(&self, key: String, json: String) -> napi::Result<()> {
+    pub async fn autopilot_append_iteration(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.add_iteration(&key, &json);
-            Ok(())
+        svc.append_iteration(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn autopilot_update_thinking(&self, key: String, json: String) -> napi::Result<()> {
+    pub async fn autopilot_update_thinking_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.autopilot.lock().await;
-            svc.update_thinking(&key, &json);
-            Ok(())
+        svc.update_thinking_proto(&req_bytes).map_err(napi::Error::from_reason)
     }
 
 }

@@ -110,8 +110,6 @@ export interface IAuthManager {
 }
 
 export interface IAutopilotService {
-  add_controller(json: string): void;
-  add_iteration(key: string, json: string): void;
   approve_controller(key: string, request_json: string): Promise<void>;
   controllers_json(): string;
   create_controller(request_json: string): Promise<string>;
@@ -125,15 +123,18 @@ export interface IAutopilotService {
   get_thinking_json(key: string): any;
   handback_controller(key: string): Promise<void>;
   pause_controller(key: string): Promise<void>;
-  remove_controller(key: string): void;
   resume_controller(key: string): Promise<void>;
-  set_controllers(json: string): void;
-  set_current_controller(json: string): void;
-  set_iterations(key: string, json: string): void;
   stop_controller(key: string): Promise<void>;
   takeover_controller(key: string): Promise<void>;
-  update_controller(key: string, json: string): void;
-  update_thinking(key: string, json: string): void;
+  // Proto-bytes mutators (mirror state_autopilot.rs).
+  replace_cached_controllers(req_bytes: Uint8Array): void;
+  set_current_controller_proto(req_bytes: Uint8Array): void;
+  insert_controller(req_bytes: Uint8Array): void;
+  patch_controller(req_bytes: Uint8Array): void;
+  remove_controller_proto(req_bytes: Uint8Array): void;
+  replace_cached_iterations(req_bytes: Uint8Array): void;
+  append_iteration(req_bytes: Uint8Array): void;
+  update_thinking_proto(req_bytes: Uint8Array): void;
 }
 
 export interface IAutopilotState {

@@ -139,6 +139,10 @@ pub mod proto_runner_state_v1 {
     pub use ::runner_state_proto::proto::runner_state::v1::*;
 }
 
+pub mod proto_autopilot_state_v1 {
+    pub use ::autopilot_state_proto::proto::autopilot_state::v1::*;
+}
+
 pub mod proto_sso_v1 {
     pub use ::sso_proto::proto::sso::v1::*;
 }

@@ -5,12 +5,8 @@ import { invokeIpcContract } from "../../../helpers/ipc-contract";
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · autopilot", () => {
-  test("autopilotAddController", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotAddController", returnType: "void" }, "");
-  });
-
-  test("autopilotAddIteration", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotAddIteration", returnType: "void" }, "", "");
+  test("autopilotAppendIteration", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotAppendIteration", returnType: "void" }, []);
   });
 
   test("autopilotControllersJson", async ({ sharedPage }) => {
@@ -37,27 +33,31 @@ test.describe("IPC · autopilot", () => {
     await invokeIpcContract(sharedPage, { method: "autopilotGetThinkingJson", returnType: "string" }, "");
   });
 
-  test("autopilotRemoveController", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotRemoveController", returnType: "void" }, "");
+  test("autopilotInsertController", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotInsertController", returnType: "void" }, []);
   });
 
-  test("autopilotSetControllers", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotSetControllers", returnType: "void" }, "");
+  test("autopilotPatchController", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotPatchController", returnType: "void" }, []);
   });
 
-  test("autopilotSetCurrentController", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotSetCurrentController", returnType: "void" }, "");
+  test("autopilotRemoveControllerProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotRemoveControllerProto", returnType: "void" }, []);
   });
 
-  test("autopilotSetIterations", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotSetIterations", returnType: "void" }, "", "");
+  test("autopilotReplaceCachedControllers", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotReplaceCachedControllers", returnType: "void" }, []);
   });
 
-  test("autopilotUpdateController", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotUpdateController", returnType: "void" }, "", "");
+  test("autopilotReplaceCachedIterations", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotReplaceCachedIterations", returnType: "void" }, []);
   });
 
-  test("autopilotUpdateThinking", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "autopilotUpdateThinking", returnType: "void" }, "", "");
+  test("autopilotSetCurrentControllerProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotSetCurrentControllerProto", returnType: "void" }, []);
+  });
+
+  test("autopilotUpdateThinkingProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "autopilotUpdateThinkingProto", returnType: "void" }, []);
   });
 });

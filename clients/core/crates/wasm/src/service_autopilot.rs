@@ -51,26 +51,36 @@ impl WasmAutopilotService {
         }
     }
 
-    pub fn set_controllers(&self, json: &str) { self.0.set_controllers(json); }
-    pub fn set_current_controller(&self, json: &str) { self.0.set_current_controller(json); }
-    pub fn add_controller(&self, json: &str) { self.0.add_controller(json); }
-
-    pub fn update_controller(&self, key: &str, json: &str) {
-        self.0.update_controller(key, json);
+    pub fn replace_cached_controllers(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_cached_controllers(req_bytes)
     }
 
-    pub fn remove_controller(&self, key: &str) { self.0.remove_controller(key); }
-
-    pub fn set_iterations(&self, key: &str, json: &str) {
-        self.0.set_iterations(key, json);
+    pub fn set_current_controller_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.set_current_controller_proto(req_bytes)
     }
 
-    pub fn add_iteration(&self, key: &str, json: &str) {
-        self.0.add_iteration(key, json);
+    pub fn insert_controller(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.insert_controller(req_bytes)
     }
 
-    pub fn update_thinking(&self, key: &str, json: &str) {
-        self.0.update_thinking(key, json);
+    pub fn patch_controller(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.patch_controller(req_bytes)
+    }
+
+    pub fn remove_controller_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.remove_controller_proto(req_bytes)
+    }
+
+    pub fn replace_cached_iterations(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_cached_iterations(req_bytes)
+    }
+
+    pub fn append_iteration(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.append_iteration(req_bytes)
+    }
+
+    pub fn update_thinking_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.update_thinking_proto(req_bytes)
     }
 
     // -------- Connect-RPC (binary wire) --------

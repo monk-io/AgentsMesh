@@ -323,27 +323,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "autopilotAddController",
+    "name": "autopilotAppendIteration",
     "group": "autopilot",
     "params": [
       {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotAddIteration",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -405,79 +390,78 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
-    "name": "autopilotRemoveController",
+    "name": "autopilotInsertController",
     "group": "autopilot",
     "params": [
       {
-        "name": "key",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "autopilotSetControllers",
+    "name": "autopilotPatchController",
     "group": "autopilot",
     "params": [
       {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "autopilotSetCurrentController",
+    "name": "autopilotRemoveControllerProto",
     "group": "autopilot",
     "params": [
       {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "autopilotSetIterations",
+    "name": "autopilotReplaceCachedControllers",
     "group": "autopilot",
     "params": [
       {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "autopilotUpdateController",
+    "name": "autopilotReplaceCachedIterations",
     "group": "autopilot",
     "params": [
       {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "autopilotUpdateThinking",
+    "name": "autopilotSetCurrentControllerProto",
     "group": "autopilot",
     "params": [
       {
-        "name": "key",
-        "type": "string"
-      },
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "autopilotUpdateThinkingProto",
+    "group": "autopilot",
+    "params": [
       {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"

@@ -57,14 +57,14 @@ export declare class AppState {
   autopilotGetIterationsJson(key: string): Promise<string>
   autopilotGetThinkingJson(key: string): Promise<string>
   autopilotGetThinkingHistoryJson(key: string): Promise<string>
-  autopilotSetControllers(json: string): Promise<void>
-  autopilotSetCurrentController(json: string): Promise<void>
-  autopilotAddController(json: string): Promise<void>
-  autopilotUpdateController(key: string, json: string): Promise<void>
-  autopilotRemoveController(key: string): Promise<void>
-  autopilotSetIterations(key: string, json: string): Promise<void>
-  autopilotAddIteration(key: string, json: string): Promise<void>
-  autopilotUpdateThinking(key: string, json: string): Promise<void>
+  autopilotReplaceCachedControllers(reqBytes: Array<number>): Promise<void>
+  autopilotSetCurrentControllerProto(reqBytes: Array<number>): Promise<void>
+  autopilotInsertController(reqBytes: Array<number>): Promise<void>
+  autopilotPatchController(reqBytes: Array<number>): Promise<void>
+  autopilotRemoveControllerProto(reqBytes: Array<number>): Promise<void>
+  autopilotReplaceCachedIterations(reqBytes: Array<number>): Promise<void>
+  autopilotAppendIteration(reqBytes: Array<number>): Promise<void>
+  autopilotUpdateThinkingProto(reqBytes: Array<number>): Promise<void>
   autopilotFetchControllers(): Promise<string>
   autopilotFetchController(key: string): Promise<string>
   autopilotCreateController(requestJson: string): Promise<string>

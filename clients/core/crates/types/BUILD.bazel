@@ -49,6 +49,7 @@ rust_library(
         "//proto/repository/v1:repository_rust_proto",
         "//proto/runner_api/v1:runner_api_rust_proto",
         "//proto/runner_state/v1:runner_state_rust_proto",
+        "//proto/autopilot_state/v1:autopilot_state_rust_proto",
         "//proto/sso/v1:sso_rust_proto",
         "//proto/support_ticket/v1:support_ticket_rust_proto",
         "//proto/ticket/v1:ticket_rust_proto",
