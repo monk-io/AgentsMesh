@@ -15,8 +15,8 @@ import { MessageList } from "@/components/support/message-list";
 import {
   addSupportTicketMessage,
 } from "@/lib/api/facade/support-ticket";
-import type { SupportTicketDetail } from "@/lib/api/connect/supportTicketConnect";
-import { getSupportTicketDetail } from "@/lib/api/connect/supportTicketConnect";
+import type { SupportTicketDetail } from "@/lib/api/facade/supportTicketConnect";
+import { getSupportTicketDetail } from "@/lib/api/facade/supportTicketConnect";
 
 export default function SupportTicketDetailPage() {
   const params = useParams();

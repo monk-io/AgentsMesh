@@ -142,4 +142,13 @@ impl AppState {
         svc.patch_channel_member_count(&req_bytes)
             .map_err(|e| napi::Error::from_reason(e))
     }
+
+    #[napi]
+    pub async fn channel_remove_channel_member(
+        &self, req_bytes: Vec<u8>,
+    ) -> napi::Result<()> {
+        let svc = self.channel.lock().await;
+        svc.remove_channel_member(&req_bytes)
+            .map_err(|e| napi::Error::from_reason(e))
+    }
 }

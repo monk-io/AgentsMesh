@@ -30,33 +30,6 @@ impl PodService {
             .map(|pod| serde_json::to_string(pod).unwrap_or_default())
     }
 
-    pub fn update_pod_status(
-        &self, pod_key: &str, status: &str,
-        agent_status: Option<String>, error_code: Option<String>,
-        error_message: Option<String>, timestamp: Option<i64>,
-    ) {
-        self.state.write().unwrap().update_pod_status(
-            pod_key, status, agent_status.as_deref(),
-            error_code.as_deref(), error_message.as_deref(), timestamp,
-        );
-    }
-
-    pub fn update_pod_title(&self, pod_key: &str, title: &str, timestamp: Option<i64>) {
-        self.state.write().unwrap().update_pod_title(pod_key, title, timestamp);
-    }
-
-    pub fn update_pod_alias(&self, pod_key: &str, alias: &str) {
-        self.state.write().unwrap().update_pod_alias(pod_key, alias);
-    }
-
-    pub fn update_agent_status(&self, pod_key: &str, agent_status: &str) {
-        self.state.write().unwrap().update_agent_status(pod_key, agent_status);
-    }
-
-    pub fn remove_pod(&self, pod_key: &str) {
-        self.state.write().unwrap().remove_pod(pod_key);
-    }
-
     // -------- Connect-RPC (binary wire) --------
 
     pub async fn list_pods_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {

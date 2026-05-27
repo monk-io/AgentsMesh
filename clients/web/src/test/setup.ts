@@ -13,6 +13,7 @@ import {
   ReplaceChannelUnreadCountsRequestSchema,
   ReplaceChannelPodsRequestSchema,
   ReplaceChannelMembersRequestSchema,
+  RemoveChannelMemberRequestSchema,
 } from '@proto/channel_state/v1/mutations_pb'
 import {
   ApplySessionRequestSchema,
@@ -385,7 +386,6 @@ vi.mock('@/lib/wasm-core', () => {
     mute_channel: fn().mockResolvedValue(undefined),
     fetch_channel_members: fn().mockResolvedValue('{"members":[],"total":0}'),
     invite_channel_members: fn().mockResolvedValue(undefined),
-    remove_channel_member: fn().mockResolvedValue(undefined),
     channel_members_json: fn((id: bigint) => h.channel.members.get(String(id)) ?? '[]'),
     get_channel_pods: fn().mockResolvedValue('{"pods":[]}'),
     channel_pods_json: fn((id: bigint) => h.channel.pods.get(String(id)) ?? '[]'),
@@ -534,6 +534,14 @@ vi.mock('@/lib/wasm-core', () => {
           role: m.role, is_muted: m.isMuted, joined_at: m.joinedAt,
         }))
         h.channel.members.set(String(req.channelId), JSON.stringify(members))
+      } catch { /* noop */ }
+    }),
+    remove_channel_member: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(RemoveChannelMemberRequestSchema, bytes)
+        const key = String(req.channelId)
+        const existing = JSON.parse(h.channel.members.get(key) ?? "[]") as Array<{ user_id: number }>
+        h.channel.members.set(key, JSON.stringify(existing.filter((m) => m.user_id !== Number(req.userId))))
       } catch { /* noop */ }
     }),
   }

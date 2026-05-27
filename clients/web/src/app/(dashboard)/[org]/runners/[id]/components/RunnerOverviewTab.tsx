@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 import { Cpu, HardDrive, Terminal, ArrowUpCircle } from "lucide-react";
 import type { RunnerData, RelayConnectionInfo } from "@/lib/viewModels/runner";
-import { upgradeRunner } from "@/lib/api/connect/runnerConnect";
+import { upgradeRunner } from "@/lib/api/facade/runnerConnect";
 import { isVersionOutdated } from "@/lib/utils/version";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";

@@ -1008,6 +1008,21 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "any"
   },
   {
+    "name": "channelRemoveChannelMember",
+    "group": "channel",
+    "params": [
+      {
+        "name": "id",
+        "type": "number"
+      },
+      {
+        "name": "userId",
+        "type": "number"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
     "name": "channelRemoveMessage",
     "group": "channel",
     "params": [],
@@ -1783,97 +1798,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "pod",
     "params": [],
     "returnType": "string"
-  },
-  {
-    "name": "podRemovePod",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdateAgentStatus",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "agentStatus",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdatePodAlias",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "alias",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdatePodStatus",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      },
-      {
-        "name": "agentStatus",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "errorCode",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "errorMessage",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "timestamp",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdatePodTitle",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "title",
-        "type": "string"
-      },
-      {
-        "name": "timestamp",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
   },
   {
     "name": "promocodeGetRedemptionHistoryConnect",

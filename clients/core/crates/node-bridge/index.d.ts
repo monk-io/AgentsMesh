@@ -150,6 +150,7 @@ export declare class AppState {
   channelReplaceChannelPods(reqBytes: Uint8Array): Promise<void>
   channelReplaceChannelMembers(reqBytes: Uint8Array): Promise<void>
   channelPatchChannelMemberCount(reqBytes: Uint8Array): Promise<void>
+  channelRemoveChannelMember(reqBytes: Uint8Array): Promise<void>
   channelFetchChannels(includeArchived?: boolean | undefined | null): Promise<string>
   channelFetchChannel(id: number): Promise<string>
   channelCreateChannel(requestJson: string): Promise<string>
@@ -207,7 +208,6 @@ export declare class AppState {
   extensionInstallCustomMcpServer(repoId: number, json: string): Promise<string>
   extensionUpdateMcpServer(repoId: number, installId: number, json: string): Promise<string>
   extensionUninstallMcpServer(repoId: number, installId: number): Promise<void>
-  filePresignUpload(json: string): Promise<string>
   fileUploadFile(fileData: Array<number>, filename: string, contentType: string): Promise<string>
   grantList(resourceType: string, resourceId: string): Promise<string>
   grantCreate(resourceType: string, resourceId: string, userId: number): Promise<string>
@@ -282,22 +282,6 @@ export declare class AppState {
   podPodsJson(): Promise<string>
   podCurrentPodJson(): Promise<string>
   podGetPodJson(podKey: string): Promise<string>
-  podUpsertPod(podJson: string, timestamp?: number | undefined | null): Promise<void>
-  podSetPods(podsJson: string): Promise<void>
-  podSetCurrentPod(podJson: string): Promise<void>
-  podUpdatePodStatus(podKey: string, status: string, agentStatus?: string | undefined | null, errorCode?: string | undefined | null, errorMessage?: string | undefined | null, timestamp?: number | undefined | null): Promise<void>
-  podUpdatePodTitle(podKey: string, title: string, timestamp?: number | undefined | null): Promise<void>
-  podUpdatePodAlias(podKey: string, alias: string): Promise<void>
-  podUpdateAgentStatus(podKey: string, agentStatus: string): Promise<void>
-  podRemovePod(podKey: string): Promise<void>
-  podFetchPods(status?: string | undefined | null, runnerId?: number | undefined | null, createdById?: number | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  podFetchSidebarPods(filter: string, userId?: number | undefined | null): Promise<string>
-  podLoadMorePods(filter: string, userId: number | undefined | null, offset: number): Promise<string>
-  podFetchPod(podKey: string): Promise<string>
-  podCreatePod(requestJson: string): Promise<string>
-  podTerminatePod(podKey: string): Promise<void>
-  podUpdatePodAliasApi(podKey: string, alias?: string | undefined | null): Promise<void>
-  podGetPodConnection(podKey: string): Promise<string>
   repositoryList(): Promise<string>
   repositoryGet(id: number): Promise<string>
   repositoryCreate(json: string): Promise<string>

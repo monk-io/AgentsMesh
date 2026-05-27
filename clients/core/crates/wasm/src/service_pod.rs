@@ -30,28 +30,6 @@ impl WasmPodService {
         }
     }
 
-    pub fn update_pod_status(
-        &self, pod_key: &str, status: &str,
-        agent_status: Option<String>, error_code: Option<String>,
-        error_message: Option<String>, timestamp: Option<i64>,
-    ) {
-        self.0.update_pod_status(pod_key, status, agent_status, error_code, error_message, timestamp);
-    }
-
-    pub fn update_pod_title(&self, pod_key: &str, title: &str, timestamp: Option<i64>) {
-        self.0.update_pod_title(pod_key, title, timestamp);
-    }
-
-    pub fn update_pod_alias(&self, pod_key: &str, alias: &str) {
-        self.0.update_pod_alias(pod_key, alias);
-    }
-
-    pub fn update_agent_status(&self, pod_key: &str, agent_status: &str) {
-        self.0.update_agent_status(pod_key, agent_status);
-    }
-
-    pub fn remove_pod(&self, pod_key: &str) { self.0.remove_pod(pod_key); }
-
     // -------- Connect-RPC (binary wire) --------
     //
     // Each `*_connect` method takes prost-encoded bytes (Uint8Array on the JS

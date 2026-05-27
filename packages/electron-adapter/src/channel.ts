@@ -14,6 +14,7 @@ import {
   ReplaceChannelUnreadCountsRequestSchema,
   ReplaceChannelPodsRequestSchema,
   ReplaceChannelMembersRequestSchema,
+  RemoveChannelMemberRequestSchema,
 } from "@agentsmesh/proto/channel_state/v1/mutations_pb";
 import type {
   Channel as ProtoChannel,
@@ -264,6 +265,17 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
     const req = fromBinary(ReplaceChannelMembersRequestSchema, reqBytes);
     this.set_channel_members(req.channelId, JSON.stringify(req.members.map(memberToCache)));
     void invoke<void>("channelReplaceChannelMembers", Array.from(reqBytes)).catch(() => undefined);
+    return Promise.resolve();
+  }
+
+  remove_channel_member(reqBytes: Uint8Array): Promise<void> {
+    const req = fromBinary(RemoveChannelMemberRequestSchema, reqBytes);
+    const key = String(req.channelId);
+    const json = this._membersByChannel.get(key) ?? "[]";
+    const members = JSON.parse(json) as Array<{ user_id: number }>;
+    const filtered = members.filter((m) => m.user_id !== Number(req.userId));
+    this._membersByChannel.set(key, JSON.stringify(filtered));
+    void invoke<void>("channelRemoveChannelMember", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 

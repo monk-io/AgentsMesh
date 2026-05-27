@@ -9,8 +9,9 @@ use agentsmesh_state::channel_types::ChannelMessage;
 use agentsmesh_types::proto_channel_state_v1::{
     ApplyChannelMessageEditedEventRequest, ApplyIncomingChannelMessageRequest,
     InsertChannelMessageRequest, InsertChannelRequest, PatchChannelMemberCountRequest,
-    PrependCachedChannelMessagesRequest, ReplaceCachedChannelMessagesRequest,
-    ReplaceCachedChannelsRequest, ReplaceChannelMembersRequest, ReplaceChannelPodsRequest,
+    PrependCachedChannelMessagesRequest, RemoveChannelMemberRequest,
+    ReplaceCachedChannelMessagesRequest, ReplaceCachedChannelsRequest,
+    ReplaceChannelMembersRequest, ReplaceChannelPodsRequest,
     ReplaceChannelUnreadCountsRequest,
 };
 use prost::Message;
@@ -122,6 +123,13 @@ impl ChannelService {
         let req = ReplaceChannelMembersRequest::decode(req_bytes)
             .map_err(|e| format!("decode ReplaceChannelMembersRequest: {e}"))?;
         self.state_write().set_channel_members(req.channel_id, req.members);
+        Ok(())
+    }
+
+    pub fn remove_channel_member(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = RemoveChannelMemberRequest::decode(req_bytes)
+            .map_err(|e| format!("decode RemoveChannelMemberRequest: {e}"))?;
+        self.state_write().remove_channel_member(req.channel_id, req.user_id);
         Ok(())
     }
 }

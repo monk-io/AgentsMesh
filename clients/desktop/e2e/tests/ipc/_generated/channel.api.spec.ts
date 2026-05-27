@@ -129,6 +129,10 @@ test.describe("IPC · channel", () => {
     await invokeIpcContract(sharedPage, { method: "channelPrependCachedChannelMessages", returnType: "any" });
   });
 
+  test("channelRemoveChannelMember", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelRemoveChannelMember", returnType: "void" }, 0, 0);
+  });
+
   test("channelRemoveMessage", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelRemoveMessage", returnType: "any" });
   });

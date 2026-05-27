@@ -107,10 +107,6 @@ impl ChannelService {
             .map(|c| serde_json::to_string(c).unwrap_or_default())
     }
 
-    pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {
-        self.state.write().unwrap().remove_channel_member(channel_id, user_id);
-    }
-
     pub fn remove_message(&self, channel_id: i64, message_id: i64) {
         self.state.write().unwrap().remove_message(channel_id, message_id);
     }

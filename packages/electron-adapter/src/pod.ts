@@ -70,9 +70,24 @@ function podToCache(p: ProtoPod): Record<string, unknown> {
   };
 }
 
+// Apply scalar status patch on a single cached pod. Used by the proto-bytes
+// status/title/alias/agent-status mutators below; not exposed publicly.
+function patchPodInCache(
+  cache: string,
+  podKey: string,
+  patch: Record<string, unknown>,
+): string {
+  const pods = JSON.parse(cache) as Array<Record<string, unknown>>;
+  const p = pods.find((x) => x.pod_key === podKey);
+  if (p) Object.assign(p, patch);
+  return JSON.stringify(pods);
+}
+
 export class ElectronPodService implements IPodService {
   private _podsCache = "[]";
   private _currentPodCache: string | null = null;
+
+  // ── Read selectors ──
 
   pods_json(): string { return this._podsCache; }
   current_pod_json(): unknown { return this._currentPodCache; }
@@ -82,110 +97,14 @@ export class ElectronPodService implements IPodService {
     return p ? JSON.stringify(p) : null;
   }
 
-  upsert_pod(json: string): void {
-    const pod = JSON.parse(json) as { pod_key: string };
-    const pods = JSON.parse(this._podsCache) as { pod_key: string }[];
-    const idx = pods.findIndex(x => x.pod_key === pod.pod_key);
-    if (idx >= 0) pods[idx] = pod; else pods.push(pod);
-    this._podsCache = JSON.stringify(pods);
-  }
+  // ── Proto-bytes mutators (mirror clients/core/crates/wasm WasmPodState) ──
+  // The wasm side stores in linear memory which the renderer reads
+  // synchronously; the Electron side has no Rust memory in-process — decode
+  // the proto bytes locally and update _podsCache so `pods_json()` reflects
+  // the mutation immediately. NAPI fan-out is fire-and-forget so the
+  // main-process Rust cache stays in sync for the few main-process consumers
+  // that depend on it.
 
-  set_pods(json: string): void { this._podsCache = json; }
-  set_current_pod(json: string): void { this._currentPodCache = json || null; }
-
-  update_pod_status(key: string, status: string, agentStatus?: string | null, errorCode?: string | null, errorMessage?: string | null): void {
-    const pods = JSON.parse(this._podsCache) as { pod_key: string; status: string; agent_status?: string; error_code?: string; error_message?: string }[];
-    const p = pods.find(x => x.pod_key === key);
-    if (p) {
-      p.status = status;
-      if (agentStatus !== undefined) p.agent_status = agentStatus ?? undefined;
-      if (errorCode !== undefined) p.error_code = errorCode ?? undefined;
-      if (errorMessage !== undefined) p.error_message = errorMessage ?? undefined;
-    }
-    this._podsCache = JSON.stringify(pods);
-  }
-
-  update_pod_title(key: string, title: string): void {
-    const pods = JSON.parse(this._podsCache) as { pod_key: string; title?: string }[];
-    const p = pods.find(x => x.pod_key === key);
-    if (p) p.title = title;
-    this._podsCache = JSON.stringify(pods);
-  }
-
-  update_pod_alias(key: string, alias: string): void {
-    const pods = JSON.parse(this._podsCache) as { pod_key: string; alias?: string }[];
-    const p = pods.find(x => x.pod_key === key);
-    if (p) p.alias = alias;
-    this._podsCache = JSON.stringify(pods);
-  }
-
-  update_agent_status(key: string, status: string): void {
-    const pods = JSON.parse(this._podsCache) as { pod_key: string; agent_status?: string }[];
-    const p = pods.find(x => x.pod_key === key);
-    if (p) p.agent_status = status;
-    this._podsCache = JSON.stringify(pods);
-  }
-
-  remove_pod(key: string): void {
-    const pods = JSON.parse(this._podsCache) as { pod_key: string }[];
-    this._podsCache = JSON.stringify(pods.filter(x => x.pod_key !== key));
-  }
-
-  async fetch_pods(status?: string | null, runnerId?: bigint | null, createdById?: bigint | null, limit?: bigint | null, offset?: bigint | null): Promise<string> {
-    const result = await invoke<string>("podFetchPods", status, runnerId ? Number(runnerId) : null, createdById ? Number(createdById) : null, limit ? Number(limit) : null, offset ? Number(offset) : null);
-    const parsed = JSON.parse(result);
-    this._podsCache = JSON.stringify(parsed.pods || []);
-    return result;
-  }
-
-  async fetch_sidebar_pods(filter: string, userId?: bigint | null): Promise<string> {
-    const result = await invoke<string>("podFetchSidebarPods", filter, userId ? Number(userId) : null);
-    const parsed = JSON.parse(result);
-    this._podsCache = JSON.stringify(parsed.pods || []);
-    return result;
-  }
-
-  async load_more_pods(filter: string, userId: bigint | null | undefined, offset: bigint): Promise<string> {
-    const result = await invoke<string>("podLoadMorePods", filter, userId ? Number(userId) : null, Number(offset));
-    const parsed = JSON.parse(result);
-    for (const pod of (parsed.newPods || [])) this.upsert_pod(JSON.stringify(pod));
-    return result;
-  }
-
-  async fetch_pod(key: string): Promise<string> {
-    const result = await invoke<string>("podFetchPod", key);
-    this.upsert_pod(result);
-    this._currentPodCache = result;
-    return result;
-  }
-
-  async create_pod(json: string): Promise<string> {
-    const result = await invoke<string>("podCreatePod", json);
-    this.upsert_pod(result);
-    this._currentPodCache = result;
-    return result;
-  }
-
-  async terminate_pod(key: string): Promise<void> {
-    await invoke<void>("podTerminatePod", key);
-    this.update_pod_status(key, "terminated");
-  }
-
-  async update_pod_alias_api(key: string, alias?: string | null): Promise<void> {
-    await invoke<void>("podUpdatePodAlias", key, alias);
-    this.update_pod_alias(key, alias || "");
-  }
-
-  async get_pod_connection(key: string): Promise<string> {
-    return invoke<string>("podGetPodConnection", key);
-  }
-
-  // Proto-bytes mutators (mirror clients/core/crates/wasm WasmPodState). The
-  // wasm side stores in linear memory which the renderer reads synchronously;
-  // the Electron side has no Rust memory in-process — decode the proto bytes
-  // locally and update _podsCache so the renderer's `pods_json()` reflects the
-  // mutation immediately. NAPI forwarding is fire-and-forget so a future
-  // main-process consumer of the Rust cache stays in sync.
   replace_cached_pods(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceCachedPodsRequestSchema, reqBytes);
     this._podsCache = JSON.stringify(req.pods.map(podToCache));
@@ -204,51 +123,46 @@ export class ElectronPodService implements IPodService {
 
   insert_created_pod(reqBytes: Uint8Array): void {
     const req = fromBinary(InsertCreatedPodRequestSchema, reqBytes);
-    if (req.pod) {
-      const cache = JSON.parse(this._podsCache) as { pod_key: string }[];
-      const c = podToCache(req.pod);
-      const idx = cache.findIndex((p) => p.pod_key === c.pod_key);
-      if (idx >= 0) cache[idx] = { ...cache[idx], ...c };
-      else cache.unshift(c as { pod_key: string });
-      this._podsCache = JSON.stringify(cache);
-    }
+    if (!req.pod) return;
+    const cache = JSON.parse(this._podsCache) as { pod_key: string }[];
+    const c = podToCache(req.pod);
+    const idx = cache.findIndex((p) => p.pod_key === c.pod_key);
+    if (idx >= 0) cache[idx] = { ...cache[idx], ...c };
+    else cache.unshift(c as { pod_key: string });
+    this._podsCache = JSON.stringify(cache);
   }
 
   mark_pod_terminated(reqBytes: Uint8Array): void {
     const req = fromBinary(MarkPodTerminatedRequestSchema, reqBytes);
-    this.update_pod_status(req.podKey, "terminated");
+    this._podsCache = patchPodInCache(this._podsCache, req.podKey, { status: "terminated" });
   }
 
   patch_pod_perpetual(reqBytes: Uint8Array): void {
     const req = fromBinary(PatchPodPerpetualRequestSchema, reqBytes);
-    const pods = JSON.parse(this._podsCache) as { pod_key: string; perpetual?: boolean }[];
-    const p = pods.find((x) => x.pod_key === req.podKey);
-    if (p) {
-      p.perpetual = req.perpetual;
-      this._podsCache = JSON.stringify(pods);
-    }
+    this._podsCache = patchPodInCache(this._podsCache, req.podKey, { perpetual: req.perpetual });
   }
 
   apply_pod_status_event(reqBytes: Uint8Array): void {
     const req = fromBinary(ApplyPodStatusEventRequestSchema, reqBytes);
-    this.update_pod_status(
-      req.podKey, req.status,
-      req.agentStatus ?? null, req.errorCode ?? null, req.errorMessage ?? null,
-    );
+    const patch: Record<string, unknown> = { status: req.status };
+    if (req.agentStatus !== undefined) patch.agent_status = req.agentStatus ?? undefined;
+    if (req.errorCode !== undefined) patch.error_code = req.errorCode ?? undefined;
+    if (req.errorMessage !== undefined) patch.error_message = req.errorMessage ?? undefined;
+    this._podsCache = patchPodInCache(this._podsCache, req.podKey, patch);
   }
 
   apply_pod_title_event(reqBytes: Uint8Array): void {
     const req = fromBinary(ApplyPodTitleEventRequestSchema, reqBytes);
-    this.update_pod_title(req.podKey, req.title);
+    this._podsCache = patchPodInCache(this._podsCache, req.podKey, { title: req.title });
   }
 
   apply_pod_alias_event(reqBytes: Uint8Array): void {
     const req = fromBinary(ApplyPodAliasEventRequestSchema, reqBytes);
-    this.update_pod_alias(req.podKey, req.alias ?? "");
+    this._podsCache = patchPodInCache(this._podsCache, req.podKey, { alias: req.alias ?? "" });
   }
 
   apply_agent_status_event(reqBytes: Uint8Array): void {
     const req = fromBinary(ApplyAgentStatusEventRequestSchema, reqBytes);
-    this.update_agent_status(req.podKey, req.agentStatus);
+    this._podsCache = patchPodInCache(this._podsCache, req.podKey, { agent_status: req.agentStatus });
   }
 }

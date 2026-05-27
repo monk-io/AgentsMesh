@@ -6,6 +6,7 @@ import {
   InsertChannelRequestSchema,
   ReplaceChannelPodsRequestSchema,
   ReplaceChannelMembersRequestSchema,
+  RemoveChannelMemberRequestSchema,
 } from "@proto/channel_state/v1/mutations_pb";
 import {
   channelDataToProtoChannel,
@@ -137,8 +138,13 @@ export const channelApi = {
 
   removeMember: async (id: number, userId: number) => {
     await removeChannelMemberConnect(orgSlug(), id, userId);
-    // Mirror Rust wasm path: remove from cached members so selector re-reads it gone.
-    getChannelService().remove_channel_member_local(BigInt(id), BigInt(userId));
+    // Mirror Rust wasm path: remove from cached members via proto-bytes
+    // mutator so selector re-reads observe the absence immediately.
+    const req = protoCreate(RemoveChannelMemberRequestSchema, {
+      channelId: BigInt(id),
+      userId: BigInt(userId),
+    });
+    getChannelService().remove_channel_member(toBinary(RemoveChannelMemberRequestSchema, req));
     return { message: "ok" };
   },
 

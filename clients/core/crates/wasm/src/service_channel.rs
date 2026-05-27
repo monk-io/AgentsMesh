@@ -70,10 +70,6 @@ impl WasmChannelService {
         }
     }
 
-    pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {
-        self.0.remove_channel_member_local(channel_id, user_id);
-    }
-
     // ---- Proto-bytes mutators (new SSOT contract) ----
 
     pub fn replace_cached_channels(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
@@ -94,6 +90,10 @@ impl WasmChannelService {
 
     pub fn patch_channel_member_count(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         self.0.patch_channel_member_count(req_bytes).map_err(map_err)
+    }
+
+    pub fn remove_channel_member(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.remove_channel_member(req_bytes).map_err(map_err)
     }
 
     pub fn apply_incoming_channel_message(&self, req_bytes: &[u8]) -> Result<bool, JsValue> {

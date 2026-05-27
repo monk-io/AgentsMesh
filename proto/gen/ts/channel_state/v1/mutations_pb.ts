@@ -23,7 +23,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file channel_state/v1/mutations.proto.
  */
 export const file_channel_state_v1_mutations: GenFile = /*@__PURE__*/
-  fileDesc("CiBjaGFubmVsX3N0YXRlL3YxL211dGF0aW9ucy5wcm90bxIWcHJvdG8uY2hhbm5lbF9zdGF0ZS52MSJDCh5QYXRjaENoYW5uZWxNZW1iZXJDb3VudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxINCgVkZWx0YRgCIAEoBSJxCiJBcHBseUluY29taW5nQ2hhbm5lbE1lc3NhZ2VSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSNwoHbWVzc2FnZRgCIAEoCzImLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuQ2hhbm5lbE1lc3NhZ2UiogIKJUFwcGx5Q2hhbm5lbE1lc3NhZ2VFZGl0ZWRFdmVudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxISCgptZXNzYWdlX2lkGAIgASgDEgwKBGJvZHkYAyABKAkSFAoHY29udGVudBgEIAEoCUgAiAEBEl0KCG1lbnRpb25zGAUgAygLMksucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5BcHBseUNoYW5uZWxNZXNzYWdlRWRpdGVkRXZlbnRSZXF1ZXN0Lk1lbnRpb25zRW50cnkSEQoJZWRpdGVkX2F0GAYgASgJGi8KDU1lbnRpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIKCghfY29udGVudCJRChxSZXBsYWNlQ2FjaGVkQ2hhbm5lbHNSZXF1ZXN0EjEKCGNoYW5uZWxzGAEgAygLMh8ucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsIkgKFEluc2VydENoYW5uZWxSZXF1ZXN0EjAKB2NoYW5uZWwYASABKAsyHy5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWwihQEKI1JlcGxhY2VDYWNoZWRDaGFubmVsTWVzc2FnZXNSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSOAoIbWVzc2FnZXMYAiADKAsyJi5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWxNZXNzYWdlEhAKCGhhc19tb3JlGAMgASgIIoUBCiNQcmVwZW5kQ2FjaGVkQ2hhbm5lbE1lc3NhZ2VzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEjgKCG1lc3NhZ2VzGAIgAygLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZRIQCghoYXNfbW9yZRgDIAEoCCJqChtJbnNlcnRDaGFubmVsTWVzc2FnZVJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI3CgdtZXNzYWdlGAIgASgLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZSKpAQohUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0ElUKBmNvdW50cxgBIAMoCzJFLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0LkNvdW50c0VudHJ5Gi0KC0NvdW50c0VudHJ5EgsKA2tleRgBIAEoAxINCgV2YWx1ZRgCIAEoDToCOAEiUAoZUmVwbGFjZUNoYW5uZWxQb2RzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEh8KBHBvZHMYAiADKAsyES5wcm90by5wb2QudjEuUG9kImoKHFJlcGxhY2VDaGFubmVsTWVtYmVyc1JlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI2CgdtZW1iZXJzGAIgAygLMiUucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVtYmVyQk9aTWdpdGh1Yi5jb20vYW50aHJvcGljcy9hZ2VudHNtZXNoL3Byb3RvL2dlbi9nby9jaGFubmVsX3N0YXRlL3YxO2NoYW5uZWxzdGF0ZXYxYgZwcm90bzM", [file_channel_state_v1_channel_state, file_pod_v1_pod]);
+  fileDesc("CiBjaGFubmVsX3N0YXRlL3YxL211dGF0aW9ucy5wcm90bxIWcHJvdG8uY2hhbm5lbF9zdGF0ZS52MSJDCh5QYXRjaENoYW5uZWxNZW1iZXJDb3VudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxINCgVkZWx0YRgCIAEoBSJxCiJBcHBseUluY29taW5nQ2hhbm5lbE1lc3NhZ2VSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSNwoHbWVzc2FnZRgCIAEoCzImLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuQ2hhbm5lbE1lc3NhZ2UiogIKJUFwcGx5Q2hhbm5lbE1lc3NhZ2VFZGl0ZWRFdmVudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxISCgptZXNzYWdlX2lkGAIgASgDEgwKBGJvZHkYAyABKAkSFAoHY29udGVudBgEIAEoCUgAiAEBEl0KCG1lbnRpb25zGAUgAygLMksucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5BcHBseUNoYW5uZWxNZXNzYWdlRWRpdGVkRXZlbnRSZXF1ZXN0Lk1lbnRpb25zRW50cnkSEQoJZWRpdGVkX2F0GAYgASgJGi8KDU1lbnRpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIKCghfY29udGVudCJRChxSZXBsYWNlQ2FjaGVkQ2hhbm5lbHNSZXF1ZXN0EjEKCGNoYW5uZWxzGAEgAygLMh8ucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsIkgKFEluc2VydENoYW5uZWxSZXF1ZXN0EjAKB2NoYW5uZWwYASABKAsyHy5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWwihQEKI1JlcGxhY2VDYWNoZWRDaGFubmVsTWVzc2FnZXNSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSOAoIbWVzc2FnZXMYAiADKAsyJi5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWxNZXNzYWdlEhAKCGhhc19tb3JlGAMgASgIIoUBCiNQcmVwZW5kQ2FjaGVkQ2hhbm5lbE1lc3NhZ2VzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEjgKCG1lc3NhZ2VzGAIgAygLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZRIQCghoYXNfbW9yZRgDIAEoCCJqChtJbnNlcnRDaGFubmVsTWVzc2FnZVJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI3CgdtZXNzYWdlGAIgASgLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZSKpAQohUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0ElUKBmNvdW50cxgBIAMoCzJFLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0LkNvdW50c0VudHJ5Gi0KC0NvdW50c0VudHJ5EgsKA2tleRgBIAEoAxINCgV2YWx1ZRgCIAEoDToCOAEiUAoZUmVwbGFjZUNoYW5uZWxQb2RzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEh8KBHBvZHMYAiADKAsyES5wcm90by5wb2QudjEuUG9kImoKHFJlcGxhY2VDaGFubmVsTWVtYmVyc1JlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI2CgdtZW1iZXJzGAIgAygLMiUucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVtYmVyIkEKGlJlbW92ZUNoYW5uZWxNZW1iZXJSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSDwoHdXNlcl9pZBgCIAEoA0JPWk1naXRodWIuY29tL2FudGhyb3BpY3MvYWdlbnRzbWVzaC9wcm90by9nZW4vZ28vY2hhbm5lbF9zdGF0ZS92MTtjaGFubmVsc3RhdGV2MWIGcHJvdG8z", [file_channel_state_v1_channel_state, file_pod_v1_pod]);
 
 /**
  * ---------------------------------------------------------------------------
@@ -353,4 +353,32 @@ export type ReplaceChannelMembersRequest = Message<"proto.channel_state.v1.Repla
  */
 export const ReplaceChannelMembersRequestSchema: GenMessage<ReplaceChannelMembersRequest> = /*@__PURE__*/
   messageDesc(file_channel_state_v1_mutations, 10);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Remove a single user from the cached members of a channel — used after
+ * a removeChannelMember Connect-RPC succeeds. Selector re-reads pick up
+ * the absence without a full list refetch.
+ * ---------------------------------------------------------------------------
+ *
+ * @generated from message proto.channel_state.v1.RemoveChannelMemberRequest
+ */
+export type RemoveChannelMemberRequest = Message<"proto.channel_state.v1.RemoveChannelMemberRequest"> & {
+  /**
+   * @generated from field: int64 channel_id = 1;
+   */
+  channelId: bigint;
+
+  /**
+   * @generated from field: int64 user_id = 2;
+   */
+  userId: bigint;
+};
+
+/**
+ * Describes the message proto.channel_state.v1.RemoveChannelMemberRequest.
+ * Use `create(RemoveChannelMemberRequestSchema)` to create a new message.
+ */
+export const RemoveChannelMemberRequestSchema: GenMessage<RemoveChannelMemberRequest> = /*@__PURE__*/
+  messageDesc(file_channel_state_v1_mutations, 11);
 

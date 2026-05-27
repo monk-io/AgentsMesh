@@ -251,6 +251,7 @@ export interface IChannelService {
   // from proto/channel_state/v1/mutations.proto.
   replace_channel_pods(req_bytes: Uint8Array): Promise<void>;
   replace_channel_members(req_bytes: Uint8Array): Promise<void>;
+  remove_channel_member(req_bytes: Uint8Array): Promise<void>;
 }
 
 export interface IChannelState {
@@ -324,7 +325,6 @@ export interface IExtensionService {
 }
 
 export interface IFileService {
-  presign_upload(json: string): Promise<string>;
   upload_file(file_data: Uint8Array, filename: string, content_type: string): Promise<string>;
 }
 
@@ -452,25 +452,19 @@ export interface IOrgApiService {
 }
 
 export interface IPodService {
-  create_pod(request_json: string): Promise<string>;
   current_pod_json(): any;
-  fetch_pod(pod_key: string): Promise<string>;
-  fetch_pods(status?: string | null, runner_id?: bigint | null, created_by_id?: bigint | null, limit?: bigint | null, offset?: bigint | null): Promise<string>;
-  fetch_sidebar_pods(filter: string, user_id?: bigint | null): Promise<string>;
-  get_pod_connection(pod_key: string): Promise<string>;
   get_pod_json(pod_key: string): any;
-  load_more_pods(filter: string, user_id: bigint | null | undefined, offset: bigint): Promise<string>;
   pods_json(): string;
-  remove_pod(pod_key: string): void;
-  set_current_pod(pod_json: string): void;
-  set_pods(pods_json: string): void;
-  terminate_pod(pod_key: string): Promise<void>;
-  update_agent_status(pod_key: string, agent_status: string): void;
-  update_pod_alias(pod_key: string, alias: string): void;
-  update_pod_alias_api(pod_key: string, alias?: string | null): Promise<void>;
-  update_pod_status(pod_key: string, status: string, agent_status?: string | null, error_code?: string | null, error_message?: string | null, timestamp?: bigint | null): void;
-  update_pod_title(pod_key: string, title: string, timestamp?: bigint | null): void;
-  upsert_pod(pod_json: string, timestamp?: bigint | null): void;
+  // Proto-bytes mutators (mirror WasmPodState).
+  replace_cached_pods(req_bytes: Uint8Array): void;
+  append_cached_pods(req_bytes: Uint8Array): void;
+  insert_created_pod(req_bytes: Uint8Array): void;
+  mark_pod_terminated(req_bytes: Uint8Array): void;
+  patch_pod_perpetual(req_bytes: Uint8Array): void;
+  apply_pod_status_event(req_bytes: Uint8Array): void;
+  apply_pod_title_event(req_bytes: Uint8Array): void;
+  apply_pod_alias_event(req_bytes: Uint8Array): void;
+  apply_agent_status_event(req_bytes: Uint8Array): void;
 }
 
 export interface IPodState {

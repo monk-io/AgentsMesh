@@ -16,24 +16,4 @@ test.describe("IPC · pod", () => {
   test("podPodsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "podPodsJson", returnType: "string" });
   });
-
-  test("podRemovePod", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "podRemovePod", returnType: "void" }, "");
-  });
-
-  test("podUpdateAgentStatus", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "podUpdateAgentStatus", returnType: "void" }, "", "");
-  });
-
-  test("podUpdatePodAlias", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "podUpdatePodAlias", returnType: "void" }, "", "");
-  });
-
-  test("podUpdatePodStatus", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "podUpdatePodStatus", returnType: "void" }, "", "", "", "", "", 0);
-  });
-
-  test("podUpdatePodTitle", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "podUpdatePodTitle", returnType: "void" }, "", "", 0);
-  });
 });
