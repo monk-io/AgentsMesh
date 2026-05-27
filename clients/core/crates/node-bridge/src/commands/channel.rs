@@ -82,14 +82,6 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn channel_set_channels(&self, _json: String) -> napi::Result<()> {
-        Err(napi::Error::new(
-            napi::Status::GenericFailure,
-            "channel_set_channels deprecated in proto migration; pending NAPI migration in Phase 5",
-        ))
-    }
-
-    #[napi]
     pub async fn channel_set_current_channel(&self, id: Option<i64>) -> napi::Result<()> {
         let svc = self.channel.lock().await;
             svc.set_current_channel(id);
@@ -103,26 +95,10 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn channel_add_channel_local(&self, _json: String) -> napi::Result<()> {
-        Err(napi::Error::new(
-            napi::Status::GenericFailure,
-            "channel_add_channel_local deprecated in proto migration; pending NAPI migration in Phase 5",
-        ))
-    }
-
-    #[napi]
     pub async fn channel_update_channel_local(&self, id: i64, json: String) -> napi::Result<()> {
         let svc = self.channel.lock().await;
             svc.update_channel_local(id, &json);
             Ok(())
-    }
-
-    #[napi]
-    pub async fn channel_remove_channel_local(&self, _id: i64) -> napi::Result<()> {
-        Err(napi::Error::new(
-            napi::Status::GenericFailure,
-            "channel_remove_channel_local deprecated in proto migration; pending NAPI migration in Phase 5",
-        ))
     }
 
     // Proto-bytes mutators (matching the wasm bridge surface). Renderer side

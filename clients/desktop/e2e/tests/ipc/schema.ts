@@ -735,17 +735,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
-    "name": "channelAddChannelLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "channelApplyChannelMessageEditedEvent",
     "group": "channel",
     "params": [],
@@ -753,6 +742,12 @@ export const ipcSchema: IpcMethodSchema[] = [
   },
   {
     "name": "channelApplyIncomingChannelMessage",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelArchiveChannelConnect",
     "group": "channel",
     "params": [],
     "returnType": "any"
@@ -808,10 +803,28 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
+    "name": "channelCreateChannelConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
     "name": "channelCurrentChannelJson",
     "group": "channel",
     "params": [],
     "returnType": "string"
+  },
+  {
+    "name": "channelDeleteChannelMessageConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelEditChannelMessageConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelFilterChannelsJson",
@@ -829,6 +842,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
+    "name": "channelGetChannelConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
     "name": "channelGetChannelJson",
     "group": "channel",
     "params": [
@@ -838,6 +857,12 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "string"
+  },
+  {
+    "name": "channelGetChannelUnreadCountsConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelGetLastMessageJson",
@@ -918,6 +943,30 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "any"
   },
   {
+    "name": "channelListChannelMembersConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelListChannelMessagesConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelListChannelsConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelMarkChannelReadConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
     "name": "channelMentionCountsJson",
     "group": "channel",
     "params": [],
@@ -934,17 +983,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "channel",
     "params": [],
     "returnType": "any"
-  },
-  {
-    "name": "channelRemoveChannelLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
   },
   {
     "name": "channelRemoveMessage",
@@ -982,21 +1020,16 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
-    "name": "channelSetChannelPodsLocal",
+    "name": "channelSendChannelMessageConnect",
     "group": "channel",
     "params": [],
     "returnType": "any"
   },
   {
-    "name": "channelSetChannels",
+    "name": "channelSetChannelPodsLocal",
     "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelSetCurrentChannel",
@@ -1048,10 +1081,22 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "number"
   },
   {
+    "name": "channelUnarchiveChannelConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
     "name": "channelUnreadCountsJson",
     "group": "channel",
     "params": [],
     "returnType": "string"
+  },
+  {
+    "name": "channelUpdateChannelConnect",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelUpdateChannelLocal",

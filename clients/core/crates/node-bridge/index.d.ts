@@ -140,12 +140,9 @@ export declare class AppState {
   channelMentionCountsJson(): Promise<string>
   channelSortedChannelIdsJson(mode: string, includeArchived: boolean): Promise<string>
   channelGetLastMessageJson(channelId: number): Promise<string>
-  channelSetChannels(json: string): Promise<void>
   channelSetCurrentChannel(id?: number | undefined | null): Promise<void>
   channelSelectChannel(id?: number | undefined | null): Promise<string>
-  channelAddChannelLocal(json: string): Promise<void>
   channelUpdateChannelLocal(id: number, json: string): Promise<void>
-  channelRemoveChannelLocal(id: number): Promise<void>
   channelFetchChannels(includeArchived?: boolean | undefined | null): Promise<string>
   channelFetchChannel(id: number): Promise<string>
   channelCreateChannel(requestJson: string): Promise<string>

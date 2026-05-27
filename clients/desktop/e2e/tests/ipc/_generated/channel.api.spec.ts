@@ -5,16 +5,16 @@ import { invokeIpcContract } from "../../../helpers/ipc-contract";
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · channel", () => {
-  test("channelAddChannelLocal", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "channelAddChannelLocal", returnType: "void" }, "");
-  });
-
   test("channelApplyChannelMessageEditedEvent", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelApplyChannelMessageEditedEvent", returnType: "any" });
   });
 
   test("channelApplyIncomingChannelMessage", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelApplyIncomingChannelMessage", returnType: "any" });
+  });
+
+  test("channelArchiveChannelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelArchiveChannelConnect", returnType: "any" });
   });
 
   test("channelChannelMembersJson", async ({ sharedPage }) => {
@@ -37,16 +37,36 @@ test.describe("IPC · channel", () => {
     await invokeIpcContract(sharedPage, { method: "channelClearChannelUnread", returnType: "void" }, 0);
   });
 
+  test("channelCreateChannelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelCreateChannelConnect", returnType: "any" });
+  });
+
   test("channelCurrentChannelJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelCurrentChannelJson", returnType: "string" });
+  });
+
+  test("channelDeleteChannelMessageConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelDeleteChannelMessageConnect", returnType: "any" });
+  });
+
+  test("channelEditChannelMessageConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelEditChannelMessageConnect", returnType: "any" });
   });
 
   test("channelFilterChannelsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelFilterChannelsJson", returnType: "string" }, "", false);
   });
 
+  test("channelGetChannelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelGetChannelConnect", returnType: "any" });
+  });
+
   test("channelGetChannelJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelGetChannelJson", returnType: "string" }, 0);
+  });
+
+  test("channelGetChannelUnreadCountsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelGetChannelUnreadCountsConnect", returnType: "any" });
   });
 
   test("channelGetLastMessageJson", async ({ sharedPage }) => {
@@ -81,6 +101,22 @@ test.describe("IPC · channel", () => {
     await invokeIpcContract(sharedPage, { method: "channelInsertChannelMessage", returnType: "any" });
   });
 
+  test("channelListChannelMembersConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelListChannelMembersConnect", returnType: "any" });
+  });
+
+  test("channelListChannelMessagesConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelListChannelMessagesConnect", returnType: "any" });
+  });
+
+  test("channelListChannelsConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelListChannelsConnect", returnType: "any" });
+  });
+
+  test("channelMarkChannelReadConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelMarkChannelReadConnect", returnType: "any" });
+  });
+
   test("channelMentionCountsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelMentionCountsJson", returnType: "string" });
   });
@@ -91,10 +127,6 @@ test.describe("IPC · channel", () => {
 
   test("channelPrependCachedChannelMessages", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelPrependCachedChannelMessages", returnType: "any" });
-  });
-
-  test("channelRemoveChannelLocal", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "channelRemoveChannelLocal", returnType: "void" }, 0);
   });
 
   test("channelRemoveMessage", async ({ sharedPage }) => {
@@ -117,12 +149,12 @@ test.describe("IPC · channel", () => {
     await invokeIpcContract(sharedPage, { method: "channelSelectChannel", returnType: "string" }, 0);
   });
 
-  test("channelSetChannelPodsLocal", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "channelSetChannelPodsLocal", returnType: "any" });
+  test("channelSendChannelMessageConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelSendChannelMessageConnect", returnType: "any" });
   });
 
-  test("channelSetChannels", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "channelSetChannels", returnType: "void" }, "");
+  test("channelSetChannelPodsLocal", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelSetChannelPodsLocal", returnType: "any" });
   });
 
   test("channelSetCurrentChannel", async ({ sharedPage }) => {
@@ -145,8 +177,16 @@ test.describe("IPC · channel", () => {
     await invokeIpcContract(sharedPage, { method: "channelTotalUnreadCount", returnType: "number" });
   });
 
+  test("channelUnarchiveChannelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelUnarchiveChannelConnect", returnType: "any" });
+  });
+
   test("channelUnreadCountsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "channelUnreadCountsJson", returnType: "string" });
+  });
+
+  test("channelUpdateChannelConnect", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "channelUpdateChannelConnect", returnType: "any" });
   });
 
   test("channelUpdateChannelLocal", async ({ sharedPage }) => {
