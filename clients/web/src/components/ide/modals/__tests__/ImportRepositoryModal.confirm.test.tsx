@@ -4,6 +4,7 @@ import {
   setupProviderMocks,
   mockRepositoryCreate,
   stableRepoSvc,
+  lastCreateRepoCall,
 } from "./ImportRepositoryModal.utils";
 
 // Stable references so React's useCallback([currentOrg]) doesn't churn.
@@ -136,11 +137,10 @@ describe("ImportRepositoryModal - Confirmation Step", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      // useImportWizard.handleImport calls getRepositoryService().create(JSON.stringify({...}))
-      // — assert on the parsed JSON payload.
-      expect(stableRepoSvc.create).toHaveBeenCalled();
-      const arg = stableRepoSvc.create.mock.calls[0][0];
-      expect(JSON.parse(arg as string)).toEqual(
+      // useImportWizard.handleImport calls createRepositoryConnect with
+      // proto bytes — assert on the decoded request body.
+      expect(stableRepoSvc.createRepositoryConnect).toHaveBeenCalled();
+      expect(lastCreateRepoCall()).toEqual(
         expect.objectContaining({ ticket_prefix: "TEST" }),
       );
     });

@@ -195,22 +195,29 @@ describe("Channel Store (Connect adapter)", () => {
   describe("join/leave channel", () => {
     it("should join and refresh", async () => {
       seedChannels([mockChannel], mockChannel);
-      const updated = { ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] };
+      // `pods` is no longer cached on the Channel proto — it lives in a
+      // separate `channel_pods_*` cache after the proto-state migration.
+      // The behavioural contract here is "joinChannelPod was called with
+      // the right args + getChannel re-fetched the channel"; we don't
+      // assert on `pods` length anymore.
+      const refreshed = { ...mockChannel, name: "general-renamed" };
       mocks.joinChannelPod.mockResolvedValue(undefined);
-      mocks.getChannel.mockResolvedValue(updated);
+      mocks.getChannel.mockResolvedValue(refreshed);
       await act(async () => { await useChannelStore.getState().joinChannel(1, "pod-123"); });
       expect(mocks.joinChannelPod).toHaveBeenCalledWith(orgSlug, 1, "pod-123");
-      expect(getChannels()[0].pods).toHaveLength(1);
+      expect(mocks.getChannel).toHaveBeenCalledWith(orgSlug, 1);
+      expect(getChannels()[0].name).toBe("general-renamed");
     });
 
     it("should leave and refresh", async () => {
-      seedChannels([{ ...mockChannel, pods: [{ pod_key: "pod-123", status: "running" }] }], mockChannel);
-      const updated = { ...mockChannel, pods: [] };
+      seedChannels([mockChannel], mockChannel);
+      const refreshed = { ...mockChannel, name: "general-left" };
       mocks.leaveChannelPod.mockResolvedValue(undefined);
-      mocks.getChannel.mockResolvedValue(updated);
+      mocks.getChannel.mockResolvedValue(refreshed);
       await act(async () => { await useChannelStore.getState().leaveChannel(1, "pod-123"); });
       expect(mocks.leaveChannelPod).toHaveBeenCalledWith(orgSlug, 1, "pod-123");
-      expect(getChannels()[0].pods).toHaveLength(0);
+      expect(mocks.getChannel).toHaveBeenCalledWith(orgSlug, 1);
+      expect(getChannels()[0].name).toBe("general-left");
     });
   });
 

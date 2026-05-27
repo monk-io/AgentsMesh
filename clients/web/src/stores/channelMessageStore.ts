@@ -1,5 +1,6 @@
 import { readCurrentUser, readCurrentOrg } from "@/stores/auth";
 import { create } from "zustand";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { getChannelService } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
 import {
@@ -15,10 +16,18 @@ import { getCache, updateCache } from "./channelMessageTypes";
 import type { ChannelMessageState } from "./channelMessageTypes";
 import type { ChannelMessage } from "@/lib/api/facade/channel";
 import {
-  toWasmProjection,
   fromWasmProjection,
   type WasmChannelMessage,
 } from "./channelMessageWasmProjection";
+import { channelMessageToProto } from "@/lib/api/channelProtoMap";
+import {
+  ReplaceCachedChannelMessagesRequestSchema,
+  PrependCachedChannelMessagesRequestSchema,
+  InsertChannelMessageRequestSchema,
+  ApplyIncomingChannelMessageRequestSchema,
+  ApplyChannelMessageEditedEventRequestSchema,
+  ReplaceChannelUnreadCountsRequestSchema,
+} from "@proto/channel_state/v1/mutations_pb";
 import { registerOrgScopedReset } from "@/lib/org-scope/registry";
 
 export { EMPTY_CACHE, type ChannelMessageCache } from "./channelMessageTypes";
@@ -45,6 +54,62 @@ export function readMessages(channelId: number): { messages: ChannelMessage[]; h
 const bumpMessages = () =>
   useChannelMessageStore.setState((s) => ({ _messagesTick: s._messagesTick + 1 }));
 
+function dispatchReplaceMessages(channelId: number, messages: ChannelMessage[], hasMore: boolean) {
+  const req = protoCreate(ReplaceCachedChannelMessagesRequestSchema, {
+    channelId: BigInt(channelId),
+    messages: messages.map(channelMessageToProto),
+    hasMore,
+  });
+  svc().replace_cached_channel_messages(toBinary(ReplaceCachedChannelMessagesRequestSchema, req));
+}
+
+function dispatchPrependMessages(channelId: number, messages: ChannelMessage[], hasMore: boolean) {
+  const req = protoCreate(PrependCachedChannelMessagesRequestSchema, {
+    channelId: BigInt(channelId),
+    messages: messages.map(channelMessageToProto),
+    hasMore,
+  });
+  svc().prepend_cached_channel_messages(toBinary(PrependCachedChannelMessagesRequestSchema, req));
+}
+
+function dispatchInsertMessage(channelId: number, message: ChannelMessage) {
+  const req = protoCreate(InsertChannelMessageRequestSchema, {
+    channelId: BigInt(channelId),
+    message: channelMessageToProto(message),
+  });
+  svc().insert_channel_message(toBinary(InsertChannelMessageRequestSchema, req));
+}
+
+function dispatchIncomingMessage(message: ChannelMessage): boolean {
+  const req = protoCreate(ApplyIncomingChannelMessageRequestSchema, {
+    channelId: BigInt(message.channel_id),
+    message: channelMessageToProto(message),
+  });
+  return svc().apply_incoming_channel_message(
+    toBinary(ApplyIncomingChannelMessageRequestSchema, req),
+  );
+}
+
+function dispatchMessageEdited(channelId: number, edit: {
+  id: number; body: string; content?: ChannelMessage["content"]; mentions?: ChannelMessage["mentions"]; edited_at?: string;
+}) {
+  const req = protoCreate(ApplyChannelMessageEditedEventRequestSchema, {
+    channelId: BigInt(channelId),
+    messageId: BigInt(edit.id),
+    body: edit.body,
+    content: edit.content ? JSON.stringify(edit.content) : undefined,
+    mentions: edit.mentions
+      ? Object.fromEntries(
+          Object.entries(edit.mentions).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]),
+        )
+      : {},
+    editedAt: edit.edited_at ?? "",
+  });
+  svc().apply_channel_message_edited_event(
+    toBinary(ApplyChannelMessageEditedEventRequestSchema, req),
+  );
+}
+
 export const useChannelMessageStore = create<ChannelMessageState>((set, get) => ({
   cache: {},
   _messagesTick: 0,
@@ -64,11 +129,10 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         beforeId,
         limit,
       });
-      const wasmItems = items.map(toWasmProjection);
       if (isLoadMore) {
-        svc().prepend_messages(BigInt(channelId), JSON.stringify(wasmItems), has_more);
+        dispatchPrependMessages(channelId, items, has_more);
       } else {
-        svc().set_messages(BigInt(channelId), JSON.stringify(wasmItems), has_more);
+        dispatchReplaceMessages(channelId, items, has_more);
       }
       set((state) => updateCache(state, channelId, {
         loading: false, loadingMore: false, error: null,
@@ -105,7 +169,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         }
       }
 
-      svc().add_message(BigInt(channelId), JSON.stringify(toWasmProjection(msg)));
+      dispatchInsertMessage(channelId, msg);
       bumpMessages();
       return msg;
     } catch (error: unknown) {
@@ -115,7 +179,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
   },
 
   addMessage: (_channelId, message) => {
-    svc().on_new_message(JSON.stringify(toWasmProjection(message)));
+    dispatchIncomingMessage(message);
     bumpMessages();
   },
 
@@ -125,7 +189,10 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
         source: payload.source,
         mentions: payload.mentions && Object.keys(payload.mentions).length > 0 ? payload.mentions : undefined,
       });
-      svc().update_message_local(BigInt(channelId), JSON.stringify(toWasmProjection(updated)));
+      dispatchMessageEdited(channelId, {
+        id: messageId, body: updated.body,
+        content: updated.content, mentions: updated.mentions, edited_at: updated.edited_at,
+      });
       bumpMessages();
     } catch (error: unknown) {
       console.error("Failed to edit message:", getErrorMessage(error, "Unknown error"));
@@ -136,7 +203,7 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
   deleteMessage: async (channelId, messageId) => {
     try {
       await deleteChannelMessage(orgSlug(), channelId, messageId);
-      svc().remove_message_local(BigInt(channelId), BigInt(messageId));
+      svc().remove_message(BigInt(channelId), BigInt(messageId));
       bumpMessages();
     } catch (error: unknown) {
       console.error("Failed to delete message:", getErrorMessage(error, "Unknown error"));
@@ -145,19 +212,25 @@ export const useChannelMessageStore = create<ChannelMessageState>((set, get) => 
   },
 
   updateMessage: (channelId, data) => {
-    svc().update_message_local(BigInt(channelId), JSON.stringify(toWasmProjection(data)));
+    dispatchMessageEdited(channelId, {
+      id: data.id, body: data.body, content: data.content,
+      mentions: data.mentions, edited_at: data.edited_at,
+    });
     bumpMessages();
   },
 
   removeMessage: (channelId, messageId) => {
-    svc().remove_message_local(BigInt(channelId), BigInt(messageId));
+    svc().remove_message(BigInt(channelId), BigInt(messageId));
     bumpMessages();
   },
 
   fetchUnreadCounts: async () => {
     try {
       const unread = await getChannelUnreadCounts(orgSlug());
-      svc().set_unread_counts(JSON.stringify(unread));
+      const req = protoCreate(ReplaceChannelUnreadCountsRequestSchema, {
+        counts: Object.fromEntries(Object.entries(unread).map(([k, v]) => [BigInt(k), v])) as unknown as { [k: string]: number },
+      });
+      svc().replace_channel_unread_counts(toBinary(ReplaceChannelUnreadCountsRequestSchema, req));
       set((s) => ({ _unreadTick: s._unreadTick + 1 }));
     } catch (error: unknown) {
       console.error("Failed to fetch unread counts:", getErrorMessage(error, "Unknown error"));
@@ -203,8 +276,8 @@ export {
 } from "./channelMessageSelectors";
 
 registerOrgScopedReset(() => {
-  const ch = svc() as unknown as { set_unread_counts?: (json: string) => void };
-  ch.set_unread_counts?.("{}");
+  const emptyReq = protoCreate(ReplaceChannelUnreadCountsRequestSchema, { counts: {} });
+  svc().replace_channel_unread_counts(toBinary(ReplaceChannelUnreadCountsRequestSchema, emptyReq));
   useChannelMessageStore.setState((s) => ({
     cache: {},
     _messagesTick: s._messagesTick + 1,

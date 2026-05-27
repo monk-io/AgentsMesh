@@ -1,10 +1,22 @@
 use agentsmesh_state::ticket_state::TicketState;
-use agentsmesh_types::proto_ticket_v1::{BoardColumn, Label, Ticket};
+use agentsmesh_types::proto_ticket_state_v1::{
+    ApplyTicketDeletedEventRequest, ApplyTicketStatusEventRequest,
+    AppendBoardColumnTicketsRequest, FilterTicketsRequest, FilterTicketsResponse,
+    InsertCreatedLabelRequest, InsertCreatedTicketRequest,
+    PatchCachedTicketRequest, RemoveCachedLabelRequest,
+    ReplaceBoardColumnsRequest, ReplaceCachedLabelsRequest,
+    ReplaceCachedTicketsRequest, SetCurrentTicketRequest,
+};
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmTicketState {
     inner: TicketState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -14,92 +26,21 @@ impl WasmTicketState {
         Self { inner: TicketState::with_storage(crate::new_memory_backend()) }
     }
 
+    // -------- Read accessors (kept JSON for ergonomic React consumers).
+    // The renderer materialises these into typed views via JSON.parse;
+    // a proto round-trip here costs ~2x for no business benefit because
+    // the values are never crossed back across the boundary.
+
     pub fn tickets_json(&self) -> String {
         serde_json::to_string(self.inner.get_tickets()).unwrap_or_default()
-    }
-
-    pub fn get_ticket_by_slug_json(&self, slug: &str) -> JsValue {
-        match self.inner.get_ticket_by_slug(slug) {
-            Some(t) => JsValue::from_str(&serde_json::to_string(t).unwrap_or_default()),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn set_tickets(&mut self, tickets_json: &str) {
-        if let Ok(tickets) = serde_json::from_str::<Vec<Ticket>>(tickets_json) {
-            self.inner.set_tickets(tickets);
-        }
-    }
-
-    pub fn add_ticket(&mut self, ticket_json: &str) {
-        if let Ok(ticket) = serde_json::from_str::<Ticket>(ticket_json) {
-            self.inner.add_ticket(ticket);
-        }
-    }
-
-    pub fn update_ticket(&mut self, slug: &str, ticket_json: &str) {
-        if let Ok(ticket) = serde_json::from_str::<Ticket>(ticket_json) {
-            self.inner.update_ticket(slug, ticket);
-        }
-    }
-
-    pub fn update_ticket_status(&mut self, slug: &str, status: &str) {
-        self.inner.update_ticket_status(slug, status);
-    }
-
-    pub fn remove_ticket(&mut self, slug: &str) {
-        self.inner.remove_ticket(slug);
-    }
-
-    pub fn filter_tickets_json(
-        &self,
-        search: &str,
-        statuses_json: &str,
-        priorities_json: &str,
-        repository_ids_json: &str,
-    ) -> String {
-        let search_opt = if search.is_empty() { None } else { Some(search) };
-        let statuses: Vec<String> = serde_json::from_str(statuses_json).unwrap_or_default();
-        let priorities: Vec<String> = serde_json::from_str(priorities_json).unwrap_or_default();
-        let repo_ids: Vec<i64> = serde_json::from_str(repository_ids_json).unwrap_or_default();
-        let filtered = self.inner.filter_tickets(search_opt, &statuses, &priorities, &repo_ids);
-        serde_json::to_string(&filtered).unwrap_or_default()
     }
 
     pub fn board_columns_json(&self) -> String {
         serde_json::to_string(self.inner.get_board_columns()).unwrap_or_default()
     }
 
-    pub fn set_board_columns(&mut self, columns_json: &str) {
-        if let Ok(cols) = serde_json::from_str::<Vec<BoardColumn>>(columns_json) {
-            self.inner.set_board_columns(cols);
-        }
-    }
-
-    pub fn append_column_tickets(&mut self, status: &str, tickets_json: &str) {
-        if let Ok(tickets) = serde_json::from_str::<Vec<Ticket>>(tickets_json) {
-            self.inner.append_column_tickets(status, tickets);
-        }
-    }
-
     pub fn labels_json(&self) -> String {
         serde_json::to_string(self.inner.get_labels()).unwrap_or_default()
-    }
-
-    pub fn set_labels(&mut self, labels_json: &str) {
-        if let Ok(labels) = serde_json::from_str::<Vec<Label>>(labels_json) {
-            self.inner.set_labels(labels);
-        }
-    }
-
-    pub fn add_label(&mut self, label_json: &str) {
-        if let Ok(label) = serde_json::from_str::<Label>(label_json) {
-            self.inner.add_label(label);
-        }
-    }
-
-    pub fn remove_label(&mut self, id: f64) {
-        self.inner.remove_label(id as i64);
     }
 
     pub fn current_ticket_json(&self) -> JsValue {
@@ -109,11 +50,84 @@ impl WasmTicketState {
         }
     }
 
-    pub fn set_current_ticket(&mut self, ticket_json: &str) {
-        if ticket_json.is_empty() || ticket_json == "null" {
-            self.inner.set_current_ticket(None);
-        } else if let Ok(t) = serde_json::from_str::<Ticket>(ticket_json) {
-            self.inner.set_current_ticket(Some(t));
-        }
+    // -------- Proto bytes mutators.
+
+    pub fn replace_cached_tickets(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceCachedTicketsRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_tickets(req.tickets);
+        Ok(())
+    }
+
+    pub fn insert_created_ticket(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = InsertCreatedTicketRequest::decode(req_bytes).map_err(decode_err)?;
+        let ticket = req.ticket.ok_or_else(|| JsValue::from_str("missing ticket"))?;
+        self.inner.add_ticket(ticket);
+        Ok(())
+    }
+
+    pub fn patch_cached_ticket(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = PatchCachedTicketRequest::decode(req_bytes).map_err(decode_err)?;
+        let ticket = req.ticket.ok_or_else(|| JsValue::from_str("missing ticket"))?;
+        self.inner.update_ticket(&req.slug, ticket);
+        Ok(())
+    }
+
+    pub fn apply_ticket_status_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyTicketStatusEventRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.update_ticket_status(&req.slug, &req.status);
+        Ok(())
+    }
+
+    pub fn apply_ticket_deleted_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyTicketDeletedEventRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.remove_ticket(&req.slug);
+        Ok(())
+    }
+
+    pub fn replace_board_columns(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceBoardColumnsRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_board_columns(req.columns);
+        Ok(())
+    }
+
+    pub fn append_board_column_tickets(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = AppendBoardColumnTicketsRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.append_column_tickets(&req.status, req.tickets);
+        Ok(())
+    }
+
+    pub fn set_current_ticket(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = SetCurrentTicketRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_current_ticket(req.ticket);
+        Ok(())
+    }
+
+    pub fn replace_cached_labels(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceCachedLabelsRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_labels(req.labels);
+        Ok(())
+    }
+
+    pub fn insert_created_label(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = InsertCreatedLabelRequest::decode(req_bytes).map_err(decode_err)?;
+        let label = req.label.ok_or_else(|| JsValue::from_str("missing label"))?;
+        self.inner.add_label(label);
+        Ok(())
+    }
+
+    pub fn remove_cached_label(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = RemoveCachedLabelRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.remove_label(req.id);
+        Ok(())
+    }
+
+    pub fn filter_tickets(&self, req_bytes: &[u8]) -> Result<Vec<u8>, JsValue> {
+        let req = FilterTicketsRequest::decode(req_bytes).map_err(decode_err)?;
+        let search = if req.search.is_empty() { None } else { Some(req.search.as_str()) };
+        let tickets: Vec<_> = self.inner
+            .filter_tickets(search, &req.statuses, &req.priorities, &req.repository_ids)
+            .into_iter().cloned().collect();
+        let resp = FilterTicketsResponse { tickets };
+        Ok(resp.encode_to_vec())
     }
 }

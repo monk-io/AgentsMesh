@@ -32,22 +32,43 @@ impl WasmLoopService {
         }
     }
 
-    pub fn set_loops(&self, json: &str) { self.0.set_loops(json); }
-    pub fn set_current_loop(&self, json: &str) { self.0.set_current_loop(json); }
+    // -------- Proto-state mutations (binary wire) --------
 
-    pub fn update_loop_local(&self, slug: &str, json: &str) {
-        self.0.update_loop_local(slug, json);
+    pub fn replace_cached_loops(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_cached_loops(bytes)
     }
 
-    pub fn add_run(&self, json: &str) { self.0.add_run(json); }
-    pub fn set_runs(&self, json: &str) { self.0.set_runs(json); }
-    pub fn append_runs(&self, json: &str) { self.0.append_runs(json); }
-
-    pub fn update_run_status(&self, run_id: i64, status: &str) {
-        self.0.update_run_status(run_id, status);
+    pub fn set_current_loop(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.set_current_loop(bytes)
     }
 
-    pub fn clear_runs(&self) { self.0.clear_runs(); }
+    pub fn clear_current_loop(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.clear_current_loop(bytes)
+    }
+
+    pub fn patch_loop_from_action(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.patch_loop_from_action(bytes)
+    }
+
+    pub fn insert_loop_run(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.insert_loop_run(bytes)
+    }
+
+    pub fn replace_cached_runs(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_cached_runs(bytes)
+    }
+
+    pub fn append_cached_runs(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.append_cached_runs(bytes)
+    }
+
+    pub fn patch_loop_run_status(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.patch_loop_run_status(bytes)
+    }
+
+    pub fn clear_loop_runs(&self, bytes: &[u8]) -> Result<(), String> {
+        self.0.clear_loop_runs(bytes)
+    }
 
     // -------- Connect-RPC (binary wire) --------
 

@@ -96,7 +96,7 @@ export const blockstoreApi = {
 
   async catchupOps(wsID: string, _after = 0, limit = 500): Promise<{ ops: BlockOp[] }> {
     const after = svc().last_op_id(wsID);
-    const { ops } = await streamOpsConnect(orgSlug(), wsID, after, limit);
+    const { ops } = await streamOpsConnect(orgSlug(), wsID, Number(after), limit);
     // Apply each authoritative op into the SSOT cache so subsequent reads
     // reflect the converged state. apply_remote_op also bumps last_op_id.
     for (const op of ops) {

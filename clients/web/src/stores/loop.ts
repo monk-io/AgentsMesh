@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { useMemo } from "react";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import type { LoopData, LoopRunData, RunStatus, CreateLoopRequest, UpdateLoopRequest } from "@/lib/viewModels/loop";
 import { getLoopService } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
@@ -17,6 +18,14 @@ import {
   listLoopRuns as listLoopRunsConnect,
   cancelLoopRun as cancelLoopRunConnect,
 } from "@/lib/api/facade/loopConnect";
+import {
+  AppendCachedRunsRequestSchema, ClearCurrentLoopRequestSchema,
+  ClearLoopRunsRequestSchema, InsertLoopRunRequestSchema,
+  PatchLoopFromActionRequestSchema, PatchLoopRunStatusRequestSchema,
+  ReplaceCachedLoopsRequestSchema, ReplaceCachedRunsRequestSchema,
+  SetCurrentLoopRequestSchema,
+} from "@proto/loop_state/v1/loop_state_pb";
+import { loopToProtoLoop, loopRunToProtoLoopRun } from "@/lib/api/loopProtoMap";
 
 export type { LoopData, LoopRunData, RunStatus };
 
@@ -43,6 +52,61 @@ export function useCurrentLoop(): LoopData | null {
 export function useLoopRuns(): LoopRunData[] {
   const tick = useLoopStore((s) => s._tick);
   return useMemo(() => JSON.parse(svc().runs_json()), [tick]);
+}
+
+function replaceCachedLoops(items: LoopData[]): void {
+  const req = protoCreate(ReplaceCachedLoopsRequestSchema, {
+    loops: items.map(loopToProtoLoop),
+  });
+  svc().replace_cached_loops(toBinary(ReplaceCachedLoopsRequestSchema, req));
+}
+
+function setCurrentLoop(loop: LoopData): void {
+  const req = protoCreate(SetCurrentLoopRequestSchema, { loop: loopToProtoLoop(loop) });
+  svc().set_current_loop(toBinary(SetCurrentLoopRequestSchema, req));
+}
+
+function clearCurrentLoop(): void {
+  const req = protoCreate(ClearCurrentLoopRequestSchema, {});
+  svc().clear_current_loop(toBinary(ClearCurrentLoopRequestSchema, req));
+}
+
+function patchLoopFromAction(slug: string, loop: LoopData): void {
+  const req = protoCreate(PatchLoopFromActionRequestSchema, {
+    slug, loop: loopToProtoLoop(loop),
+  });
+  svc().patch_loop_from_action(toBinary(PatchLoopFromActionRequestSchema, req));
+}
+
+function insertLoopRun(run: LoopRunData): void {
+  const req = protoCreate(InsertLoopRunRequestSchema, { run: loopRunToProtoLoopRun(run) });
+  svc().insert_loop_run(toBinary(InsertLoopRunRequestSchema, req));
+}
+
+function replaceCachedRuns(items: LoopRunData[]): void {
+  const req = protoCreate(ReplaceCachedRunsRequestSchema, {
+    runs: items.map(loopRunToProtoLoopRun),
+  });
+  svc().replace_cached_runs(toBinary(ReplaceCachedRunsRequestSchema, req));
+}
+
+function appendCachedRuns(items: LoopRunData[]): void {
+  const req = protoCreate(AppendCachedRunsRequestSchema, {
+    runs: items.map(loopRunToProtoLoopRun),
+  });
+  svc().append_cached_runs(toBinary(AppendCachedRunsRequestSchema, req));
+}
+
+function patchLoopRunStatus(runId: number, status: string): void {
+  const req = protoCreate(PatchLoopRunStatusRequestSchema, {
+    runId: BigInt(runId), status,
+  });
+  svc().patch_loop_run_status(toBinary(PatchLoopRunStatusRequestSchema, req));
+}
+
+function clearLoopRuns(): void {
+  const req = protoCreate(ClearLoopRunsRequestSchema, {});
+  svc().clear_loop_runs(toBinary(ClearLoopRunsRequestSchema, req));
 }
 
 interface LoopStoreState {
@@ -78,7 +142,7 @@ export const useLoopStore = create<LoopStoreState>((set, get) => ({
         query: filters?.query,
         limit: 500,
       });
-      svc().set_loops(JSON.stringify(items));
+      replaceCachedLoops(items);
       set({ totalCount: total, loading: false, _tick: get()._tick + 1 });
     } catch (err) { set({ error: getErrorMessage(err, "An error occurred"), loading: false }); }
   },
@@ -87,13 +151,13 @@ export const useLoopStore = create<LoopStoreState>((set, get) => ({
     const curJson = svc().current_loop_json();
     const curSlug = curJson ? (typeof curJson === "string" ? JSON.parse(curJson) : curJson)?.slug : null;
     if (curSlug !== slug) {
-      svc().clear_runs();
+      clearLoopRuns();
       set({ runsTotalCount: 0, _tick: get()._tick + 1 });
     }
     set({ loopLoading: true, error: null });
     try {
       const loop = await getLoopConnect(orgSlug(), slug);
-      svc().set_current_loop(JSON.stringify(loop));
+      setCurrentLoop(loop);
       set({ loopLoading: false, _tick: get()._tick + 1 });
     } catch (err) { set({ error: getErrorMessage(err, "An error occurred"), loopLoading: false }); }
   },
@@ -113,19 +177,19 @@ export const useLoopStore = create<LoopStoreState>((set, get) => ({
 
   deleteLoop: async (slug) => {
     await deleteLoopConnect(orgSlug(), slug);
-    svc().set_current_loop("");
+    clearCurrentLoop();
     bump();
     get().fetchLoops();
   },
 
   enableLoop: async (slug) => {
     const loop = await enableLoopConnect(orgSlug(), slug);
-    svc().update_loop_local(slug, JSON.stringify(loop));
+    patchLoopFromAction(slug, loop);
     bump();
   },
   disableLoop: async (slug) => {
     const loop = await disableLoopConnect(orgSlug(), slug);
-    svc().update_loop_local(slug, JSON.stringify(loop));
+    patchLoopFromAction(slug, loop);
     bump();
   },
 
@@ -133,7 +197,7 @@ export const useLoopStore = create<LoopStoreState>((set, get) => ({
     try {
       const result = await triggerLoopConnect(orgSlug(), slug);
       if (result.run) {
-        svc().add_run(JSON.stringify(result.run));
+        insertLoopRun(result.run);
       }
       bump();
       get().fetchRuns(slug, { limit: 20, offset: 0 });
@@ -151,9 +215,9 @@ export const useLoopStore = create<LoopStoreState>((set, get) => ({
         offset: filters?.offset,
       });
       if ((filters?.offset ?? 0) > 0) {
-        svc().append_runs(JSON.stringify(items));
+        appendCachedRuns(items);
       } else {
-        svc().set_runs(JSON.stringify(items));
+        replaceCachedRuns(items);
       }
       set({ runsTotalCount: total, runsLoading: false, _tick: get()._tick + 1 });
     } catch (err) { set({ error: getErrorMessage(err, "An error occurred"), runsLoading: false }); }
@@ -167,14 +231,15 @@ export const useLoopStore = create<LoopStoreState>((set, get) => ({
 
   cancelRun: async (slug, runId) => {
     await cancelLoopRunConnect(orgSlug(), slug, runId);
-    svc().update_run_status(BigInt(runId), "cancelled");
+    patchLoopRunStatus(runId, "cancelled");
     bump();
     get().fetchRuns(slug, { limit: 20, offset: 0 });
     get().fetchLoop(slug);
   },
 
   setCurrentLoop: (loop) => {
-    svc().set_current_loop(loop ? JSON.stringify(loop) : "");
+    if (loop) setCurrentLoop(loop);
+    else clearCurrentLoop();
     bump();
   },
 

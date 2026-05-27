@@ -6,6 +6,7 @@ import {
   mockRepositoryCreate,
   createRepositoryResponse,
   stableRepoSvc,
+  lastCreateRepoCall,
 } from "./ImportRepositoryModal.utils";
 
 const stable = vi.hoisted(() => ({
@@ -77,9 +78,8 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalled();
-      const arg = stableRepoSvc.create.mock.calls[0][0];
-      expect(JSON.parse(arg as string)).toEqual(
+      expect(stableRepoSvc.createRepositoryConnect).toHaveBeenCalled();
+      expect(lastCreateRepoCall()).toEqual(
         expect.objectContaining({ provider_type: "github" }),
       );
       expect(mockOnImported).toHaveBeenCalled();
@@ -121,9 +121,8 @@ describe("ImportRepositoryModal - Navigation Flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalled();
-      const arg = stableRepoSvc.create.mock.calls[0][0];
-      expect(JSON.parse(arg as string)).toEqual(
+      expect(stableRepoSvc.createRepositoryConnect).toHaveBeenCalled();
+      expect(lastCreateRepoCall()).toEqual(
         expect.objectContaining({ visibility: "private" }),
       );
     });

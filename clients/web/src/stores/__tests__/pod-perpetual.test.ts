@@ -4,12 +4,14 @@ import { create, toBinary } from "@bufbuild/protobuf";
 import { UpdatePodPerpetualResponseSchema } from "@proto/pod/v1/pod_pb";
 import { usePodStore } from "../pod";
 import { getPodService } from "@/lib/wasm-core";
-import { mockPod, resetPodStore } from "./pod-test-utils";
+import {
+  mockPod,
+  resetPodStore,
+  podStateMock,
+  lastPatchPodPerpetual,
+} from "./pod-test-utils";
 
 interface MockService {
-  get_pod_json: ReturnType<typeof vi.fn>;
-  upsert_pod: ReturnType<typeof vi.fn>;
-  pods_json: ReturnType<typeof vi.fn>;
   update_pod_perpetual_connect: ReturnType<typeof vi.fn>;
 }
 
@@ -25,37 +27,29 @@ const okBytes = () =>
 
 beforeEach(() => {
   resetPodStore();
-  Object.assign(getPodService(), {
-    get_pod_json: vi.fn((key: string) =>
-      key === mockPod.pod_key ? JSON.stringify({ ...mockPod, perpetual: false }) : null,
-    ),
-    upsert_pod: vi.fn(),
-    pods_json: vi.fn().mockReturnValue("[]"),
-    update_pod_perpetual_connect: vi.fn().mockResolvedValue(okBytes()),
-  });
+  vi.mocked(svc().update_pod_perpetual_connect).mockResolvedValue(okBytes());
 });
 
 describe("Pod Store — updatePodPerpetual", () => {
-  it("calls Connect adapter and upserts the pod with new perpetual", async () => {
+  it("calls Connect adapter and patches perpetual on the cache", async () => {
     await act(async () => {
       await usePodStore.getState().updatePodPerpetual(mockPod.pod_key, true);
     });
 
     expect(svc().update_pod_perpetual_connect).toHaveBeenCalledTimes(1);
-    expect(svc().upsert_pod).toHaveBeenCalledTimes(1);
-    const [upsertBody] = svc().upsert_pod.mock.calls[0];
-    expect(JSON.parse(upsertBody).perpetual).toBe(true);
+    expect(podStateMock().patch_pod_perpetual).toHaveBeenCalledTimes(1);
+    const patch = lastPatchPodPerpetual();
+    expect(patch?.pod_key).toBe(mockPod.pod_key);
+    expect(patch?.perpetual).toBe(true);
   });
 
   it("flips perpetual to false", async () => {
-    svc().get_pod_json.mockReturnValue(JSON.stringify({ ...mockPod, perpetual: true }));
-
     await act(async () => {
       await usePodStore.getState().updatePodPerpetual(mockPod.pod_key, false);
     });
 
-    const [upsertBody] = svc().upsert_pod.mock.calls[0];
-    expect(JSON.parse(upsertBody).perpetual).toBe(false);
+    const patch = lastPatchPodPerpetual();
+    expect(patch?.perpetual).toBe(false);
   });
 
   it("records the error and rethrows when the API call fails", async () => {
@@ -67,18 +61,23 @@ describe("Pod Store — updatePodPerpetual", () => {
       ).rejects.toThrow("Server error");
     });
 
-    expect(svc().upsert_pod).not.toHaveBeenCalled();
+    // Cache must not be patched when the network call fails.
+    expect(podStateMock().patch_pod_perpetual).not.toHaveBeenCalled();
     expect(usePodStore.getState().error).toContain("Server error");
   });
 
-  it("does nothing when the pod is not in WASM state", async () => {
-    svc().get_pod_json.mockReturnValue(null);
-
+  it("still patches the cache even when the pod is not in WASM state", async () => {
+    // Production updatePodPerpetual doesn't consult get_pod_json — it
+    // simply hands the patch to the wasm side. The bridge is responsible
+    // for ignoring patches against unknown pod_keys; the store doesn't
+    // short-circuit. This matches the wasm-side `patch_pod_perpetual`
+    // contract (no-op on missing key) and keeps the store mutator pure.
     await act(async () => {
       await usePodStore.getState().updatePodPerpetual("missing-pod", true);
     });
 
     expect(svc().update_pod_perpetual_connect).toHaveBeenCalledTimes(1);
-    expect(svc().upsert_pod).not.toHaveBeenCalled();
+    expect(podStateMock().patch_pod_perpetual).toHaveBeenCalledTimes(1);
+    expect(lastPatchPodPerpetual()?.pod_key).toBe("missing-pod");
   });
 });

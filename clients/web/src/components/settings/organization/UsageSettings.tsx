@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { getTokenUsageService } from "@/lib/wasm-core";
+import { getDashboard as getDashboardConnect } from "@/lib/api/facade/tokenUsageConnect";
+import { readCurrentOrg } from "@/stores/auth";
 import type {
   TokenUsageSummary,
   TokenUsageTimeSeriesPoint,
@@ -142,15 +143,15 @@ export function UsageSettings({ t }: UsageSettingsProps) {
     };
 
     try {
-      const raw = await getTokenUsageService().get_dashboard(
-        params.start_time ?? null,
-        params.end_time ?? null,
-        params.agent_slug ?? null,
-        params.user_id != null ? BigInt(params.user_id) : null,
-        params.model ?? null,
-        params.granularity ?? null,
-      );
-      const data = JSON.parse(raw);
+      const data = await getDashboardConnect({
+        orgSlug: readCurrentOrg()?.slug ?? "",
+        startTime: params.start_time ?? undefined,
+        endTime: params.end_time ?? undefined,
+        agentSlug: params.agent_slug ?? undefined,
+        userId: params.user_id != null ? params.user_id : undefined,
+        model: params.model ?? undefined,
+        granularity: params.granularity ?? undefined,
+      });
 
       if (controller.signal.aborted) return;
 

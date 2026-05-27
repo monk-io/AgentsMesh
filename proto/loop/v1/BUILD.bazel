@@ -19,6 +19,7 @@ proto_library(
     name = "loop_proto",
     srcs = ["loop.proto"],
     data = [":loop_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
 )
 

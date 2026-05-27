@@ -37,7 +37,7 @@ impl AppState {
     #[napi]
     pub async fn loop_svc_set_current_loop(&self, json: String) -> napi::Result<()> {
         let svc = self.loop_svc.lock().await;
-            svc.set_current_loop(&json);
+            svc.set_current_loop_json(&json);
             Ok(())
     }
 

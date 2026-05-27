@@ -7,6 +7,7 @@ mod binding;
 mod blockstore;
 mod blockstore_proto_convert;
 mod channel;
+mod channel_proto;
 mod env_bundle;
 mod error;
 mod extension;

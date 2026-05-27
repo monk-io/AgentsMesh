@@ -4,7 +4,6 @@ use std::sync::RwLock;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::ticket_state::TicketState;
 use agentsmesh_types::proto_ticket_v1 as ticket_proto;
-use agentsmesh_types::proto_ticket_v1::{BoardColumn, Label, Ticket};
 use prost::Message;
 
 pub struct TicketService {
@@ -15,100 +14,6 @@ pub struct TicketService {
 impl TicketService {
     pub fn new(client: Arc<ApiClient>, state: TicketState) -> Self {
         Self { client, state: RwLock::new(state) }
-    }
-
-    pub fn tickets_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().get_tickets()).unwrap_or_default()
-    }
-
-    pub fn get_ticket_by_slug_json(&self, slug: &str) -> Option<String> {
-        self.state.read().unwrap().get_ticket_by_slug(slug)
-            .map(|t| serde_json::to_string(t).unwrap_or_default())
-    }
-
-    pub fn current_ticket_json(&self) -> Option<String> {
-        self.state.read().unwrap().get_current_ticket()
-            .map(|t| serde_json::to_string(t).unwrap_or_default())
-    }
-
-    pub fn board_columns_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().get_board_columns()).unwrap_or_default()
-    }
-
-    pub fn labels_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().get_labels()).unwrap_or_default()
-    }
-
-    pub fn filter_tickets_json(
-        &self, search: &str, statuses_json: &str,
-        priorities_json: &str, repository_ids_json: &str,
-    ) -> String {
-        let statuses: Vec<String> = serde_json::from_str(statuses_json).unwrap_or_default();
-        let priorities: Vec<String> = serde_json::from_str(priorities_json).unwrap_or_default();
-        let repo_ids: Vec<i64> = serde_json::from_str(repository_ids_json).unwrap_or_default();
-        let s = if search.is_empty() { None } else { Some(search) };
-        let binding = self.state.read().unwrap();
-        let filtered = binding.filter_tickets(s, &statuses, &priorities, &repo_ids);
-        serde_json::to_string(&filtered).unwrap_or_default()
-    }
-
-    pub fn set_tickets(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Ticket>>(json) {
-            self.state.write().unwrap().set_tickets(v);
-        }
-    }
-
-    pub fn add_ticket(&self, json: &str) {
-        if let Ok(t) = serde_json::from_str::<Ticket>(json) {
-            self.state.write().unwrap().add_ticket(t);
-        }
-    }
-
-    pub fn update_ticket_local(&self, slug: &str, json: &str) {
-        if let Ok(t) = serde_json::from_str::<Ticket>(json) {
-            self.state.write().unwrap().update_ticket(slug, t);
-        }
-    }
-
-    pub fn update_ticket_status_local(&self, slug: &str, status: &str) {
-        self.state.write().unwrap().update_ticket_status(slug, status);
-    }
-
-    pub fn remove_ticket(&self, slug: &str) {
-        self.state.write().unwrap().remove_ticket(slug);
-    }
-
-    pub fn set_current_ticket(&self, json: &str) {
-        let t = if json.is_empty() { None } else { serde_json::from_str::<Ticket>(json).ok() };
-        self.state.write().unwrap().set_current_ticket(t);
-    }
-
-    pub fn set_board_columns(&self, json: &str) {
-        if let Ok(cols) = serde_json::from_str::<Vec<BoardColumn>>(json) {
-            self.state.write().unwrap().set_board_columns(cols);
-        }
-    }
-
-    pub fn append_column_tickets(&self, status: &str, json: &str) {
-        if let Ok(tickets) = serde_json::from_str::<Vec<Ticket>>(json) {
-            self.state.write().unwrap().append_column_tickets(status, tickets);
-        }
-    }
-
-    pub fn set_labels(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Label>>(json) {
-            self.state.write().unwrap().set_labels(v);
-        }
-    }
-
-    pub fn add_label(&self, json: &str) {
-        if let Ok(l) = serde_json::from_str::<Label>(json) {
-            self.state.write().unwrap().add_label(l);
-        }
-    }
-
-    pub fn remove_label(&self, id: f64) {
-        self.state.write().unwrap().remove_label(id as i64);
     }
 
     pub async fn get_ticket_pods(

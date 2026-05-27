@@ -1,0 +1,15 @@
+// proto.runner_state.v1 — client-side runner state mutation contract.
+//
+// See proto/pod_state/v1/pod_state.proto for the full design rationale.
+
+syntax = "proto3";
+
+package proto.runner_state.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/runner_state/v1;runnerstatev1";
+
+// Realtime runner:status_changed event.
+message ApplyRunnerStatusEventRequest {
+  int64 runner_id = 1;
+  string status = 2;
+}

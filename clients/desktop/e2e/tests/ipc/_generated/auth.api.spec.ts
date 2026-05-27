@@ -13,6 +13,10 @@ test.describe("IPC · auth", () => {
     await invokeIpcContract(sharedPage, { method: "authBootstrap", returnType: "any" });
   });
 
+  test("authBootstrapProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authBootstrapProto", returnType: "Array<number>" });
+  });
+
   test("authClearSession", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authClearSession", returnType: "void" });
   });
@@ -21,12 +25,20 @@ test.describe("IPC · auth", () => {
     await invokeIpcContract(sharedPage, { method: "authFetchOrganizations", returnType: "string" });
   });
 
+  test("authFetchOrganizationsProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authFetchOrganizationsProto", returnType: "Array<number>" });
+  });
+
   test("authGetCurrentOrgJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authGetCurrentOrgJson", returnType: "string | null" });
   });
 
   test("authGetCurrentUserJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authGetCurrentUserJson", returnType: "string | null" });
+  });
+
+  test("authGetCurrentUserProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authGetCurrentUserProto", returnType: "Array<number> | null" });
   });
 
   test("authGetExpiresAt", async ({ sharedPage }) => {
@@ -49,12 +61,20 @@ test.describe("IPC · auth", () => {
     await invokeIpcContract(sharedPage, { method: "authLogin", returnType: "string" }, "", "");
   });
 
+  test("authLoginProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authLoginProto", returnType: "Array<number>" }, "", "");
+  });
+
   test("authLogout", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authLogout", returnType: "void" });
   });
 
   test("authRefreshToken", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authRefreshToken", returnType: "string" });
+  });
+
+  test("authRefreshTokenProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "authRefreshTokenProto", returnType: "Array<number>" });
   });
 
   test("authSetCurrentOrg", async ({ sharedPage }) => {

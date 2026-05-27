@@ -37,6 +37,10 @@ pub mod proto_auth_v1 {
     pub use ::auth_proto::proto::auth::v1::*;
 }
 
+pub mod proto_auth_state_v1 {
+    pub use ::auth_state_proto::proto::auth_state::v1::*;
+}
+
 pub mod proto_autopilot_v1 {
     pub use ::autopilot_proto::proto::autopilot::v1::*;
 }
@@ -95,6 +99,10 @@ pub mod proto_loop_v1 {
     pub use ::loop_proto::proto::r#loop::v1::*;
 }
 
+pub mod proto_loop_state_v1 {
+    pub use ::loop_state_proto::proto::loop_state::v1::*;
+}
+
 pub mod proto_mesh_v1 {
     pub use ::mesh_proto::proto::mesh::v1::*;
 }
@@ -111,6 +119,10 @@ pub mod proto_pod_v1 {
     pub use ::pod_proto::proto::pod::v1::*;
 }
 
+pub mod proto_pod_state_v1 {
+    pub use ::pod_state_proto::proto::pod_state::v1::*;
+}
+
 pub mod proto_promocode_v1 {
     pub use ::promocode_proto::proto::promocode::v1::*;
 }
@@ -123,6 +135,10 @@ pub mod proto_runner_api_v1 {
     pub use ::runner_api_proto::proto::runner_api::v1::*;
 }
 
+pub mod proto_runner_state_v1 {
+    pub use ::runner_state_proto::proto::runner_state::v1::*;
+}
+
 pub mod proto_sso_v1 {
     pub use ::sso_proto::proto::sso::v1::*;
 }
@@ -133,6 +149,10 @@ pub mod proto_support_ticket_v1 {
 
 pub mod proto_ticket_v1 {
     pub use ::ticket_proto::proto::ticket::v1::*;
+}
+
+pub mod proto_ticket_state_v1 {
+    pub use ::ticket_state_proto::proto::ticket_state::v1::*;
 }
 
 pub mod proto_ticket_relations_v1 {

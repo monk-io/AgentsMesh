@@ -3,6 +3,8 @@ use std::sync::Arc;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::RunnerService;
 use agentsmesh_state::runner_state::RunnerState;
+use agentsmesh_types::proto_runner_state_v1::ApplyRunnerStatusEventRequest;
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -24,13 +26,6 @@ impl WasmRunnerService {
         }
     }
 
-    pub fn get_runner_json(&self, id: i64) -> JsValue {
-        match self.0.get_runner_json(id) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
     pub fn set_runners(&self, json: &str) { self.0.set_runners(json); }
     pub fn set_available_runners(&self, json: &str) { self.0.set_available_runners(json); }
     pub fn set_current_runner(&self, json: &str) { self.0.set_current_runner(json); }
@@ -39,15 +34,14 @@ impl WasmRunnerService {
         self.0.update_runner_local(id, json);
     }
 
-    pub fn update_runner_status(&self, id: i64, status: &str) {
-        self.0.update_runner_status(id, status);
+    pub fn apply_runner_status_event(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ApplyRunnerStatusEventRequest::decode(req_bytes)
+            .map_err(|e| format!("decode apply_runner_status_event: {e}"))?;
+        self.0.update_runner_status(req.runner_id, &req.status);
+        Ok(())
     }
 
     pub fn remove_runner_local(&self, id: i64) { self.0.remove_runner_local(id); }
-
-    pub async fn update_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
-        self.0.update_runner(id, request_json).await
-    }
 
     pub async fn list_runner_pods(
         &self, id: i64, status: Option<String>, limit: Option<u32>, offset: Option<u32>,

@@ -29,7 +29,7 @@ import { ElectronBlockstoreService } from './blockstore';
 import { ElectronLocalRunnerService } from './local_runner';
 import { invoke } from './invoke';
 import {
-  ElectronAcpManager, ElectronRelayManager,
+  ElectronAcpManager, ElectronRelayManager, ElectronTicketState,
 } from './state_adapters';
 
 /**
@@ -147,7 +147,7 @@ export function createElectronServiceProvider(baseUrl = '') {
     podState: podService,
     runnerState: runnerService,
     meshState: meshService,
-    ticketState: ticketService,
+    ticketState: new ElectronTicketState(),
     channelState: channelService,
     loopState: loopService,
     autopilotState: autopilotService,

@@ -19,13 +19,13 @@ const mockService = {
   set_runners: vi.fn((j: string) => { mockRunnersList = JSON.parse(j) }),
   set_available_runners: vi.fn((j: string) => { mockAvailableRunners = JSON.parse(j) }),
   set_current_runner: vi.fn((j: string) => { mockCurrentRunner = j ? JSON.parse(j) : null }),
-  update_runner_status: vi.fn(),
-  update_runner: vi.fn((id: bigint, j: string) => {
+  apply_runner_status_event: vi.fn(),
+  update_runner_local: vi.fn((id: number, j: string) => {
     const r = JSON.parse(j) as Runner
-    const idx = mockRunnersList.findIndex((x) => x.id === Number(id))
+    const idx = mockRunnersList.findIndex((x) => x.id === id)
     if (idx >= 0) mockRunnersList[idx] = r
   }),
-  remove_runner: vi.fn((id: bigint) => {
+  remove_runner_local: vi.fn((id: bigint) => {
     mockRunnersList = mockRunnersList.filter((x) => x.id !== Number(id))
     mockAvailableRunners = mockAvailableRunners.filter((x) => x.id !== Number(id))
   }),
@@ -298,7 +298,7 @@ describe('Runner Store Actions', () => {
       mockListAvailable([runner])
       await useRunnerStore.getState().fetchAvailableRunners()
 
-      mockService.update_runner_status.mockImplementation(() => {
+      mockService.apply_runner_status_event.mockImplementation(() => {
         mockRunnersList = [{ ...runner, status: 'offline' }]
         mockAvailableRunners = []
       })
@@ -316,7 +316,7 @@ describe('Runner Store Actions', () => {
       mockListAvailable([runner])
       await useRunnerStore.getState().fetchAvailableRunners()
 
-      mockService.update_runner_status.mockImplementation(() => {
+      mockService.apply_runner_status_event.mockImplementation(() => {
         // State stays the same since status is already online
       })
 

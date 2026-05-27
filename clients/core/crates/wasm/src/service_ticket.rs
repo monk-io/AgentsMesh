@@ -14,54 +14,9 @@ impl WasmTicketService {
         Self(TicketService::new(client, state))
     }
 
-    pub fn tickets_json(&self) -> String { self.0.tickets_json() }
-
-    pub fn get_ticket_by_slug_json(&self, slug: &str) -> JsValue {
-        match self.0.get_ticket_by_slug_json(slug) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn current_ticket_json(&self) -> JsValue {
-        match self.0.current_ticket_json() {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn board_columns_json(&self) -> String { self.0.board_columns_json() }
-    pub fn labels_json(&self) -> String { self.0.labels_json() }
-
-    pub fn filter_tickets_json(
-        &self, search: &str, statuses_json: &str,
-        priorities_json: &str, repository_ids_json: &str,
-    ) -> String {
-        self.0.filter_tickets_json(search, statuses_json, priorities_json, repository_ids_json)
-    }
-
-    pub fn set_tickets(&self, json: &str) { self.0.set_tickets(json); }
-    pub fn add_ticket(&self, json: &str) { self.0.add_ticket(json); }
-
-    pub fn update_ticket_local(&self, slug: &str, json: &str) {
-        self.0.update_ticket_local(slug, json);
-    }
-
-    pub fn update_ticket_status_local(&self, slug: &str, status: &str) {
-        self.0.update_ticket_status_local(slug, status);
-    }
-
-    pub fn remove_ticket(&self, slug: &str) { self.0.remove_ticket(slug); }
-    pub fn set_current_ticket(&self, json: &str) { self.0.set_current_ticket(json); }
-    pub fn set_board_columns(&self, json: &str) { self.0.set_board_columns(json); }
-
-    pub fn append_column_tickets(&self, status: &str, json: &str) {
-        self.0.append_column_tickets(status, json);
-    }
-
-    pub fn set_labels(&self, json: &str) { self.0.set_labels(json); }
-    pub fn add_label(&self, json: &str) { self.0.add_label(json); }
-    pub fn remove_label(&self, id: f64) { self.0.remove_label(id); }
+    // -------- Ticket→Pod lookup (MeshService domain) — kept on this
+    // service because the per-ticket pod cache is tied to the ticket
+    // detail view, not the ticket list cache.
 
     pub async fn get_ticket_pods(
         &self, slug: &str, active_only: Option<bool>,

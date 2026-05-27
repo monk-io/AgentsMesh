@@ -607,24 +607,6 @@ export interface ITicketRelationsService {
 }
 
 export interface ITicketService {
-  // Local state mutators (in-memory cache) — wasm/electron both back these.
-  add_label(json: string): void;
-  add_ticket(json: string): void;
-  append_column_tickets(status: string, json: string): void;
-  board_columns_json(): string;
-  current_ticket_json(): any;
-  filter_tickets_json(search: string, statuses_json: string, priorities_json: string, repository_ids_json: string): string;
-  get_ticket_by_slug_json(slug: string): any;
-  labels_json(): string;
-  remove_label(id: number): void;
-  remove_ticket(slug: string): void;
-  set_board_columns(json: string): void;
-  set_current_ticket(json: string): void;
-  set_labels(json: string): void;
-  set_tickets(json: string): void;
-  tickets_json(): string;
-  update_ticket_local(slug: string, json: string): void;
-  update_ticket_status_local(slug: string, status: string): void;
   // REST-only (proto.ticket.v1 doesn't own ticket→pod lookup — MeshService does).
   get_ticket_pods(slug: string, active_only?: boolean | null): Promise<string>;
   ticket_pods_json(slug: string): string;
@@ -651,23 +633,29 @@ export interface ITicketService {
 }
 
 export interface ITicketState {
-  add_label(label_json: string): void;
-  add_ticket(ticket_json: string): void;
-  append_column_tickets(status: string, tickets_json: string): void;
+  // Read accessors — JSON for ergonomic React consumers (parsed once on read).
   board_columns_json(): string;
   current_ticket_json(): any;
-  filter_tickets_json(search: string, statuses_json: string, priorities_json: string, repository_ids_json: string): string;
-  get_ticket_by_slug_json(slug: string): any;
   labels_json(): string;
-  remove_label(id: number): void;
-  remove_ticket(slug: string): void;
-  set_board_columns(columns_json: string): void;
-  set_current_ticket(ticket_json: string): void;
-  set_labels(labels_json: string): void;
-  set_tickets(tickets_json: string): void;
   tickets_json(): string;
-  update_ticket(slug: string, ticket_json: string): void;
-  update_ticket_status(slug: string, status: string): void;
+  // Proto bytes mutators — each takes prost-encoded Uint8Array; the schema
+  // lives in proto/ticket_state/v1/ticket_state.proto. Mirrors the pod_state
+  // bridge in shape (apply_*_event for realtime, replace_cached_* for fetch
+  // results, insert_created_* for fresh entities, patch_cached_* for local
+  // mutation results, set_current_ticket / append_board_column_tickets /
+  // remove_cached_label for the rest).
+  apply_ticket_status_event(req: Uint8Array): void;
+  apply_ticket_deleted_event(req: Uint8Array): void;
+  replace_cached_tickets(req: Uint8Array): void;
+  insert_created_ticket(req: Uint8Array): void;
+  patch_cached_ticket(req: Uint8Array): void;
+  replace_board_columns(req: Uint8Array): void;
+  append_board_column_tickets(req: Uint8Array): void;
+  set_current_ticket(req: Uint8Array): void;
+  replace_cached_labels(req: Uint8Array): void;
+  insert_created_label(req: Uint8Array): void;
+  remove_cached_label(req: Uint8Array): void;
+  filter_tickets(req: Uint8Array): Uint8Array;
 }
 
 export interface ITokenUsageService {

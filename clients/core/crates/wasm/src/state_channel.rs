@@ -1,12 +1,23 @@
 use std::collections::HashMap;
 
 use agentsmesh_state::channel_state::{ChannelSortMode, ChannelState};
-use agentsmesh_state::channel_types::{Channel, ChannelMessage, MessagePreview, User};
+use agentsmesh_state::channel_types::ChannelMessage;
+use agentsmesh_types::proto_channel_state_v1::{
+    ApplyChannelMessageEditedEventRequest, ApplyIncomingChannelMessageRequest,
+    InsertChannelMessageRequest, InsertChannelRequest, PatchChannelMemberCountRequest,
+    PrependCachedChannelMessagesRequest, ReplaceCachedChannelMessagesRequest,
+    ReplaceCachedChannelsRequest, ReplaceChannelUnreadCountsRequest,
+};
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmChannelState {
     inner: ChannelState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -20,13 +31,6 @@ impl WasmChannelState {
         self.inner.set_current_user_id(user_id);
     }
 
-    pub fn set_current_user(&mut self, user_json: &str) {
-        match serde_json::from_str::<User>(user_json) {
-            Ok(user) => self.inner.set_current_user(Some(user)),
-            Err(_) => self.inner.set_current_user(None),
-        }
-    }
-
     pub fn channels_json(&self) -> String {
         serde_json::to_string(self.inner.get_channels()).unwrap_or_default()
     }
@@ -37,12 +41,6 @@ impl WasmChannelState {
                 &serde_json::to_string(c).unwrap_or_default(),
             ),
             None => JsValue::NULL,
-        }
-    }
-
-    pub fn set_channels(&mut self, json: &str) {
-        if let Ok(channels) = serde_json::from_str::<Vec<Channel>>(json) {
-            self.inner.set_channels(channels);
         }
     }
 
@@ -59,20 +57,38 @@ impl WasmChannelState {
         }
     }
 
-    pub fn add_channel(&mut self, json: &str) {
-        if let Ok(channel) = serde_json::from_str::<Channel>(json) {
-            self.inner.add_channel(channel);
-        }
+    pub fn replace_cached_channels(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceCachedChannelsRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_channels(req.channels);
+        Ok(())
     }
 
-    pub fn update_channel(&mut self, id: i64, json: &str) {
-        if let Ok(channel) = serde_json::from_str::<Channel>(json) {
+    pub fn insert_channel(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = InsertChannelRequest::decode(req_bytes).map_err(decode_err)?;
+        let channel = req.channel.ok_or_else(|| JsValue::from_str("missing channel"))?;
+        let id = channel.id;
+        if self.inner.get_channel(id).is_some() {
             self.inner.update_channel(id, channel);
+        } else {
+            self.inner.add_channel(channel);
         }
+        Ok(())
     }
 
     pub fn remove_channel(&mut self, id: i64) {
         self.inner.remove_channel(id);
+    }
+
+    pub fn patch_channel_member_count(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = PatchChannelMemberCountRequest::decode(req_bytes).map_err(decode_err)?;
+        if let Some(existing) = self.inner.get_channel(req.channel_id).cloned() {
+            let mut next = existing;
+            let curr = next.member_count.unwrap_or(0);
+            let new = (curr + req.delta as i64).max(0);
+            next.member_count = Some(new);
+            self.inner.update_channel(req.channel_id, next);
+        }
+        Ok(())
     }
 
     pub fn filter_channels_json(&self, query: &str, include_archived: bool) -> String {
@@ -108,33 +124,59 @@ impl WasmChannelState {
         }
     }
 
-    pub fn set_last_message(&mut self, channel_id: i64, preview_json: &str) {
-        if let Ok(preview) = serde_json::from_str::<MessagePreview>(preview_json) {
-            self.inner.set_last_message(channel_id, preview);
-        }
+    pub fn apply_incoming_channel_message(&mut self, req_bytes: &[u8]) -> Result<bool, JsValue> {
+        let req = ApplyIncomingChannelMessageRequest::decode(req_bytes).map_err(decode_err)?;
+        let msg = req.message.ok_or_else(|| JsValue::from_str("missing message"))?;
+        Ok(self.inner.on_new_message(msg))
     }
 
-    pub fn add_message(&mut self, channel_id: i64, message_json: &str) {
-        if let Ok(msg) = serde_json::from_str::<ChannelMessage>(message_json) {
-            self.inner.add_message(channel_id, msg);
-        }
+    pub fn insert_channel_message(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = InsertChannelMessageRequest::decode(req_bytes).map_err(decode_err)?;
+        let msg = req.message.ok_or_else(|| JsValue::from_str("missing message"))?;
+        self.inner.add_message(req.channel_id, msg);
+        Ok(())
     }
 
-    pub fn on_new_message(&mut self, message_json: &str) -> bool {
-        match serde_json::from_str::<ChannelMessage>(message_json) {
-            Ok(msg) => self.inner.on_new_message(msg),
-            Err(_) => false,
-        }
-    }
-
-    pub fn update_message(&mut self, channel_id: i64, message_json: &str) {
-        if let Ok(msg) = serde_json::from_str::<ChannelMessage>(message_json) {
-            self.inner.update_message(channel_id, msg);
-        }
+    pub fn apply_channel_message_edited_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyChannelMessageEditedEventRequest::decode(req_bytes).map_err(decode_err)?;
+        let mentions_json = if req.mentions.is_empty() {
+            None
+        } else {
+            serde_json::to_string(&req.mentions).ok()
+        };
+        let mut patch = ChannelMessage {
+            id: req.message_id,
+            channel_id: req.channel_id,
+            body: req.body,
+            content_json: req.content,
+            mentions_json,
+            edited_at: Some(req.edited_at),
+            ..ChannelMessage::default()
+        };
+        // ChannelMessage default has `body: ""`, but the inner.update_message
+        // guards on `!message.body.is_empty()` — explicit reset above is fine.
+        // Clear the default channel_id=0 if the caller really meant ID 0 — but
+        // realtime always supplies a positive channel_id, so the override above
+        // is correct.
+        let _ = &mut patch;
+        self.inner.update_message(req.channel_id, patch);
+        Ok(())
     }
 
     pub fn remove_message(&mut self, channel_id: i64, message_id: i64) {
         self.inner.remove_message(channel_id, message_id);
+    }
+
+    pub fn replace_cached_channel_messages(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceCachedChannelMessagesRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_messages(req.channel_id, req.messages, req.has_more);
+        Ok(())
+    }
+
+    pub fn prepend_cached_channel_messages(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = PrependCachedChannelMessagesRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.prepend_messages(req.channel_id, req.messages, req.has_more);
+        Ok(())
     }
 
     pub fn get_messages_json(&self, channel_id: i64) -> JsValue {
@@ -152,36 +194,11 @@ impl WasmChannelState {
         }
     }
 
-    pub fn set_messages(
-        &mut self,
-        channel_id: i64,
-        messages_json: &str,
-        has_more: bool,
-    ) {
-        if let Ok(messages) =
-            serde_json::from_str::<Vec<ChannelMessage>>(messages_json)
-        {
-            self.inner.set_messages(channel_id, messages, has_more);
-        }
-    }
-
-    pub fn prepend_messages(
-        &mut self,
-        channel_id: i64,
-        messages_json: &str,
-        has_more: bool,
-    ) {
-        if let Ok(messages) =
-            serde_json::from_str::<Vec<ChannelMessage>>(messages_json)
-        {
-            self.inner.prepend_messages(channel_id, messages, has_more);
-        }
-    }
-
-    pub fn set_unread_counts(&mut self, json: &str) {
-        if let Ok(counts) = serde_json::from_str::<HashMap<i64, u32>>(json) {
-            self.inner.set_unread_counts(counts);
-        }
+    pub fn replace_channel_unread_counts(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceChannelUnreadCountsRequest::decode(req_bytes).map_err(decode_err)?;
+        let counts: HashMap<i64, u32> = req.counts.into_iter().collect();
+        self.inner.set_unread_counts(counts);
+        Ok(())
     }
 
     pub fn increment_unread(&mut self, channel_id: i64) {
@@ -219,12 +236,6 @@ impl WasmChannelState {
 
     pub fn total_mention_count(&self) -> u32 {
         self.inner.total_mention_count()
-    }
-
-    pub fn set_mention_counts(&mut self, json: &str) {
-        if let Ok(counts) = serde_json::from_str::<HashMap<i64, u32>>(json) {
-            self.inner.set_mention_counts(counts);
-        }
     }
 
     pub fn mention_counts_json(&self) -> String {

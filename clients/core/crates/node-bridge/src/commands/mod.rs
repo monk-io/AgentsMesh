@@ -6,6 +6,7 @@ pub mod binding;
 pub mod blockstore;
 pub mod channel;
 pub mod channel_api;
+pub mod channel_connect;
 pub mod channel_state;
 pub mod extension;
 pub mod file;

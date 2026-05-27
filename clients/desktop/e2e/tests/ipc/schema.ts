@@ -66,6 +66,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "any"
   },
   {
+    "name": "authBootstrapProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number>"
+  },
+  {
     "name": "authClearSession",
     "group": "auth",
     "params": [],
@@ -78,6 +84,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
+    "name": "authFetchOrganizationsProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number>"
+  },
+  {
     "name": "authGetCurrentOrgJson",
     "group": "auth",
     "params": [],
@@ -88,6 +100,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "auth",
     "params": [],
     "returnType": "string | null"
+  },
+  {
+    "name": "authGetCurrentUserProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number> | null"
   },
   {
     "name": "authGetExpiresAt",
@@ -129,6 +147,21 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
+    "name": "authLoginProto",
+    "group": "auth",
+    "params": [
+      {
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "password",
+        "type": "string"
+      }
+    ],
+    "returnType": "Array<number>"
+  },
+  {
     "name": "authLogout",
     "group": "auth",
     "params": [],
@@ -139,6 +172,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "auth",
     "params": [],
     "returnType": "string"
+  },
+  {
+    "name": "authRefreshTokenProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number>"
   },
   {
     "name": "authSetCurrentOrg",
@@ -707,19 +746,16 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
-    "name": "channelAddMessage",
+    "name": "channelApplyChannelMessageEditedEvent",
     "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelApplyIncomingChannelMessage",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelChannelMembersJson",
@@ -870,40 +906,34 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
+    "name": "channelInsertChannel",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelInsertChannelMessage",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
     "name": "channelMentionCountsJson",
     "group": "channel",
     "params": [],
     "returnType": "string"
   },
   {
-    "name": "channelOnNewMessage",
+    "name": "channelPatchChannelMemberCount",
     "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "boolean"
+    "params": [],
+    "returnType": "any"
   },
   {
-    "name": "channelPrependMessages",
+    "name": "channelPrependCachedChannelMessages",
     "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      },
-      {
-        "name": "hasMore",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "void"
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelRemoveChannelLocal",
@@ -917,19 +947,28 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
-    "name": "channelRemoveMessageLocal",
+    "name": "channelRemoveMessage",
     "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "messageId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelReplaceCachedChannelMessages",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelReplaceCachedChannels",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
+  },
+  {
+    "name": "channelReplaceChannelUnreadCounts",
+    "group": "channel",
+    "params": [],
+    "returnType": "any"
   },
   {
     "name": "channelSelectChannel",
@@ -971,79 +1010,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
-    "name": "channelSetCurrentUser",
-    "group": "channel",
-    "params": [
-      {
-        "name": "userJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "channelSetCurrentUserId",
     "group": "channel",
     "params": [
       {
         "name": "userId",
         "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetLastMessage",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetMentionCounts",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetMessages",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      },
-      {
-        "name": "hasMore",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetUnreadCounts",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
       }
     ],
     "returnType": "void"
@@ -1087,21 +1059,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelUpdateMessageLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
         "type": "number"
       },
       {
@@ -2112,17 +2069,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "ticketAddLabel",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "ticketAddLabelConnect",
     "group": "ticket",
     "params": [
@@ -2132,38 +2078,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketAddTicket",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketAppendColumnTickets",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "status",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketBoardColumnsJson",
-    "group": "ticket",
-    "params": [],
-    "returnType": "string"
   },
   {
     "name": "ticketCreateLabelConnect",
@@ -2188,12 +2102,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "ticketCurrentTicketJson",
-    "group": "ticket",
-    "params": [],
-    "returnType": "string"
-  },
-  {
     "name": "ticketDeleteLabelConnect",
     "group": "ticket",
     "params": [
@@ -2214,29 +2122,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketFilterTicketsJson",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "search",
-        "type": "string"
-      },
-      {
-        "name": "statusesJson",
-        "type": "string"
-      },
-      {
-        "name": "prioritiesJson",
-        "type": "string"
-      },
-      {
-        "name": "repositoryIdsJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
   },
   {
     "name": "ticketGetActiveTicketsConnect",
@@ -2272,17 +2157,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "ticketGetTicketBySlugJson",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
     "name": "ticketGetTicketConnect",
     "group": "ticket",
     "params": [
@@ -2306,12 +2180,6 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "boolean | undefined | null"
       }
     ],
-    "returnType": "string"
-  },
-  {
-    "name": "ticketLabelsJson",
-    "group": "ticket",
-    "params": [],
     "returnType": "string"
   },
   {
@@ -2348,17 +2216,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "ticketRemoveLabel",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "ticketRemoveLabelConnect",
     "group": "ticket",
     "params": [
@@ -2370,61 +2227,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "ticketRemoveTicket",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetBoardColumns",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetCurrentTicket",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetLabels",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetTickets",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "ticketTicketPodsJson",
     "group": "ticket",
     "params": [
@@ -2433,12 +2235,6 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
-  },
-  {
-    "name": "ticketTicketsJson",
-    "group": "ticket",
-    "params": [],
     "returnType": "string"
   },
   {
@@ -2464,21 +2260,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "ticketUpdateTicketLocal",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "ticketUpdateTicketStatusConnect",
     "group": "ticket",
     "params": [
@@ -2488,21 +2269,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketUpdateTicketStatusLocal",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
   },
   {
     "name": "ticketRelationsCreateCommentConnect",

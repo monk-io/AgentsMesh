@@ -19,8 +19,12 @@ rust_prost_transform(
 
 proto_library(
     name = "channel_state_proto",
-    srcs = ["channel_state.proto"],
+    srcs = [
+        "channel_state.proto",
+        "mutations.proto",
+    ],
     data = [":channel_state_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
 )
 

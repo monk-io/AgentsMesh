@@ -390,30 +390,14 @@ vi.mock('@/lib/wasm-core', () => {
     replace_cached_channels: fn((bytes: Uint8Array) => {
       try {
         const req = fromBinary(ReplaceCachedChannelsRequestSchema, bytes)
-        h.channel.list = JSON.stringify(req.channels.map((c) => ({
-          id: Number(c.id),
-          organization_id: c.organizationId !== undefined ? Number(c.organizationId) : undefined,
-          name: c.name, description: c.description, document: c.document,
-          visibility: c.visibility, is_archived: c.isArchived, is_member: c.isMember,
-          member_count: c.memberCount !== undefined ? Number(c.memberCount) : 0,
-          agent_count: c.agentCount !== undefined ? Number(c.agentCount) : 0,
-          created_at: c.createdAt, updated_at: c.updatedAt,
-        })))
+        h.channel.list = JSON.stringify(req.channels.map((c) => decodeProtoChannel(c)))
       } catch { h.channel.list = '[]' }
     }),
     insert_channel: fn((bytes: Uint8Array) => {
       try {
         const { channel: c } = fromBinary(InsertChannelRequestSchema, bytes)
         if (!c) return
-        const channel = {
-          id: Number(c.id),
-          organization_id: c.organizationId !== undefined ? Number(c.organizationId) : undefined,
-          name: c.name, description: c.description, document: c.document,
-          visibility: c.visibility, is_archived: c.isArchived, is_member: c.isMember,
-          member_count: c.memberCount !== undefined ? Number(c.memberCount) : 0,
-          agent_count: c.agentCount !== undefined ? Number(c.agentCount) : 0,
-          created_at: c.createdAt, updated_at: c.updatedAt,
-        }
+        const channel = decodeProtoChannel(c)
         const list = JSON.parse(h.channel.list) as { id: number }[]
         const idx = list.findIndex((x) => x.id === channel.id)
         if (idx >= 0) list[idx] = { ...list[idx], ...channel }
@@ -503,6 +487,29 @@ vi.mock('@/lib/wasm-core', () => {
         for (const [k, v] of Object.entries(req.counts)) h.channel.unread.set(k, v as number)
       } catch { /* noop */ }
     }),
+  }
+
+  // Helper: proto.channel_state.v1.Channel → web Channel (snake_case). Only
+  // emits fields that the proto carried — keeps deep-equality assertions
+  // against `mockChannel` stable across the proto round-trip.
+  function decodeProtoChannel(c: {
+    id: bigint; organizationId?: bigint; name: string; description?: string;
+    document?: string; visibility?: string; isArchived: boolean; isMember: boolean;
+    memberCount?: bigint; agentCount?: bigint; createdAt?: string; updatedAt?: string;
+  }): { id: number; name: string; is_archived: boolean; is_member: boolean; member_count: number; [k: string]: unknown } {
+    const out: Record<string, unknown> = {
+      id: Number(c.id), name: c.name,
+      is_archived: c.isArchived, is_member: c.isMember,
+      member_count: c.memberCount !== undefined ? Number(c.memberCount) : 0,
+    }
+    if (c.organizationId !== undefined) out.organization_id = Number(c.organizationId)
+    if (c.description !== undefined) out.description = c.description
+    if (c.document !== undefined) out.document = c.document
+    if (c.visibility !== undefined) out.visibility = c.visibility
+    if (c.agentCount !== undefined) out.agent_count = Number(c.agentCount)
+    if (c.createdAt !== undefined) out.created_at = c.createdAt
+    if (c.updatedAt !== undefined) out.updated_at = c.updatedAt
+    return out as { id: number; name: string; is_archived: boolean; is_member: boolean; member_count: number; [k: string]: unknown }
   }
 
   // Helper: proto.channel_state.v1.ChannelMessage (camelCase) → web wasm

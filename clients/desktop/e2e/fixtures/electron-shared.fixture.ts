@@ -1,4 +1,8 @@
 import { test as base, _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
+import { mkdtemp, rm, cp } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   getApiBaseUrl,
   getElectronMainPath,
@@ -9,37 +13,41 @@ import {
 import { invokeIpc } from "../helpers/ipc";
 import { loadStorageFile, restoreStorage } from "../helpers/storage-state";
 
-// Worker-scoped Electron fixture for IPC smoke tests.
-//
-// The default `electron.fixture.ts` is test-scoped: each test launches and
-// tears down its own Electron app. That's correct for tests that need fresh
-// state, but the auto-generated IPC smoke specs (clients/desktop/e2e/tests/
-// ipc/_generated/*) just ping each handler — they never mutate state and
-// don't depend on isolation. With ~280 of them in a single worker the
-// repeated launch/close pattern saturates the macOS process/fd budget and
-// triggers `electronApplication.firstWindow` timeouts after ~250 tests
-// (the original loop_svc_delete_loop flaky).
-//
-// This fixture keeps one Electron + one Page alive for the entire worker,
-// shared across every test in the spec — each individual test still owns
-// its own report / retry / timeout, only the Electron process is shared.
-//
-// SAFE ONLY for smoke specs that issue read/no-op IPC calls. State-mutating
-// tests must keep using the default test-scoped fixture in electron.fixture.ts.
-
 export interface SharedElectronFixtures {
   sharedElectronApp: ElectronApplication;
   sharedPage: Page;
+  sharedUserDataDir: string;
 }
 
 export const test = base.extend<Record<string, never>, SharedElectronFixtures>({
+  sharedUserDataDir: [
+    async ({}, use, workerInfo) => {
+      const dir = await mkdtemp(
+        join(tmpdir(), `agentsmesh-e2e-shared-w${workerInfo.workerIndex}-`),
+      );
+      const setupDir = getUserDataDir();
+      if (existsSync(setupDir)) {
+        try {
+          await cp(setupDir, dir, { recursive: true, preserveTimestamps: true });
+        } catch {
+          // Setup dir clone is a best-effort optimization; specs that
+          // depend on auth state will still get it via restoreStorage +
+          // authBootstrap in sharedPage below.
+        }
+      }
+      await use(dir);
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined);
+    },
+    { scope: "worker" },
+  ],
+
   sharedElectronApp: [
-    async ({}, use) => {
+    async ({ sharedUserDataDir }, use) => {
       const ciArgs = isCi() && process.platform === "linux"
         ? ["--no-sandbox", "--disable-dev-shm-usage"]
         : [];
       const app = await electron.launch({
-        args: [getElectronMainPath(), `--user-data-dir=${getUserDataDir()}`, ...ciArgs],
+        args: [getElectronMainPath(), `--user-data-dir=${sharedUserDataDir}`, ...ciArgs],
         env: {
           ...process.env,
           AGENTSMESH_API_URL: getApiBaseUrl(),

@@ -1,10 +1,15 @@
 use agentsmesh_state::runner_state::RunnerState;
-use agentsmesh_types::proto_runner_api_v1::Runner;
+use agentsmesh_types::proto_runner_state_v1::ApplyRunnerStatusEventRequest;
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmRunnerState {
     inner: RunnerState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -32,54 +37,9 @@ impl WasmRunnerState {
         }
     }
 
-    pub fn get_runner_json(&self, id: i64) -> JsValue {
-        match self.inner.get_runner(id) {
-            Some(r) => JsValue::from_str(
-                &serde_json::to_string(r).unwrap_or_default(),
-            ),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn set_runners(&mut self, json: &str) {
-        if let Ok(runners) = serde_json::from_str::<Vec<Runner>>(json) {
-            self.inner.set_runners(runners);
-        }
-    }
-
-    pub fn set_available_runners(&mut self, json: &str) {
-        if let Ok(runners) = serde_json::from_str::<Vec<Runner>>(json) {
-            self.inner.set_available_runners(runners);
-        }
-    }
-
-    pub fn set_current_runner(&mut self, json: &str) {
-        let runner = if json.is_empty() {
-            None
-        } else {
-            serde_json::from_str::<Runner>(json).ok()
-        };
-        self.inner.set_current_runner(runner);
-    }
-
-    pub fn update_runner(&mut self, id: f64, json: &str) {
-        if let Ok(runner) = serde_json::from_str::<Runner>(json) {
-            self.inner.update_runner(id as i64, runner);
-        }
-    }
-
-    pub fn update_runner_status(&mut self, id: i64, status: &str) {
-        self.inner.update_runner_status(id, status);
-    }
-
-    pub fn remove_runner(&mut self, id: i64) {
-        self.inner.remove_runner(id);
-    }
-
-    pub fn can_accept_pods(runner_json: &str) -> bool {
-        match serde_json::from_str::<Runner>(runner_json) {
-            Ok(runner) => RunnerState::can_accept_pods(&runner),
-            Err(_) => false,
-        }
+    pub fn apply_runner_status_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyRunnerStatusEventRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.update_runner_status(req.runner_id, &req.status);
+        Ok(())
     }
 }

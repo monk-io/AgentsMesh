@@ -1,10 +1,12 @@
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::sync::RwLockWriteGuard;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::channel_state::ChannelState;
-use agentsmesh_state::channel_types::{Channel, ChannelMember, ChannelMessage};
+use agentsmesh_state::channel_types::{Channel, ChannelMember};
 use agentsmesh_types::proto_pod_v1::Pod;
+use prost::Message as _;
 
 pub struct ChannelService {
     client: Arc<ApiClient>,
@@ -19,6 +21,12 @@ impl ChannelService {
     /// Crate-local accessor used by channel_connect.rs to forward to the
     /// underlying api-client `*_connect` methods.
     pub(crate) fn client(&self) -> &ApiClient { &self.client }
+
+    /// Crate-local write lock used by the proto mutator surface
+    /// (channel_proto.rs).
+    pub(crate) fn state_write(&self) -> RwLockWriteGuard<'_, ChannelState> {
+        self.state.write().unwrap()
+    }
 
     pub fn channels_json(&self) -> String {
         serde_json::to_string(self.state.read().unwrap().get_channels()).unwrap_or_default()
@@ -92,12 +100,6 @@ impl ChannelService {
             .map(|p| serde_json::to_string(p).unwrap_or_default())
     }
 
-    pub fn set_channels(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Channel>>(json) {
-            self.state.write().unwrap().set_channels(v);
-        }
-    }
-
     pub fn set_current_channel(&self, id: Option<i64>) {
         self.state.write().unwrap().set_current_channel(id);
     }
@@ -107,20 +109,14 @@ impl ChannelService {
             .map(|c| serde_json::to_string(c).unwrap_or_default())
     }
 
-    pub fn add_channel_local(&self, json: &str) {
-        if let Ok(c) = serde_json::from_str::<Channel>(json) {
-            self.state.write().unwrap().add_channel(c);
-        }
-    }
+    // ---- Legacy JSON-bridge entry points retained for callers outside the
+    // channel stores (facade/channel.ts goes through these; once the facade
+    // adopts proto these can be removed). ----
 
     pub fn update_channel_local(&self, id: i64, json: &str) {
         if let Ok(c) = serde_json::from_str::<Channel>(json) {
             self.state.write().unwrap().update_channel(id, c);
         }
-    }
-
-    pub fn remove_channel_local(&self, id: i64) {
-        self.state.write().unwrap().remove_channel(id);
     }
 
     pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
@@ -139,55 +135,8 @@ impl ChannelService {
         self.state.write().unwrap().remove_channel_member(channel_id, user_id);
     }
 
-    pub fn set_current_user(&self, user_json: &str) {
-        if let Ok(u) = serde_json::from_str(user_json) {
-            self.state.write().unwrap().set_current_user(Some(u));
-        }
-    }
-
-    pub fn set_current_user_id(&self, user_id: Option<i64>) {
-        self.state.write().unwrap().set_current_user_id(user_id);
-    }
-
-    pub fn set_messages(&self, channel_id: i64, json: &str, has_more: bool) {
-        if let Ok(msgs) = serde_json::from_str::<Vec<ChannelMessage>>(json) {
-            self.state.write().unwrap().set_messages(channel_id, msgs, has_more);
-        }
-    }
-
-    pub fn prepend_messages(&self, channel_id: i64, json: &str, has_more: bool) {
-        if let Ok(msgs) = serde_json::from_str::<Vec<ChannelMessage>>(json) {
-            self.state.write().unwrap().prepend_messages(channel_id, msgs, has_more);
-        }
-    }
-
-    pub fn add_message(&self, channel_id: i64, json: &str) {
-        if let Ok(msg) = serde_json::from_str::<ChannelMessage>(json) {
-            self.state.write().unwrap().add_message(channel_id, msg);
-        }
-    }
-
-    pub fn on_new_message(&self, json: &str) -> bool {
-        match serde_json::from_str::<ChannelMessage>(json) {
-            Ok(msg) => self.state.write().unwrap().on_new_message(msg),
-            Err(_) => false,
-        }
-    }
-
-    pub fn update_message_local(&self, channel_id: i64, json: &str) {
-        if let Ok(msg) = serde_json::from_str::<ChannelMessage>(json) {
-            self.state.write().unwrap().update_message(channel_id, msg);
-        }
-    }
-
-    pub fn remove_message_local(&self, channel_id: i64, message_id: i64) {
+    pub fn remove_message(&self, channel_id: i64, message_id: i64) {
         self.state.write().unwrap().remove_message(channel_id, message_id);
-    }
-
-    pub fn set_unread_counts(&self, json: &str) {
-        if let Ok(counts) = serde_json::from_str(json) {
-            self.state.write().unwrap().set_unread_counts(counts);
-        }
     }
 
     pub fn increment_unread(&self, channel_id: i64) {
@@ -198,24 +147,12 @@ impl ChannelService {
         self.state.write().unwrap().clear_channel_unread(channel_id);
     }
 
-    pub fn set_mention_counts(&self, json: &str) {
-        if let Ok(counts) = serde_json::from_str(json) {
-            self.state.write().unwrap().set_mention_counts(counts);
-        }
-    }
-
     pub fn increment_mention(&self, channel_id: i64) {
         self.state.write().unwrap().increment_mention(channel_id);
     }
 
     pub fn clear_channel_mentions(&self, channel_id: i64) {
         self.state.write().unwrap().clear_channel_mentions(channel_id);
-    }
-
-    pub fn set_last_message(&self, channel_id: i64, json: &str) {
-        if let Ok(p) = serde_json::from_str(json) {
-            self.state.write().unwrap().set_last_message(channel_id, p);
-        }
     }
 
     pub fn channel_pods_json(&self, id: i64) -> String {
@@ -236,7 +173,6 @@ impl ChannelService {
 // =============================================================================
 
 use agentsmesh_types::proto_channel_v1 as channel_proto;
-use prost::Message;
 
 use crate::wire;
 

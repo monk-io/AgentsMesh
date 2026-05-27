@@ -1,10 +1,22 @@
 use agentsmesh_state::pod_state::PodState;
 use agentsmesh_types::proto_pod_v1::Pod;
+use agentsmesh_types::proto_pod_state_v1::{
+    InsertCreatedPodRequest, PatchPodPerpetualRequest,
+    ApplyPodStatusEventRequest, ApplyPodTitleEventRequest,
+    ApplyPodAliasEventRequest, ApplyAgentStatusEventRequest,
+    ReplaceCachedPodsRequest, AppendCachedPodsRequest,
+    MarkPodTerminatedRequest,
+};
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmPodState {
     inner: PodState,
+}
+
+fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
+    JsValue::from_str(&format!("decode: {e}"))
 }
 
 #[wasm_bindgen]
@@ -36,62 +48,82 @@ impl WasmPodState {
         }
     }
 
-    pub fn upsert_pod(&mut self, pod_json: &str, timestamp: Option<i64>) {
-        if let Ok(pod) = serde_json::from_str::<Pod>(pod_json) {
-            self.inner.upsert_pod(pod, timestamp);
-        }
+    pub fn insert_created_pod(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = InsertCreatedPodRequest::decode(req_bytes).map_err(decode_err)?;
+        let pod = req.pod.ok_or_else(|| JsValue::from_str("missing pod"))?;
+        let ts = if req.client_timestamp_ms == 0 { None } else { Some(req.client_timestamp_ms) };
+        self.inner.upsert_pod(pod, ts);
+        Ok(())
     }
 
-    /// Replace the entire pod list with a fresh batch from a ListPods call.
-    /// Mirrors WasmRunnerState::set_runners. Stores/pod.ts::fetchPods +
-    /// fetchSidebarPods call this after each Connect ListPods round-trip
-    /// so the sidebar / workspace pod list reflects the latest server state.
-    /// Without this method, the JS call throws TypeError silently inside
-    /// the store's try/catch and the UI keeps showing "暂无 Pod" even
-    /// though the network round-trip succeeded.
-    pub fn set_pods(&mut self, json: &str) {
-        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(json) {
-            self.inner.set_pods(pods);
-        }
+    pub fn patch_pod_perpetual(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = PatchPodPerpetualRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.patch_perpetual(&req.pod_key, req.perpetual);
+        Ok(())
     }
 
-    pub fn update_pod_status(
-        &mut self,
-        pod_key: &str,
-        status: &str,
-        agent_status: Option<String>,
-        error_code: Option<String>,
-        error_message: Option<String>,
-        timestamp: Option<i64>,
-    ) {
+    pub fn apply_pod_status_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyPodStatusEventRequest::decode(req_bytes).map_err(decode_err)?;
         self.inner.update_pod_status(
-            pod_key,
-            status,
-            agent_status.as_deref(),
-            error_code.as_deref(),
-            error_message.as_deref(),
-            timestamp,
+            &req.pod_key,
+            &req.status,
+            req.agent_status.as_deref(),
+            req.error_code.as_deref(),
+            req.error_message.as_deref(),
+            None,
         );
+        Ok(())
     }
 
-    pub fn update_pod_title(
-        &mut self,
-        pod_key: &str,
-        title: &str,
-        timestamp: Option<i64>,
-    ) {
-        self.inner.update_pod_title(pod_key, title, timestamp);
+    pub fn apply_pod_title_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyPodTitleEventRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.update_pod_title(&req.pod_key, &req.title, None);
+        Ok(())
     }
 
-    pub fn update_pod_alias(&mut self, pod_key: &str, alias: &str) {
-        self.inner.update_pod_alias(pod_key, alias);
+    pub fn apply_pod_alias_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyPodAliasEventRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.update_pod_alias(&req.pod_key, req.alias.as_deref().unwrap_or(""));
+        Ok(())
     }
 
-    pub fn update_agent_status(&mut self, pod_key: &str, agent_status: &str) {
-        self.inner.update_agent_status(pod_key, agent_status);
+    pub fn apply_agent_status_event(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ApplyAgentStatusEventRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.update_agent_status(&req.pod_key, &req.agent_status);
+        Ok(())
+    }
+
+    pub fn replace_cached_pods(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = ReplaceCachedPodsRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.set_pods(req.pods);
+        Ok(())
+    }
+
+    pub fn append_cached_pods(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = AppendCachedPodsRequest::decode(req_bytes).map_err(decode_err)?;
+        for pod in req.pods {
+            self.inner.upsert_pod(pod, None);
+        }
+        Ok(())
+    }
+
+    pub fn mark_pod_terminated(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        let req = MarkPodTerminatedRequest::decode(req_bytes).map_err(decode_err)?;
+        self.inner.update_pod_status(&req.pod_key, "terminated", None, None, None, None);
+        Ok(())
     }
 
     pub fn remove_pod(&mut self, pod_key: &str) {
         self.inner.remove_pod(pod_key);
+    }
+
+    pub fn update_init_progress(
+        &mut self, pod_key: &str, phase: &str, progress: f64, message: Option<String>,
+    ) {
+        self.inner.update_init_progress(pod_key, phase, progress, message.as_deref());
+    }
+
+    pub fn clear_init_progress(&mut self, pod_key: &str) {
+        self.inner.clear_init_progress(pod_key);
     }
 }

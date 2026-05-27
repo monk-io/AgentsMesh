@@ -18,26 +18,33 @@ import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
 
-const isEmptyHint = /no .*pods?|没有.*pod|empty|暂无|还没有/i;
+const isEmptyHint = /no .*(pod|loop|channel|ticket|run)s?|no .*found|没有.*(pod|loop|channel|ticket|run)|empty|暂无|还没有|nothing here|此.*暂无/i;
 
 test.describe("Data integrity: list pages match API counts", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
-  test("workspace sidebar pod count matches ListPods API", async ({ page, api }) => {
+  test("workspace sidebar pod count matches ListPods API", async ({ page, api, db }) => {
     const cc = await api.connect();
-    // Mirror the renderer's default sidebar request — "mine" filter, page
-    // size from SIDEBAR_PAGE_SIZE in podTypes.ts (currently 50). We don't
-    // re-export the constant to e2e because the SSOT is Rust + the proto;
-    // the test asserts "DOM count == API count for the same query", so any
-    // value the page actually uses is what we need.
+    // Mirror the renderer's default sidebar request — "mine" tab maps to
+    // status "running,initializing" + created_by_id = current user
+    // (SIDEBAR_STATUS_MAP in stores/podTypes.ts). Anything else returned
+    // by the API would be filtered out client-side, so testing equality
+    // against an unfiltered API call is structurally wrong.
+    const userId = db.queryValue(
+      `SELECT id FROM users WHERE email = 'dev@agentsmesh.local' LIMIT 1`,
+    );
+    expect(userId, "dev seed must include the dev user").toBeTruthy();
     const { items } = await cc.pod.listPods({
       orgSlug: TEST_ORG_SLUG,
+      status: "running,initializing",
+      createdById: BigInt(userId as string),
       limit: 50,
       offset: 0,
     }) as { items: Array<{ podKey: string }> };
 
     await page.goto(`/${TEST_ORG_SLUG}/workspace`);
     await page.waitForLoadState("load");
+    await page.waitForTimeout(2000); // sidebar fetch lands
 
     if (items.length === 0) {
       // Empty state must be visible — otherwise the sidebar is silently
@@ -87,13 +94,17 @@ test.describe("Data integrity: list pages match API counts", () => {
 
     await page.goto(`/${TEST_ORG_SLUG}/runners/${id}`);
     await page.waitForLoadState("load");
+    await page.waitForTimeout(2000); // initial mount
 
-    // Pods tab must be selected for rows to render.
-    const podsTab = page.getByRole("tab", { name: /pods?|实例/i }).first();
-    if (await podsTab.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    // Pods tab must be selected for rows to render. Click the tab using
+    // its stable testid (not text — i18n + text-collision-prone).
+    const podsTab = page.locator('[data-testid="runner-detail-tab-pods"]');
+    if (await podsTab.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await podsTab.click();
     }
-    await page.waitForTimeout(2000);
+    // loadPods is async behind the click — wait for the first row or empty
+    // state to land before assertions.
+    await page.waitForTimeout(4000);
 
     const expectedKeys = apiRes.items.map((p) => p.podKey);
     if (expectedKeys.length === 0) {
@@ -109,10 +120,16 @@ test.describe("Data integrity: list pages match API counts", () => {
       return;
     }
 
-    const tableText = await page.textContent("body") ?? "";
+    // Wait for the runner-pod-row attribute to appear (the table render is
+    // async behind a loadPods fetch). Then read every rendered pod_key.
+    const podRows = page.locator('[data-testid="runner-pod-row"]');
+    await expect(podRows.first()).toBeVisible({ timeout: 10_000 });
+    const renderedKeys = await podRows.evaluateAll(els =>
+      els.map(el => el.getAttribute("data-pod-key")).filter((k): k is string => !!k)
+    );
     for (const key of expectedKeys) {
       expect(
-        tableText.includes(key),
+        renderedKeys.includes(key),
         `runner pods table missing pod ${key} from ListPods(runnerId) response`,
       ).toBe(true);
     }

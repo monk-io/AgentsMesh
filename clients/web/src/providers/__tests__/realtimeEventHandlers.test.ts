@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { fromBinary } from "@bufbuild/protobuf";
+import {
+  ApplyIncomingChannelMessageRequestSchema,
+  ApplyChannelMessageEditedEventRequestSchema,
+} from "@proto/channel_state/v1/mutations_pb";
 import { handleChannelEvent, handleInfraEvent } from "../realtimeEventHandlers";
 import { useChannelMessageStore } from "@/stores/channel";
 import { readMessages } from "@/stores/channelMessageStore";
@@ -63,22 +68,49 @@ vi.mock("@/lib/wasm-core", async () => {
     getTicketService: () => ({
       current_ticket_json: () => null,
     }),
+    getTicketState: () => ({
+      current_ticket_json: () => null,
+    }),
     getChannelService: () => ({
-      on_new_message: (json: string) => {
-        const msg = JSON.parse(json);
-        const list = buckets.get(msg.channel_id) ?? [];
+      apply_incoming_channel_message: (bytes: Uint8Array) => {
+        const req = fromBinary(ApplyIncomingChannelMessageRequestSchema, bytes);
+        if (!req.message) return false;
+        const channelId = Number(req.channelId);
+        const msg = {
+          id: Number(req.message.id), channel_id: channelId,
+          body: req.message.body,
+          sender_pod: req.message.senderPod,
+          sender_user_id: req.message.senderUserId !== undefined ? Number(req.message.senderUserId) : undefined,
+          message_type: req.message.messageType,
+          content_json: req.message.contentJson,
+          mentions_json: req.message.mentionsJson,
+          reply_to: req.message.replyTo !== undefined ? Number(req.message.replyTo) : undefined,
+          created_at: req.message.createdAt,
+          sender_user: req.message.senderUser ? {
+            id: Number(req.message.senderUser.id),
+            username: req.message.senderUser.username,
+            name: req.message.senderUser.name,
+          } : undefined,
+          sender_pod_info: req.message.senderPodInfo ? {
+            pod_key: req.message.senderPodInfo.podKey,
+            alias: req.message.senderPodInfo.alias,
+            ...(req.message.senderPodInfo.agent ? { agent: { name: req.message.senderPodInfo.agent.name } } : {}),
+          } : undefined,
+        };
+        const list = buckets.get(channelId) ?? [];
         if (!list.some((m: Record<string, unknown>) => (m as { id: number }).id === msg.id)) list.push(msg);
-        buckets.set(msg.channel_id, list);
+        buckets.set(channelId, list);
+        return true;
       },
-      update_message_local: (channelId: bigint, json: string) => {
-        const cid = Number(channelId);
-        const data = JSON.parse(json);
+      apply_channel_message_edited_event: (bytes: Uint8Array) => {
+        const req = fromBinary(ApplyChannelMessageEditedEventRequestSchema, bytes);
+        const cid = Number(req.channelId);
         const list = buckets.get(cid) ?? [];
-        const idx = list.findIndex((m: Record<string, unknown>) => (m as { id: number }).id === data.id);
-        if (idx >= 0) list[idx] = { ...list[idx], ...data };
+        const idx = list.findIndex((m: Record<string, unknown>) => (m as { id: number }).id === Number(req.messageId));
+        if (idx >= 0) list[idx] = { ...list[idx], body: req.body, edited_at: req.editedAt };
         buckets.set(cid, list);
       },
-      remove_message_local: (channelId: bigint, messageId: bigint) => {
+      remove_message: (channelId: bigint, messageId: bigint) => {
         const cid = Number(channelId);
         const mid = Number(messageId);
         buckets.set(cid, (buckets.get(cid) ?? []).filter((m: Record<string, unknown>) => (m as { id: number }).id !== mid));

@@ -162,6 +162,17 @@ impl PodState {
     pub fn get_pod(&self, pod_key: &str) -> Option<&Pod> { self.pods.iter().find(|p| p.pod_key == pod_key) }
     pub fn set_current_pod(&mut self, pod: Option<Pod>) { self.current_pod = pod; }
 
+    /// SRP patch — only the perpetual flag of an existing pod. No-op if
+    /// pod not in cache (it'll arrive via a later upsert).
+    pub fn patch_perpetual(&mut self, pod_key: &str, perpetual: bool) {
+        if let Some(pos) = self.pods.iter().position(|p| p.pod_key == pod_key) {
+            self.pods[pos].perpetual = perpetual;
+            if let Some(repo) = &self.repo {
+                save_pod(repo, &self.pods[pos]);
+            }
+        }
+    }
+
     pub fn set_pods(&mut self, pods: Vec<Pod>) {
         self.pods = pods;
         if let Some(repo) = &self.repo {

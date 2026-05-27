@@ -1,6 +1,6 @@
 import { usePodStore } from "@/stores/pod";
 import { useRunnerStore } from "@/stores/runner";
-import { getTicketService, getPodState, parseWasmAny } from "@/lib/wasm-core";
+import { getTicketState, getPodState, parseWasmAny } from "@/lib/wasm-core";
 import { useTicketStore } from "@/stores/ticket";
 import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
 import { readCurrentUser } from "@/stores/auth";
@@ -132,7 +132,7 @@ function debouncedTicketRefetch(debounceRef: DebounceRef | undefined) {
     debounceRef.current = null;
     const s = useTicketStore.getState();
     s.fetchTickets?.();
-    const currentTicket = parseWasmAny<{ slug: string }>(getTicketService().current_ticket_json());
+    const currentTicket = parseWasmAny<{ slug: string }>(getTicketState().current_ticket_json());
     if (currentTicket?.slug) {
       s.fetchTicket?.(currentTicket.slug);
     }

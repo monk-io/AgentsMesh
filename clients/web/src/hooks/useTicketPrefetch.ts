@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { getTicketService, getTicketRelationsService } from "@/lib/wasm-core";
+import {
+  getTicket as getTicketConnect,
+  getSubTickets as getSubTicketsConnect,
+} from "@/lib/api/facade/ticketConnect";
+import { listRelations, listCommits } from "@/lib/api/facade/ticketRelations";
+import { readCurrentOrg } from "@/stores/auth";
+
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
 
 const prefetchCache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
@@ -45,16 +54,17 @@ export function useTicketPrefetch() {
       pendingRequests.add(slug);
 
       try {
-        const ticketData = JSON.parse(await getTicketService().fetch_ticket(slug));
+        const org = orgSlug();
+        const ticketData = await getTicketConnect(org, slug);
         prefetchCache.set(slug, {
           data: ticketData,
           timestamp: Date.now(),
         });
 
         const [subTickets, relations, commits] = await Promise.allSettled([
-          getTicketService().get_sub_tickets(slug).then((j: string) => JSON.parse(j)),
-          getTicketRelationsService().list_relations(slug).then((j: string) => JSON.parse(j)),
-          getTicketRelationsService().list_commits(slug).then((j: string) => JSON.parse(j)),
+          getSubTicketsConnect(org, slug),
+          listRelations(org, slug),
+          listCommits(org, slug),
         ]);
 
         if (subTickets.status === "fulfilled") {

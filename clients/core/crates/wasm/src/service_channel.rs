@@ -8,6 +8,8 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 pub struct WasmChannelService(pub(crate) ChannelService);
 
+fn map_err(e: String) -> JsValue { JsValue::from_str(&e) }
+
 #[wasm_bindgen]
 impl WasmChannelService {
     pub(crate) fn new(client: Arc<ApiClient>, state: ChannelState) -> Self {
@@ -59,7 +61,6 @@ impl WasmChannelService {
         }
     }
 
-    pub fn set_channels(&self, json: &str) { self.0.set_channels(json); }
     pub fn set_current_channel(&self, id: Option<i64>) { self.0.set_current_channel(id); }
 
     pub fn select_channel(&self, id: Option<i64>) -> JsValue {
@@ -69,13 +70,12 @@ impl WasmChannelService {
         }
     }
 
-    pub fn add_channel_local(&self, json: &str) { self.0.add_channel_local(json); }
+    // ---- Legacy JSON-bridge entry points (facade/channel.ts still uses these
+    // until that layer migrates to proto). ----
 
     pub fn update_channel_local(&self, id: i64, json: &str) {
         self.0.update_channel_local(id, json);
     }
-
-    pub fn remove_channel_local(&self, id: i64) { self.0.remove_channel_local(id); }
 
     pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
         self.0.set_channel_pods_local(channel_id, json);
@@ -89,40 +89,54 @@ impl WasmChannelService {
         self.0.remove_channel_member_local(channel_id, user_id);
     }
 
-    pub fn set_current_user(&self, user_json: &str) { self.0.set_current_user(user_json); }
-    pub fn set_current_user_id(&self, user_id: Option<i64>) { self.0.set_current_user_id(user_id); }
+    // ---- Proto-bytes mutators (new SSOT contract) ----
 
-    pub fn set_messages(&self, channel_id: i64, json: &str, has_more: bool) {
-        self.0.set_messages(channel_id, json, has_more);
+    pub fn replace_cached_channels(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.replace_cached_channels(req_bytes).map_err(map_err)
     }
 
-    pub fn prepend_messages(&self, channel_id: i64, json: &str, has_more: bool) {
-        self.0.prepend_messages(channel_id, json, has_more);
+    pub fn insert_channel(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.insert_channel(req_bytes).map_err(map_err)
     }
 
-    pub fn add_message(&self, channel_id: i64, json: &str) { self.0.add_message(channel_id, json); }
-    pub fn on_new_message(&self, json: &str) -> bool { self.0.on_new_message(json) }
-
-    pub fn update_message_local(&self, channel_id: i64, json: &str) {
-        self.0.update_message_local(channel_id, json);
+    pub fn patch_channel_member_count(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.patch_channel_member_count(req_bytes).map_err(map_err)
     }
 
-    pub fn remove_message_local(&self, channel_id: i64, message_id: i64) {
-        self.0.remove_message_local(channel_id, message_id);
+    pub fn apply_incoming_channel_message(&self, req_bytes: &[u8]) -> Result<bool, JsValue> {
+        self.0.apply_incoming_channel_message(req_bytes).map_err(map_err)
     }
 
-    pub fn set_unread_counts(&self, json: &str) { self.0.set_unread_counts(json); }
+    pub fn insert_channel_message(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.insert_channel_message(req_bytes).map_err(map_err)
+    }
+
+    pub fn apply_channel_message_edited_event(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.apply_channel_message_edited_event(req_bytes).map_err(map_err)
+    }
+
+    pub fn remove_message(&self, channel_id: i64, message_id: i64) {
+        self.0.remove_message(channel_id, message_id);
+    }
+
+    pub fn replace_cached_channel_messages(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.replace_cached_channel_messages(req_bytes).map_err(map_err)
+    }
+
+    pub fn prepend_cached_channel_messages(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.prepend_cached_channel_messages(req_bytes).map_err(map_err)
+    }
+
+    pub fn replace_channel_unread_counts(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.replace_channel_unread_counts(req_bytes).map_err(map_err)
+    }
+
     pub fn increment_unread(&self, channel_id: i64) { self.0.increment_unread(channel_id); }
     pub fn clear_channel_unread(&self, channel_id: i64) { self.0.clear_channel_unread(channel_id); }
-    pub fn set_mention_counts(&self, json: &str) { self.0.set_mention_counts(json); }
     pub fn increment_mention(&self, channel_id: i64) { self.0.increment_mention(channel_id); }
 
     pub fn clear_channel_mentions(&self, channel_id: i64) {
         self.0.clear_channel_mentions(channel_id);
-    }
-
-    pub fn set_last_message(&self, channel_id: i64, json: &str) {
-        self.0.set_last_message(channel_id, json);
     }
 
     pub fn channel_pods_json(&self, id: i64) -> String {

@@ -82,10 +82,11 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn channel_set_channels(&self, json: String) -> napi::Result<()> {
-        let svc = self.channel.lock().await;
-            svc.set_channels(&json);
-            Ok(())
+    pub async fn channel_set_channels(&self, _json: String) -> napi::Result<()> {
+        Err(napi::Error::new(
+            napi::Status::GenericFailure,
+            "channel_set_channels deprecated in proto migration; pending NAPI migration in Phase 5",
+        ))
     }
 
     #[napi]
@@ -102,10 +103,11 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn channel_add_channel_local(&self, json: String) -> napi::Result<()> {
-        let svc = self.channel.lock().await;
-            svc.add_channel_local(&json);
-            Ok(())
+    pub async fn channel_add_channel_local(&self, _json: String) -> napi::Result<()> {
+        Err(napi::Error::new(
+            napi::Status::GenericFailure,
+            "channel_add_channel_local deprecated in proto migration; pending NAPI migration in Phase 5",
+        ))
     }
 
     #[napi]
@@ -116,10 +118,41 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn channel_remove_channel_local(&self, id: i64) -> napi::Result<()> {
-        let svc = self.channel.lock().await;
-            svc.remove_channel_local(id);
-            Ok(())
+    pub async fn channel_remove_channel_local(&self, _id: i64) -> napi::Result<()> {
+        Err(napi::Error::new(
+            napi::Status::GenericFailure,
+            "channel_remove_channel_local deprecated in proto migration; pending NAPI migration in Phase 5",
+        ))
     }
 
+    // Proto-bytes mutators (matching the wasm bridge surface). Renderer side
+    // already encodes via @bufbuild/protobuf; the Buffer here is the same
+    // payload, just transported over NAPI instead of wasm-bindgen.
+
+    #[napi]
+    pub async fn channel_replace_cached_channels(
+        &self, req_bytes: Vec<u8>,
+    ) -> napi::Result<()> {
+        let svc = self.channel.lock().await;
+        svc.replace_cached_channels(&req_bytes)
+            .map_err(|e| napi::Error::from_reason(e))
+    }
+
+    #[napi]
+    pub async fn channel_insert_channel(
+        &self, req_bytes: Vec<u8>,
+    ) -> napi::Result<()> {
+        let svc = self.channel.lock().await;
+        svc.insert_channel(&req_bytes)
+            .map_err(|e| napi::Error::from_reason(e))
+    }
+
+    #[napi]
+    pub async fn channel_patch_channel_member_count(
+        &self, req_bytes: Vec<u8>,
+    ) -> napi::Result<()> {
+        let svc = self.channel.lock().await;
+        svc.patch_channel_member_count(&req_bytes)
+            .map_err(|e| napi::Error::from_reason(e))
+    }
 }

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { useMemo } from "react";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import type { RunnerData } from "@/lib/api";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
@@ -13,6 +14,7 @@ import {
   deleteRunner as deleteRunnerConnect,
   createRunnerToken as createRunnerTokenConnect,
 } from "@/lib/api/facade/runnerConnect";
+import { ApplyRunnerStatusEventRequestSchema } from "@proto/runner_state/v1/runner_state_pb";
 
 export type RunnerStatus = "online" | "offline" | "maintenance" | "busy";
 export type Runner = RunnerData;
@@ -58,6 +60,13 @@ export function useCurrentRunner(): Runner | null {
   }, [tick]);
 }
 
+export function applyRunnerStatusEvent(runnerId: number, status: string) {
+  const req = protoCreate(ApplyRunnerStatusEventRequestSchema, {
+    runnerId: BigInt(runnerId), status,
+  });
+  svc().apply_runner_status_event(toBinary(ApplyRunnerStatusEventRequestSchema, req));
+}
+
 export const useRunnerStore = create<RunnerState>((set, get) => ({
   _tick: 0, loading: false, fetched: false, error: null,
 
@@ -89,7 +98,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   updateRunner: async (id, data) => {
     try {
       const runner = await updateRunnerConnect(orgSlug(), id, data);
-      svc().update_runner(BigInt(id), JSON.stringify(runner));
+      svc().update_runner_local(id, JSON.stringify(runner));
       bump();
       return runner;
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update runner") }); throw e; }
@@ -98,7 +107,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   deleteRunner: async (id) => {
     try {
       await deleteRunnerConnect(orgSlug(), id);
-      svc().remove_runner(BigInt(id));
+      svc().remove_runner_local(BigInt(id));
       bump();
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete runner") }); throw e; }
   },
@@ -116,7 +125,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   },
 
   updateRunnerStatus: (runnerId, status) => {
-    svc().update_runner_status(BigInt(runnerId), status);
+    applyRunnerStatusEvent(runnerId, status);
     bump();
   },
 

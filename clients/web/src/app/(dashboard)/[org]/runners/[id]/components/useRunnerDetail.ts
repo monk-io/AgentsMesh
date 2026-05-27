@@ -70,13 +70,11 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
   const loadPods = useCallback(async () => {
     setLoadingPods(true);
     try {
-      // `list_runner_pods` returns a serde-serialized ListPodsResponse from
-      // Rust core — proto field names (snake_case), so the wire shape is
-      // `{ items, total, limit, offset }`, NOT `{ pods, total }`. The
-      // pre-R5-7 REST endpoint used `pods`; the migration to the Connect
-      // ListPods (with runner_id filter) flipped the field name and this
-      // call site wasn't updated, so the list silently rendered empty
-      // even though `total` came back correct.
+      // list_runner_pods returns a serialised proto.pod.v1.ListPodsResponse.
+      // serde emits fields as `items` (proto field name), not `pods`. The
+      // original Bug 1 that motivated this whole proto-migration PR was a
+      // R6 regression where this destructure read `res.pods` (undefined) —
+      // an empty sidebar shipped to production. Keep reading `items` here.
       const res: { items: RunnerPodData[]; total: number } = JSON.parse(
         await getRunnerService().list_runner_pods(BigInt(runnerId), podFilter || null, limit ?? null, offset ?? null)
       );
