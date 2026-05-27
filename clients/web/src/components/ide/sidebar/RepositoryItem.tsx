@@ -39,7 +39,7 @@ export function RepositoryItem({
   const providerIcon = providerIcons[repo.provider_type] || providerIcons.generic;
 
   return (
-    <div>
+    <div data-testid="repository-row" data-repo-slug={repo.slug} data-repo-id={String(repo.id)}>
       <div
         className={cn(
           "group flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer",

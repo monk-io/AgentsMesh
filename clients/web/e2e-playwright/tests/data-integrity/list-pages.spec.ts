@@ -225,4 +225,120 @@ test.describe("Data integrity: list pages match API counts", () => {
       `loops list renders 0 of ${items.length} API-returned loop names/slugs — wasm cache likely dropped them`,
     ).toBe(true);
   });
+
+  test("repositories sidebar rows match ListRepositories API count", async ({ page, api }) => {
+    const cc = await api.connect();
+    // RepoState was just migrated to proto-bytes mutators (5 JSON bypasses
+    // eliminated). The sidebar list path still reads from the same wasm
+    // cache the proto mutators write to, so this asserts the round-trip:
+    // backend → wasm proto deserialization → cache → useRepositories selector.
+    const { items } = await cc.repository.listRepositories({ orgSlug: TEST_ORG_SLUG }) as {
+      items: Array<{ id: bigint; slug: string }>;
+    };
+
+    // `/{org}/repositories` redirects to `/{org}/infra?tab=repositories`.
+    // The list renders inside the IDE shell's RepositoriesSidebarContent.
+    await page.goto(`/${TEST_ORG_SLUG}/repositories`);
+    await page.waitForLoadState("load");
+    await page.waitForTimeout(2000);
+
+    if (items.length === 0) {
+      const empty = await page.getByText(isEmptyHint).first().isVisible({ timeout: 5_000 }).catch(() => false);
+      expect(empty, "no repositories → page must render empty state").toBe(true);
+      return;
+    }
+
+    const rows = page.locator('[data-testid="repository-row"]');
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+    const renderedSlugs = await rows.evaluateAll(els =>
+      els.map(el => el.getAttribute("data-repo-slug")).filter((s): s is string => !!s)
+    );
+    for (const repo of items) {
+      expect(
+        renderedSlugs.includes(repo.slug),
+        `repositories sidebar missing repo ${repo.slug} that ListRepositories returned`,
+      ).toBe(true);
+    }
+  });
+
+  test("mesh topology pod nodes match GetMeshTopology API count", async ({ page, api }) => {
+    const cc = await api.connect();
+    // MeshState just migrated to ReplaceTopologyRequest proto-bytes. The
+    // topology read path (GetMeshTopology → wasm fetch_topology → store
+    // _tick → renderer) is the failure mode this guards: if any field
+    // name drifts during proto encode/decode, nodes silently disappear.
+    const topology = await cc.mesh.getMeshTopology({ orgSlug: TEST_ORG_SLUG }) as {
+      nodes: Array<{ podKey: string }>;
+    };
+
+    await page.goto(`/${TEST_ORG_SLUG}/mesh`);
+    await page.waitForLoadState("load");
+    await page.waitForTimeout(2000);
+
+    if (topology.nodes.length === 0) {
+      // Mesh renders its own "No Active Pods" state — match that text or
+      // the generic empty hint. Dev seed has 0 pods so this is the
+      // expected branch on a clean install.
+      const noPodsVisible = await page.getByText(/no active pods/i).first().isVisible({ timeout: 5_000 }).catch(() => false);
+      const generic = await page.getByText(isEmptyHint).first().isVisible({ timeout: 5_000 }).catch(() => false);
+      expect(noPodsVisible || generic, "API returned 0 mesh nodes → mesh page must show empty state").toBe(true);
+      return;
+    }
+
+    // React-flow renders one PodNode per topology.nodes entry; the inner
+    // div carries `data-pod-key` so we can compare directly against the
+    // API list rather than parsing visible text.
+    const podNodes = page.locator('[data-testid="mesh-pod-node"]');
+    await expect(podNodes.first()).toBeVisible({ timeout: 10_000 });
+    const renderedKeys = await podNodes.evaluateAll(els =>
+      els.map(el => el.getAttribute("data-pod-key")).filter((k): k is string => !!k)
+    );
+    for (const node of topology.nodes) {
+      expect(
+        renderedKeys.includes(node.podKey),
+        `mesh topology missing pod ${node.podKey} that GetMeshTopology returned`,
+      ).toBe(true);
+    }
+  });
+
+  test("blocks page loads workspace from ListWorkspaces API", async ({ page, api }) => {
+    const cc = await api.connect();
+    // BlockstoreState just migrated to ApplyRemoteOpRequest proto-bytes for
+    // mutations. The workspace listing path (listWorkspaces → page
+    // hydrate → root block ID) still flows through JSON fetch for the
+    // page-tree shell — but the page is the integration target where any
+    // proto/JSON drift would leave the renderer stuck on the loading
+    // spinner. This asserts the page reaches a "workspace loaded" state.
+    const { items: workspaces } = await cc.blockstore.listWorkspaces({ orgSlug: TEST_ORG_SLUG }) as {
+      items: Array<{ id: string; rootBlockId?: string }>;
+    };
+
+    await page.goto(`/${TEST_ORG_SLUG}/blocks`);
+    await page.waitForLoadState("load");
+    // ensureDefaultWorkspace auto-creates a workspace if none exists, so
+    // by the time the page settles the API list must have ≥1 item.
+    await page.waitForTimeout(3000);
+
+    // After hydrate the BlocksSidebar mounts the page-tree shell. The
+    // search input gets `data-testid="blocks-sidebar-search"` once the
+    // workspace is ready — its presence is the canary that the
+    // workspace → root_block_id → renderer chain wired up.
+    const sidebarSearch = page.locator('[data-testid="blocks-sidebar-search"]');
+    await expect(sidebarSearch).toBeVisible({ timeout: 15_000 });
+
+    // After waiting for the sidebar, the workspace list must be non-empty.
+    // ensureDefaultWorkspace ran during page load, so re-fetch.
+    const after = await cc.blockstore.listWorkspaces({ orgSlug: TEST_ORG_SLUG }) as {
+      items: Array<{ id: string }>;
+    };
+    expect(
+      after.items.length,
+      "blocks page should have triggered ensureDefaultWorkspace; listWorkspaces must return ≥1",
+    ).toBeGreaterThan(0);
+    // Sanity: the initial workspaces list (if non-empty) is a subset of
+    // post-hydrate list (ensureDefault only adds, never removes).
+    for (const w of workspaces) {
+      expect(after.items.some((x) => x.id === w.id)).toBe(true);
+    }
+  });
 });

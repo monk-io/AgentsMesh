@@ -49,6 +49,8 @@ function PodNode({ data }: PodNodeProps) {
     <PodContextMenu node={node}>
       <div
         title={startedTitle}
+        data-testid="mesh-pod-node"
+        data-pod-key={node.pod_key}
         className={`px-4 py-3 rounded-lg border-2 bg-background shadow-md min-w-[180px] transition-all ${
           isSelected
             ? "border-primary ring-2 ring-primary/20"
