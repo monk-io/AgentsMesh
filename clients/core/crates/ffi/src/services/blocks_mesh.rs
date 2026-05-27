@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use agentsmesh_types::proto_mesh_v1 as mesh_proto;
 use agentsmesh_types::proto_notification_v1 as notification_proto;
+use agentsmesh_types::proto_blockstore_state_v1 as blockstore_state_proto;
+use prost::Message as _;
 
 use crate::core::AgentsMeshCore;
 use crate::dto::{
@@ -149,21 +151,35 @@ impl AgentsMeshCore {
     // Bulk state-cache mutators — webview RPC bridge (iOS embed mode)
     // calls these after fetching via the binary-wire `_connect` methods
     // above, so the Rust SSOT cache stays warm without an extra fetch.
+    //
+    // The underlying BlockstoreService methods take proto-encoded envelope
+    // bytes (per cross-domain SSOT). The iOS webview channel can only
+    // forward JSON over its RPC bus, so the wrappers below accept JSON
+    // here, wrap it into the matching proto envelope, then dispatch to
+    // the proto-bytes service. UniFFI exports stay String-typed.
 
     pub fn blocks_replace_workspaces_json(&self, list_json: String) -> Result<(), CoreError> {
-        self.blockstore.replace_workspaces_json(&list_json).map_err(|m| CoreError::Unknown { message: m })
+        let req = blockstore_state_proto::ReplaceWorkspacesRequest { workspaces_json: list_json };
+        self.blockstore.replace_workspaces(&req.encode_to_vec())
+            .map_err(|m| CoreError::Unknown { message: m })
     }
 
     pub fn blocks_upsert_workspace_json(&self, ws_json: String) -> Result<(), CoreError> {
-        self.blockstore.upsert_workspace_json(&ws_json).map_err(|m| CoreError::Unknown { message: m })
+        let req = blockstore_state_proto::UpsertWorkspaceRequest { workspace_json: ws_json };
+        self.blockstore.upsert_workspace(&req.encode_to_vec())
+            .map_err(|m| CoreError::Unknown { message: m })
     }
 
     pub fn blocks_upsert_blocks_json(&self, blocks_json: String) -> Result<(), CoreError> {
-        self.blockstore.upsert_blocks_json(&blocks_json).map_err(|m| CoreError::Unknown { message: m })
+        let req = blockstore_state_proto::UpsertBlocksRequest { blocks_json };
+        self.blockstore.upsert_blocks(&req.encode_to_vec())
+            .map_err(|m| CoreError::Unknown { message: m })
     }
 
     pub fn blocks_upsert_refs_json(&self, refs_json: String) -> Result<(), CoreError> {
-        self.blockstore.upsert_refs_json(&refs_json).map_err(|m| CoreError::Unknown { message: m })
+        let req = blockstore_state_proto::UpsertRefsRequest { refs_json };
+        self.blockstore.upsert_refs(&req.encode_to_vec())
+            .map_err(|m| CoreError::Unknown { message: m })
     }
 
     /// Search-hit DTO export — kept typed so a Swift caller (e.g. a

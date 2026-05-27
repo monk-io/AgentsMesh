@@ -35,6 +35,7 @@ go_proto_library(
     importpath = "github.com/anthropics/agentsmesh/proto/gen/go/channel_state/v1",
     proto = ":channel_state_proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/pod/v1:pod_go_proto"],
 )
 
 rust_prost_library(

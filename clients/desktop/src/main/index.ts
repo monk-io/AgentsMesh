@@ -1,6 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import path from "path";
 import { AppState, initLogger, logEvent } from "@agentsmesh/node-bridge";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
+import { ReplaceChannelPodsRequestSchema } from "@proto/channel_state/v1/mutations_pb";
+import { PodSchema } from "@proto/pod/v1/pod_pb";
 import { createLocalRunnerStubs, type LocalRunnerStubMap } from "./local_runner_stubs";
 import { acquireSingleInstance } from "./single_instance";
 import { IPC_ALLOWLIST, IPC_ALLOWLIST_SET } from "./ipc-allowlist.generated";
@@ -310,7 +313,7 @@ function registerLegacyApiAliases() {
   // exposes these aliases for desktop e2e specs that still invoke through
   // IPC by name. The cache update is necessary because main's AppState
   // holds a separate Rust state from the renderer wasm — without the
-  // set_channel_pods_local fan-out, channelChannelPodsJson stays empty.
+  // ReplaceChannelPods fan-out, channelChannelPodsJson stays empty.
   //
   // Connect-JSON serializes int64 as a JSON string to preserve precision —
   // IPC callers parse the channel response and forward `id` to us as a
@@ -376,13 +379,24 @@ function registerLegacyApiAliases() {
       "ListChannelPods",
       { orgSlug: orgSlug(), id: channelId },
     );
-    const parsed = JSON.parse(raw) as { items?: unknown[] };
-    // Items are ChannelPod {id, pod_key, status, agent_status, alias}. Apply
-    // snake_case + int64 coerce so the cache deserializer (#[serde(default)]
-    // proto_pod_v1::Pod) accepts the shape.
-    const pods = (parsed.items ?? []).map((p) => coerceInt64(snakeCaseDeep(p)));
-    await (appState as { channelSetChannelPodsLocal: (id: number, json: string) => Promise<void> })
-      .channelSetChannelPodsLocal(channelId, JSON.stringify(pods));
+    const parsed = JSON.parse(raw) as { items?: Array<Record<string, unknown>> };
+    // Wrap the 5 ChannelPod summary fields into proto.pod.v1.Pod (other
+    // fields default to proto3 zeros) and dispatch via the cross-domain
+    // SSOT mutator on the NAPI bridge.
+    const protoPods = (parsed.items ?? []).map((p) => protoCreate(PodSchema, {
+      id: BigInt(typeof p.id === "number" ? p.id : Number(p.id ?? 0)),
+      podKey: String(p.podKey ?? p.pod_key ?? ""),
+      alias: p.alias != null ? String(p.alias) : undefined,
+      status: String(p.status ?? ""),
+      agentStatus: String(p.agentStatus ?? p.agent_status ?? ""),
+    }));
+    const req = protoCreate(ReplaceChannelPodsRequestSchema, {
+      channelId: BigInt(channelId),
+      pods: protoPods,
+    });
+    const bytes = toBinary(ReplaceChannelPodsRequestSchema, req);
+    await (appState as { channelReplaceChannelPods: (b: Uint8Array) => Promise<void> })
+      .channelReplaceChannelPods(bytes);
   };
 
   const fetchChannelEnvelope = async (channelId: number): Promise<string> => {
