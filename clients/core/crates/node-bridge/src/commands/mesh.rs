@@ -60,6 +60,12 @@ impl AppState {
     }
 
     #[napi]
+    pub async fn mesh_replace_topology(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let svc = self.mesh.lock().await;
+        svc.replace_topology(&req_bytes).map_err(err)
+    }
+
+    #[napi]
     pub async fn mesh_select_node(&self, pod_key: Option<String>) -> napi::Result<()> {
         let svc = self.mesh.lock().await;
             svc.select_node(pod_key);

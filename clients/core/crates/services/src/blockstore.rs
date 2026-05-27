@@ -4,7 +4,7 @@ use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::blockstore_state::BlockstoreState;
 use agentsmesh_state::blockstore_types::{
     ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, OpKind,
-    SearchHit, SemanticSearchRequest, Workspace,
+    Workspace,
 };
 use agentsmesh_types::proto_blockstore_v1 as blockstore_proto;
 use agentsmesh_types::proto_blockstore_state_v1 as blockstore_state_proto;
@@ -12,7 +12,7 @@ use prost::Message;
 
 use crate::blockstore_proto_convert::{
     block_from_proto, block_op_from_proto, block_ref_from_proto, chrono_like_now,
-    op_envelope_to_proto, search_hit_from_proto, synthesize_op, workspace_from_proto,
+    synthesize_op, workspace_from_proto,
 };
 
 pub struct BlockstoreService {
@@ -28,29 +28,6 @@ impl BlockstoreService {
     pub(crate) fn client(&self) -> &ApiClient { &self.client }
 
     fn org_slug(&self) -> String { self.client.current_org_slug() }
-
-    // ── Mutations ──
-
-    pub async fn apply_ops(&self, req_json: &str) -> Result<String, String> {
-        let req: ApplyOpsRequest = serde_json::from_str(req_json)
-            .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
-        let proto_req = blockstore_proto::ApplyOpsRequest {
-            org_slug: self.org_slug(),
-            workspace_id: req.workspace_id.clone(),
-            ops: req.ops.iter().map(op_envelope_to_proto).collect(),
-            idempotency_key: req.idempotency_key.clone(),
-            parent_op_id: req.parent_op_id,
-        };
-        let resp = self.client.blockstore_apply_ops_connect(&proto_req).await
-            .map_err(crate::wire)?;
-        let res = ApplyOpsResult {
-            op_ids: resp.op_ids,
-            was_replay: resp.was_replay,
-            parent_op_id: resp.parent_op_id,
-        };
-        self.apply_local_ops(&req, &res);
-        serde_json::to_string(&res).map_err(crate::wire)
-    }
 
     fn apply_local_ops(&self, req: &ApplyOpsRequest, res: &ApplyOpsResult) {
         if res.was_replay { return; }
@@ -141,23 +118,6 @@ impl BlockstoreService {
             state.apply_remote_op(&op);
         }
         Ok(())
-    }
-
-    pub async fn semantic_search(&self, workspace_id: &str, req_json: &str) -> Result<String, String> {
-        let req: SemanticSearchRequest = serde_json::from_str(req_json)
-            .map_err(|e| format!("invalid search request: {e}"))?;
-        let proto_req = blockstore_proto::SemanticSearchRequest {
-            org_slug: self.org_slug(),
-            workspace_id: workspace_id.to_string(),
-            query: req.query,
-            top_k: req.top_k.map(|v| v as i32),
-            min_score: req.min_score.map(|v| v as f32),
-            r#type: req.block_type,
-        };
-        let resp = self.client.blockstore_semantic_search_connect(&proto_req).await
-            .map_err(crate::wire)?;
-        let hits: Vec<SearchHit> = resp.hits.into_iter().map(search_hit_from_proto).collect();
-        serde_json::to_string(&serde_json::json!({ "hits": hits })).map_err(crate::wire)
     }
 
     // ── Remote op stream (realtime) ──

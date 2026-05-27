@@ -25,10 +25,6 @@ test.describe("IPC · runner", () => {
     await invokeIpcContract(sharedPage, { method: "runnerGetRunnerJson", returnType: "string" }, 0);
   });
 
-  test("runnerListRunnerPods", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerListRunnerPods", returnType: "string" }, 0, "", 0, 0);
-  });
-
   test("runnerPatchCachedRunner", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "runnerPatchCachedRunner", returnType: "void" }, []);
   });
@@ -51,10 +47,6 @@ test.describe("IPC · runner", () => {
 
   test("runnerSetCurrentRunnerProto", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "runnerSetCurrentRunnerProto", returnType: "void" }, []);
-  });
-
-  test("runnerUpdateRunner", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerUpdateRunner", returnType: "string" }, 0, "");
   });
 
   test("runnerUpdateRunnerStatus", async ({ sharedPage }) => {

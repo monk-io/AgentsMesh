@@ -19,6 +19,7 @@ import {
   requestLogUpload as requestLogUploadConnect,
   upgradeRunner as upgradeRunnerConnect,
 } from "../connect/runnerConnect";
+import { listPods as listPodsConnect } from "../connect/podConnect";
 
 export type { RunnerData, GRPCRegistrationToken, RunnerPodData, SandboxStatus, RelayConnectionInfo, RunnerLogData } from "@/lib/viewModels/runner";
 
@@ -65,13 +66,14 @@ export const runnerApi = {
     const { items, total, limit, offset } = await listRunnerLogsConnect(orgSlug(), id);
     return { logs: items, total, limit, offset };
   },
-  // list_runner_pods isn't owned by proto.runner_api.v1 — it spans pod state
-  // (mesh plane). Keep on legacy wasm surface until the mesh side migrates.
+  // List pods filtered by runner_id via proto.pod.v1.PodService.ListPods.
+  // (The dedicated REST endpoint was retired; ListPods has a runner_id
+  // filter we delegate to here.)
   listPods: async (id: number, filters?: { status?: string; limit?: number; offset?: number }) => {
-    const json = await getRunnerService().list_runner_pods(
-      BigInt(id), filters?.status ?? null, filters?.limit ?? null, filters?.offset ?? null,
-    );
-    return JSON.parse(json);
+    const { items, total } = await listPodsConnect(orgSlug(), {
+      runner_id: id, status: filters?.status, limit: filters?.limit, offset: filters?.offset,
+    });
+    return { items, total };
   },
   querySandboxes: async (id: number, podKeys: string[]) => {
     return await querySandboxesConnect(orgSlug(), id, podKeys);

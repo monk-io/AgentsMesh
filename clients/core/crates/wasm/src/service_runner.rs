@@ -53,12 +53,6 @@ impl WasmRunnerService {
         Ok(())
     }
 
-    pub async fn list_runner_pods(
-        &self, id: i64, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        self.0.list_runner_pods(id, status, limit, offset).await
-    }
-
     pub async fn get_auth_status(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
         self.0.get_auth_status_connect(request_bytes).await
     }

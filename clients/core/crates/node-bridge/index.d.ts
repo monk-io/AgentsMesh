@@ -19,9 +19,6 @@ export declare class AppState {
   authGetCurrentUserJson(): string | null
   authGetCurrentOrgJson(): string | null
   authGetOrganizationsJson(): string
-  authApplySession(sessionJson: string): void
-  authSetOrganizations(orgsJson: string): void
-  authSetCurrentOrg(orgJson: string): void
   authClearSession(): void
   authLoginProto(email: string, password: string): Promise<Array<number>>
   authRefreshTokenProto(): Promise<Array<number>>
@@ -110,13 +107,11 @@ export declare class AppState {
   bindingGetPendingBindings(): Promise<string>
   bindingGetBoundPods(): Promise<string>
   bindingCheckBinding(targetPod: string): Promise<string>
-  blockstoreApplyOps(reqJson: string): Promise<string>
   blockstoreListWorkspaces(): Promise<string>
   blockstoreEnsureDefaultWorkspace(): Promise<string>
   blockstoreLoadSubtree(workspaceId: string, rootId: string): Promise<void>
   blockstoreLoadTypeDefs(workspaceId: string): Promise<void>
   blockstoreCatchup(workspaceId: string): Promise<void>
-  blockstoreSemanticSearch(workspaceId: string, reqJson: string): Promise<string>
   blockstoreApplyRemoteOp(reqBytes: Array<number>): Promise<void>
   blockstoreReplaceWorkspaces(reqBytes: Uint8Array): Promise<void>
   blockstoreUpsertWorkspace(reqBytes: Uint8Array): Promise<void>
@@ -241,24 +236,15 @@ export declare class AppState {
   loopSvcCurrentLoopJson(): Promise<string>
   loopSvcRunsJson(): Promise<string>
   loopSvcGetLoopBySlugJson(slug: string): Promise<string>
-  loopSvcSetLoops(json: string): Promise<void>
-  loopSvcSetCurrentLoop(json: string): Promise<void>
-  loopSvcUpdateLoopLocal(slug: string, json: string): Promise<void>
-  loopSvcAddRun(json: string): Promise<void>
-  loopSvcSetRuns(json: string): Promise<void>
-  loopSvcAppendRuns(json: string): Promise<void>
-  loopSvcUpdateRunStatus(runId: number, status: string): Promise<void>
-  loopSvcClearRuns(): Promise<void>
-  loopSvcFetchLoops(status?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  loopSvcFetchLoop(slug: string): Promise<string>
-  loopSvcCreateLoop(requestJson: string): Promise<string>
-  loopSvcUpdateLoop(slug: string, requestJson: string): Promise<string>
-  loopSvcDeleteLoop(slug: string): Promise<void>
-  loopSvcEnableLoop(slug: string): Promise<string>
-  loopSvcDisableLoop(slug: string): Promise<string>
-  loopSvcTriggerLoop(slug: string): Promise<string>
-  loopSvcFetchRuns(slug: string, status?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
-  loopSvcCancelRun(slug: string, runId: number): Promise<void>
+  loopSvcReplaceCachedLoops(reqBytes: Uint8Array): Promise<void>
+  loopSvcSetCurrentLoop(reqBytes: Uint8Array): Promise<void>
+  loopSvcClearCurrentLoop(reqBytes: Uint8Array): Promise<void>
+  loopSvcPatchLoopFromAction(reqBytes: Uint8Array): Promise<void>
+  loopSvcInsertLoopRun(reqBytes: Uint8Array): Promise<void>
+  loopSvcReplaceCachedRuns(reqBytes: Uint8Array): Promise<void>
+  loopSvcAppendCachedRuns(reqBytes: Uint8Array): Promise<void>
+  loopSvcPatchLoopRunStatus(reqBytes: Uint8Array): Promise<void>
+  loopSvcClearLoopRuns(reqBytes: Uint8Array): Promise<void>
   meshTopologyJson(): Promise<string>
   meshSelectedNode(): Promise<string>
   meshGetNodeJson(podKey: string): Promise<string>
@@ -267,7 +253,7 @@ export declare class AppState {
   meshGetActiveNodesJson(): Promise<string>
   meshGetNodesByRunnerJson(runnerId: number): Promise<string>
   meshGetRunnerInfoJson(runnerId: number): Promise<string>
-  meshSetTopology(json: string): Promise<void>
+  meshReplaceTopology(reqBytes: Uint8Array): Promise<void>
   meshClearTopology(): Promise<void>
   meshSelectNode(podKey?: string | undefined | null): Promise<void>
   meshFetchTopology(): Promise<string>
@@ -338,7 +324,6 @@ export declare class AppState {
   runnerFetchRunners(status?: string | undefined | null): Promise<string>
   runnerFetchAvailableRunners(): Promise<string>
   runnerFetchRunner(id: number): Promise<string>
-  runnerUpdateRunner(id: number, requestJson: string): Promise<string>
   runnerDeleteRunner(id: number): Promise<void>
   runnerCreateToken(requestJson: string): Promise<string>
   runnerFetchTokens(): Promise<string>
@@ -346,7 +331,6 @@ export declare class AppState {
   runnerListRunnerLogs(id: number): Promise<string>
   runnerRequestLogUpload(id: number): Promise<void>
   runnerUpgradeRunner(id: number, requestJson: string): Promise<string>
-  runnerListRunnerPods(id: number, status?: string | undefined | null, limit?: number | undefined | null, offset?: number | undefined | null): Promise<string>
   runnerQueryRunnerSandboxes(id: number, requestJson: string): Promise<string>
   runnerGetAuthStatus(requestBytes: Uint8Array): Promise<Uint8Array>
   runnerAuthorizeRunner(requestBytes: Uint8Array): Promise<Uint8Array>

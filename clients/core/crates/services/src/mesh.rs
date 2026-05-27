@@ -82,6 +82,22 @@ impl MeshService {
         self.state.write().unwrap().set_topology(topo.clone());
         serde_json::to_string(&topo).map_err(crate::wire)
     }
+
+    /// Proto-bytes mutator — accepts a prost-encoded
+    /// `proto.mesh_state.v1.ReplaceTopologyRequest` and applies the
+    /// embedded MeshTopology (JSON-carried for variant-shaped data) into
+    /// the local state. Mirrors WasmMeshState::replace_topology so the
+    /// NAPI bridge (Electron main) can fan out the same way.
+    pub fn replace_topology(&self, req_bytes: &[u8]) -> Result<(), String> {
+        use agentsmesh_types::proto_mesh_state_v1::ReplaceTopologyRequest;
+        use prost::Message as _;
+        let req = ReplaceTopologyRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ReplaceTopologyRequest: {e}"))?;
+        if let Ok(topology) = serde_json::from_str::<mp::MeshTopology>(&req.topology_json) {
+            self.state.write().unwrap().set_topology(topology);
+        }
+        Ok(())
+    }
 }
 
 // =============================================================================

@@ -140,13 +140,6 @@ export class ElectronRunnerService implements IRunnerService {
     // Note: caller is the store; store also dispatches RemoveCachedRunnerRequest separately
   }
 
-  async update_runner(id: bigint, json: string): Promise<string> {
-    const result = await invoke<string>("runnerUpdateRunner", Number(id), json);
-    // Note: caller (store) issues PatchCachedRunner proto bytes after
-    this._currentRunnerCache = result;
-    return result;
-  }
-
   async upgrade_runner(id: bigint, json: string): Promise<string> {
     return invoke<string>("runnerUpgradeRunner", Number(id), json);
   }
@@ -169,10 +162,6 @@ export class ElectronRunnerService implements IRunnerService {
 
   async list_runner_logs(id: bigint): Promise<string> {
     return invoke<string>("runnerListRunnerLogs", Number(id));
-  }
-
-  async list_runner_pods(id: bigint, status?: string | null, limit?: number | null, offset?: number | null): Promise<string> {
-    return invoke<string>("runnerListRunnerPods", Number(id), status, limit, offset);
   }
 
   async query_runner_sandboxes(id: bigint, json: string): Promise<string> {

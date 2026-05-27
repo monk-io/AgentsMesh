@@ -5,16 +5,16 @@ import { invokeIpcContract } from "../../../helpers/ipc-contract";
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · loop_svc", () => {
-  test("loopSvcAddRun", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcAddRun", returnType: "void" }, "");
+  test("loopSvcAppendCachedRuns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcAppendCachedRuns", returnType: "void" }, []);
   });
 
-  test("loopSvcAppendRuns", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcAppendRuns", returnType: "void" }, "");
+  test("loopSvcClearCurrentLoop", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcClearCurrentLoop", returnType: "void" }, []);
   });
 
-  test("loopSvcClearRuns", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcClearRuns", returnType: "void" });
+  test("loopSvcClearLoopRuns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcClearLoopRuns", returnType: "void" }, []);
   });
 
   test("loopSvcCurrentLoopJson", async ({ sharedPage }) => {
@@ -25,8 +25,28 @@ test.describe("IPC · loop_svc", () => {
     await invokeIpcContract(sharedPage, { method: "loopSvcGetLoopBySlugJson", returnType: "string" }, "");
   });
 
+  test("loopSvcInsertLoopRun", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcInsertLoopRun", returnType: "void" }, []);
+  });
+
   test("loopSvcLoopsJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "loopSvcLoopsJson", returnType: "string" });
+  });
+
+  test("loopSvcPatchLoopFromAction", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcPatchLoopFromAction", returnType: "void" }, []);
+  });
+
+  test("loopSvcPatchLoopRunStatus", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcPatchLoopRunStatus", returnType: "void" }, []);
+  });
+
+  test("loopSvcReplaceCachedLoops", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcReplaceCachedLoops", returnType: "void" }, []);
+  });
+
+  test("loopSvcReplaceCachedRuns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "loopSvcReplaceCachedRuns", returnType: "void" }, []);
   });
 
   test("loopSvcRunsJson", async ({ sharedPage }) => {
@@ -34,22 +54,6 @@ test.describe("IPC · loop_svc", () => {
   });
 
   test("loopSvcSetCurrentLoop", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcSetCurrentLoop", returnType: "void" }, "");
-  });
-
-  test("loopSvcSetLoops", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcSetLoops", returnType: "void" }, "");
-  });
-
-  test("loopSvcSetRuns", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcSetRuns", returnType: "void" }, "");
-  });
-
-  test("loopSvcUpdateLoopLocal", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcUpdateLoopLocal", returnType: "void" }, "", "");
-  });
-
-  test("loopSvcUpdateRunStatus", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "loopSvcUpdateRunStatus", returnType: "void" }, 0, "");
+    await invokeIpcContract(sharedPage, { method: "loopSvcSetCurrentLoop", returnType: "void" }, []);
   });
 });

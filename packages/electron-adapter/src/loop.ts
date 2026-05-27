@@ -1,5 +1,59 @@
 import { invoke } from "./invoke";
 import type { ILoopService } from "@agentsmesh/service-interface";
+import { fromBinary } from "@bufbuild/protobuf";
+import {
+  ReplaceCachedLoopsRequestSchema,
+  SetCurrentLoopRequestSchema,
+  ClearCurrentLoopRequestSchema,
+  PatchLoopFromActionRequestSchema,
+  InsertLoopRunRequestSchema,
+  ReplaceCachedRunsRequestSchema,
+  AppendCachedRunsRequestSchema,
+  PatchLoopRunStatusRequestSchema,
+  ClearLoopRunsRequestSchema,
+} from "@agentsmesh/proto/loop_state/v1/loop_state_pb";
+
+// Proto -> JS-cache shape converter. Mirrors the legacy JSON shape readers
+// (loops_json / current_loop_json / runs_json) consumed by selectors.
+interface ProtoLoop {
+  id: bigint; slug: string; name: string; description?: string;
+  podKey?: string; agentSlug?: string; intervalSeconds?: number;
+  prompt?: string; status?: string; enabled?: boolean;
+  lastRunAt?: string; nextRunAt?: string;
+  createdAt?: string; updatedAt?: string;
+}
+interface ProtoLoopRun {
+  id: bigint; loopSlug?: string; podKey?: string; status?: string;
+  startedAt?: string; finishedAt?: string;
+}
+
+function loopToCache(l: ProtoLoop): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    id: Number(l.id), slug: l.slug, name: l.name,
+  };
+  if (l.description !== undefined) out.description = l.description;
+  if (l.podKey !== undefined) out.pod_key = l.podKey;
+  if (l.agentSlug !== undefined) out.agent_slug = l.agentSlug;
+  if (l.intervalSeconds !== undefined) out.interval_seconds = l.intervalSeconds;
+  if (l.prompt !== undefined) out.prompt = l.prompt;
+  if (l.status !== undefined) out.status = l.status;
+  if (l.enabled !== undefined) out.enabled = l.enabled;
+  if (l.lastRunAt !== undefined) out.last_run_at = l.lastRunAt;
+  if (l.nextRunAt !== undefined) out.next_run_at = l.nextRunAt;
+  if (l.createdAt !== undefined) out.created_at = l.createdAt;
+  if (l.updatedAt !== undefined) out.updated_at = l.updatedAt;
+  return out;
+}
+
+function runToCache(r: ProtoLoopRun): Record<string, unknown> {
+  const out: Record<string, unknown> = { id: Number(r.id) };
+  if (r.loopSlug !== undefined) out.loop_slug = r.loopSlug;
+  if (r.podKey !== undefined) out.pod_key = r.podKey;
+  if (r.status !== undefined) out.status = r.status;
+  if (r.startedAt !== undefined) out.started_at = r.startedAt;
+  if (r.finishedAt !== undefined) out.finished_at = r.finishedAt;
+  return out;
+}
 
 export class ElectronLoopService implements ILoopService {
   private _loopsCache = "[]";
@@ -16,107 +70,76 @@ export class ElectronLoopService implements ILoopService {
     return l ? JSON.stringify(l) : null;
   }
 
-  set_loops(json: string): void { this._loopsCache = json; }
-  set_runs(json: string): void { this._runsCache = json; }
-  set_current_loop(json: string): void { this._currentLoopCache = json || null; }
+  // Proto-bytes mutators (mirror WasmLoopService). Decode locally to keep
+  // synchronous read selectors warm, then fan out to NAPI fire-and-forget so
+  // the main-process Rust state stays in sync.
 
-  add_run(json: string): void {
-    const runs = JSON.parse(this._runsCache) as unknown[];
-    runs.push(JSON.parse(json));
-    this._runsCache = JSON.stringify(runs);
+  replace_cached_loops(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceCachedLoopsRequestSchema, reqBytes);
+    this._loopsCache = JSON.stringify(req.loops.map(loopToCache));
+    void invoke<void>("loopSvcReplaceCachedLoops", Array.from(reqBytes)).catch(() => undefined);
   }
 
-  append_runs(json: string): void {
+  set_current_loop(reqBytes: Uint8Array): void {
+    const req = fromBinary(SetCurrentLoopRequestSchema, reqBytes);
+    this._currentLoopCache = req.loop ? JSON.stringify(loopToCache(req.loop)) : null;
+    void invoke<void>("loopSvcSetCurrentLoop", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  clear_current_loop(reqBytes: Uint8Array): void {
+    fromBinary(ClearCurrentLoopRequestSchema, reqBytes);
+    this._currentLoopCache = null;
+    void invoke<void>("loopSvcClearCurrentLoop", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  patch_loop_from_action(reqBytes: Uint8Array): void {
+    const req = fromBinary(PatchLoopFromActionRequestSchema, reqBytes);
+    if (req.loop) {
+      const patch = loopToCache(req.loop);
+      const list = JSON.parse(this._loopsCache) as Array<{ slug: string }>;
+      const idx = list.findIndex(x => x.slug === req.slug);
+      if (idx >= 0) list[idx] = { ...list[idx], ...patch } as { slug: string };
+      this._loopsCache = JSON.stringify(list);
+    }
+    void invoke<void>("loopSvcPatchLoopFromAction", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  insert_loop_run(reqBytes: Uint8Array): void {
+    const req = fromBinary(InsertLoopRunRequestSchema, reqBytes);
+    if (req.run) {
+      const runs = JSON.parse(this._runsCache) as unknown[];
+      runs.push(runToCache(req.run));
+      this._runsCache = JSON.stringify(runs);
+    }
+    void invoke<void>("loopSvcInsertLoopRun", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  replace_cached_runs(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceCachedRunsRequestSchema, reqBytes);
+    this._runsCache = JSON.stringify(req.runs.map(runToCache));
+    void invoke<void>("loopSvcReplaceCachedRuns", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  append_cached_runs(reqBytes: Uint8Array): void {
+    const req = fromBinary(AppendCachedRunsRequestSchema, reqBytes);
     const existing = JSON.parse(this._runsCache) as unknown[];
-    const newer = JSON.parse(json) as unknown[];
+    const newer = req.runs.map(runToCache);
     this._runsCache = JSON.stringify([...existing, ...newer]);
+    void invoke<void>("loopSvcAppendCachedRuns", Array.from(reqBytes)).catch(() => undefined);
   }
 
-  clear_runs(): void { this._runsCache = "[]"; }
-
-  update_loop_local(slug: string, json: string): void {
-    const loops = JSON.parse(this._loopsCache) as { slug: string }[];
-    const idx = loops.findIndex(x => x.slug === slug);
-    if (idx >= 0) loops[idx] = { ...loops[idx], ...JSON.parse(json) };
-    this._loopsCache = JSON.stringify(loops);
-  }
-
-  update_run_status(runId: bigint, status: string): void {
-    const runs = JSON.parse(this._runsCache) as { id: number; status?: string }[];
-    const r = runs.find(x => x.id === Number(runId));
-    if (r) r.status = status;
+  patch_loop_run_status(reqBytes: Uint8Array): void {
+    const req = fromBinary(PatchLoopRunStatusRequestSchema, reqBytes);
+    const runs = JSON.parse(this._runsCache) as Array<{ id: number; status?: string }>;
+    const r = runs.find(x => x.id === Number(req.runId));
+    if (r) r.status = req.status;
     this._runsCache = JSON.stringify(runs);
+    void invoke<void>("loopSvcPatchLoopRunStatus", Array.from(reqBytes)).catch(() => undefined);
   }
 
-  async fetch_loops(status?: string | null, limit?: number | null, offset?: number | null): Promise<string> {
-    const result = await invoke<string>("loopSvcFetchLoops", status, limit, offset);
-    const parsed = JSON.parse(result);
-    this._loopsCache = JSON.stringify(parsed.loops ?? []);
-    return result;
-  }
-
-  async fetch_loop(slug: string): Promise<string> {
-    const result = await invoke<string>("loopSvcFetchLoop", slug);
-    this._currentLoopCache = result;
-    return result;
-  }
-
-  async fetch_runs(slug: string, status?: string | null, limit?: number | null, offset?: number | null): Promise<string> {
-    const result = await invoke<string>("loopSvcFetchRuns", slug, status, limit, offset);
-    const parsed = JSON.parse(result);
-    this._runsCache = JSON.stringify(parsed.runs ?? []);
-    return result;
-  }
-
-  async create_loop(json: string): Promise<string> {
-    const result = await invoke<string>("loopSvcCreateLoop", json);
-    const loops = JSON.parse(this._loopsCache) as unknown[];
-    loops.push(JSON.parse(result));
-    this._loopsCache = JSON.stringify(loops);
-    this._currentLoopCache = result;
-    return result;
-  }
-
-  async update_loop(slug: string, json: string): Promise<string> {
-    const result = await invoke<string>("loopSvcUpdateLoop", slug, json);
-    this.update_loop_local(slug, result);
-    this._currentLoopCache = result;
-    return result;
-  }
-
-  async delete_loop(slug: string): Promise<void> {
-    await invoke<void>("loopSvcDeleteLoop", slug);
-    const loops = JSON.parse(this._loopsCache) as { slug: string }[];
-    this._loopsCache = JSON.stringify(loops.filter(x => x.slug !== slug));
-  }
-
-  async enable_loop(slug: string): Promise<string> {
-    const result = await invoke<string>("loopSvcEnableLoop", slug);
-    this.update_loop_local(slug, result);
-    this._currentLoopCache = result;
-    return result;
-  }
-
-  async disable_loop(slug: string): Promise<string> {
-    const result = await invoke<string>("loopSvcDisableLoop", slug);
-    this.update_loop_local(slug, result);
-    this._currentLoopCache = result;
-    return result;
-  }
-
-  async trigger_loop(slug: string): Promise<string> {
-    const result = await invoke<string>("loopSvcTriggerLoop", slug);
-    this.update_loop_local(slug, result);
-    this._currentLoopCache = result;
-    return result;
-  }
-
-  async cancel_run(slug: string, runId: bigint): Promise<void> {
-    await invoke<void>("loopSvcCancelRun", slug, Number(runId));
-    this.update_run_status(runId, "cancelled");
-  }
-
-  async fetch_iterations(key: string): Promise<string> {
-    return invoke<string>("loopSvcFetchIterations", key);
+  clear_loop_runs(reqBytes: Uint8Array): void {
+    fromBinary(ClearLoopRunsRequestSchema, reqBytes);
+    this._runsCache = "[]";
+    void invoke<void>("loopSvcClearLoopRuns", Array.from(reqBytes)).catch(() => undefined);
   }
 }

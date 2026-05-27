@@ -187,14 +187,31 @@ impl AgentsMeshCore {
     pub async fn blocks_semantic_search(
         &self, workspace_id: String, req: SemanticSearchRequestDto,
     ) -> Result<Vec<SearchHitDto>, CoreError> {
-        let req: agentsmesh_state::blockstore_types::SemanticSearchRequest = req.into();
-        let req_json = serde_json::to_string(&req).unwrap_or_else(|_| "{}".into());
-        let resp = self.blockstore
-            .semantic_search(&workspace_id, &req_json).await
+        use agentsmesh_types::proto_blockstore_v1 as bp;
+        let req_view: agentsmesh_state::blockstore_types::SemanticSearchRequest = req.into();
+        let proto_req = bp::SemanticSearchRequest {
+            org_slug: String::new(),  // service layer fills from session
+            workspace_id: workspace_id.clone(),
+            query: req_view.query,
+            top_k: req_view.top_k.map(|v| v as i32),
+            min_score: req_view.min_score.map(|v| v as f32),
+            r#type: req_view.block_type,
+        };
+        let req_bytes = proto_req.encode_to_vec();
+        let resp_bytes = self.blockstore
+            .semantic_search_connect(&req_bytes).await
             .map_err(|m| CoreError::Unknown { message: m })?;
-        let hits: Vec<agentsmesh_state::blockstore_types::SearchHit> = serde_json::from_str(&resp)
+        let resp = bp::SemanticSearchResponse::decode(resp_bytes.as_slice())
             .map_err(|e| CoreError::Unknown { message: format!("decode hits: {e}") })?;
-        Ok(hits.into_iter().map(SearchHitDto::from).collect())
+        Ok(resp.hits.into_iter()
+            .map(|h| agentsmesh_state::blockstore_types::SearchHit {
+                block_id: h.block_id,
+                block_type: h.r#type,
+                snippet: h.snippet,
+                score: h.score as f64,
+            })
+            .map(SearchHitDto::from)
+            .collect())
     }
 
     // ── Typed wrappers — for native TCA reducers that prefer Swift

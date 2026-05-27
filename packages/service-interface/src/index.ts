@@ -362,28 +362,20 @@ export interface ILocalRunnerService {
 }
 
 export interface ILoopService {
-  add_run(json: string): void;
-  append_runs(json: string): void;
-  cancel_run(slug: string, run_id: bigint): Promise<void>;
-  clear_runs(): void;
-  create_loop(request_json: string): Promise<string>;
   current_loop_json(): any;
-  delete_loop(slug: string): Promise<void>;
-  disable_loop(slug: string): Promise<string>;
-  enable_loop(slug: string): Promise<string>;
-  fetch_loop(slug: string): Promise<string>;
-  fetch_loops(status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
-  fetch_runs(slug: string, status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   get_loop_by_slug_json(slug: string): any;
   loops_json(): string;
   runs_json(): string;
-  set_current_loop(json: string): void;
-  set_loops(json: string): void;
-  set_runs(json: string): void;
-  trigger_loop(slug: string): Promise<string>;
-  update_loop(slug: string, request_json: string): Promise<string>;
-  update_loop_local(slug: string, json: string): void;
-  update_run_status(run_id: bigint, status: string): void;
+  // Proto-bytes mutators (mirror WasmLoopService).
+  replace_cached_loops(req_bytes: Uint8Array): void;
+  set_current_loop(req_bytes: Uint8Array): void;
+  clear_current_loop(req_bytes: Uint8Array): void;
+  patch_loop_from_action(req_bytes: Uint8Array): void;
+  insert_loop_run(req_bytes: Uint8Array): void;
+  replace_cached_runs(req_bytes: Uint8Array): void;
+  append_cached_runs(req_bytes: Uint8Array): void;
+  patch_loop_run_status(req_bytes: Uint8Array): void;
+  clear_loop_runs(req_bytes: Uint8Array): void;
 }
 
 export interface ILoopState {
@@ -560,7 +552,6 @@ export interface IRunnerService {
   get_auth_status(request_bytes: Uint8Array): Promise<Uint8Array>;
   get_runner_json(id: bigint): any;
   list_runner_logs(id: bigint): Promise<string>;
-  list_runner_pods(id: bigint, status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   query_runner_sandboxes(id: bigint, request_json: string): Promise<string>;
   // Proto-bytes mutators (mirror state_runner.rs).
   replace_cached_runners(req_bytes: Uint8Array): void;
@@ -570,7 +561,6 @@ export interface IRunnerService {
   remove_cached_runner(req_bytes: Uint8Array): void;
   request_log_upload(id: bigint): Promise<void>;
   runners_json(): string;
-  update_runner(id: bigint, request_json: string): Promise<string>;
   update_runner_status(id: bigint, status: string): void;
   upgrade_runner(id: bigint, request_json: string): Promise<string>;
 }

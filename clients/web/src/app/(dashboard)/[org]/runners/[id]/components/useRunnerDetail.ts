@@ -8,14 +8,14 @@ import type {
   SandboxStatus,
   RelayConnectionInfo,
 } from "@/lib/viewModels/runner";
-import { getRunnerService } from "@/lib/wasm-core";
+import { runnerApi } from "@/lib/api/facade/runner";
 import {
   getRunner as getRunnerConnect,
   updateRunner as updateRunnerConnect,
   deleteRunner as deleteRunnerConnect,
   querySandboxes as querySandboxesConnect,
-} from "@/lib/api/connect/runnerConnect";
-import { createPod as createPodConnect } from "@/lib/api/connect/podConnect";
+} from "@/lib/api/facade/runnerConnect";
+import { createPod as createPodConnect } from "@/lib/api/facade/podConnect";
 import { getLocalizedErrorMessage } from "@/lib/api/errors";
 import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -70,15 +70,14 @@ export function useRunnerDetail(t: (key: string) => string, runnerIdArg?: number
   const loadPods = useCallback(async () => {
     setLoadingPods(true);
     try {
-      // list_runner_pods returns a serialised proto.pod.v1.ListPodsResponse.
-      // serde emits fields as `items` (proto field name), not `pods`. The
-      // original Bug 1 that motivated this whole proto-migration PR was a
-      // R6 regression where this destructure read `res.pods` (undefined) —
-      // an empty sidebar shipped to production. Keep reading `items` here.
-      const res: { items: RunnerPodData[]; total: number } = JSON.parse(
-        await getRunnerService().list_runner_pods(BigInt(runnerId), podFilter || null, limit ?? null, offset ?? null)
-      );
-      setPods(res.items || []);
+      // proto.pod.v1.ListPods filtered by runner_id — proto-bytes Connect-RPC
+      // through the runner facade. Replaces the legacy wasm JSON wrapper.
+      const res = await runnerApi.listPods(runnerId, {
+        status: podFilter || undefined,
+        limit,
+        offset,
+      });
+      setPods((res.items as RunnerPodData[]) || []);
       setTotal(res.total);
     } catch (error) {
       console.error("Failed to load pods:", error);

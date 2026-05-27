@@ -5,10 +5,6 @@ import { invokeIpcContract } from "../../../helpers/ipc-contract";
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · blockstore", () => {
-  test("blockstoreApplyOps", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreApplyOps", returnType: "string" }, "");
-  });
-
   test("blockstoreApplyRemoteOp", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "blockstoreApplyRemoteOp", returnType: "void" }, []);
   });
@@ -75,10 +71,6 @@ test.describe("IPC · blockstore", () => {
 
   test("blockstoreReplaceWorkspaces", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "blockstoreReplaceWorkspaces", returnType: "void" }, []);
-  });
-
-  test("blockstoreSemanticSearch", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "blockstoreSemanticSearch", returnType: "string" }, "", "");
   });
 
   test("blockstoreSetLastOpId", async ({ sharedPage }) => {

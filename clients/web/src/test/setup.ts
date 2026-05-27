@@ -661,33 +661,19 @@ vi.mock('@/lib/wasm-core', () => {
   }
 
   const loopState = {
-    set_loops: fn((j: string) => { h.loop.list = j }),
     loops_json: fn(() => h.loop.list),
-    set_current_loop: fn((j: string) => { h.loop.current = j }),
     current_loop_json: fn(() => h.loop.current || undefined),
+    runs_json: fn(() => '[]'),
     get_loop_by_slug_json: fn((slug: string) => {
       const arr = JSON.parse(h.loop.list) as { slug: string }[]
       const l = arr.find((x) => x.slug === slug)
       return l ? JSON.stringify(l) : undefined
     }),
-    update_loop_local: fn(),
-    add_run: fn(), set_runs: fn(), append_runs: fn(),
-    update_run_status: fn(), runs_json: fn(() => '[]'), clear_runs: fn(),
     // Proto-state mutations (binary wire) — TS store uses these.
-    replace_cached_loops: fn(), clear_current_loop: fn(),
+    replace_cached_loops: fn(), set_current_loop: fn(), clear_current_loop: fn(),
     patch_loop_from_action: fn(), insert_loop_run: fn(),
     replace_cached_runs: fn(), append_cached_runs: fn(),
     patch_loop_run_status: fn(), clear_loop_runs: fn(),
-    fetch_loops: fn().mockResolvedValue(JSON.stringify({ loops: [], total: 0 })),
-    fetch_loop: fn().mockResolvedValue('{}'),
-    create_loop: fn().mockResolvedValue('{}'),
-    update_loop: fn().mockResolvedValue('{}'),
-    delete_loop: fn().mockResolvedValue(undefined),
-    enable_loop: fn().mockResolvedValue('{}'),
-    disable_loop: fn().mockResolvedValue('{}'),
-    trigger_loop: fn().mockResolvedValue('{}'),
-    fetch_runs: fn().mockResolvedValue(JSON.stringify({ runs: [], total: 0 })),
-    cancel_run: fn().mockResolvedValue(undefined),
     // Connect-RPC binary lane (proto.loop.v1.LoopService).
     listLoopsConnect: fn().mockResolvedValue(new Uint8Array()),
     getLoopConnect: fn().mockResolvedValue(new Uint8Array()),

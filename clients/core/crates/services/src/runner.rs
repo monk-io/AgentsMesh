@@ -9,7 +9,6 @@ use agentsmesh_types::proto_runner_state_v1::{
     PatchCachedRunnerRequest, RemoveCachedRunnerRequest, ReplaceAvailableRunnersRequest,
     ReplaceCachedRunnersRequest, SetCurrentRunnerRequest,
 };
-use agentsmesh_types::UpdateRunnerRequest;
 use prost::Message;
 
 pub struct RunnerService {
@@ -80,38 +79,6 @@ impl RunnerService {
 
     pub fn update_runner_status(&self, id: i64, status: &str) {
         self.state.write().unwrap().update_runner_status(id, status);
-    }
-
-    pub async fn update_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
-        let req_legacy: UpdateRunnerRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let req = runner_proto::UpdateRunnerRequest {
-            org_slug: self.client.current_org_slug(),
-            id,
-            description: req_legacy.description,
-            max_concurrent_pods: req_legacy.max_concurrent_pods,
-            is_enabled: req_legacy.is_enabled,
-            visibility: req_legacy.visibility,
-            tags: None,
-        };
-        let runner = self.client.update_runner_connect(&req).await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_runner(id, runner.clone());
-        serde_json::to_string(&runner).map_err(crate::wire)
-    }
-
-    pub async fn list_runner_pods(
-        &self, id: i64, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        // proto.runner_api.v1 doesn't expose runner-scoped pod listing — the
-        // proto SSOT routes per-runner pod lookup through QuerySandboxes
-        // for sandbox state. Keep the legacy REST path here so existing
-        // callers (web's runner detail view) keep working until proto.pod.v1
-        // adds a runner_id filter. Touches:
-        //   - clients/web/src/lib/api/runner.ts (legacy fetch path)
-        let resp = self.client
-            .list_runner_pods(id, status.as_deref(), limit, offset)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
     }
 
     pub async fn get_auth_status_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {

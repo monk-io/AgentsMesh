@@ -111,10 +111,6 @@ impl WasmBlockstoreService {
     // legacy methods bridge to the existing REST path; the Connect methods
     // above run in parallel for the proto-migration's binary wire.
 
-    pub async fn apply_ops(&self, req_json: String) -> Result<String, String> {
-        self.0.apply_ops(&req_json).await
-    }
-
     pub async fn list_workspaces(&self) -> Result<String, String> {
         self.0.list_workspaces().await
     }
@@ -133,12 +129,6 @@ impl WasmBlockstoreService {
 
     pub async fn catchup(&self, workspace_id: String) -> Result<(), String> {
         self.0.catchup(&workspace_id).await
-    }
-
-    pub async fn semantic_search(
-        &self, workspace_id: String, req_json: String,
-    ) -> Result<String, String> {
-        self.0.semantic_search(&workspace_id, &req_json).await
     }
 
     pub fn apply_remote_op(&self, req_bytes: &[u8]) -> Result<(), String> {

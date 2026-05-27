@@ -83,48 +83,6 @@ impl LoopService {
             .map(|l| serde_json::to_string(l).unwrap_or_default())
     }
 
-    // -------- Legacy JSON mutations (NAPI backward-compat only) --------
-    //
-    // The wasm bridge no longer exposes these — TS renderer code goes
-    // through the proto-bytes methods below. Kept here because the
-    // node-bridge desktop layer still wires them up directly. NAPI
-    // proto-ization is Phase 5 of the proto-state migration.
-
-    pub fn set_loops(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<LoopData>>(json) {
-            self.state.write().unwrap().set_loops(v);
-        }
-    }
-
-    pub fn set_current_loop_json(&self, json: &str) {
-        let l = if json.is_empty() { None } else { serde_json::from_str::<LoopData>(json).ok() };
-        self.state.write().unwrap().set_current_loop(l);
-    }
-
-    pub fn update_loop_local(&self, slug: &str, json: &str) {
-        if let Ok(l) = serde_json::from_str::<LoopData>(json) {
-            self.state.write().unwrap().update_loop(slug, l);
-        }
-    }
-
-    pub fn add_run(&self, json: &str) {
-        if let Ok(r) = serde_json::from_str::<LoopRunData>(json) {
-            self.state.write().unwrap().add_run(r);
-        }
-    }
-
-    pub fn set_runs(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<LoopRunData>>(json) {
-            self.state.write().unwrap().set_runs(v);
-        }
-    }
-
-    pub fn append_runs(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<LoopRunData>>(json) {
-            self.state.write().unwrap().append_runs(v);
-        }
-    }
-
     pub fn update_run_status(&self, run_id: i64, status: &str) {
         self.state.write().unwrap().update_run_status(run_id, status);
     }

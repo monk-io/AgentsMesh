@@ -49,17 +49,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "any"
   },
   {
-    "name": "authApplySession",
-    "group": "auth",
-    "params": [
-      {
-        "name": "sessionJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "authApplySessionProto",
     "group": "auth",
     "params": [
@@ -191,34 +180,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "Array<number>"
   },
   {
-    "name": "authSetCurrentOrg",
-    "group": "auth",
-    "params": [
-      {
-        "name": "orgJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
     "name": "authSetCurrentOrgProto",
     "group": "auth",
     "params": [
       {
         "name": "reqBytes",
         "type": "Array<number>"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "authSetOrganizations",
-    "group": "auth",
-    "params": [
-      {
-        "name": "orgsJson",
-        "type": "string"
       }
     ],
     "returnType": "void"
@@ -560,17 +527,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "any"
   },
   {
-    "name": "blockstoreApplyOps",
-    "group": "blockstore",
-    "params": [
-      {
-        "name": "reqJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
     "name": "blockstoreApplyRemoteOp",
     "group": "blockstore",
     "params": [
@@ -725,21 +681,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "void"
-  },
-  {
-    "name": "blockstoreSemanticSearch",
-    "group": "blockstore",
-    "params": [
-      {
-        "name": "workspaceId",
-        "type": "string"
-      },
-      {
-        "name": "reqJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
   },
   {
     "name": "blockstoreSetLastOpId",
@@ -1562,31 +1503,36 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "void"
   },
   {
-    "name": "loopSvcAddRun",
+    "name": "loopSvcAppendCachedRuns",
     "group": "loop_svc",
     "params": [
       {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Uint8Array"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "loopSvcAppendRuns",
+    "name": "loopSvcClearCurrentLoop",
     "group": "loop_svc",
     "params": [
       {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Uint8Array"
       }
     ],
     "returnType": "void"
   },
   {
-    "name": "loopSvcClearRuns",
+    "name": "loopSvcClearLoopRuns",
     "group": "loop_svc",
-    "params": [],
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
     "returnType": "void"
   },
   {
@@ -1607,10 +1553,65 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
+    "name": "loopSvcInsertLoopRun",
+    "group": "loop_svc",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
     "name": "loopSvcLoopsJson",
     "group": "loop_svc",
     "params": [],
     "returnType": "string"
+  },
+  {
+    "name": "loopSvcPatchLoopFromAction",
+    "group": "loop_svc",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "loopSvcPatchLoopRunStatus",
+    "group": "loop_svc",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "loopSvcReplaceCachedLoops",
+    "group": "loop_svc",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "loopSvcReplaceCachedRuns",
+    "group": "loop_svc",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "loopSvcRunsJson",
@@ -1623,60 +1624,8 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "loop_svc",
     "params": [
       {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcSetLoops",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcSetRuns",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcUpdateLoopLocal",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcUpdateRunStatus",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "runId",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Uint8Array"
       }
     ],
     "returnType": "void"
@@ -1777,6 +1726,17 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "mesh",
     "params": [],
     "returnType": "any"
+  },
+  {
+    "name": "meshReplaceTopology",
+    "group": "mesh",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "meshSelectedNode",
@@ -1994,29 +1954,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
-    "name": "runnerListRunnerPods",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "limit",
-        "type": "number | undefined | null"
-      },
-      {
-        "name": "offset",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
     "name": "runnerPatchCachedRunner",
     "group": "runner",
     "params": [
@@ -2076,21 +2013,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "void"
-  },
-  {
-    "name": "runnerUpdateRunner",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "requestJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
   },
   {
     "name": "runnerUpdateRunnerStatus",

@@ -5,10 +5,6 @@ import { invokeIpcContract } from "../../../helpers/ipc-contract";
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · auth", () => {
-  test("authApplySession", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authApplySession", returnType: "void" }, "");
-  });
-
   test("authApplySessionProto", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authApplySessionProto", returnType: "void" }, []);
   });
@@ -81,16 +77,8 @@ test.describe("IPC · auth", () => {
     await invokeIpcContract(sharedPage, { method: "authRefreshTokenProto", returnType: "Array<number>" });
   });
 
-  test("authSetCurrentOrg", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authSetCurrentOrg", returnType: "void" }, "");
-  });
-
   test("authSetCurrentOrgProto", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "authSetCurrentOrgProto", returnType: "void" }, []);
-  });
-
-  test("authSetOrganizations", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "authSetOrganizations", returnType: "void" }, "");
   });
 
   test("authSetOrganizationsProto", async ({ sharedPage }) => {

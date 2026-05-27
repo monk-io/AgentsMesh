@@ -53,6 +53,10 @@ test.describe("IPC · mesh", () => {
     await invokeIpcContract(sharedPage, { method: "meshGetTicketPodsConnect", returnType: "any" });
   });
 
+  test("meshReplaceTopology", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "meshReplaceTopology", returnType: "void" }, []);
+  });
+
   test("meshSelectedNode", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "meshSelectedNode", returnType: "string" });
   });

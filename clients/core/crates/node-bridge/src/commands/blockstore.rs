@@ -6,12 +6,6 @@ use crate::{AppState, err};
 #[napi]
 impl AppState {
     #[napi]
-    pub async fn blockstore_apply_ops(&self, req_json: String) -> napi::Result<String> {
-        let svc = self.blockstore.lock().await;
-        svc.apply_ops(&req_json).await.map_err(err)
-    }
-
-    #[napi]
     pub async fn blockstore_list_workspaces(&self) -> napi::Result<String> {
         let svc = self.blockstore.lock().await;
         svc.list_workspaces().await.map_err(err)
@@ -39,12 +33,6 @@ impl AppState {
     pub async fn blockstore_catchup(&self, workspace_id: String) -> napi::Result<()> {
         let svc = self.blockstore.lock().await;
         svc.catchup(&workspace_id).await.map_err(err)
-    }
-
-    #[napi]
-    pub async fn blockstore_semantic_search(&self, workspace_id: String, req_json: String) -> napi::Result<String> {
-        let svc = self.blockstore.lock().await;
-        svc.semantic_search(&workspace_id, &req_json).await.map_err(err)
     }
 
     #[napi]
