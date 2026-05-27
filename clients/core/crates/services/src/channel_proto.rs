@@ -1,9 +1,7 @@
 // Proto-bytes mutator surface for ChannelService. Each method decodes a
 // prost-encoded request (issued by TS/Swift via wasm-bindgen / NAPI /
 // UniFFI) and applies it to the in-memory cache via the underlying
-// ChannelState. The non-proto JSON helpers in channel.rs are retained for
-// callers that haven't migrated yet (facade/channel.ts, channel.rs node
-// bridge).
+// ChannelState.
 
 use std::collections::HashMap;
 
@@ -12,7 +10,8 @@ use agentsmesh_types::proto_channel_state_v1::{
     ApplyChannelMessageEditedEventRequest, ApplyIncomingChannelMessageRequest,
     InsertChannelMessageRequest, InsertChannelRequest, PatchChannelMemberCountRequest,
     PrependCachedChannelMessagesRequest, ReplaceCachedChannelMessagesRequest,
-    ReplaceCachedChannelsRequest, ReplaceChannelUnreadCountsRequest,
+    ReplaceCachedChannelsRequest, ReplaceChannelMembersRequest, ReplaceChannelPodsRequest,
+    ReplaceChannelUnreadCountsRequest,
 };
 use prost::Message;
 
@@ -109,6 +108,20 @@ impl ChannelService {
             .map_err(|e| format!("decode ReplaceChannelUnreadCountsRequest: {e}"))?;
         let counts: HashMap<i64, u32> = req.counts.into_iter().collect();
         self.state_write().set_unread_counts(counts);
+        Ok(())
+    }
+
+    pub fn replace_channel_pods(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ReplaceChannelPodsRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ReplaceChannelPodsRequest: {e}"))?;
+        self.state_write().set_channel_pods(req.channel_id, req.pods);
+        Ok(())
+    }
+
+    pub fn replace_channel_members(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ReplaceChannelMembersRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ReplaceChannelMembersRequest: {e}"))?;
+        self.state_write().set_channel_members(req.channel_id, req.members);
         Ok(())
     }
 }

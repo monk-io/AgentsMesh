@@ -13,15 +13,17 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Channel, ChannelMessage } from "./channel_state_pb.ts";
+import type { Channel, ChannelMember, ChannelMessage } from "./channel_state_pb.ts";
 import { file_channel_state_v1_channel_state } from "./channel_state_pb.ts";
+import type { Pod } from "../../pod/v1/pod_pb.ts";
+import { file_pod_v1_pod } from "../../pod/v1/pod_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file channel_state/v1/mutations.proto.
  */
 export const file_channel_state_v1_mutations: GenFile = /*@__PURE__*/
-  fileDesc("CiBjaGFubmVsX3N0YXRlL3YxL211dGF0aW9ucy5wcm90bxIWcHJvdG8uY2hhbm5lbF9zdGF0ZS52MSJDCh5QYXRjaENoYW5uZWxNZW1iZXJDb3VudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxINCgVkZWx0YRgCIAEoBSJxCiJBcHBseUluY29taW5nQ2hhbm5lbE1lc3NhZ2VSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSNwoHbWVzc2FnZRgCIAEoCzImLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuQ2hhbm5lbE1lc3NhZ2UiogIKJUFwcGx5Q2hhbm5lbE1lc3NhZ2VFZGl0ZWRFdmVudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxISCgptZXNzYWdlX2lkGAIgASgDEgwKBGJvZHkYAyABKAkSFAoHY29udGVudBgEIAEoCUgAiAEBEl0KCG1lbnRpb25zGAUgAygLMksucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5BcHBseUNoYW5uZWxNZXNzYWdlRWRpdGVkRXZlbnRSZXF1ZXN0Lk1lbnRpb25zRW50cnkSEQoJZWRpdGVkX2F0GAYgASgJGi8KDU1lbnRpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIKCghfY29udGVudCJRChxSZXBsYWNlQ2FjaGVkQ2hhbm5lbHNSZXF1ZXN0EjEKCGNoYW5uZWxzGAEgAygLMh8ucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsIkgKFEluc2VydENoYW5uZWxSZXF1ZXN0EjAKB2NoYW5uZWwYASABKAsyHy5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWwihQEKI1JlcGxhY2VDYWNoZWRDaGFubmVsTWVzc2FnZXNSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSOAoIbWVzc2FnZXMYAiADKAsyJi5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWxNZXNzYWdlEhAKCGhhc19tb3JlGAMgASgIIoUBCiNQcmVwZW5kQ2FjaGVkQ2hhbm5lbE1lc3NhZ2VzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEjgKCG1lc3NhZ2VzGAIgAygLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZRIQCghoYXNfbW9yZRgDIAEoCCJqChtJbnNlcnRDaGFubmVsTWVzc2FnZVJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI3CgdtZXNzYWdlGAIgASgLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZSKpAQohUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0ElUKBmNvdW50cxgBIAMoCzJFLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0LkNvdW50c0VudHJ5Gi0KC0NvdW50c0VudHJ5EgsKA2tleRgBIAEoAxINCgV2YWx1ZRgCIAEoDToCOAFCT1pNZ2l0aHViLmNvbS9hbnRocm9waWNzL2FnZW50c21lc2gvcHJvdG8vZ2VuL2dvL2NoYW5uZWxfc3RhdGUvdjE7Y2hhbm5lbHN0YXRldjFiBnByb3RvMw", [file_channel_state_v1_channel_state]);
+  fileDesc("CiBjaGFubmVsX3N0YXRlL3YxL211dGF0aW9ucy5wcm90bxIWcHJvdG8uY2hhbm5lbF9zdGF0ZS52MSJDCh5QYXRjaENoYW5uZWxNZW1iZXJDb3VudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxINCgVkZWx0YRgCIAEoBSJxCiJBcHBseUluY29taW5nQ2hhbm5lbE1lc3NhZ2VSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSNwoHbWVzc2FnZRgCIAEoCzImLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuQ2hhbm5lbE1lc3NhZ2UiogIKJUFwcGx5Q2hhbm5lbE1lc3NhZ2VFZGl0ZWRFdmVudFJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxISCgptZXNzYWdlX2lkGAIgASgDEgwKBGJvZHkYAyABKAkSFAoHY29udGVudBgEIAEoCUgAiAEBEl0KCG1lbnRpb25zGAUgAygLMksucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5BcHBseUNoYW5uZWxNZXNzYWdlRWRpdGVkRXZlbnRSZXF1ZXN0Lk1lbnRpb25zRW50cnkSEQoJZWRpdGVkX2F0GAYgASgJGi8KDU1lbnRpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUIKCghfY29udGVudCJRChxSZXBsYWNlQ2FjaGVkQ2hhbm5lbHNSZXF1ZXN0EjEKCGNoYW5uZWxzGAEgAygLMh8ucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsIkgKFEluc2VydENoYW5uZWxSZXF1ZXN0EjAKB2NoYW5uZWwYASABKAsyHy5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWwihQEKI1JlcGxhY2VDYWNoZWRDaGFubmVsTWVzc2FnZXNSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAMSOAoIbWVzc2FnZXMYAiADKAsyJi5wcm90by5jaGFubmVsX3N0YXRlLnYxLkNoYW5uZWxNZXNzYWdlEhAKCGhhc19tb3JlGAMgASgIIoUBCiNQcmVwZW5kQ2FjaGVkQ2hhbm5lbE1lc3NhZ2VzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEjgKCG1lc3NhZ2VzGAIgAygLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZRIQCghoYXNfbW9yZRgDIAEoCCJqChtJbnNlcnRDaGFubmVsTWVzc2FnZVJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI3CgdtZXNzYWdlGAIgASgLMiYucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVzc2FnZSKpAQohUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0ElUKBmNvdW50cxgBIAMoCzJFLnByb3RvLmNoYW5uZWxfc3RhdGUudjEuUmVwbGFjZUNoYW5uZWxVbnJlYWRDb3VudHNSZXF1ZXN0LkNvdW50c0VudHJ5Gi0KC0NvdW50c0VudHJ5EgsKA2tleRgBIAEoAxINCgV2YWx1ZRgCIAEoDToCOAEiUAoZUmVwbGFjZUNoYW5uZWxQb2RzUmVxdWVzdBISCgpjaGFubmVsX2lkGAEgASgDEh8KBHBvZHMYAiADKAsyES5wcm90by5wb2QudjEuUG9kImoKHFJlcGxhY2VDaGFubmVsTWVtYmVyc1JlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoAxI2CgdtZW1iZXJzGAIgAygLMiUucHJvdG8uY2hhbm5lbF9zdGF0ZS52MS5DaGFubmVsTWVtYmVyQk9aTWdpdGh1Yi5jb20vYW50aHJvcGljcy9hZ2VudHNtZXNoL3Byb3RvL2dlbi9nby9jaGFubmVsX3N0YXRlL3YxO2NoYW5uZWxzdGF0ZXYxYgZwcm90bzM", [file_channel_state_v1_channel_state, file_pod_v1_pod]);
 
 /**
  * ---------------------------------------------------------------------------
@@ -294,4 +296,61 @@ export type ReplaceChannelUnreadCountsRequest = Message<"proto.channel_state.v1.
  */
 export const ReplaceChannelUnreadCountsRequestSchema: GenMessage<ReplaceChannelUnreadCountsRequest> = /*@__PURE__*/
   messageDesc(file_channel_state_v1_mutations, 8);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Replace cached pods joined to a channel — used after a
+ * listChannelPods fetch. Drops the previous list for `channel_id` and
+ * seeds it with the returned set. Carries the wire-level Pod so the
+ * cache stays compatible with proto.pod.v1 consumers (only the
+ * summary fields will be populated by the renderer).
+ * ---------------------------------------------------------------------------
+ *
+ * @generated from message proto.channel_state.v1.ReplaceChannelPodsRequest
+ */
+export type ReplaceChannelPodsRequest = Message<"proto.channel_state.v1.ReplaceChannelPodsRequest"> & {
+  /**
+   * @generated from field: int64 channel_id = 1;
+   */
+  channelId: bigint;
+
+  /**
+   * @generated from field: repeated proto.pod.v1.Pod pods = 2;
+   */
+  pods: Pod[];
+};
+
+/**
+ * Describes the message proto.channel_state.v1.ReplaceChannelPodsRequest.
+ * Use `create(ReplaceChannelPodsRequestSchema)` to create a new message.
+ */
+export const ReplaceChannelPodsRequestSchema: GenMessage<ReplaceChannelPodsRequest> = /*@__PURE__*/
+  messageDesc(file_channel_state_v1_mutations, 9);
+
+/**
+ * ---------------------------------------------------------------------------
+ * Replace cached members of a channel — used after a listChannelMembers
+ * fetch. Wholesale replaces the cached list for `channel_id`.
+ * ---------------------------------------------------------------------------
+ *
+ * @generated from message proto.channel_state.v1.ReplaceChannelMembersRequest
+ */
+export type ReplaceChannelMembersRequest = Message<"proto.channel_state.v1.ReplaceChannelMembersRequest"> & {
+  /**
+   * @generated from field: int64 channel_id = 1;
+   */
+  channelId: bigint;
+
+  /**
+   * @generated from field: repeated proto.channel_state.v1.ChannelMember members = 2;
+   */
+  members: ChannelMember[];
+};
+
+/**
+ * Describes the message proto.channel_state.v1.ReplaceChannelMembersRequest.
+ * Use `create(ReplaceChannelMembersRequestSchema)` to create a new message.
+ */
+export const ReplaceChannelMembersRequestSchema: GenMessage<ReplaceChannelMembersRequest> = /*@__PURE__*/
+  messageDesc(file_channel_state_v1_mutations, 10);
 

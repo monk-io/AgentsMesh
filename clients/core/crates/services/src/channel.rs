@@ -4,8 +4,6 @@ use std::sync::RwLockWriteGuard;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::channel_state::ChannelState;
-use agentsmesh_state::channel_types::{Channel, ChannelMember};
-use agentsmesh_types::proto_pod_v1::Pod;
 use prost::Message as _;
 
 pub struct ChannelService {
@@ -107,28 +105,6 @@ impl ChannelService {
     pub fn select_channel(&self, id: Option<i64>) -> Option<String> {
         self.state.write().unwrap().select_channel(id)
             .map(|c| serde_json::to_string(c).unwrap_or_default())
-    }
-
-    // ---- Legacy JSON-bridge entry points retained for callers outside the
-    // channel stores (facade/channel.ts goes through these; once the facade
-    // adopts proto these can be removed). ----
-
-    pub fn update_channel_local(&self, id: i64, json: &str) {
-        if let Ok(c) = serde_json::from_str::<Channel>(json) {
-            self.state.write().unwrap().update_channel(id, c);
-        }
-    }
-
-    pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
-        if let Ok(pods) = serde_json::from_str::<Vec<Pod>>(json) {
-            self.state.write().unwrap().set_channel_pods(channel_id, pods);
-        }
-    }
-
-    pub fn set_channel_members_local(&self, channel_id: i64, json: &str) {
-        if let Ok(members) = serde_json::from_str::<Vec<ChannelMember>>(json) {
-            self.state.write().unwrap().set_channel_members(channel_id, members);
-        }
     }
 
     pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {

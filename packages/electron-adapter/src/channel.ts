@@ -12,11 +12,15 @@ import {
   ApplyIncomingChannelMessageRequestSchema,
   ApplyChannelMessageEditedEventRequestSchema,
   ReplaceChannelUnreadCountsRequestSchema,
+  ReplaceChannelPodsRequestSchema,
+  ReplaceChannelMembersRequestSchema,
 } from "@agentsmesh/proto/channel_state/v1/mutations_pb";
 import type {
   Channel as ProtoChannel,
   ChannelMessage as ProtoChannelMessage,
+  ChannelMember as ProtoChannelMember,
 } from "@agentsmesh/proto/channel_state/v1/channel_state_pb";
+import type { Pod as ProtoPod } from "@agentsmesh/proto/pod/v1/pod_pb";
 
 // Proto -> JS-cache shape converters. The renderer reads from
 // `_messagesCache` / `_channelsCache` via channels_json() / get_messages_json().
@@ -72,6 +76,26 @@ function messageToCache(m: ProtoChannelMessage): Record<string, unknown> {
   };
 }
 
+function podToCache(p: ProtoPod): Record<string, unknown> {
+  return {
+    id: Number(p.id),
+    pod_key: p.podKey,
+    alias: p.alias,
+    status: p.status,
+    agent_status: p.agentStatus,
+  };
+}
+
+function memberToCache(m: ProtoChannelMember): Record<string, unknown> {
+  return {
+    channel_id: Number(m.channelId),
+    user_id: Number(m.userId),
+    role: m.role,
+    is_muted: m.isMuted,
+    joined_at: m.joinedAt,
+  };
+}
+
 export class ElectronChannelService extends ChannelLocalState implements IChannelService {
   async fetch_channels(includeArchived?: boolean | null): Promise<string> {
     const result = await invoke<string>("channelFetchChannels", includeArchived);
@@ -86,7 +110,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
 
   async fetch_channel(id: bigint): Promise<string> {
     const result = await invoke<string>("channelFetchChannel", Number(id));
-    this.update_channel_local(id, result);
+    this.upsert_channel_cache_from_json(id, result);
     return result;
   }
 
@@ -119,7 +143,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
 
   async update_channel(id: bigint, json: string): Promise<string> {
     const result = await invoke<string>("channelUpdateChannel", Number(id), json);
-    this.update_channel_local(id, result);
+    this.upsert_channel_cache_from_json(id, result);
     return result;
   }
 
@@ -185,6 +209,23 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
     return result;
   }
 
+  // Local-cache helper used by fetch_channel / update_channel after a JSON
+  // legacy IPC response. Decodes the JSON envelope and upserts into
+  // _channelsCache. Distinct from insert_channel (which takes proto bytes).
+  private upsert_channel_cache_from_json(id: bigint, json: string): void {
+    let patch: Record<string, unknown> | null = null;
+    try {
+      patch = JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      return;
+    }
+    const list = JSON.parse(this._channelsCache) as { id: number }[];
+    const idx = list.findIndex((x) => x.id === Number(id));
+    if (idx >= 0) list[idx] = { ...list[idx], ...patch };
+    else if (patch && typeof patch.id === "number") list.unshift(patch as { id: number });
+    this._channelsCache = JSON.stringify(list);
+  }
+
   // Proto-bytes mutators decode locally into the JS-side cache so synchronous
   // readers (channels_json / get_messages_json / unread_counts_json) see the
   // mutation immediately. NAPI forwarding is fire-and-forget — present so the
@@ -209,6 +250,20 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
       this._channelsCache = JSON.stringify(list);
     }
     void invoke<void>("channelInsertChannel", Array.from(reqBytes)).catch(() => undefined);
+    return Promise.resolve();
+  }
+
+  replace_channel_pods(reqBytes: Uint8Array): Promise<void> {
+    const req = fromBinary(ReplaceChannelPodsRequestSchema, reqBytes);
+    this.set_channel_pods(req.channelId, JSON.stringify(req.pods.map(podToCache)));
+    void invoke<void>("channelReplaceChannelPods", Array.from(reqBytes)).catch(() => undefined);
+    return Promise.resolve();
+  }
+
+  replace_channel_members(reqBytes: Uint8Array): Promise<void> {
+    const req = fromBinary(ReplaceChannelMembersRequestSchema, reqBytes);
+    this.set_channel_members(req.channelId, JSON.stringify(req.members.map(memberToCache)));
+    void invoke<void>("channelReplaceChannelMembers", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 

@@ -246,8 +246,11 @@ export interface IChannelService {
   unarchive_channel(id: bigint): Promise<void>;
   unread_counts_json(): string;
   update_channel(id: bigint, request_json: string): Promise<string>;
-  update_channel_local(id: bigint, json: string): void;
   update_message_local(channel_id: bigint, json: string): void;
+  // Proto-bytes mutators — bytes encode @bufbuild/protobuf-generated messages
+  // from proto/channel_state/v1/mutations.proto.
+  replace_channel_pods(req_bytes: Uint8Array): Promise<void>;
+  replace_channel_members(req_bytes: Uint8Array): Promise<void>;
 }
 
 export interface IChannelState {

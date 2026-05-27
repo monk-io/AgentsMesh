@@ -70,21 +70,6 @@ impl WasmChannelService {
         }
     }
 
-    // ---- Legacy JSON-bridge entry points (facade/channel.ts still uses these
-    // until that layer migrates to proto). ----
-
-    pub fn update_channel_local(&self, id: i64, json: &str) {
-        self.0.update_channel_local(id, json);
-    }
-
-    pub fn set_channel_pods_local(&self, channel_id: i64, json: &str) {
-        self.0.set_channel_pods_local(channel_id, json);
-    }
-
-    pub fn set_channel_members_local(&self, channel_id: i64, json: &str) {
-        self.0.set_channel_members_local(channel_id, json);
-    }
-
     pub fn remove_channel_member_local(&self, channel_id: i64, user_id: i64) {
         self.0.remove_channel_member_local(channel_id, user_id);
     }
@@ -97,6 +82,14 @@ impl WasmChannelService {
 
     pub fn insert_channel(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         self.0.insert_channel(req_bytes).map_err(map_err)
+    }
+
+    pub fn replace_channel_pods(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.replace_channel_pods(req_bytes).map_err(map_err)
+    }
+
+    pub fn replace_channel_members(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
+        self.0.replace_channel_members(req_bytes).map_err(map_err)
     }
 
     pub fn patch_channel_member_count(&self, req_bytes: &[u8]) -> Result<(), JsValue> {

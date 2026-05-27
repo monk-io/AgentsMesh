@@ -12,6 +12,7 @@ syntax = "proto3";
 package proto.channel_state.v1;
 
 import "channel_state/v1/channel_state.proto";
+import "pod/v1/pod.proto";
 
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/channel_state/v1;channelstatev1";
 
@@ -106,4 +107,25 @@ message InsertChannelMessageRequest {
 // ---------------------------------------------------------------------------
 message ReplaceChannelUnreadCountsRequest {
   map<int64, uint32> counts = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached pods joined to a channel — used after a
+// listChannelPods fetch. Drops the previous list for `channel_id` and
+// seeds it with the returned set. Carries the wire-level Pod so the
+// cache stays compatible with proto.pod.v1 consumers (only the
+// summary fields will be populated by the renderer).
+// ---------------------------------------------------------------------------
+message ReplaceChannelPodsRequest {
+  int64 channel_id = 1;
+  repeated proto.pod.v1.Pod pods = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached members of a channel — used after a listChannelMembers
+// fetch. Wholesale replaces the cached list for `channel_id`.
+// ---------------------------------------------------------------------------
+message ReplaceChannelMembersRequest {
+  int64 channel_id = 1;
+  repeated ChannelMember members = 2;
 }

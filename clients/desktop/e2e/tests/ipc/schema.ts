@@ -950,8 +950,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelInsertChannel",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelInsertChannelMessage",
@@ -992,8 +997,13 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelPatchChannelMemberCount",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelPrependCachedChannelMessages",
@@ -1016,8 +1026,35 @@ export const ipcSchema: IpcMethodSchema[] = [
   {
     "name": "channelReplaceCachedChannels",
     "group": "channel",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "channelReplaceChannelMembers",
+    "group": "channel",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "channelReplaceChannelPods",
+    "group": "channel",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "void"
   },
   {
     "name": "channelReplaceChannelUnreadCounts",
@@ -1038,12 +1075,6 @@ export const ipcSchema: IpcMethodSchema[] = [
   },
   {
     "name": "channelSendChannelMessageConnect",
-    "group": "channel",
-    "params": [],
-    "returnType": "any"
-  },
-  {
-    "name": "channelSetChannelPodsLocal",
     "group": "channel",
     "params": [],
     "returnType": "any"
@@ -1114,21 +1145,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "group": "channel",
     "params": [],
     "returnType": "any"
-  },
-  {
-    "name": "channelUpdateChannelLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
   },
   {
     "name": "envBundleCreateEnvBundleConnect",

@@ -145,7 +145,11 @@ export declare class AppState {
   channelGetLastMessageJson(channelId: number): Promise<string>
   channelSetCurrentChannel(id?: number | undefined | null): Promise<void>
   channelSelectChannel(id?: number | undefined | null): Promise<string>
-  channelUpdateChannelLocal(id: number, json: string): Promise<void>
+  channelReplaceCachedChannels(reqBytes: Uint8Array): Promise<void>
+  channelInsertChannel(reqBytes: Uint8Array): Promise<void>
+  channelReplaceChannelPods(reqBytes: Uint8Array): Promise<void>
+  channelReplaceChannelMembers(reqBytes: Uint8Array): Promise<void>
+  channelPatchChannelMemberCount(reqBytes: Uint8Array): Promise<void>
   channelFetchChannels(includeArchived?: boolean | undefined | null): Promise<string>
   channelFetchChannel(id: number): Promise<string>
   channelCreateChannel(requestJson: string): Promise<string>

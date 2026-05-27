@@ -94,13 +94,6 @@ impl AppState {
             Ok(svc.select_channel(id).unwrap_or_default())
     }
 
-    #[napi]
-    pub async fn channel_update_channel_local(&self, id: i64, json: String) -> napi::Result<()> {
-        let svc = self.channel.lock().await;
-            svc.update_channel_local(id, &json);
-            Ok(())
-    }
-
     // Proto-bytes mutators (matching the wasm bridge surface). Renderer side
     // already encodes via @bufbuild/protobuf; the Buffer here is the same
     // payload, just transported over NAPI instead of wasm-bindgen.
@@ -120,6 +113,24 @@ impl AppState {
     ) -> napi::Result<()> {
         let svc = self.channel.lock().await;
         svc.insert_channel(&req_bytes)
+            .map_err(|e| napi::Error::from_reason(e))
+    }
+
+    #[napi]
+    pub async fn channel_replace_channel_pods(
+        &self, req_bytes: Vec<u8>,
+    ) -> napi::Result<()> {
+        let svc = self.channel.lock().await;
+        svc.replace_channel_pods(&req_bytes)
+            .map_err(|e| napi::Error::from_reason(e))
+    }
+
+    #[napi]
+    pub async fn channel_replace_channel_members(
+        &self, req_bytes: Vec<u8>,
+    ) -> napi::Result<()> {
+        let svc = self.channel.lock().await;
+        svc.replace_channel_members(&req_bytes)
             .map_err(|e| napi::Error::from_reason(e))
     }
 

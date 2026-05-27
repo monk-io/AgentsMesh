@@ -11,6 +11,8 @@ import {
   ApplyIncomingChannelMessageRequestSchema,
   ApplyChannelMessageEditedEventRequestSchema,
   ReplaceChannelUnreadCountsRequestSchema,
+  ReplaceChannelPodsRequestSchema,
+  ReplaceChannelMembersRequestSchema,
 } from '@proto/channel_state/v1/mutations_pb'
 import {
   ApplySessionRequestSchema,
@@ -27,6 +29,8 @@ const h = vi.hoisted(() => {
     list: '[]', current: null as bigint | null,
     msgs: new Map<string, { json: string; hasMore: boolean }>(),
     unread: new Map<string, number>(),
+    pods: new Map<string, string>(),
+    members: new Map<string, string>(),
   };
   const ticket = { list: '[]', labels: '[]', boardCols: '[]', current: '' };
   const mesh = { topo: '', selected: undefined as string | undefined };
@@ -43,6 +47,7 @@ const h = vi.hoisted(() => {
     runner.list = '[]'; runner.available = '[]'; runner.current = '';
     channel.list = '[]'; channel.current = null;
     channel.msgs.clear(); channel.unread.clear();
+    channel.pods.clear(); channel.members.clear();
     ticket.list = '[]'; ticket.labels = '[]'; ticket.boardCols = '[]'; ticket.current = '';
     mesh.topo = ''; mesh.selected = undefined;
     loop.list = '[]'; loop.current = '';
@@ -381,9 +386,9 @@ vi.mock('@/lib/wasm-core', () => {
     fetch_channel_members: fn().mockResolvedValue('{"members":[],"total":0}'),
     invite_channel_members: fn().mockResolvedValue(undefined),
     remove_channel_member: fn().mockResolvedValue(undefined),
-    channel_members_json: fn(() => '[]'),
+    channel_members_json: fn((id: bigint) => h.channel.members.get(String(id)) ?? '[]'),
     get_channel_pods: fn().mockResolvedValue('{"pods":[]}'),
-    channel_pods_json: fn(() => '[]'),
+    channel_pods_json: fn((id: bigint) => h.channel.pods.get(String(id)) ?? '[]'),
     update_message_local: fn((chId: bigint, json: string) => {
       const k = cKey(chId); const entry = h.channel.msgs.get(k); if (!entry) return
       const msg = JSON.parse(json); const msgs = JSON.parse(entry.json) as { id: number }[]
@@ -395,12 +400,6 @@ vi.mock('@/lib/wasm-core', () => {
       const k = cKey(chId); const entry = h.channel.msgs.get(k); if (!entry) return
       const msgs = JSON.parse(entry.json) as { id: number }[]
       h.channel.msgs.set(k, { json: JSON.stringify(msgs.filter((m) => m.id !== Number(msgId))), hasMore: entry.hasMore })
-    }),
-    update_channel_local: fn((id: bigint, json: string) => {
-      const ch = JSON.parse(json)
-      const list = JSON.parse(h.channel.list) as { id: number }[]
-      const idx = list.findIndex((c) => c.id === Number(id))
-      if (idx >= 0) { list[idx] = ch; h.channel.list = JSON.stringify(list) }
     }),
     add_channel_local: fn((json: string) => {
       const ch = JSON.parse(json) as { id: number }
@@ -515,6 +514,26 @@ vi.mock('@/lib/wasm-core', () => {
         const req = fromBinary(ReplaceChannelUnreadCountsRequestSchema, bytes)
         h.channel.unread.clear()
         for (const [k, v] of Object.entries(req.counts)) h.channel.unread.set(k, v as number)
+      } catch { /* noop */ }
+    }),
+    replace_channel_pods: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ReplaceChannelPodsRequestSchema, bytes)
+        const pods = req.pods.map((p) => ({
+          id: Number(p.id), pod_key: p.podKey, alias: p.alias,
+          status: p.status, agent_status: p.agentStatus,
+        }))
+        h.channel.pods.set(String(req.channelId), JSON.stringify(pods))
+      } catch { /* noop */ }
+    }),
+    replace_channel_members: fn((bytes: Uint8Array) => {
+      try {
+        const req = fromBinary(ReplaceChannelMembersRequestSchema, bytes)
+        const members = req.members.map((m) => ({
+          channel_id: Number(m.channelId), user_id: Number(m.userId),
+          role: m.role, is_muted: m.isMuted, joined_at: m.joinedAt,
+        }))
+        h.channel.members.set(String(req.channelId), JSON.stringify(members))
       } catch { /* noop */ }
     }),
   }

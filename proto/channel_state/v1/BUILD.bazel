@@ -26,6 +26,7 @@ proto_library(
     data = [":channel_state_serde_transform"],
     strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
+    deps = ["//proto/pod/v1:pod_proto"],
 )
 
 go_proto_library(

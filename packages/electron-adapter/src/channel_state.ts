@@ -21,19 +21,23 @@ export class ChannelLocalState {
   // readers (useChannelPods.readPodsFromRust) need this to surface joined pods
   // in the RightRail without an additional async round trip.
   _podsByChannel = new Map<string, string>();
+  // Per-channel member array JSON — mirrors Rust ChannelState.members_by_channel.
+  // Populated by ElectronChannelService.replace_channel_members (proto-bytes
+  // mutator) so useChannelMembers can read synchronously.
+  _membersByChannel = new Map<string, string>();
 
   channels_json(): string { return this._channelsCache; }
   channel_pods_json(channelId: bigint): string {
     return this._podsByChannel.get(String(channelId)) ?? "[]";
   }
+  channel_members_json(channelId: bigint): string {
+    return this._membersByChannel.get(String(channelId)) ?? "[]";
+  }
   set_channel_pods(channelId: bigint, json: string): void {
     this._podsByChannel.set(String(channelId), json);
   }
-  // Alias mirroring the wasm service_channel.rs export name. clients/web's
-  // channelApi.getPods calls `set_channel_pods_local` (matches WASM); the
-  // desktop adapter needs the same name so the call doesn't silently no-op.
-  set_channel_pods_local(channelId: bigint, json: string): void {
-    this._podsByChannel.set(String(channelId), json);
+  set_channel_members(channelId: bigint, json: string): void {
+    this._membersByChannel.set(String(channelId), json);
   }
   current_channel_json(): unknown {
     if (this._currentChannelId == null) return null;
@@ -130,13 +134,6 @@ export class ChannelLocalState {
   remove_channel_local(id: bigint): void {
     const chs = JSON.parse(this._channelsCache) as { id: number }[];
     this._channelsCache = JSON.stringify(chs.filter(x => x.id !== Number(id)));
-  }
-
-  update_channel_local(id: bigint, json: string): void {
-    const chs = JSON.parse(this._channelsCache) as { id: number }[];
-    const idx = chs.findIndex(x => x.id === Number(id));
-    if (idx >= 0) chs[idx] = { ...chs[idx], ...JSON.parse(json) };
-    this._channelsCache = JSON.stringify(chs);
   }
 
   add_message(channelId: bigint, json: string): void {
