@@ -395,8 +395,13 @@ function registerLegacyApiAliases() {
       pods: protoPods,
     });
     const bytes = toBinary(ReplaceChannelPodsRequestSchema, req);
-    await (appState as { channelReplaceChannelPods: (b: Uint8Array) => Promise<void> })
-      .channelReplaceChannelPods(bytes);
+    // napi-rs Vec<u8> binding expects `Array<number>` over the JS boundary;
+    // Uint8Array works in some paths but the channelJoinChannel ipcMain
+    // handler (called from renderer through serialised IPC) sees the value
+    // as an opaque object without a `length` accessor. Materialise as a
+    // plain array to match the rest of the proto-bytes NAPI surface.
+    await (appState as { channelReplaceChannelPods: (b: number[]) => Promise<void> })
+      .channelReplaceChannelPods(Array.from(bytes));
   };
 
   const fetchChannelEnvelope = async (channelId: number): Promise<string> => {
