@@ -31,6 +31,12 @@ import type {
   WasmChannelState,
   WasmLoopState,
   WasmMeshState,
+  WasmAutopilotService,
+  WasmAcpSessionManager,
+  WasmRepoState,
+  WasmAppState,
+  WasmBlockstoreService,
+  WasmAuthManager,
 } from "agentsmesh-wasm";
 
 // Plain identity helper — `_Sig<F>` accepts any function type. We use it
@@ -147,6 +153,92 @@ type _MeshState_clear          = _Sig<WasmMeshState["clear_topology"]>;
 type _MeshState_select         = _Sig<WasmMeshState["select_node"]>;
 type _MeshState_get_node       = _Sig<WasmMeshState["get_node_json"]>;
 type _MeshState_get_edges      = _Sig<WasmMeshState["get_edges_for_node_json"]>;
+type _MeshState_proto_replace  = _RequiresU8<WasmMeshState["replace_topology"]>;
+
+// ── RunnerService proto-bytes mutators (production callers: stores/runner.ts) ──
+// runner-state migration: 5 mutators flipped to proto-bytes; mock conflates
+// state + service into one object so dispatch is on getRunnerService().
+type _RunnerSvc_replace_cached       = _Sig<WasmRunnerService["replace_cached_runners"]>;
+type _RunnerSvc_replace_available    = _Sig<WasmRunnerService["replace_available_runners"]>;
+type _RunnerSvc_set_current_proto    = _Sig<WasmRunnerService["set_current_runner_proto"]>;
+type _RunnerSvc_patch_cached         = _Sig<WasmRunnerService["patch_cached_runner"]>;
+type _RunnerSvc_remove_cached        = _Sig<WasmRunnerService["remove_cached_runner"]>;
+type _RunnerSvc_apply_status_event   = _Sig<WasmRunnerService["apply_runner_status_event"]>;
+type _RunnerSvc_proto_replace_cached    = _RequiresU8<WasmRunnerService["replace_cached_runners"]>;
+type _RunnerSvc_proto_replace_available = _RequiresU8<WasmRunnerService["replace_available_runners"]>;
+type _RunnerSvc_proto_set_current       = _RequiresU8<WasmRunnerService["set_current_runner_proto"]>;
+type _RunnerSvc_proto_patch_cached      = _RequiresU8<WasmRunnerService["patch_cached_runner"]>;
+type _RunnerSvc_proto_remove_cached     = _RequiresU8<WasmRunnerService["remove_cached_runner"]>;
+
+// ── AutopilotService proto-bytes mutators (production callers: stores/autopilot.ts) ──
+// 8 mutators on the service surface — note `remove_controller_proto` and
+// `update_thinking_proto` carry the `_proto` suffix because the service
+// retains legacy methods for the takeover/handback flows.
+type _AutopilotSvc_replace_controllers   = _Sig<WasmAutopilotService["replace_cached_controllers"]>;
+type _AutopilotSvc_set_current_proto     = _Sig<WasmAutopilotService["set_current_controller_proto"]>;
+type _AutopilotSvc_insert_controller     = _Sig<WasmAutopilotService["insert_controller"]>;
+type _AutopilotSvc_patch_controller      = _Sig<WasmAutopilotService["patch_controller"]>;
+type _AutopilotSvc_remove_controller_proto = _Sig<WasmAutopilotService["remove_controller_proto"]>;
+type _AutopilotSvc_replace_iterations    = _Sig<WasmAutopilotService["replace_cached_iterations"]>;
+type _AutopilotSvc_append_iteration      = _Sig<WasmAutopilotService["append_iteration"]>;
+type _AutopilotSvc_update_thinking_proto = _Sig<WasmAutopilotService["update_thinking_proto"]>;
+type _AutopilotSvc_proto_replace_ctrls   = _RequiresU8<WasmAutopilotService["replace_cached_controllers"]>;
+type _AutopilotSvc_proto_set_current     = _RequiresU8<WasmAutopilotService["set_current_controller_proto"]>;
+type _AutopilotSvc_proto_insert          = _RequiresU8<WasmAutopilotService["insert_controller"]>;
+type _AutopilotSvc_proto_patch           = _RequiresU8<WasmAutopilotService["patch_controller"]>;
+type _AutopilotSvc_proto_remove          = _RequiresU8<WasmAutopilotService["remove_controller_proto"]>;
+type _AutopilotSvc_proto_replace_iters   = _RequiresU8<WasmAutopilotService["replace_cached_iterations"]>;
+type _AutopilotSvc_proto_append_iter     = _RequiresU8<WasmAutopilotService["append_iteration"]>;
+type _AutopilotSvc_proto_update_think    = _RequiresU8<WasmAutopilotService["update_thinking_proto"]>;
+
+// ── AcpSessionManager proto-bytes mutators (production callers: stores/acpSession.ts) ──
+// 4 mutators carry opaque JSON blobs through ACP state (UI owns the AST).
+type _AcpMgr_update_tool_call         = _Sig<WasmAcpSessionManager["update_tool_call"]>;
+type _AcpMgr_update_plan              = _Sig<WasmAcpSessionManager["update_plan"]>;
+type _AcpMgr_add_permission_request   = _Sig<WasmAcpSessionManager["add_permission_request"]>;
+type _AcpMgr_update_configuration     = _Sig<WasmAcpSessionManager["update_configuration"]>;
+type _AcpMgr_proto_update_tool_call   = _RequiresU8<WasmAcpSessionManager["update_tool_call"]>;
+type _AcpMgr_proto_update_plan        = _RequiresU8<WasmAcpSessionManager["update_plan"]>;
+type _AcpMgr_proto_add_permission     = _RequiresU8<WasmAcpSessionManager["add_permission_request"]>;
+type _AcpMgr_proto_update_config      = _RequiresU8<WasmAcpSessionManager["update_configuration"]>;
+
+// ── RepoState proto-bytes mutators (production callers: stores/repository.ts) ──
+// 5 mutators on the state surface; remove_repository stays string-keyed
+// because the wire schema treats it as a non-payload-carrying delete.
+type _RepoState_repos_json            = _Sig<WasmRepoState["repositories_json"]>;
+type _RepoState_current_repo_json     = _Sig<WasmRepoState["current_repo_json"]>;
+type _RepoState_branches_json         = _Sig<WasmRepoState["branches_json"]>;
+type _RepoState_replace_cached_repos  = _Sig<WasmRepoState["replace_cached_repositories"]>;
+type _RepoState_set_current_repo      = _Sig<WasmRepoState["set_current_repo_proto"]>;
+type _RepoState_replace_branches      = _Sig<WasmRepoState["replace_branches"]>;
+type _RepoState_insert_repo           = _Sig<WasmRepoState["insert_repository"]>;
+type _RepoState_patch_repo            = _Sig<WasmRepoState["patch_repository"]>;
+type _RepoState_proto_replace_cached  = _RequiresU8<WasmRepoState["replace_cached_repositories"]>;
+type _RepoState_proto_set_current     = _RequiresU8<WasmRepoState["set_current_repo_proto"]>;
+type _RepoState_proto_replace_branches = _RequiresU8<WasmRepoState["replace_branches"]>;
+type _RepoState_proto_insert          = _RequiresU8<WasmRepoState["insert_repository"]>;
+type _RepoState_proto_patch           = _RequiresU8<WasmRepoState["patch_repository"]>;
+
+// ── AppState fan-out dispatcher (single mutator; future renderer entry point) ──
+type _AppState_dispatch         = _Sig<WasmAppState["dispatch_event"]>;
+type _AppState_proto_dispatch   = _RequiresU8<WasmAppState["dispatch_event"]>;
+
+// ── BlockstoreService apply_remote_op proto-bytes mutator ──
+// production callers: stores/blockstoreSubscribe.ts + lib/api/facade/blockstoreApi.ts
+type _BlockstoreSvc_apply_remote_op       = _Sig<WasmBlockstoreService["apply_remote_op"]>;
+type _BlockstoreSvc_proto_apply_remote_op = _RequiresU8<WasmBlockstoreService["apply_remote_op"]>;
+
+// ── AuthManager proto-bytes mutators (production callers: stores/auth.ts) ──
+// 3 mutators flipped from JSON-string to proto-bytes — `apply_session` /
+// `set_organizations` / `set_current_org`. Signature now requires
+// Uint8Array; the previous `string` shape would break this assertion.
+type _AuthMgr_apply_session          = _Sig<WasmAuthManager["apply_session"]>;
+type _AuthMgr_set_organizations      = _Sig<WasmAuthManager["set_organizations"]>;
+type _AuthMgr_set_current_org        = _Sig<WasmAuthManager["set_current_org"]>;
+type _AuthMgr_proto_apply_session    = _RequiresU8<WasmAuthManager["apply_session"]>;
+type _AuthMgr_proto_set_organizations = _RequiresU8<WasmAuthManager["set_organizations"]>;
+type _AuthMgr_proto_set_current_org   = _RequiresU8<WasmAuthManager["set_current_org"]>;
+
 
 // Vitest discovery requires the file to contain *something* runnable, but
 // the body is intentionally empty — tsc + the type assertions above are
