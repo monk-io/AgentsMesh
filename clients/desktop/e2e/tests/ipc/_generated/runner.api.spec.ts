@@ -29,32 +29,32 @@ test.describe("IPC · runner", () => {
     await invokeIpcContract(sharedPage, { method: "runnerListRunnerPods", returnType: "string" }, 0, "", 0, 0);
   });
 
-  test("runnerRemoveRunnerLocal", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerRemoveRunnerLocal", returnType: "void" }, 0);
+  test("runnerPatchCachedRunner", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerPatchCachedRunner", returnType: "void" }, []);
+  });
+
+  test("runnerRemoveCachedRunner", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerRemoveCachedRunner", returnType: "void" }, []);
+  });
+
+  test("runnerReplaceAvailableRunners", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerReplaceAvailableRunners", returnType: "void" }, []);
+  });
+
+  test("runnerReplaceCachedRunners", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerReplaceCachedRunners", returnType: "void" }, []);
   });
 
   test("runnerRunnersJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "runnerRunnersJson", returnType: "string" });
   });
 
-  test("runnerSetAvailableRunners", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerSetAvailableRunners", returnType: "void" }, "");
-  });
-
-  test("runnerSetCurrentRunner", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerSetCurrentRunner", returnType: "void" }, "");
-  });
-
-  test("runnerSetRunners", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerSetRunners", returnType: "void" }, "");
+  test("runnerSetCurrentRunnerProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "runnerSetCurrentRunnerProto", returnType: "void" }, []);
   });
 
   test("runnerUpdateRunner", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "runnerUpdateRunner", returnType: "string" }, 0, "");
-  });
-
-  test("runnerUpdateRunnerLocal", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "runnerUpdateRunnerLocal", returnType: "void" }, 0, "");
   });
 
   test("runnerUpdateRunnerStatus", async ({ sharedPage }) => {

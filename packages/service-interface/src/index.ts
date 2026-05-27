@@ -551,14 +551,15 @@ export interface IRunnerService {
   list_runner_logs(id: bigint): Promise<string>;
   list_runner_pods(id: bigint, status?: string | null, limit?: number | null, offset?: number | null): Promise<string>;
   query_runner_sandboxes(id: bigint, request_json: string): Promise<string>;
-  remove_runner_local(id: bigint): void;
+  // Proto-bytes mutators (mirror state_runner.rs).
+  replace_cached_runners(req_bytes: Uint8Array): void;
+  replace_available_runners(req_bytes: Uint8Array): void;
+  set_current_runner_proto(req_bytes: Uint8Array): void;
+  patch_cached_runner(req_bytes: Uint8Array): void;
+  remove_cached_runner(req_bytes: Uint8Array): void;
   request_log_upload(id: bigint): Promise<void>;
   runners_json(): string;
-  set_available_runners(json: string): void;
-  set_current_runner(json: string): void;
-  set_runners(json: string): void;
   update_runner(id: bigint, request_json: string): Promise<string>;
-  update_runner_local(id: number, json: string): void;
   update_runner_status(id: bigint, status: string): void;
   upgrade_runner(id: bigint, request_json: string): Promise<string>;
 }

@@ -317,12 +317,12 @@ export declare class AppState {
   runnerAvailableRunnersJson(): Promise<string>
   runnerCurrentRunnerJson(): Promise<string>
   runnerGetRunnerJson(id: number): Promise<string>
-  runnerSetRunners(json: string): Promise<void>
-  runnerSetAvailableRunners(json: string): Promise<void>
-  runnerSetCurrentRunner(json: string): Promise<void>
-  runnerUpdateRunnerLocal(id: number, json: string): Promise<void>
+  runnerReplaceCachedRunners(reqBytes: Array<number>): Promise<void>
+  runnerReplaceAvailableRunners(reqBytes: Array<number>): Promise<void>
+  runnerSetCurrentRunnerProto(reqBytes: Array<number>): Promise<void>
+  runnerPatchCachedRunner(reqBytes: Array<number>): Promise<void>
   runnerUpdateRunnerStatus(id: number, status: string): Promise<void>
-  runnerRemoveRunnerLocal(id: number): Promise<void>
+  runnerRemoveCachedRunner(reqBytes: Array<number>): Promise<void>
   runnerFetchRunners(status?: string | undefined | null): Promise<string>
   runnerFetchAvailableRunners(): Promise<string>
   runnerFetchRunner(id: number): Promise<string>

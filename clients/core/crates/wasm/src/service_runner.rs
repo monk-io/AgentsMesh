@@ -26,12 +26,24 @@ impl WasmRunnerService {
         }
     }
 
-    pub fn set_runners(&self, json: &str) { self.0.set_runners(json); }
-    pub fn set_available_runners(&self, json: &str) { self.0.set_available_runners(json); }
-    pub fn set_current_runner(&self, json: &str) { self.0.set_current_runner(json); }
+    pub fn replace_cached_runners(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_cached_runners(req_bytes)
+    }
 
-    pub fn update_runner_local(&self, id: f64, json: &str) {
-        self.0.update_runner_local(id, json);
+    pub fn replace_available_runners(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_available_runners(req_bytes)
+    }
+
+    pub fn set_current_runner_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.set_current_runner_proto(req_bytes)
+    }
+
+    pub fn patch_cached_runner(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.patch_cached_runner(req_bytes)
+    }
+
+    pub fn remove_cached_runner(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.remove_cached_runner(req_bytes)
     }
 
     pub fn apply_runner_status_event(&self, req_bytes: &[u8]) -> Result<(), String> {
@@ -40,8 +52,6 @@ impl WasmRunnerService {
         self.0.update_runner_status(req.runner_id, &req.status);
         Ok(())
     }
-
-    pub fn remove_runner_local(&self, id: i64) { self.0.remove_runner_local(id); }
 
     pub async fn list_runner_pods(
         &self, id: i64, status: Option<String>, limit: Option<u32>, offset: Option<u32>,

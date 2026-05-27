@@ -1,5 +1,42 @@
 import { invoke } from "./invoke";
 import type { IRunnerService } from "@agentsmesh/service-interface";
+import { fromBinary } from "@bufbuild/protobuf";
+import {
+  ReplaceCachedRunnersRequestSchema,
+  ReplaceAvailableRunnersRequestSchema,
+  SetCurrentRunnerRequestSchema,
+  PatchCachedRunnerRequestSchema,
+  RemoveCachedRunnerRequestSchema,
+} from "@agentsmesh/proto/runner_state/v1/runner_state_pb";
+import type { Runner as ProtoRunner } from "@agentsmesh/proto/runner_api/v1/runner_pb";
+
+// ProtoRunner (camelCase + BigInt) → JS-cache shape (snake_case + number).
+// Inlined to keep electron-adapter independent of the web/src tree.
+function runnerToCache(r: ProtoRunner): Record<string, unknown> {
+  const ZERO = BigInt(0);
+  const host: Record<string, unknown> | undefined = r.hostInfoJson
+    ? (() => { try { return JSON.parse(r.hostInfoJson); } catch { return undefined; } })()
+    : undefined;
+  return {
+    id: Number(r.id),
+    node_id: r.nodeId,
+    description: r.description || undefined,
+    status: r.status,
+    last_heartbeat: r.lastHeartbeat,
+    current_pods: r.currentPods,
+    max_concurrent_pods: r.maxConcurrentPods,
+    runner_version: r.runnerVersion,
+    is_enabled: r.isEnabled,
+    visibility: r.visibility,
+    registered_by_user_id: r.registeredByUserId !== undefined && r.registeredByUserId !== ZERO
+      ? Number(r.registeredByUserId) : undefined,
+    host_info: host,
+    available_agents: r.availableAgents?.length ? r.availableAgents : undefined,
+    tags: r.tags?.length ? r.tags : undefined,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+  };
+}
 
 export class ElectronRunnerService implements IRunnerService {
   private _runnersCache = "[]";
@@ -16,15 +53,47 @@ export class ElectronRunnerService implements IRunnerService {
     return r ? JSON.stringify(r) : null;
   }
 
-  set_runners(json: string): void { this._runnersCache = json; }
-  set_available_runners(json: string): void { this._availableRunnersCache = json; }
-  set_current_runner(json: string): void { this._currentRunnerCache = json || null; }
+  // Proto-bytes mutators — decode locally + update JS cache synchronously,
+  // then fire-and-forget NAPI sync. Mirrors ElectronChannelService /
+  // ElectronPodService pattern (renderer reads via runners_json() etc.
+  // immediately after dispatch; IPC roundtrip would defeat that invariant).
 
-  update_runner_local(id: number, json: string): void {
-    const runners = JSON.parse(this._runnersCache) as { id: number }[];
-    const idx = runners.findIndex(x => x.id === id);
-    if (idx >= 0) runners[idx] = { ...runners[idx], ...JSON.parse(json) };
-    this._runnersCache = JSON.stringify(runners);
+  replace_cached_runners(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceCachedRunnersRequestSchema, reqBytes);
+    this._runnersCache = JSON.stringify(req.runners.map(runnerToCache));
+    void invoke<void>("runnerReplaceCachedRunners", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  replace_available_runners(reqBytes: Uint8Array): void {
+    const req = fromBinary(ReplaceAvailableRunnersRequestSchema, reqBytes);
+    this._availableRunnersCache = JSON.stringify(req.runners.map(runnerToCache));
+    void invoke<void>("runnerReplaceAvailableRunners", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  set_current_runner_proto(reqBytes: Uint8Array): void {
+    const req = fromBinary(SetCurrentRunnerRequestSchema, reqBytes);
+    this._currentRunnerCache = req.runner ? JSON.stringify(runnerToCache(req.runner)) : null;
+    void invoke<void>("runnerSetCurrentRunnerProto", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  patch_cached_runner(reqBytes: Uint8Array): void {
+    const req = fromBinary(PatchCachedRunnerRequestSchema, reqBytes);
+    if (req.runner) {
+      const patch = runnerToCache(req.runner);
+      const list = JSON.parse(this._runnersCache) as { id: number }[];
+      const idx = list.findIndex((x) => x.id === patch.id);
+      if (idx >= 0) list[idx] = { ...list[idx], ...patch };
+      else list.push(patch as { id: number });
+      this._runnersCache = JSON.stringify(list);
+    }
+    void invoke<void>("runnerPatchCachedRunner", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  remove_cached_runner(reqBytes: Uint8Array): void {
+    const req = fromBinary(RemoveCachedRunnerRequestSchema, reqBytes);
+    const list = JSON.parse(this._runnersCache) as { id: number }[];
+    this._runnersCache = JSON.stringify(list.filter((x) => x.id !== Number(req.runnerId)));
+    void invoke<void>("runnerRemoveCachedRunner", Array.from(reqBytes)).catch(() => undefined);
   }
 
   update_runner_status(id: bigint, status: string): void {
@@ -32,11 +101,6 @@ export class ElectronRunnerService implements IRunnerService {
     const r = runners.find(x => x.id === Number(id));
     if (r) r.status = status;
     this._runnersCache = JSON.stringify(runners);
-  }
-
-  remove_runner_local(id: bigint): void {
-    const runners = JSON.parse(this._runnersCache) as { id: number }[];
-    this._runnersCache = JSON.stringify(runners.filter(x => x.id !== Number(id)));
   }
 
   async fetch_runners(status?: string | null): Promise<string> {
@@ -73,12 +137,12 @@ export class ElectronRunnerService implements IRunnerService {
 
   async delete_runner(id: bigint): Promise<void> {
     await invoke<void>("runnerDeleteRunner", Number(id));
-    this.remove_runner_local(id);
+    // Note: caller is the store; store also dispatches RemoveCachedRunnerRequest separately
   }
 
   async update_runner(id: bigint, json: string): Promise<string> {
     const result = await invoke<string>("runnerUpdateRunner", Number(id), json);
-    this.update_runner_local(Number(id), result);
+    // Note: caller (store) issues PatchCachedRunner proto bytes after
     this._currentRunnerCache = result;
     return result;
   }

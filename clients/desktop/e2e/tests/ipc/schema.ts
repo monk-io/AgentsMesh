@@ -1929,12 +1929,45 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
-    "name": "runnerRemoveRunnerLocal",
+    "name": "runnerPatchCachedRunner",
     "group": "runner",
     "params": [
       {
-        "name": "id",
-        "type": "number"
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "runnerRemoveCachedRunner",
+    "group": "runner",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "runnerReplaceAvailableRunners",
+    "group": "runner",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void"
+  },
+  {
+    "name": "runnerReplaceCachedRunners",
+    "group": "runner",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1946,34 +1979,12 @@ export const ipcSchema: IpcMethodSchema[] = [
     "returnType": "string"
   },
   {
-    "name": "runnerSetAvailableRunners",
+    "name": "runnerSetCurrentRunnerProto",
     "group": "runner",
     "params": [
       {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerSetCurrentRunner",
-    "group": "runner",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerSetRunners",
-    "group": "runner",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
     "returnType": "void"
@@ -1992,21 +2003,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "string"
-  },
-  {
-    "name": "runnerUpdateRunnerLocal",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
   },
   {
     "name": "runnerUpdateRunnerStatus",

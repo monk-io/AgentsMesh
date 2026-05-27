@@ -1,15 +1,74 @@
 // proto.runner_state.v1 — client-side runner state mutation contract.
 //
-// See proto/pod_state/v1/pod_state.proto for the full design rationale.
+// Companion to proto.runner_api.v1 — that package owns the wire schema
+// for Connect-RPC (ListRunners / GetRunner / etc.), while this package
+// holds the SRP-shaped mutation messages issued by TS / Swift renderer
+// code against the in-process Rust runner cache via the wasm-bindgen /
+// NAPI / UniFFI bridge.
+//
+// Naming convention mirrors proto.pod_state.v1:
+//   * ApplyXxxEventRequest    — realtime-event driven cache mutation
+//   * InsertXxxRequest        — new entity arriving at the cache
+//   * PatchXxxFieldRequest    — single field of an existing entity
+//   * RemoveXxxRequest        — single key deletion
+//   * ReplaceCachedXxxRequest — wholesale cache replacement after a
+//                               list-fetch round-trip
 
 syntax = "proto3";
 
 package proto.runner_state.v1;
 
+import "runner_api/v1/runner.proto";
+
 option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/runner_state/v1;runnerstatev1";
 
+// ---------------------------------------------------------------------------
 // Realtime runner:status_changed event.
+// ---------------------------------------------------------------------------
 message ApplyRunnerStatusEventRequest {
   int64 runner_id = 1;
   string status = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Replace the cached "all runners" view — used by sidebar / runners page
+// after ListRunners returns. Wholesale replacement so the displayed list
+// matches the active org / status-filter combination.
+// ---------------------------------------------------------------------------
+message ReplaceCachedRunnersRequest {
+  repeated proto.runner_api.v1.Runner runners = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Replace the cached "available runners" view — used by Pod create modal
+// after ListAvailableRunners returns. Distinct from ReplaceCachedRunners
+// because the two views may diverge (one shows online + accepting pods,
+// the other shows all runners regardless of capacity).
+// ---------------------------------------------------------------------------
+message ReplaceAvailableRunnersRequest {
+  repeated proto.runner_api.v1.Runner runners = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Set / clear the "current runner" used by runner-detail page. Empty
+// runner field (i.e. runner unset) means clear.
+// ---------------------------------------------------------------------------
+message SetCurrentRunnerRequest {
+  optional proto.runner_api.v1.Runner runner = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Patch a single runner in-place after a GetRunner / UpdateRunner returns.
+// Idempotent on `runner.id`: if the cache already has it, replace; if
+// absent, insert. Used by fetchRunner + updateRunner after-success paths.
+// ---------------------------------------------------------------------------
+message PatchCachedRunnerRequest {
+  proto.runner_api.v1.Runner runner = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Remove a runner from cache — used after DeleteRunner Connect call.
+// ---------------------------------------------------------------------------
+message RemoveCachedRunnerRequest {
+  int64 runner_id = 1;
 }

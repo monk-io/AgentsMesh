@@ -5,6 +5,10 @@ use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::runner_state::RunnerState;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
 use agentsmesh_types::proto_runner_api_v1::Runner;
+use agentsmesh_types::proto_runner_state_v1::{
+    PatchCachedRunnerRequest, RemoveCachedRunnerRequest, ReplaceAvailableRunnersRequest,
+    ReplaceCachedRunnersRequest, SetCurrentRunnerRequest,
+};
 use agentsmesh_types::UpdateRunnerRequest;
 use prost::Message;
 
@@ -36,35 +40,46 @@ impl RunnerService {
             .map(|r| serde_json::to_string(r).unwrap_or_default())
     }
 
-    pub fn set_runners(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Runner>>(json) {
-            self.state.write().unwrap().set_runners(v);
-        }
+    pub fn replace_cached_runners(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ReplaceCachedRunnersRequest::decode(req_bytes)
+            .map_err(|e| format!("decode replace_cached_runners: {e}"))?;
+        self.state.write().unwrap().set_runners(req.runners);
+        Ok(())
     }
 
-    pub fn set_available_runners(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Runner>>(json) {
-            self.state.write().unwrap().set_available_runners(v);
-        }
+    pub fn replace_available_runners(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ReplaceAvailableRunnersRequest::decode(req_bytes)
+            .map_err(|e| format!("decode replace_available_runners: {e}"))?;
+        self.state.write().unwrap().set_available_runners(req.runners);
+        Ok(())
     }
 
-    pub fn set_current_runner(&self, json: &str) {
-        let r = if json.is_empty() { None } else { serde_json::from_str::<Runner>(json).ok() };
-        self.state.write().unwrap().set_current_runner(r);
+    pub fn set_current_runner_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = SetCurrentRunnerRequest::decode(req_bytes)
+            .map_err(|e| format!("decode set_current_runner: {e}"))?;
+        self.state.write().unwrap().set_current_runner(req.runner);
+        Ok(())
     }
 
-    pub fn update_runner_local(&self, id: f64, json: &str) {
-        if let Ok(r) = serde_json::from_str::<Runner>(json) {
-            self.state.write().unwrap().update_runner(id as i64, r);
+    pub fn patch_cached_runner(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = PatchCachedRunnerRequest::decode(req_bytes)
+            .map_err(|e| format!("decode patch_cached_runner: {e}"))?;
+        if let Some(r) = req.runner {
+            let id = r.id;
+            self.state.write().unwrap().update_runner(id, r);
         }
+        Ok(())
+    }
+
+    pub fn remove_cached_runner(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = RemoveCachedRunnerRequest::decode(req_bytes)
+            .map_err(|e| format!("decode remove_cached_runner: {e}"))?;
+        self.state.write().unwrap().remove_runner(req.runner_id);
+        Ok(())
     }
 
     pub fn update_runner_status(&self, id: i64, status: &str) {
         self.state.write().unwrap().update_runner_status(id, status);
-    }
-
-    pub fn remove_runner_local(&self, id: i64) {
-        self.state.write().unwrap().remove_runner(id);
     }
 
     pub async fn update_runner(&self, id: i64, request_json: &str) -> Result<String, String> {

@@ -28,31 +28,27 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn runner_set_runners(&self, json: String) -> napi::Result<()> {
+    pub async fn runner_replace_cached_runners(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.runner.lock().await;
-            svc.set_runners(&json);
-            Ok(())
+        svc.replace_cached_runners(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn runner_set_available_runners(&self, json: String) -> napi::Result<()> {
+    pub async fn runner_replace_available_runners(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.runner.lock().await;
-            svc.set_available_runners(&json);
-            Ok(())
+        svc.replace_available_runners(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn runner_set_current_runner(&self, json: String) -> napi::Result<()> {
+    pub async fn runner_set_current_runner_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.runner.lock().await;
-            svc.set_current_runner(&json);
-            Ok(())
+        svc.set_current_runner_proto(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
-    pub async fn runner_update_runner_local(&self, id: f64, json: String) -> napi::Result<()> {
+    pub async fn runner_patch_cached_runner(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.runner.lock().await;
-            svc.update_runner_local(id, &json);
-            Ok(())
+        svc.patch_cached_runner(&req_bytes).map_err(napi::Error::from_reason)
     }
 
     #[napi]
@@ -63,10 +59,9 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn runner_remove_runner_local(&self, id: i64) -> napi::Result<()> {
+    pub async fn runner_remove_cached_runner(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.runner.lock().await;
-            svc.remove_runner_local(id);
-            Ok(())
+        svc.remove_cached_runner(&req_bytes).map_err(napi::Error::from_reason)
     }
 
 }

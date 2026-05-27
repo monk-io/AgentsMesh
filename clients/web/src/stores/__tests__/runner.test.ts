@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { create, toBinary } from '@bufbuild/protobuf'
+import { create, toBinary, fromBinary } from '@bufbuild/protobuf'
 import {
   ListRunnersResponseSchema,
   ListAvailableRunnersResponseSchema,
@@ -9,26 +9,66 @@ import {
   DeleteRunnerResponseSchema,
   type Runner as ProtoRunner,
 } from '@proto/runner_api/v1/runner_pb'
+import {
+  ReplaceCachedRunnersRequestSchema,
+  ReplaceAvailableRunnersRequestSchema,
+  SetCurrentRunnerRequestSchema,
+  PatchCachedRunnerRequestSchema,
+  RemoveCachedRunnerRequestSchema,
+} from '@proto/runner_state/v1/runner_state_pb'
 import { getRunnerStatusInfo, canAcceptPods, formatHostInfo, Runner, useRunnerStore } from '../runner'
 
 let mockRunnersList: Runner[] = []
 let mockAvailableRunners: Runner[] = []
 let mockCurrentRunner: Runner | null = null
 
+function protoRunnerToData(r: ProtoRunner): Runner {
+  const out: Runner = {
+    id: Number(r.id),
+    node_id: r.nodeId,
+    status: r.status as Runner['status'],
+    last_heartbeat: r.lastHeartbeat,
+    current_pods: r.currentPods,
+    max_concurrent_pods: r.maxConcurrentPods,
+    is_enabled: r.isEnabled,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+  }
+  if (r.description) out.description = r.description
+  if (r.runnerVersion) out.runner_version = r.runnerVersion
+  if (r.visibility) out.visibility = r.visibility as Runner['visibility']
+  return out
+}
+
 const mockService = {
-  set_runners: vi.fn((j: string) => { mockRunnersList = JSON.parse(j) }),
-  set_available_runners: vi.fn((j: string) => { mockAvailableRunners = JSON.parse(j) }),
-  set_current_runner: vi.fn((j: string) => { mockCurrentRunner = j ? JSON.parse(j) : null }),
+  replace_cached_runners: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(ReplaceCachedRunnersRequestSchema, bytes)
+    mockRunnersList = req.runners.map(protoRunnerToData)
+  }),
+  replace_available_runners: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(ReplaceAvailableRunnersRequestSchema, bytes)
+    mockAvailableRunners = req.runners.map(protoRunnerToData)
+  }),
+  set_current_runner_proto: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(SetCurrentRunnerRequestSchema, bytes)
+    mockCurrentRunner = req.runner ? protoRunnerToData(req.runner) : null
+  }),
+  patch_cached_runner: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(PatchCachedRunnerRequestSchema, bytes)
+    if (req.runner) {
+      const r = protoRunnerToData(req.runner)
+      const idx = mockRunnersList.findIndex((x) => x.id === r.id)
+      if (idx >= 0) mockRunnersList[idx] = r
+      else mockRunnersList.push(r)
+    }
+  }),
+  remove_cached_runner: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(RemoveCachedRunnerRequestSchema, bytes)
+    const id = Number(req.runnerId)
+    mockRunnersList = mockRunnersList.filter((x) => x.id !== id)
+    mockAvailableRunners = mockAvailableRunners.filter((x) => x.id !== id)
+  }),
   apply_runner_status_event: vi.fn(),
-  update_runner_local: vi.fn((id: number, j: string) => {
-    const r = JSON.parse(j) as Runner
-    const idx = mockRunnersList.findIndex((x) => x.id === id)
-    if (idx >= 0) mockRunnersList[idx] = r
-  }),
-  remove_runner_local: vi.fn((id: bigint) => {
-    mockRunnersList = mockRunnersList.filter((x) => x.id !== Number(id))
-    mockAvailableRunners = mockAvailableRunners.filter((x) => x.id !== Number(id))
-  }),
   runners_json: vi.fn(() => JSON.stringify(mockRunnersList)),
   available_runners_json: vi.fn(() => JSON.stringify(mockAvailableRunners)),
   current_runner_json: vi.fn(() => (mockCurrentRunner ? JSON.stringify(mockCurrentRunner) : null)),
