@@ -45,6 +45,12 @@ const NAPI_BINARY = resolve(
 const INDEX_DTS = resolve(REPO_ROOT, "clients/core/crates/node-bridge/index.d.ts");
 const OUT_DIR = resolve(REPO_ROOT, "clients/desktop/e2e/tests/ipc/_generated");
 const SCHEMA_FILE = resolve(REPO_ROOT, "clients/desktop/e2e/tests/ipc/schema.ts");
+// Main-process IPC allowlist — replaces reflection-over-prototype in
+// bindAppStateHandlers. Only methods present here become reachable as IPC
+// channels from the renderer. Keeping this file generated from the same
+// NAPI binary symbol list ensures it never drifts from what AppState
+// actually implements.
+const IPC_ALLOWLIST_FILE = resolve(REPO_ROOT, "clients/desktop/src/main/ipc-allowlist.generated.ts");
 
 interface IpcMethod {
   name: string;
@@ -347,6 +353,32 @@ function main(): void {
   mkdirSync(dirname(SCHEMA_FILE), { recursive: true });
   writeFileSync(SCHEMA_FILE, emitSchemaFile(methods), "utf-8");
   console.log(`[gen-ipc-tests] schema → ${SCHEMA_FILE}`);
+
+  mkdirSync(dirname(IPC_ALLOWLIST_FILE), { recursive: true });
+  writeFileSync(IPC_ALLOWLIST_FILE, emitAllowlistFile(methods), "utf-8");
+  console.log(`[gen-ipc-tests] allowlist → ${IPC_ALLOWLIST_FILE}`);
+}
+
+function emitAllowlistFile(methods: IpcMethod[]): string {
+  return `// AUTO-GENERATED — regenerate: pnpm --filter desktop e2e:gen
+//
+// Source of truth: the napi-rs binary at
+// clients/core/crates/node-bridge/agentsmesh-node-bridge.<plat>.node. This
+// file lists every method that bindAppStateHandlers() in main/index.ts is
+// permitted to expose as an IPC channel. Methods not in this list cannot
+// be reached from the renderer — even if they exist on AppState.prototype.
+//
+// Replaces the prior reflect-everything pattern so dead / internal NAPI
+// methods can no longer be invoked accidentally by a stale renderer.
+
+export const IPC_ALLOWLIST: ReadonlyArray<string> = ${JSON.stringify(
+    methods.map((m) => m.name),
+    null,
+    2,
+  )};
+
+export const IPC_ALLOWLIST_SET: ReadonlySet<string> = new Set(IPC_ALLOWLIST);
+`;
 }
 
 main();

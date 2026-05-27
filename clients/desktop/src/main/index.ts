@@ -3,6 +3,7 @@ import path from "path";
 import { AppState, initLogger, logEvent } from "@agentsmesh/node-bridge";
 import { createLocalRunnerStubs, type LocalRunnerStubMap } from "./local_runner_stubs";
 import { acquireSingleInstance } from "./single_instance";
+import { IPC_ALLOWLIST, IPC_ALLOWLIST_SET } from "./ipc-allowlist.generated";
 import {
   registerProtocol,
   attachSecondInstanceUrlHandler,
@@ -94,6 +95,14 @@ function createWindow() {
 
 // Called at boot and after server switch (new AppState). MUST removeHandler first
 // because ipcMain.handle throws on duplicate registration.
+//
+// Allowlist-driven (vs reflect-everything): the set of methods exposed as IPC
+// channels comes from `ipc-allowlist.generated.ts` — auto-generated from the
+// same NAPI binary symbol enumeration that drives e2e contract specs, so the
+// two stay in lock-step. Any NAPI method not in the allowlist is unreachable
+// from the renderer even if it exists on AppState.prototype. Drift (allowlist
+// references a method that's missing from AppState, or vice-versa) is logged
+// at boot.
 function bindAppStateHandlers() {
   for (const ch of appStateHandlers) {
     ipcMain.removeHandler(ch);
@@ -101,10 +110,38 @@ function bindAppStateHandlers() {
   appStateHandlers.clear();
 
   const proto = Object.getPrototypeOf(appState);
-  const methodNames = Object.getOwnPropertyNames(proto).filter(
-    (k) => k !== "constructor" && typeof (appState as any)[k] === "function",
+  const protoMethods = new Set(
+    Object.getOwnPropertyNames(proto).filter(
+      (k) => k !== "constructor" && typeof (appState as any)[k] === "function",
+    ),
   );
-  for (const m of methodNames) {
+
+  // Drift detection: warn (don't crash) on either side mismatching the
+  // allowlist. Crash would block legitimate dev workflows after a Bazel
+  // rebuild lag; a warn surfaces the issue immediately in the dev log
+  // while keeping renderer paths working.
+  const missingFromBinary: string[] = [];
+  for (const name of IPC_ALLOWLIST) {
+    if (!protoMethods.has(name)) missingFromBinary.push(name);
+  }
+  const missingFromAllowlist: string[] = [];
+  for (const name of protoMethods) {
+    if (!IPC_ALLOWLIST_SET.has(name)) missingFromAllowlist.push(name);
+  }
+  if (missingFromBinary.length > 0) {
+    console.warn(
+      `[electron] IPC allowlist drift: ${missingFromBinary.length} methods listed but not in AppState.prototype — regenerate with \`pnpm --filter desktop e2e:gen\``,
+    );
+  }
+  if (missingFromAllowlist.length > 0) {
+    console.warn(
+      `[electron] IPC allowlist drift: ${missingFromAllowlist.length} AppState methods not in allowlist (denied to renderer) — regenerate with \`pnpm --filter desktop e2e:gen\``,
+    );
+  }
+
+  let registered = 0;
+  for (const m of IPC_ALLOWLIST) {
+    if (!protoMethods.has(m)) continue; // skip missing methods (logged above)
     ipcMain.handle(m, async (_e, ...args: unknown[]) => {
       try {
         if (stubs && m in stubs) {
@@ -116,8 +153,9 @@ function bindAppStateHandlers() {
       }
     });
     appStateHandlers.add(m);
+    registered++;
   }
-  console.log(`[electron] Registered ${methodNames.length} IPC handlers`);
+  console.log(`[electron] Registered ${registered} IPC handlers (allowlist: ${IPC_ALLOWLIST.length}, AppState methods: ${protoMethods.size})`);
 }
 
 // Known leak: LocalRunnerManager / RelayManager have no shutdown hook, so their tokio
