@@ -7,6 +7,7 @@ import { PodSchema } from "@proto/pod/v1/pod_pb";
 import { createLocalRunnerStubs, type LocalRunnerStubMap } from "./local_runner_stubs";
 import { acquireSingleInstance } from "./single_instance";
 import { IPC_ALLOWLIST, IPC_ALLOWLIST_SET } from "./ipc-allowlist.generated";
+import { setupRealtimeBridge, type RealtimeBridge } from "./realtime";
 import {
   registerProtocol,
   attachSecondInstanceUrlHandler,
@@ -47,6 +48,7 @@ const isHeadlessTest = process.env.NODE_ENV === "test";
 let appState: AppState;
 let stubs: LocalRunnerStubMap | null = null;
 let mainWindow: BrowserWindow | null = null;
+let realtimeBridge: RealtimeBridge | null = null;
 const appStateHandlers = new Set<string>();
 
 const getMainWindow = () => mainWindow;
@@ -165,11 +167,20 @@ function bindAppStateHandlers() {
 // tasks may outlive the rebind. Rare in practice (server switches are uncommon).
 function rebindAppState(newApiUrl: string) {
   console.log(`[electron] Rebinding AppState: ${currentApiUrl} → ${newApiUrl}`);
+  // Dispose old realtime bridge before swapping AppState — its NAPI
+  // callbacks would otherwise keep firing into a stale Rust handle.
+  if (realtimeBridge) {
+    void realtimeBridge.dispose();
+    realtimeBridge = null;
+  }
   appState = new AppState(newApiUrl, storageDir);
   if (isHeadlessTest) {
     stubs = createLocalRunnerStubs();
   }
   bindAppStateHandlers();
+  void setupRealtimeBridge(appState, getMainWindow).then((bridge) => {
+    realtimeBridge = bridge;
+  });
   currentApiUrl = newApiUrl;
 }
 
@@ -587,6 +598,13 @@ app.whenReady().then(() => {
   }
   registerStaticHandlers();
   bindAppStateHandlers();
+  // Wire the realtime EventBus bridge BEFORE createWindow() so the renderer's
+  // EventSubscriptionManager finds `realtime:connect` etc. registered as soon
+  // as preload runs. The stream itself doesn't start until renderer calls
+  // electronAPI.invoke("realtime:connect").
+  void setupRealtimeBridge(appState, getMainWindow).then((bridge) => {
+    realtimeBridge = bridge;
+  });
   buildMenu();
   installOpenUrlHandler(getMainWindow);
   createWindow();

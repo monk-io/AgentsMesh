@@ -26,6 +26,16 @@ const api = {
     ipcRenderer.on("oauth:callback", listener);
     return () => ipcRenderer.removeListener("oauth:callback", listener);
   },
+  onRealtimeEvent: (handler: (eventJson: string) => void) => {
+    const listener = (_e: IpcRendererEvent, eventJson: string) => handler(eventJson);
+    ipcRenderer.on("realtime:event", listener);
+    return () => ipcRenderer.removeListener("realtime:event", listener);
+  },
+  onRealtimeState: (handler: (state: string) => void) => {
+    const listener = (_e: IpcRendererEvent, state: string) => handler(state);
+    ipcRenderer.on("realtime:state", listener);
+    return () => ipcRenderer.removeListener("realtime:state", listener);
+  },
   serverConfig: {
     snapshot: serverConfigSnapshot,
     get: () => ipcRenderer.invoke("serverConfig:get"),

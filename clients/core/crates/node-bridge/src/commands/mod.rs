@@ -8,6 +8,7 @@ pub mod channel;
 pub mod channel_api;
 pub mod channel_connect;
 pub mod channel_state;
+pub mod events_subscribe;
 pub mod extension;
 pub mod file;
 pub mod invitation;

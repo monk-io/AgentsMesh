@@ -156,6 +156,12 @@ export class AppState {
   envBundleListEnvBundlesConnect(request: Array<number>): Promise<Array<number>>
   envBundleSetPrimaryEnvBundleConnect(request: Array<number>): Promise<Array<number>>
   envBundleUpdateEnvBundleConnect(request: Array<number>): Promise<Array<number>>
+  eventsConnect(): Promise<void>
+  eventsDisconnect(): Promise<void>
+  eventsGetConnectionState(): Promise<string>
+  eventsOnConnectionStateChange(callback: (arg: string) => void): Promise<number>
+  eventsSubscribeAll(callback: (arg: string) => void): Promise<number>
+  eventsUnsubscribe(id: number): Promise<void>
   extensionCreateSkillRegistryConnect(request: Array<number>): Promise<Array<number>>
   extensionDeleteSkillRegistryConnect(request: Array<number>): Promise<Array<number>>
   extensionInstallCustomMcpServerConnect(request: Array<number>): Promise<Array<number>>

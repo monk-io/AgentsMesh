@@ -16,7 +16,8 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "apikeyCreateConnect",
     "group": "apikey",
     "params": [],
-    "returnType": "any"
+    "returnType": "any",
+    "ipcExposable": true
   },
   {
     "name": "apikeyDeleteConnect",
@@ -27,7 +28,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyGetConnect",
@@ -38,7 +40,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyListConnect",
@@ -49,7 +52,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyRevokeConnect",
@@ -60,7 +64,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyUpdateConnect",
@@ -71,7 +76,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authApplySessionProto",
@@ -82,79 +88,92 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authBootstrap",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "authBootstrapProto",
     "group": "auth",
     "params": [],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authClearSession",
     "group": "auth",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authFetchOrganizations",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "authFetchOrganizationsProto",
     "group": "auth",
     "params": [],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authGetCurrentOrgJson",
     "group": "auth",
     "params": [],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetCurrentUserJson",
     "group": "auth",
     "params": [],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetCurrentUserProto",
     "group": "auth",
     "params": [],
-    "returnType": "Array<number> | undefined | null"
+    "returnType": "Array<number> | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetExpiresAt",
     "group": "auth",
     "params": [],
-    "returnType": "number | undefined | null"
+    "returnType": "number | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetOrganizationsJson",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "authGetToken",
     "group": "auth",
     "params": [],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authIsAuthenticated",
     "group": "auth",
     "params": [],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "authLogin",
@@ -169,7 +188,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "authLoginProto",
@@ -184,25 +204,29 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authLogout",
     "group": "auth",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authRefreshToken",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "authRefreshTokenProto",
     "group": "auth",
     "params": [],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authSetCurrentOrgProto",
@@ -213,7 +237,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authSetOrganizationsProto",
@@ -224,7 +249,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authSwitchOrg",
@@ -235,7 +261,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authConnectForgotPasswordConnect",
@@ -246,7 +273,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectLoginConnect",
@@ -257,7 +285,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectLogoutConnect",
@@ -268,7 +297,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectOauthCallbackConnect",
@@ -279,7 +309,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectOauthRedirectConnect",
@@ -290,7 +321,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectRefreshTokenConnect",
@@ -301,7 +333,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectRegisterConnect",
@@ -312,7 +345,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectResendVerificationConnect",
@@ -323,7 +357,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectResetPasswordConnect",
@@ -334,7 +369,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectVerifyEmailConnect",
@@ -345,7 +381,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "autopilotAppendIteration",
@@ -356,19 +393,22 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotControllersJson",
     "group": "autopilot",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "autopilotCurrentControllerJson",
     "group": "autopilot",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "autopilotGetControllerByPodKeyJson",
@@ -379,7 +419,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "autopilotGetIterationsJson",
@@ -390,7 +431,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "autopilotGetThinkingHistoryJson",
@@ -401,7 +443,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "autopilotGetThinkingJson",
@@ -412,7 +455,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "autopilotInsertController",
@@ -423,7 +467,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotPatchController",
@@ -434,7 +479,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotRemoveControllerProto",
@@ -445,7 +491,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotReplaceCachedControllers",
@@ -456,7 +503,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotReplaceCachedIterations",
@@ -467,7 +515,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotSetCurrentControllerProto",
@@ -478,7 +527,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "autopilotUpdateThinkingProto",
@@ -489,7 +539,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "bindingAcceptBindingConnect",
@@ -500,7 +551,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingApproveScopesConnect",
@@ -511,7 +563,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingCheckBindingConnect",
@@ -522,7 +575,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingGetBoundPodsConnect",
@@ -533,7 +587,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingGetPendingBindingsConnect",
@@ -544,7 +599,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingListBindingsConnect",
@@ -555,7 +611,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingRejectBindingConnect",
@@ -566,7 +623,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingRequestBindingConnect",
@@ -577,7 +635,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingRequestScopesConnect",
@@ -588,7 +647,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingUnbindConnect",
@@ -599,7 +659,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreApplyRemoteOp",
@@ -610,19 +671,22 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreBacklinksJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreBlocksJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreCatchup",
@@ -633,13 +697,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreEnsureDefaultWorkspace",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreGetBlockJson",
@@ -650,7 +716,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLastOpId",
@@ -661,13 +728,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "number"
+    "returnType": "number",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLastOpIdsJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreListBacklinksJson",
@@ -678,7 +747,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreListChildrenJson",
@@ -689,13 +759,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreListWorkspaces",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLoadSubtree",
@@ -710,7 +782,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLoadTypeDefs",
@@ -721,13 +794,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreNestChildrenJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreProjectLocalOps",
@@ -738,13 +813,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreRefsJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreReplaceWorkspaces",
@@ -755,7 +832,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreSetLastOpId",
@@ -770,7 +848,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreTypeDefsJson",
@@ -781,7 +860,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreUpsertBlocks",
@@ -792,7 +872,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreUpsertRefs",
@@ -803,7 +884,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreUpsertWorkspace",
@@ -814,13 +896,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreWorkspacesJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelApplyChannelMessageEditedEvent",
@@ -831,7 +915,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelApplyIncomingChannelMessage",
@@ -842,7 +927,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "channelArchiveChannelConnect",
@@ -853,7 +939,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelChannelMembersJson",
@@ -864,7 +951,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelChannelPodsJson",
@@ -875,13 +963,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelChannelsJson",
     "group": "channel",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelClearChannelMentions",
@@ -892,7 +982,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelClearChannelUnread",
@@ -903,7 +994,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelCreateChannelConnect",
@@ -914,13 +1006,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelCurrentChannelJson",
     "group": "channel",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelDeleteChannelMessageConnect",
@@ -931,7 +1025,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelEditChannelMessageConnect",
@@ -942,7 +1037,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelFilterChannelsJson",
@@ -957,7 +1053,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "boolean"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelGetChannelConnect",
@@ -968,7 +1065,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelGetChannelJson",
@@ -979,7 +1077,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelGetChannelUnreadCountsConnect",
@@ -990,7 +1089,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelGetLastMessageJson",
@@ -1001,7 +1101,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelGetMentionCount",
@@ -1012,7 +1113,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "number"
+    "returnType": "number",
+    "ipcExposable": true
   },
   {
     "name": "channelGetMessagesJson",
@@ -1023,7 +1125,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelGetUnreadCount",
@@ -1034,7 +1137,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "number"
+    "returnType": "number",
+    "ipcExposable": true
   },
   {
     "name": "channelIncrementMention",
@@ -1045,7 +1149,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelIncrementUnread",
@@ -1056,7 +1161,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelInsertChannel",
@@ -1067,7 +1173,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelInsertChannelMessage",
@@ -1078,7 +1185,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelListChannelMembersConnect",
@@ -1089,7 +1197,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelListChannelMessagesConnect",
@@ -1100,7 +1209,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelListChannelsConnect",
@@ -1111,7 +1221,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelMarkChannelReadConnect",
@@ -1122,13 +1233,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelMentionCountsJson",
     "group": "channel",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelPatchChannelMemberCount",
@@ -1139,7 +1252,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelPrependCachedChannelMessages",
@@ -1150,7 +1264,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelRemoveChannelMember",
@@ -1161,7 +1276,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelRemoveMessage",
@@ -1176,7 +1292,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelReplaceCachedChannelMessages",
@@ -1187,7 +1304,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelReplaceCachedChannels",
@@ -1198,7 +1316,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelReplaceChannelMembers",
@@ -1209,7 +1328,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelReplaceChannelPods",
@@ -1220,7 +1340,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelReplaceChannelUnreadCounts",
@@ -1231,7 +1352,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelSelectChannel",
@@ -1242,7 +1364,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number | undefined | null"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelSendChannelMessageConnect",
@@ -1253,7 +1376,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelSetCurrentChannel",
@@ -1264,7 +1388,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number | undefined | null"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelSetCurrentUserId",
@@ -1275,7 +1400,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number | undefined | null"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "channelSortedChannelIdsJson",
@@ -1290,19 +1416,22 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "boolean"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelTotalMentionCount",
     "group": "channel",
     "params": [],
-    "returnType": "number"
+    "returnType": "number",
+    "ipcExposable": true
   },
   {
     "name": "channelTotalUnreadCount",
     "group": "channel",
     "params": [],
-    "returnType": "number"
+    "returnType": "number",
+    "ipcExposable": true
   },
   {
     "name": "channelUnarchiveChannelConnect",
@@ -1313,13 +1442,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "channelUnreadCountsJson",
     "group": "channel",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "channelUpdateChannelConnect",
@@ -1330,7 +1461,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleCreateEnvBundleConnect",
@@ -1341,7 +1473,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleDeleteEnvBundleConnect",
@@ -1352,7 +1485,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleGetEnvBundleConnect",
@@ -1363,7 +1497,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleListEnvBundlesConnect",
@@ -1374,7 +1509,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleSetPrimaryEnvBundleConnect",
@@ -1385,7 +1521,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleUpdateEnvBundleConnect",
@@ -1396,7 +1533,65 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsConnect",
+    "group": "events",
+    "params": [],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsDisconnect",
+    "group": "events",
+    "params": [],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsGetConnectionState",
+    "group": "events",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsOnConnectionStateChange",
+    "group": "events",
+    "params": [
+      {
+        "name": "callback",
+        "type": "(arg: string) => void"
+      }
+    ],
+    "returnType": "number",
+    "ipcExposable": false
+  },
+  {
+    "name": "eventsSubscribeAll",
+    "group": "events",
+    "params": [
+      {
+        "name": "callback",
+        "type": "(arg: string) => void"
+      }
+    ],
+    "returnType": "number",
+    "ipcExposable": false
+  },
+  {
+    "name": "eventsUnsubscribe",
+    "group": "events",
+    "params": [
+      {
+        "name": "id",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "extensionCreateSkillRegistryConnect",
@@ -1407,7 +1602,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionDeleteSkillRegistryConnect",
@@ -1418,7 +1614,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallCustomMcpServerConnect",
@@ -1429,7 +1626,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallMcpFromMarketConnect",
@@ -1440,7 +1638,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallSkillFromGithubConnect",
@@ -1451,7 +1650,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallSkillFromMarketConnect",
@@ -1462,7 +1662,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallSkillFromUploadedFileConnect",
@@ -1473,7 +1674,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListMarketMcpServersConnect",
@@ -1484,7 +1686,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListMarketSkillsConnect",
@@ -1495,7 +1698,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListRepoMcpServersConnect",
@@ -1506,7 +1710,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListRepoSkillsConnect",
@@ -1517,7 +1722,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListSkillRegistriesConnect",
@@ -1528,7 +1734,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListSkillRegistryOverridesConnect",
@@ -1539,7 +1746,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionPresignSkillUploadConnect",
@@ -1550,7 +1758,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionSyncSkillRegistryConnect",
@@ -1561,7 +1770,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionTogglePlatformRegistryConnect",
@@ -1572,7 +1782,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUninstallMcpServerConnect",
@@ -1583,7 +1794,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUninstallSkillConnect",
@@ -1594,7 +1806,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUpdateMcpServerConnect",
@@ -1605,7 +1818,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUpdateSkillConnect",
@@ -1616,7 +1830,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "fileUploadFile",
@@ -1635,7 +1850,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "invitationAcceptInvitationConnect",
@@ -1646,7 +1862,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationCreateInvitationConnect",
@@ -1657,7 +1874,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationGetInvitationByTokenConnect",
@@ -1668,7 +1886,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationListInvitationsConnect",
@@ -1679,7 +1898,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationListPendingInvitationsConnect",
@@ -1690,7 +1910,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationResendInvitationConnect",
@@ -1701,7 +1922,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationRevokeInvitationConnect",
@@ -1712,25 +1934,29 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerBinaryPath",
     "group": "local_runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerFallbackVersion",
     "group": "local_runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerHostTarget",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerInstallBinary",
@@ -1745,31 +1971,36 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string | undefined | null"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerInstalledVersion",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerIsInstalled",
     "group": "local_runner",
     "params": [],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerIsRegistered",
     "group": "local_runner",
     "params": [],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerLocalNodeId",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | undefined | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerRegister",
@@ -1780,37 +2011,43 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceInstall",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceStart",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceStatus",
     "group": "local_runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceStop",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceUninstall",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcAppendCachedRuns",
@@ -1821,7 +2058,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcClearCurrentLoop",
@@ -1832,7 +2070,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcClearLoopRuns",
@@ -1843,13 +2082,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcCurrentLoopJson",
     "group": "loop_svc",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcGetLoopBySlugJson",
@@ -1860,7 +2101,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcInsertLoopRun",
@@ -1871,13 +2113,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcLoopsJson",
     "group": "loop_svc",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcPatchLoopFromAction",
@@ -1888,7 +2132,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcPatchLoopRunStatus",
@@ -1899,7 +2144,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcReplaceCachedLoops",
@@ -1910,7 +2156,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcReplaceCachedRuns",
@@ -1921,13 +2168,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcRunsJson",
     "group": "loop_svc",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "loopSvcSetCurrentLoop",
@@ -1938,7 +2187,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "meshBatchGetTicketPodsConnect",
@@ -1949,13 +2199,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshClearTopology",
     "group": "mesh",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "meshCreatePodForTicketConnect",
@@ -1966,19 +2218,22 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshFetchTopology",
     "group": "mesh",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetActiveNodesJson",
     "group": "mesh",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetChannelsForNodeJson",
@@ -1989,7 +2244,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetEdgesForNodeJson",
@@ -2000,7 +2256,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetMeshTopologyConnect",
@@ -2011,7 +2268,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshGetNodeJson",
@@ -2022,7 +2280,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetNodesByRunnerJson",
@@ -2033,7 +2292,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetRunnerInfoJson",
@@ -2044,7 +2304,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshGetTicketPodsConnect",
@@ -2055,7 +2316,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Uint8Array"
       }
     ],
-    "returnType": "Uint8Array"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshReplaceTopology",
@@ -2066,13 +2328,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "meshSelectedNode",
     "group": "mesh",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "meshSelectNode",
@@ -2083,19 +2347,22 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string | undefined | null"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "meshTopologyJson",
     "group": "mesh",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "podCurrentPodJson",
     "group": "pod",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "podGetPodJson",
@@ -2106,13 +2373,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "podPodsJson",
     "group": "pod",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "promocodeGetRedemptionHistoryConnect",
@@ -2123,7 +2392,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "promocodeRedeemPromoCodeConnect",
@@ -2134,7 +2404,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "promocodeValidatePromoCodeConnect",
@@ -2145,7 +2416,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "runnerAuthorizeRunner",
@@ -2156,19 +2428,22 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "runnerAvailableRunnersJson",
     "group": "runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "runnerCurrentRunnerJson",
     "group": "runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "runnerGetAuthStatus",
@@ -2179,7 +2454,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "runnerGetRunnerJson",
@@ -2190,7 +2466,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "runnerPatchCachedRunner",
@@ -2201,7 +2478,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "runnerRemoveCachedRunner",
@@ -2212,7 +2490,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "runnerReplaceAvailableRunners",
@@ -2223,7 +2502,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "runnerReplaceCachedRunners",
@@ -2234,13 +2514,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "runnerRunnersJson",
     "group": "runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "runnerSetCurrentRunnerProto",
@@ -2251,7 +2533,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "runnerUpdateRunnerStatus",
@@ -2266,7 +2549,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "ssoDiscoverConnect",
@@ -2277,7 +2561,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ssoLdapAuthConnect",
@@ -2288,7 +2573,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketAddSupportTicketMessageConnect",
@@ -2299,7 +2585,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketAssociateAttachmentsConnect",
@@ -2310,7 +2597,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketCreateSupportTicketConnect",
@@ -2321,7 +2609,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketGetAttachmentUrlConnect",
@@ -2332,7 +2621,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketGetSupportTicketConnect",
@@ -2343,7 +2633,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketListSupportTicketsConnect",
@@ -2354,7 +2645,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketPresignAttachmentUploadConnect",
@@ -2365,7 +2657,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketAddAssigneeConnect",
@@ -2376,7 +2669,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketAddLabelConnect",
@@ -2387,7 +2681,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketCreateLabelConnect",
@@ -2398,7 +2693,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketCreateTicketConnect",
@@ -2409,7 +2705,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketDeleteLabelConnect",
@@ -2420,7 +2717,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketDeleteTicketConnect",
@@ -2431,7 +2729,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetActiveTicketsConnect",
@@ -2442,7 +2741,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetBoardConnect",
@@ -2453,7 +2753,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetSubTicketsConnect",
@@ -2464,7 +2765,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetTicketConnect",
@@ -2475,7 +2777,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetTicketPods",
@@ -2490,7 +2793,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "boolean | undefined | null"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "ticketListLabelsConnect",
@@ -2501,7 +2805,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketListTicketsConnect",
@@ -2512,7 +2817,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRemoveAssigneeConnect",
@@ -2523,7 +2829,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRemoveLabelConnect",
@@ -2534,7 +2841,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketTicketPodsJson",
@@ -2545,7 +2853,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "ticketUpdateLabelConnect",
@@ -2556,7 +2865,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketUpdateTicketConnect",
@@ -2567,7 +2877,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketUpdateTicketStatusConnect",
@@ -2578,7 +2889,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsCreateCommentConnect",
@@ -2589,7 +2901,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsCreateRelationConnect",
@@ -2600,7 +2913,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsDeleteCommentConnect",
@@ -2611,7 +2925,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsDeleteRelationConnect",
@@ -2622,7 +2937,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsLinkCommitConnect",
@@ -2633,7 +2949,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListCommentsConnect",
@@ -2644,7 +2961,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListCommitsConnect",
@@ -2655,7 +2973,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListMergeRequestsConnect",
@@ -2666,7 +2985,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListRelationsConnect",
@@ -2677,7 +2997,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsUnlinkCommitConnect",
@@ -2688,7 +3009,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsUpdateCommentConnect",
@@ -2699,7 +3021,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userChangePasswordConnect",
@@ -2710,7 +3033,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userDeleteIdentityConnect",
@@ -2721,7 +3045,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userGetMeConnect",
@@ -2732,7 +3057,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userListIdentitiesConnect",
@@ -2743,7 +3069,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userSearchUsersConnect",
@@ -2754,7 +3081,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userUpdateMeConnect",
@@ -2765,6 +3093,7 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   }
 ];

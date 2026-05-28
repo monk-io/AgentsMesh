@@ -57,6 +57,16 @@ interface IpcMethod {
   group: string;
   params: Array<{ name: string; type: string }>;
   returnType: string;
+  // false when params contain a callback (e.g., `(arg: T) => void` mapped from
+  // Rust `ThreadsafeFunction<T>`). Such methods are main-process-only —
+  // Electron IPC cannot ferry JS functions across the bridge. They stay in
+  // index.d.ts so main can call them locally, but are excluded from the
+  // renderer-facing allowlist and the generated IPC contract specs.
+  ipcExposable: boolean;
+}
+
+function isCallbackType(type: string): boolean {
+  return /=>\s*void|=>\s*Promise/.test(type);
 }
 
 // Returns a Map from method name → its declared TS signature from index.d.ts.
@@ -156,7 +166,8 @@ function extractMethodsFromBinary(): IpcMethod[] {
   for (const name of names) {
     const group = groupOf(name);
     const sig = signatures.get(name) ?? { params: [], returnType: "any" };
-    methods.push({ name, group, params: sig.params, returnType: sig.returnType });
+    const ipcExposable = !sig.params.some((p) => isCallbackType(p.type));
+    methods.push({ name, group, params: sig.params, returnType: sig.returnType, ipcExposable });
   }
   methods.sort((a, b) => a.group.localeCompare(b.group) || a.name.localeCompare(b.name));
   return methods;
@@ -213,6 +224,7 @@ const SERVICE_GROUPS = [
   "channelState",
   "channel",
   "envBundle",
+  "events",
   "extension",
   "file",
   "grant",
@@ -342,6 +354,7 @@ function main(): void {
 
   const byGroup: Record<string, IpcMethod[]> = {};
   for (const m of methods) {
+    if (!m.ipcExposable) continue; // callback-typed methods are main-only
     if (!byGroup[m.group]) byGroup[m.group] = [];
     byGroup[m.group].push(m);
   }
@@ -371,6 +384,10 @@ function main(): void {
 }
 
 function emitAllowlistFile(methods: IpcMethod[]): string {
+  // Filter out callback-typed methods (ThreadsafeFunction<T> in Rust →
+  // `(arg: T) => void` in TS). These cannot cross the IPC boundary — main
+  // must call them locally and ferry the callback output via webContents.send.
+  const exposable = methods.filter((m) => m.ipcExposable);
   return `// AUTO-GENERATED — regenerate: pnpm --filter desktop e2e:gen
 //
 // Source of truth: the napi-rs binary at
@@ -383,7 +400,7 @@ function emitAllowlistFile(methods: IpcMethod[]): string {
 // methods can no longer be invoked accidentally by a stale renderer.
 
 export const IPC_ALLOWLIST: ReadonlyArray<string> = ${JSON.stringify(
-    methods.map((m) => m.name),
+    exposable.map((m) => m.name),
     null,
     2,
   )};
@@ -489,6 +506,9 @@ function rustTypeToTs(rust: string): string {
   // Option<T> → T | undefined | null
   const optMatch = t.match(/^Option<([\s\S]+)>$/);
   if (optMatch) return `${rustTypeToTs(optMatch[1])} | undefined | null`;
+  // ThreadsafeFunction<T> → (arg: T) => void (napi-rs cross-thread JS callback)
+  const tsfnMatch = t.match(/^ThreadsafeFunction<([\s\S]+)>$/);
+  if (tsfnMatch) return `(arg: ${rustTypeToTs(tsfnMatch[1])}) => void`;
   // Vec<u8> → Array<number> (NAPI convention for proto bytes)
   if (t === "Vec<u8>" || t === "&[u8]") return "Array<number>";
   // Vec<T> → Array<T>

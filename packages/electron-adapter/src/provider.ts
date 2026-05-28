@@ -27,6 +27,7 @@ import { ElectronAuthService } from './auth';
 import { ElectronAuthConnectService } from './auth_connect';
 import { ElectronBlockstoreService } from './blockstore';
 import { ElectronLocalRunnerService } from './local_runner';
+import { ElectronEventsManager } from './realtime';
 import { invoke } from './invoke';
 import {
   ElectronAcpManager, ElectronRelayManager, ElectronTicketState,
@@ -44,27 +45,15 @@ class ElectronApiClientProxy {
   }
 
   /**
-   * `WasmApiClient` exposes `create_events_manager()` returning a stream
-   * subscriber. Desktop doesn't (yet) have a Connect ServerStream bridge
-   * over IPC — we return a no-op manager so `EventSubscriptionManager`
-   * boots without `is not a function` crashing the renderer. Realtime
-   * events silently no-op on desktop until the main-process bridge lands.
+   * Wire-compatible with `WasmApiClient.create_events_manager()`. The
+   * returned object fan-outs main-process EventBus IPC events into the
+   * renderer's `EventSubscriptionManager` (clients/web/src/lib/realtime/).
+   * See `packages/electron-adapter/src/realtime.ts` + `clients/desktop/
+   * src/main/realtime.ts` for the full bridge.
    */
-  create_events_manager(): NoopEventsManager {
-    return new NoopEventsManager();
+  create_events_manager(): ElectronEventsManager {
+    return new ElectronEventsManager();
   }
-}
-
-class NoopEventsManager {
-  private nextId = 1;
-  async subscribe_all(_cb: (json: string) => void): Promise<number> { return this.nextId++; }
-  async on_connection_state_change(cb: (state: string) => void): Promise<number> {
-    queueMicrotask(() => cb("connected"));
-    return this.nextId++;
-  }
-  async unsubscribe(_id: number): Promise<void> { /* no-op */ }
-  async connect(): Promise<void> { /* no-op */ }
-  async disconnect(): Promise<void> { /* no-op */ }
 }
 
 // user_credential proto bundles three backend services (git credential, agent

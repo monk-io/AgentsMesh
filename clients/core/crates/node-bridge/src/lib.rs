@@ -5,9 +5,11 @@ use napi_derive::napi;
 
 use agentsmesh_api_client::{ApiClient, AuthTokenStore};
 use agentsmesh_auth::{AuthManager, PersistentStorage};
+use agentsmesh_events::{EventSubscriptionManager, EventSubscriptionManagerOptions};
 use agentsmesh_local_runner::LocalRunnerManager;
 use agentsmesh_services::*;
 use agentsmesh_state::*;
+use agentsmesh_transport::runtime::PlatformRuntime;
 
 mod file_storage;
 use file_storage::FileStorage;
@@ -45,6 +47,11 @@ pub struct AppState {
     sso: Arc<Mutex<SSOService>>,
     local_runner: Arc<LocalRunnerManager>,
     client: Arc<ApiClient>,
+    // Realtime EventBus stream manager. Backed by the same Connect-RPC
+    // `EventsService.Subscribe` stream the web client uses; main process
+    // owns the connection and ferries events to renderer via IPC. See
+    // `commands/events_subscribe.rs` for the NAPI surface.
+    events: Arc<Mutex<EventSubscriptionManager<PlatformRuntime>>>,
 }
 
 #[napi]
@@ -88,6 +95,10 @@ impl AppState {
             ))),
             sso: Arc::new(Mutex::new(SSOService::new(c.clone()))),
             local_runner,
+            events: Arc::new(Mutex::new(EventSubscriptionManager::new(
+                c.clone(),
+                EventSubscriptionManagerOptions::default(),
+            ))),
             client: c,
         })
     }
