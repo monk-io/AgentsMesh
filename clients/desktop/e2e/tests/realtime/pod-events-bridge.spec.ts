@@ -48,9 +48,8 @@ test.describe("Desktop realtime · pod events bridge", () => {
           (json) => json.includes('"type":"pod:created"') && json.includes(pod.pod_key),
           15_000,
         );
-        const parsed = JSON.parse(createdEvent) as { data: string };
-        const data = JSON.parse(parsed.data) as { pod_key: string };
-        expect(data.pod_key).toBe(pod.pod_key);
+        const wireCreated = JSON.parse(createdEvent) as { data: { pod_key: string } };
+        expect(wireCreated.data.pod_key).toBe(pod.pod_key);
 
         // Terminate and assert pod:terminated also lands.
         await invokeIpc(page, "podTerminatePod", pod.pod_key);
@@ -58,9 +57,8 @@ test.describe("Desktop realtime · pod events bridge", () => {
           (json) => json.includes('"type":"pod:terminated"') && json.includes(pod.pod_key),
           15_000,
         );
-        const parsedT = JSON.parse(terminatedEvent) as { data: string };
-        const dataT = JSON.parse(parsedT.data) as { pod_key: string };
-        expect(dataT.pod_key).toBe(pod.pod_key);
+        const wireTerminated = JSON.parse(terminatedEvent) as { data: { pod_key: string } };
+        expect(wireTerminated.data.pod_key).toBe(pod.pod_key);
       } finally {
         await invokeIpc(page, "podTerminatePod", pod.pod_key).catch(() => undefined);
       }

@@ -521,6 +521,17 @@ function registerLegacyApiAliases() {
     return JSON.stringify(snakeCaseDeep(parsed));
   });
 
+  // Counterpart to podCreatePod. The realtime bridge e2e specs depend on
+  // it for cleanup. Renderer hands us a pod_key string; we route to
+  // Connect proto.pod.v1.PodService/TerminatePod.
+  ipcMain.handle("podTerminatePod", async (_e, podKey: string) => {
+    await callConnectJson(
+      "proto.pod.v1.PodService",
+      "TerminatePod",
+      { orgSlug: orgSlug(), podKey },
+    );
+  });
+
   // Generic binary Connect-RPC proxy. Web's wasm-side services expose
   // `<method>Connect(Uint8Array) -> Uint8Array`; ElectronXxxService
   // adapters that don't yet have hand-written `_connect` IPC handlers

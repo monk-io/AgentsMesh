@@ -18,7 +18,13 @@ import { installRealtimeSpy } from "../../helpers/realtime-spy";
 import { invokeIpc } from "../../helpers/ipc";
 
 test.describe("Desktop realtime · bridge smoke", () => {
-  test("preload exposes onRealtimeEvent + getState progresses past disconnected", async ({ page }) => {
+  test("preload exposes onRealtimeEvent + connect transitions state past disconnected", async ({ page, electronApp }) => {
+    // Capture main process console output for diagnostics.
+    const mainLogs: string[] = [];
+    page.on("console", (msg) => mainLogs.push(`[renderer/${msg.type()}] ${msg.text()}`));
+    page.on("pageerror", (err) => mainLogs.push(`[pageerror] ${err.message}`));
+    electronApp.on("console", (msg) => mainLogs.push(`[main/${msg.type()}] ${msg.text()}`));
+
     // 1. Preload bridge surface must exist.
     const exposed = await page.evaluate(() => {
       const api = (window as unknown as { electronAPI?: { onRealtimeEvent?: unknown; onRealtimeState?: unknown } }).electronAPI;
@@ -30,14 +36,35 @@ test.describe("Desktop realtime · bridge smoke", () => {
     expect(exposed.hasOnRealtimeEvent, "electronAPI.onRealtimeEvent must be exposed by preload").toBe(true);
     expect(exposed.hasOnRealtimeState, "electronAPI.onRealtimeState must be exposed by preload").toBe(true);
 
-    // 2. The renderer's RealtimeProvider auto-invokes realtime:connect on
-    //    dashboard mount. Navigate to workspace + wait for the connection
-    //    state IPC to report a non-disconnected value.
-    await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
-    await page.waitForTimeout(3000);
+    // Diagnostic: capture invoke failures explicitly. Probe getState first
+    // (sync — no backend round-trip), then connect (which may take a
+    // moment to spawn the stream loop).
+    const probe1 = await page.evaluate(async () => {
+      const api = (window as unknown as { electronAPI: { invoke: (c: string, ...a: unknown[]) => Promise<unknown> } }).electronAPI;
+      try { return { ok: true, value: await api.invoke("realtime:getState") }; }
+      catch (e) { return { ok: false, error: (e as Error).message }; }
+    });
+    console.log("[smoke] probe1 getState:", JSON.stringify(probe1));
 
+    const probe2 = await page.evaluate(async () => {
+      const api = (window as unknown as { electronAPI: { invoke: (c: string, ...a: unknown[]) => Promise<unknown> } }).electronAPI;
+      try { return { ok: true, value: await api.invoke("realtime:connect") }; }
+      catch (e) { return { ok: false, error: (e as Error).message }; }
+    });
+    console.log("[smoke] probe2 connect:", JSON.stringify(probe2));
+
+    if (mainLogs.length > 0) {
+      console.log("[smoke] main+renderer logs:\n  " + mainLogs.slice(-20).join("\n  "));
+    }
+
+    expect(probe1.ok).toBe(true);
+    expect(["disconnected", "connecting", "connected", "reconnecting"]).toContain(probe1.value);
+    expect(probe2.ok).toBe(true);
+
+    // After invoke connect, state should transition forward.
+    await page.waitForTimeout(2000);
     const state = await invokeIpc<string>(page, "realtime:getState");
-    expect(["connecting", "connected", "reconnecting"], `getState returned ${state}`).toContain(state);
+    expect(["connecting", "connected", "reconnecting"], `getState returned ${state} after connect`).toContain(state);
   });
 
   test("realtime-spy installs without throwing (sanity check for follow-up specs)", async ({ page }) => {

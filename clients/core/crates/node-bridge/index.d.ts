@@ -159,8 +159,8 @@ export class AppState {
   eventsConnect(): Promise<void>
   eventsDisconnect(): Promise<void>
   eventsGetConnectionState(): Promise<string>
-  eventsOnConnectionStateChange(callback: (arg: string) => void): Promise<number>
-  eventsSubscribeAll(callback: (arg: string) => void): Promise<number>
+  eventsOnConnectionStateChange(callback: (err: unknown, arg: string) => void): Promise<number>
+  eventsSubscribeAll(callback: (err: unknown, arg: string) => void): Promise<number>
   eventsUnsubscribe(id: number): Promise<void>
   extensionCreateSkillRegistryConnect(request: Array<number>): Promise<Array<number>>
   extensionDeleteSkillRegistryConnect(request: Array<number>): Promise<Array<number>>

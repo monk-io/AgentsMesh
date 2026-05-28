@@ -32,7 +32,19 @@ impl ApiClient {
         req: &SubscribeRequest,
     ) -> Result<impl Stream<Item = Result<Event, ApiError>>, ApiError> {
         let url = format!("{}{}", self.base_url, PROCEDURE);
-        let payload = req.encode_to_vec();
+        // Connect server-stream wire requires a 5-byte envelope on every
+        // message (request and response): [flags: u8, len: u32 BE, payload].
+        // The wasm client (connect_stream_wasm.rs) and the Node e2e helper
+        // both frame the request; native was the missing third path. Without
+        // this, backend parses payload[0] as `flags` and payload[1..5] as
+        // `len`, then errors "promised N bytes in enveloped message, got 4
+        // bytes" via the EndStream trailer — observable as a Connected →
+        // Reconnecting oscillation in connection_loop.
+        let raw = req.encode_to_vec();
+        let mut payload = Vec::with_capacity(5 + raw.len());
+        payload.push(0u8); // flags = 0 (no compression, not final)
+        payload.extend_from_slice(&(raw.len() as u32).to_be_bytes());
+        payload.extend_from_slice(&raw);
 
         let mut builder = self
             .http

@@ -506,9 +506,10 @@ function rustTypeToTs(rust: string): string {
   // Option<T> → T | undefined | null
   const optMatch = t.match(/^Option<([\s\S]+)>$/);
   if (optMatch) return `${rustTypeToTs(optMatch[1])} | undefined | null`;
-  // ThreadsafeFunction<T> → (arg: T) => void (napi-rs cross-thread JS callback)
+  // ThreadsafeFunction<T> → (err, arg: T) => void (napi-rs cross-thread JS
+  // callback, default CalleeHandled=true → JS sees `(err, value)` shape)
   const tsfnMatch = t.match(/^ThreadsafeFunction<([\s\S]+)>$/);
-  if (tsfnMatch) return `(arg: ${rustTypeToTs(tsfnMatch[1])}) => void`;
+  if (tsfnMatch) return `(err: unknown, arg: ${rustTypeToTs(tsfnMatch[1])}) => void`;
   // Vec<u8> → Array<number> (NAPI convention for proto bytes)
   if (t === "Vec<u8>" || t === "&[u8]") return "Array<number>";
   // Vec<T> → Array<T>

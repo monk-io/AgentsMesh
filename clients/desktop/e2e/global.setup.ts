@@ -45,7 +45,7 @@ setup("authenticate as test user (Electron)", async () => {
     // accumulates (Simulators, Chrome). 120s was tripping electron.launch
     // before firstWindow could even open. Match the firstWindow 90s bump
     // + headroom for the Electron process to spawn.
-    timeout: isCi() ? 240_000 : 30_000,
+    timeout: isCi() ? 240_000 : 120_000,
   });
 
   try {

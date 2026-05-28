@@ -1563,7 +1563,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "callback",
-        "type": "(arg: string) => void"
+        "type": "(err: unknown, arg: string) => void"
       }
     ],
     "returnType": "number",
@@ -1575,7 +1575,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "params": [
       {
         "name": "callback",
-        "type": "(arg: string) => void"
+        "type": "(err: unknown, arg: string) => void"
       }
     ],
     "returnType": "number",

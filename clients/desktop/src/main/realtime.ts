@@ -43,13 +43,16 @@ export async function setupRealtimeBridge(
     win.webContents.send(channel, payload);
   };
 
-  // Two long-lived NAPI subscriptions — fan in from the Rust event loop into
-  // a single per-window IPC stream.
-  const eventSubId = await appState.eventsSubscribeAll((eventJson: string) => {
+  // napi-rs ThreadsafeFunction<T> defaults to CalleeHandled=true, so
+  // the JS callback signature is `(err, value)` — not `(value)`. The
+  // first argument is null on success; the actual payload is the second.
+  const eventSubId = await appState.eventsSubscribeAll((_err: unknown, eventJson: string) => {
     send("realtime:event", eventJson);
   });
-  const stateSubId = await appState.eventsOnConnectionStateChange((next: string) => {
-    state = next as RealtimeState;
+  const stateSubId = await appState.eventsOnConnectionStateChange((_err: unknown, next: string) => {
+    if (typeof next === "string" && next.length > 0) {
+      state = next as RealtimeState;
+    }
     send("realtime:state", next);
   });
 
@@ -61,9 +64,9 @@ export async function setupRealtimeBridge(
   };
   const getStateHandler = (): RealtimeState => state;
 
-  ipcMain.handle("realtime:connect", connectHandler);
-  ipcMain.handle("realtime:disconnect", disconnectHandler);
-  ipcMain.handle("realtime:getState", getStateHandler);
+  ipcMain.handle("realtime:connect", () => connectHandler());
+  ipcMain.handle("realtime:disconnect", () => disconnectHandler());
+  ipcMain.handle("realtime:getState", () => getStateHandler());
 
   return {
     currentState: () => state,

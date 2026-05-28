@@ -49,12 +49,13 @@ test.describe("Desktop realtime · channel:message bridge", () => {
         15_000,
       );
       // Validate the wire payload structure — bridge must forward the raw
-      // event JSON unmodified.
-      const wire = JSON.parse(event) as { type: string; data: string };
+      // event JSON unmodified. RealtimeEvent.data is a nested JSON object
+      // (the Rust crate serializes `serde_json::Value` inline), so the
+      // outer JSON.parse yields `data` as an object, not a string.
+      const wire = JSON.parse(event) as { type: string; data: { body: string; channel_id: number | string } };
       expect(wire.type).toBe("channel:message");
-      const data = JSON.parse(wire.data) as { body: string; channel_id: number | string };
-      expect(data.body).toContain(marker);
-      expect(Number(data.channel_id)).toBe(Number(channelId));
+      expect(wire.data.body).toContain(marker);
+      expect(Number(wire.data.channel_id)).toBe(Number(channelId));
 
       if (createdId !== undefined) {
         await cc.channel.archiveChannel({ orgSlug: TEST_ORG_SLUG, id: createdId }).catch(() => undefined);
