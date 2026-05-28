@@ -12,10 +12,12 @@ go_library(
     deps = [
         "//backend/internal/api/connect/interceptors",
         "//backend/internal/domain/agentpod",
+        "//backend/internal/infra/eventbus",
         "//backend/internal/middleware",
         "//backend/internal/service/agentpod",
         "//backend/pkg/protoconv",
         "//proto/autopilot/v1:autopilot_go_proto",
+        "//proto/events/v1:events_go_proto",
         "//proto/runner/v1:runner_go_proto",
         "@com_connectrpc_connect//:connect",
     ],

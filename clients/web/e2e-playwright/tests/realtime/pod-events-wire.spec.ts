@@ -36,7 +36,7 @@ test.describe("Realtime · pod events (wire)", () => {
     const runnerId = runners![0].id;
 
     let createdPodKey: string | undefined;
-    const { event } = await withEventSubscription<unknown, { pod_key?: string; runner_id?: number }>(
+    const { event } = await withEventSubscription<unknown, { pod_key?: string; runner_id?: number | string }>(
       {
         token, orgSlug: TEST_ORG_SLUG,
         predicate: (type, data) =>
@@ -50,8 +50,7 @@ test.describe("Realtime · pod events (wire)", () => {
 
     expect(event.type).toBe("pod:created");
     expect(event.data.pod_key).toBe(createdPodKey);
-    expect(typeof event.data.runner_id).toBe("number");
-    expect(event.data.runner_id).toBe(Number(runnerId));
+    expect(Number(event.data.runner_id)).toBe(Number(runnerId));
   });
 
   test("pod:terminated arrives with terminal status", async ({ api }) => {

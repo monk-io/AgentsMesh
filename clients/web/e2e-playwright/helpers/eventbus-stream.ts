@@ -62,6 +62,13 @@ export interface AwaitEventOpts {
  * (type, data) satisfies `predicate`. Rejects with a descriptive error
  * on timeout or stream open failure.
  *
+ * Buffered + retroactive matching: events received during `action` are
+ * buffered, then re-evaluated against the predicate after `action`
+ * resolves. This handles the race where backend publishes the event
+ * before the client-side closure that supplies the predicate's expected
+ * value (e.g., a server-generated pod_key the test doesn't know until
+ * createPod resolves).
+ *
  * Settles for SETTLE_MS_BEFORE_PUBLISH between subscribe open and the
  * action firing — without it the backend hub may fan-out the event
  * before our subscriber is in its registry, causing a flaky miss.
@@ -73,8 +80,8 @@ export async function withEventSubscription<R, T extends Record<string, unknown>
   const timeout = opts.timeoutMs ?? 10_000;
   const ctrl = new AbortController();
 
+  const buffer: Array<{ type: string; data: Record<string, unknown> }> = [];
   let captured: ExpectedEvent<T> | null = null;
-  let actionResult: R | undefined;
 
   const drain = (async () => {
     try {
@@ -89,7 +96,8 @@ export async function withEventSubscription<R, T extends Record<string, unknown>
         } catch {
           data = {};
         }
-        if (opts.predicate(ev.type, data)) {
+        buffer.push({ type: ev.type, data });
+        if (captured === null && opts.predicate(ev.type, data)) {
           captured = { type: ev.type, data: data as T };
           ctrl.abort();
           return;
@@ -102,7 +110,24 @@ export async function withEventSubscription<R, T extends Record<string, unknown>
 
   await new Promise((r) => setTimeout(r, SETTLE_MS_BEFORE_PUBLISH));
 
-  actionResult = await action();
+  const actionResult = await action();
+
+  // After action resolves, the test's closure-captured values (server-
+  // generated ids, slugs, etc.) are now bound. Re-scan the buffer in
+  // case the matching event arrived before the closure was populated.
+  if (captured === null) {
+    for (const item of buffer) {
+      if (opts.predicate(item.type, item.data)) {
+        captured = { type: item.type, data: item.data as T };
+        ctrl.abort();
+        break;
+      }
+    }
+  }
+
+  if (captured !== null) {
+    return { event: captured, actionResult };
+  }
 
   const result = await Promise.race([
     drain.then(() => "drained" as const),
@@ -112,7 +137,7 @@ export async function withEventSubscription<R, T extends Record<string, unknown>
 
   if (result === "timeout" || captured === null) {
     throw new Error(
-      `withEventSubscription: timed out after ${timeout}ms waiting for matching event`,
+      `withEventSubscription: timed out after ${timeout}ms waiting for matching event (saw ${buffer.length} events: ${buffer.slice(0, 5).map((e) => e.type).join(", ")}${buffer.length > 5 ? "…" : ""})`,
     );
   }
   return { event: captured, actionResult };

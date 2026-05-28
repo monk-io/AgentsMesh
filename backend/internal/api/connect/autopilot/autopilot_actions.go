@@ -3,13 +3,17 @@ package autopilotconnect
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	"connectrpc.com/connect"
 
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
+	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	agentpodsvc "github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	apv1 "github.com/anthropics/agentsmesh/proto/gen/go/autopilot/v1"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
@@ -57,7 +61,26 @@ func (s *Server) CreateAutopilotController(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	s.publishAutopilotCreated(ctx, tenant.OrganizationID, controller, pod.PodKey)
 	return connect.NewResponse(toProtoController(controller)), nil
+}
+
+func (s *Server) publishAutopilotCreated(ctx context.Context, orgID int64, c *agentpod.AutopilotController, podKey string) {
+	if s.eventBus == nil || c == nil {
+		return
+	}
+	data := &eventsv1.AutopilotCreatedEventData{
+		AutopilotControllerKey: c.AutopilotControllerKey,
+		PodKey:                 podKey,
+	}
+	event, err := eventbus.NewEntityEvent(eventbus.EventAutopilotCreated, orgID, "autopilot_controller", c.AutopilotControllerKey, data)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to build autopilot:created event", "key", c.AutopilotControllerKey, "error", err)
+		return
+	}
+	if err := s.eventBus.Publish(ctx, event); err != nil {
+		slog.ErrorContext(ctx, "failed to publish autopilot:created event", "key", c.AutopilotControllerKey, "error", err)
+	}
 }
 
 // PauseAutopilotController — REST analogue: POST /autopilot-controllers/:key/pause.

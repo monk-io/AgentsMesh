@@ -127,8 +127,8 @@ test.describe("Realtime · channel events (wire)", () => {
     })) as { id: bigint | number };
     const channelId = ch.id;
 
-    // The dev seed always has a user with id=2 as a secondary user.
-    const inviteeId = 2n;
+    // dev seed: org "dev-org" has users id=1 (dev@) and id=3 (dev2@); use 3 as invitee.
+    const inviteeId = 3n;
 
     const { event } = await withEventSubscription<unknown, { channel_id?: number | string; user_id?: number | string }>(
       {
@@ -160,7 +160,7 @@ test.describe("Realtime · channel events (wire)", () => {
       name: `e2e-members-${Date.now().toString(36)}`,
     })) as { id: bigint | number };
     const channelId = ch.id;
-    const inviteeId = 2n;
+    const inviteeId = 3n;
 
     await cc.channel.inviteChannelMembers({
       orgSlug: TEST_ORG_SLUG, id: channelId, userIds: [inviteeId],
