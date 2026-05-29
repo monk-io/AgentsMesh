@@ -49,6 +49,13 @@ describe("credentialForms registry", () => {
     }
   );
 
+  it("cursor-cli exposes CURSOR_API_KEY secret + allows custom env", () => {
+    const spec = getCredentialFormSpec("cursor-cli");
+    expect(spec.agentSlug).toBe("cursor-cli");
+    expect(spec.allowCustomEnv).toBe(true);
+    expect(getEnvKeysFromSpec(spec)).toEqual(new Set(["CURSOR_API_KEY"]));
+  });
+
   it("falls back to pure custom-env form for unknown slug", () => {
     const spec = getCredentialFormSpec("custom-user-agent-xyz");
     expect(spec).toEqual({

@@ -15,6 +15,7 @@ import (
 	aiderfixture "github.com/anthropics/agentsmesh/runner/internal/agents/aider/testsupport"
 	claudefixture "github.com/anthropics/agentsmesh/runner/internal/agents/claude/testsupport"
 	codexfixture "github.com/anthropics/agentsmesh/runner/internal/agents/codex/testsupport"
+	_ "github.com/anthropics/agentsmesh/runner/internal/agents/cursor"
 	_ "github.com/anthropics/agentsmesh/runner/internal/agents/loopal"
 	opencodefixture "github.com/anthropics/agentsmesh/runner/internal/agents/opencode/testsupport"
 	"github.com/anthropics/agentsmesh/runner/internal/tokenusage"

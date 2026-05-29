@@ -442,6 +442,11 @@
       },
       "opencode": {
         "customEnvHint": "添加 opencode 运行所需的任意环境变量"
+      },
+      "cursor": {
+        "apiKey": "Cursor API Key",
+        "apiKeyHint": "可选。留空则使用 `cursor-agent login`（OAuth）；填写用于无头 / 密钥认证。",
+        "customEnvHint": "添加 cursor-agent 运行所需的任意环境变量"
       }
     },
     "sshKeys": {
