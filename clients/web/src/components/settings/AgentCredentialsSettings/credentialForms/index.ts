@@ -5,6 +5,7 @@ import { loopalFormSpec } from "./loopal";
 import { geminiCliFormSpec } from "./gemini-cli";
 import { aiderFormSpec } from "./aider";
 import { opencodeFormSpec } from "./opencode";
+import { cursorCliFormSpec } from "./cursor-cli";
 
 const REGISTRY: Record<string, CredentialFormSpec> = {
   [claudeCodeFormSpec.agentSlug]: claudeCodeFormSpec,
@@ -13,6 +14,7 @@ const REGISTRY: Record<string, CredentialFormSpec> = {
   [geminiCliFormSpec.agentSlug]: geminiCliFormSpec,
   [aiderFormSpec.agentSlug]: aiderFormSpec,
   [opencodeFormSpec.agentSlug]: opencodeFormSpec,
+  [cursorCliFormSpec.agentSlug]: cursorCliFormSpec,
 };
 
 // e2e-echo is a test-only agent (see deploy/dev/seed/e2e_echo.sql). The

@@ -442,6 +442,11 @@
       },
       "opencode": {
         "customEnvHint": "Any environment variables required by opencode"
+      },
+      "cursor": {
+        "apiKey": "Cursor API Key",
+        "apiKeyHint": "Optional. Leave blank to use `cursor-agent login` (OAuth); set for headless / key-based auth.",
+        "customEnvHint": "Add any extra environment variables cursor-agent needs"
       }
     },
     "sshKeys": {

@@ -131,9 +131,20 @@ func TestAddToolPathsWithPATH(t *testing.T) {
 }
 
 func TestAddToolPathsWithoutPATH(t *testing.T) {
+	// addToolPaths → envpath.UserBinaryDirs() resolves per-tool subdirs from
+	// the PROCESS home via os.UserHomeDir() (USERPROFILE on Windows, HOME on
+	// Unix) — NOT from the env slice below. Pin both so home resolves to an
+	// absolute dir on every platform: the bazel Windows test sandbox does not
+	// inherit USERPROFILE, and after the empty-home hardening UserBinaryDirs()
+	// deliberately omits home-rooted dirs (e.g. ~/.local/bin) when home is
+	// unresolvable — which is what the Windows assertion below relies on.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
 	step := NewScriptPreparationStep("echo test", time.Minute)
 
-	env := []string{"HOME=/home/test", "USER=test"}
+	env := []string{"USER=test"}
 	result := step.addToolPaths(env)
 
 	pathFound := false

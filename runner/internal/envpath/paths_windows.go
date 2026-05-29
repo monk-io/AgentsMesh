@@ -9,15 +9,30 @@ import (
 	"strings"
 )
 
-// UserBinaryDirs returns common directories where user-installed binaries live on Windows.
+// UserBinaryDirs returns common directories where user-installed binaries
+// live on Windows. Order: system prefixes first (canonical installs win),
+// per-tool home subdirs last (safety net for installers that bypass
+// standard prefixes).
 //
 //   - %USERPROFILE%\.local\bin
 //   - %LOCALAPPDATA%\Programs
 //   - %ProgramFiles%
+//   - %USERPROFILE%\bin
+//   - %USERPROFILE%\.opencode\bin
+//   - %USERPROFILE%\.cursor\bin
+//
+// If os.UserHomeDir() fails (e.g. LOCAL SERVICE / SYSTEM account with no
+// resolvable USERPROFILE), home-rooted entries are omitted — never returned
+// as drive-root-relative paths (which would let any C:\ writer hijack a
+// lookup).
 func UserBinaryDirs() []string {
-	home, _ := os.UserHomeDir()
-	dirs := []string{
-		filepath.Join(home, ".local", "bin"),
+	dirs := []string{}
+
+	home, err := os.UserHomeDir()
+	homeOK := err == nil && home != ""
+
+	if homeOK {
+		dirs = append(dirs, filepath.Join(home, ".local", "bin"))
 	}
 
 	if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
@@ -26,6 +41,14 @@ func UserBinaryDirs() []string {
 
 	if programFiles := os.Getenv("ProgramFiles"); programFiles != "" {
 		dirs = append(dirs, programFiles)
+	}
+
+	if homeOK {
+		dirs = append(dirs,
+			filepath.Join(home, "bin"),
+			filepath.Join(home, ".opencode", "bin"),
+			filepath.Join(home, ".cursor", "bin"),
+		)
 	}
 
 	return dirs

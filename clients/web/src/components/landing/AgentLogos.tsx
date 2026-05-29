@@ -52,6 +52,15 @@ const agentConfigs = [
     ),
   },
   {
+    name: "Cursor CLI",
+    descriptionKey: "landing.agentLogos.descriptions.anysphere",
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
+        <path d="M5 3l14 7-6 2-2 6-6-15z" stroke="currentColor" strokeWidth="2" fill="none" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     name: "Loopal",
     descriptionKey: "landing.agentLogos.descriptions.selfBuilt",
     icon: (
