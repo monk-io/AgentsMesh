@@ -16,7 +16,7 @@ import {
   PatchCachedRunnerRequestSchema,
   RemoveCachedRunnerRequestSchema,
 } from '@proto/runner_state/v1/runner_state_pb'
-import { getRunnerStatusInfo, canAcceptPods, formatHostInfo, Runner, useRunnerStore } from '../runner'
+import { getRunnerStatusInfo, formatHostInfo, Runner, useRunnerStore } from '../runner'
 
 let mockRunnersList: Runner[] = []
 let mockAvailableRunners: Runner[] = []
@@ -413,56 +413,6 @@ describe('Runner Store Helper Functions', () => {
         color: 'text-orange-600 dark:text-orange-400',
         dotColor: 'bg-orange-500',
       })
-    })
-  })
-
-  describe('canAcceptPods', () => {
-    const createRunner = (overrides: Partial<Runner> = {}): Runner => ({
-      id: 1,
-      node_id: 'test-runner',
-      status: 'online',
-      is_enabled: true,
-      current_pods: 0,
-      max_concurrent_pods: 5,
-      last_heartbeat: '2024-01-01T00:00:00Z',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-      ...overrides,
-    })
-
-    it('should return true for online runner with available slots', () => {
-      const runner = createRunner({ status: 'online', current_pods: 2, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(true)
-    })
-
-    it('should return false for offline runner', () => {
-      const runner = createRunner({ status: 'offline' })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false for maintenance runner', () => {
-      const runner = createRunner({ status: 'maintenance' })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false for busy runner', () => {
-      const runner = createRunner({ status: 'busy' })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false when at max capacity', () => {
-      const runner = createRunner({ status: 'online', current_pods: 5, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false when over max capacity', () => {
-      const runner = createRunner({ status: 'online', current_pods: 6, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return true with zero current pods', () => {
-      const runner = createRunner({ status: 'online', current_pods: 0, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(true)
     })
   })
 

@@ -190,9 +190,6 @@ export const getRunnerStatusInfo = (status: RunnerStatus) => {
   return m[status];
 };
 
-export const canAcceptPods = (runner: Runner): boolean =>
-  runner.status === "online" && runner.current_pods < runner.max_concurrent_pods;
-
 export const formatHostInfo = (hostInfo?: Runner["host_info"]) => {
   if (!hostInfo) return "Unknown";
   const parts: string[] = [];
