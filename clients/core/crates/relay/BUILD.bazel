@@ -31,8 +31,16 @@ rust_test(
     name = "relay_test",
     crate = ":relay",
     edition = "2021",
+    # integration_tests.rs spins a real tokio + tungstenite WS server per test
+    # (one current-thread runtime per #[tokio::test] thread). Under the default
+    # all-at-once parallelism these contend for the CPU and the server-drop
+    # reconnect test starves past its wall-clock budget. Serialize: the 76 unit
+    # tests are microsecond-fast and the 7 integration tests dominate anyway.
+    env = {"RUST_TEST_THREADS": "1"},
     deps = [
+        "@crates//:futures-util",
         "@crates//:tokio",
         "@crates//:tokio-test",
+        "@crates//:tokio-tungstenite",
     ],
 )

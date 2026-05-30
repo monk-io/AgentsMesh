@@ -229,14 +229,16 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
 
   // Proto-bytes mutators decode locally into the JS-side cache so synchronous
   // readers (channels_json / get_messages_json / unread_counts_json) see the
-  // mutation immediately. NAPI forwarding is fire-and-forget — present so the
-  // main-process Rust ChannelService stays in sync for future consumers, but
-  // not awaited because IPC latency would defeat the sync-cache invariant
-  // the renderer's _tick reactivity model assumes.
+  // mutation immediately. The fire-and-forget NAPI fan-out targets the `app_*`
+  // commands so the SAME state the EventBus dispatch hook mutates
+  // (runtime.state) gets the fetched baseline — that's what makes the
+  // post-dispatch realtime snapshot (main/realtime.ts) complete instead of
+  // realtime-only. Not awaited: IPC latency would defeat the sync-cache
+  // invariant the renderer's _tick reactivity assumes.
   replace_cached_channels(reqBytes: Uint8Array): Promise<void> {
     const req = fromBinary(ReplaceCachedChannelsRequestSchema, reqBytes);
     this._channelsCache = JSON.stringify(req.channels.map(channelToCache));
-    void invoke<void>("channelReplaceCachedChannels", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelReplaceCachedChannels", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -250,7 +252,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
       else list.unshift(c as { id: number });
       this._channelsCache = JSON.stringify(list);
     }
-    void invoke<void>("channelInsertChannel", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelInsertChannel", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -288,7 +290,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
       list[idx].member_count = Math.max(0, (list[idx].member_count ?? 0) + req.delta);
       this._channelsCache = JSON.stringify(list);
     }
-    void invoke<void>("channelPatchChannelMemberCount", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelPatchMemberCount", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -298,7 +300,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
       messages: req.messages.map(messageToCache),
       has_more: req.hasMore,
     });
-    void invoke<void>("channelReplaceCachedChannelMessages", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelReplaceCachedMessages", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -310,7 +312,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
     const existingIds = new Set((entry.messages as { id: number }[]).map((m) => m.id));
     const merged = [...older.filter((m) => !existingIds.has(m.id as number)), ...entry.messages];
     this._messagesCache.set(key, { messages: merged, has_more: req.hasMore });
-    void invoke<void>("channelPrependCachedChannelMessages", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelPrependCachedMessages", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -325,7 +327,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
       }
       this._messagesCache.set(key, entry);
     }
-    void invoke<void>("channelInsertChannelMessage", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelInsertMessage", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -361,7 +363,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
         this._messagesCache.set(key, entry);
       }
     }
-    void invoke<void>("channelApplyChannelMessageEditedEvent", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelApplyMessageEdited", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -372,12 +374,35 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
       out[String(k)] = Number(v);
     }
     this._unreadCountsCache = JSON.stringify(out);
-    void invoke<void>("channelReplaceChannelUnreadCounts", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelReplaceUnreadCounts", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
   remove_message(channelId: bigint, messageId: bigint): void {
-    void invoke<void>("channelRemoveMessage", Number(channelId), Number(messageId)).catch(() => undefined);
+    void invoke<void>("appChannelRemoveMessage", Number(channelId), Number(messageId)).catch(() => undefined);
     super.remove_message_local(channelId, messageId);
+  }
+
+  // ── UI→Rust signals: forwarded to runtime.state so the main-process SSOT
+  //    can compute unread with the self-message + active-channel rules. The
+  //    base-class versions only touch the renderer-local cache. ──
+
+  set_current_user_id(id?: bigint | null): void {
+    void invoke<void>("appSetCurrentUser", id != null ? Number(id) : null).catch(() => undefined);
+  }
+
+  select_channel(id?: bigint | null): unknown {
+    void invoke<void>("appSelectChannel", id != null ? Number(id) : null).catch(() => undefined);
+    return super.select_channel(id);
+  }
+
+  set_current_channel(id?: bigint | null): void {
+    void invoke<void>("appSetCurrentChannel", id != null ? Number(id) : null).catch(() => undefined);
+    super.set_current_channel(id);
+  }
+
+  clear_channel_unread(channelId: bigint): void {
+    void invoke<void>("appChannelClearUnread", Number(channelId)).catch(() => undefined);
+    super.clear_channel_unread(channelId);
   }
 }

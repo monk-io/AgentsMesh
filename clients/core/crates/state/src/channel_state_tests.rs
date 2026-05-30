@@ -56,10 +56,9 @@ fn on_new_message_increments_unread_for_other_user() {
     let mut s = ChannelState::new();
     s.set_channels(vec![ch(1, "gen")]);
     s.set_current_user_id(Some(10));
-    // Message from user 20 (not me). on_new_message does not auto-increment;
-    // the handler layer owns that responsibility.
+    // Message from user 20 (not me), not viewing the channel → Rust Core
+    // auto-increments unread (business logic now lives here, not the handler).
     s.on_new_message(msg_with_sender(1, 1, "hi", 20, "bob"));
-    s.increment_unread(1);
     assert_eq!(s.get_unread_count(1), 1);
 }
 
@@ -90,11 +89,78 @@ fn on_new_message_increments_unread_for_other_channel() {
     s.set_channels(vec![ch(1, "gen"), ch(2, "dev")]);
     s.set_current_user_id(Some(10));
     s.set_current_channel(Some(1)); // viewing channel 1
-    // Message in channel 2 (not current). on_new_message does not auto-increment;
-    // the handler layer owns that responsibility.
+    // Message in channel 2 (not current, from another user) → auto-increment.
     s.on_new_message(msg_with_sender(1, 2, "hi", 20, "bob"));
-    s.increment_unread(2);
     assert_eq!(s.get_unread_count(2), 1);
+}
+
+#[test]
+fn on_new_message_no_unread_without_current_user_known() {
+    // Defensive: if current_user is unset, every message counts as "other"
+    // and increments unread — matches the pre-SSOT JS fallback (it read a
+    // possibly-undefined user and still incremented when not viewing).
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
+    s.on_new_message(msg_with_sender(1, 1, "hi", 20, "bob"));
+    assert_eq!(s.get_unread_count(1), 1);
+}
+
+#[test]
+fn on_new_message_dedup_does_not_double_count_unread() {
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
+    s.set_current_user_id(Some(10));
+    s.on_new_message(msg_with_sender(1, 1, "hi", 20, "bob"));
+    s.on_new_message(msg_with_sender(1, 1, "dup", 20, "bob")); // same id → dup
+    assert_eq!(s.get_unread_count(1), 1, "dup must not re-increment");
+}
+
+#[test]
+fn on_new_message_increments_mention_when_user_mentioned() {
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
+    s.set_current_user_id(Some(10));
+    let mut m = msg_with_sender(1, 1, "hey @me", 20, "bob");
+    m.mentions_json = Some(r#"{"users":[10],"channel":false}"#.into());
+    s.on_new_message(m);
+    assert_eq!(s.get_unread_count(1), 1);
+    assert_eq!(s.get_mention_count(1), 1);
+}
+
+#[test]
+fn on_new_message_channel_mention_counts_as_mention() {
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
+    s.set_current_user_id(Some(10));
+    let mut m = msg_with_sender(1, 1, "@channel heads up", 20, "bob");
+    m.mentions_json = Some(r#"{"channel":true}"#.into());
+    s.on_new_message(m);
+    assert_eq!(s.get_mention_count(1), 1);
+}
+
+#[test]
+fn on_new_message_no_mention_when_other_user_mentioned() {
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
+    s.set_current_user_id(Some(10));
+    let mut m = msg_with_sender(1, 1, "hey @someone", 20, "bob");
+    m.mentions_json = Some(r#"{"users":[99],"channel":false}"#.into());
+    s.on_new_message(m);
+    assert_eq!(s.get_unread_count(1), 1);
+    assert_eq!(s.get_mention_count(1), 0);
+}
+
+#[test]
+fn on_new_message_mention_skipped_when_viewing_channel() {
+    let mut s = ChannelState::new();
+    s.set_channels(vec![ch(1, "gen")]);
+    s.set_current_user_id(Some(10));
+    s.set_current_channel(Some(1)); // actively viewing
+    let mut m = msg_with_sender(1, 1, "hey @me", 20, "bob");
+    m.mentions_json = Some(r#"{"users":[10]}"#.into());
+    s.on_new_message(m);
+    assert_eq!(s.get_unread_count(1), 0);
+    assert_eq!(s.get_mention_count(1), 0);
 }
 
 #[test]

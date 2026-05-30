@@ -52,7 +52,9 @@ public struct AppFeature {
 
             case .sessionRestored(true):
                 state = .dashboard(DashboardFeature.State())
-                return .none
+                // Auth is established — connect the realtime stream so the
+                // dispatch hook starts feeding runtime.state (+ CoreTickStore).
+                return .run { _ in await core.eventsConnect() }
 
             case .sessionRestored(false):
                 state = .login(LoginFeature.State())
@@ -60,7 +62,7 @@ public struct AppFeature {
 
             case .login(.delegate(.didAuthenticate)):
                 state = .dashboard(DashboardFeature.State())
-                return .none
+                return .run { _ in await core.eventsConnect() }
 
             case .dashboard(.delegate(.didSignOut)):
                 state = .login(LoginFeature.State())

@@ -13,12 +13,12 @@ import { expectHashMatches } from "./helpers/nav";
 import { captureStorage, saveStorageFile } from "./helpers/storage-state";
 
 setup("authenticate as test user (Electron)", async () => {
-  // Worst-case CI budget: electron.launch 240s + firstWindow 90s +
-  // login/redirect 90s + small overhead. Playwright's global 180s
-  // (playwright.config.ts) is per-test and would trip before the
-  // bumped launch+window timeouts could ever apply. Override locally
-  // so other specs keep the tighter default.
-  if (isCi()) setup.setTimeout(480_000);
+  // Electron cold-start + wasm-core load + login redirect is slow on ANY
+  // contended box, not just CI. The playwright per-test default (60s local,
+  // playwright.config.ts) trips before firstWindow even opens. Give the setup
+  // real headroom in both environments; per-spec tests keep the tighter
+  // default since they run against an already-warm app.
+  setup.setTimeout(isCi() ? 480_000 : 240_000);
 
   // Reset userData so login always starts fresh — avoids leaking dev-profile session.
   const userDataDir = getUserDataDir();
@@ -41,18 +41,19 @@ setup("authenticate as test user (Electron)", async () => {
       ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
     },
     // macmini-03 cold-starts the Electron renderer in 30-60s under normal
-    // load, but the shared CI box drifts to load avg 5-8 when dev residue
-    // accumulates (Simulators, Chrome). 120s was tripping electron.launch
-    // before firstWindow could even open. Match the firstWindow 90s bump
-    // + headroom for the Electron process to spawn.
-    timeout: isCi() ? 240_000 : 120_000,
+    // load, but a contended box (CI drift, or a local dev loop running builds
+    // alongside) can push electron.launch itself past 120s. Give launch the
+    // same generous budget in both environments — cold-start is the slow part
+    // everywhere, not just CI.
+    timeout: 240_000,
   });
 
   try {
     // See electron.fixture.ts: macmini-03 cold-starts the renderer in
     // 30-60s; the default 30s firstWindow timeout was tripping the
-    // global setup before any spec even ran.
-    const page = await app.firstWindow({ timeout: isCi() ? 90_000 : 30_000 });
+    // global setup before any spec even ran. Cold-start is slow locally
+    // too (not just CI), so give firstWindow the same generous window.
+    const page = await app.firstWindow({ timeout: 90_000 });
     page.on("pageerror", (err) => console.log(`[pageerror]`, err.message));
     await page.waitForLoadState("domcontentloaded");
 

@@ -21,4 +21,6 @@ mod dispatch_tests;
 #[cfg(test)]
 mod handler_tests;
 #[cfg(test)]
+mod integration_tests;
+#[cfg(test)]
 mod pool_tests;

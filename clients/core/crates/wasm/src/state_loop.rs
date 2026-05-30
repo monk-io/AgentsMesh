@@ -1,17 +1,20 @@
+use std::sync::Arc;
 
-use agentsmesh_state::loop_state::{LoopData, LoopRunData, LoopState};
+use agentsmesh_state::app_state::AppState;
+use agentsmesh_state::loop_state::{LoopData, LoopRunData};
 use agentsmesh_types::proto_loop_v1::{Loop as ProtoLoop, LoopRun as ProtoLoopRun};
 use agentsmesh_types::proto_loop_state_v1::{
     AppendCachedRunsRequest, ClearCurrentLoopRequest, ClearLoopRunsRequest,
     InsertLoopRunRequest, PatchLoopFromActionRequest, PatchLoopRunStatusRequest,
     ReplaceCachedLoopsRequest, ReplaceCachedRunsRequest, SetCurrentLoopRequest,
 };
+use parking_lot::RwLock;
 use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmLoopState {
-    inner: LoopState,
+    state: Arc<RwLock<AppState>>,
 }
 
 fn decode_err<E: std::fmt::Display>(e: E) -> JsValue {
@@ -66,19 +69,27 @@ fn run_from_proto(p: ProtoLoopRun) -> LoopRunData {
     }
 }
 
+impl WasmLoopState {
+    pub(crate) fn from_runtime(state: Arc<RwLock<AppState>>) -> Self {
+        Self { state }
+    }
+}
+
 #[wasm_bindgen]
 impl WasmLoopState {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self { inner: LoopState::with_storage(crate::new_memory_backend()) }
+        Self {
+            state: Arc::new(RwLock::new(AppState::with_storage(crate::new_memory_backend()))),
+        }
     }
 
     pub fn loops_json(&self) -> String {
-        serde_json::to_string(self.inner.get_loops()).unwrap_or_default()
+        serde_json::to_string(self.state.read().loops.get_loops()).unwrap_or_default()
     }
 
     pub fn current_loop_json(&self) -> JsValue {
-        match self.inner.get_current_loop() {
+        match self.state.read().loops.get_current_loop() {
             Some(l) => JsValue::from_str(
                 &serde_json::to_string(l).unwrap_or_default(),
             ),
@@ -87,11 +98,11 @@ impl WasmLoopState {
     }
 
     pub fn runs_json(&self) -> String {
-        serde_json::to_string(self.inner.get_runs()).unwrap_or_default()
+        serde_json::to_string(self.state.read().loops.get_runs()).unwrap_or_default()
     }
 
     pub fn get_loop_by_slug_json(&self, slug: &str) -> JsValue {
-        match self.inner.get_loop_by_slug(slug) {
+        match self.state.read().loops.get_loop_by_slug(slug) {
             Some(l) => JsValue::from_str(
                 &serde_json::to_string(l).unwrap_or_default(),
             ),
@@ -99,63 +110,63 @@ impl WasmLoopState {
         }
     }
 
-    pub fn replace_cached_loops(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn replace_cached_loops(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = ReplaceCachedLoopsRequest::decode(req_bytes).map_err(decode_err)?;
         let loops = req.loops.into_iter().map(loop_from_proto).collect();
-        self.inner.set_loops(loops);
+        self.state.write().loops.set_loops(loops);
         Ok(())
     }
 
-    pub fn set_current_loop(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn set_current_loop(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = SetCurrentLoopRequest::decode(req_bytes).map_err(decode_err)?;
         let loop_data = req.r#loop.map(loop_from_proto);
-        self.inner.set_current_loop(loop_data);
+        self.state.write().loops.set_current_loop(loop_data);
         Ok(())
     }
 
-    pub fn clear_current_loop(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn clear_current_loop(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let _ = ClearCurrentLoopRequest::decode(req_bytes).map_err(decode_err)?;
-        self.inner.set_current_loop(None);
+        self.state.write().loops.set_current_loop(None);
         Ok(())
     }
 
-    pub fn patch_loop_from_action(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn patch_loop_from_action(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = PatchLoopFromActionRequest::decode(req_bytes).map_err(decode_err)?;
         let loop_data = req.r#loop.ok_or_else(|| JsValue::from_str("missing loop"))?;
-        self.inner.update_loop(&req.slug, loop_from_proto(loop_data));
+        self.state.write().loops.update_loop(&req.slug, loop_from_proto(loop_data));
         Ok(())
     }
 
-    pub fn insert_loop_run(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn insert_loop_run(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = InsertLoopRunRequest::decode(req_bytes).map_err(decode_err)?;
         let run = req.run.ok_or_else(|| JsValue::from_str("missing run"))?;
-        self.inner.add_run(run_from_proto(run));
+        self.state.write().loops.add_run(run_from_proto(run));
         Ok(())
     }
 
-    pub fn replace_cached_runs(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn replace_cached_runs(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = ReplaceCachedRunsRequest::decode(req_bytes).map_err(decode_err)?;
         let runs = req.runs.into_iter().map(run_from_proto).collect();
-        self.inner.set_runs(runs);
+        self.state.write().loops.set_runs(runs);
         Ok(())
     }
 
-    pub fn append_cached_runs(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn append_cached_runs(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = AppendCachedRunsRequest::decode(req_bytes).map_err(decode_err)?;
         let runs: Vec<LoopRunData> = req.runs.into_iter().map(run_from_proto).collect();
-        self.inner.append_runs(runs);
+        self.state.write().loops.append_runs(runs);
         Ok(())
     }
 
-    pub fn patch_loop_run_status(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn patch_loop_run_status(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let req = PatchLoopRunStatusRequest::decode(req_bytes).map_err(decode_err)?;
-        self.inner.update_run_status(req.run_id, &req.status);
+        self.state.write().loops.update_run_status(req.run_id, &req.status);
         Ok(())
     }
 
-    pub fn clear_loop_runs(&mut self, req_bytes: &[u8]) -> Result<(), JsValue> {
+    pub fn clear_loop_runs(&self, req_bytes: &[u8]) -> Result<(), JsValue> {
         let _ = ClearLoopRunsRequest::decode(req_bytes).map_err(decode_err)?;
-        self.inner.clear_runs();
+        self.state.write().loops.clear_runs();
         Ok(())
     }
 }

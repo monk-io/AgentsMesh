@@ -69,6 +69,8 @@ export function DroppableColumn({
 
   return (
     <div ref={setNodeRef}
+      data-testid="kanban-column"
+      data-column-status={status}
       className={cn("flex-shrink-0 w-80 flex flex-col rounded-lg bg-muted/30 transition-all duration-200 overflow-hidden",
         highlighted && "ring-2 ring-primary/50 bg-primary/5")}>
       <div className={cn("h-1 w-full", topColor)} />

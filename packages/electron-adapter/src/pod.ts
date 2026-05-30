@@ -98,16 +98,16 @@ export class ElectronPodService implements IPodService {
   }
 
   // ── Proto-bytes mutators (mirror clients/core/crates/wasm WasmPodState) ──
-  // The wasm side stores in linear memory which the renderer reads
-  // synchronously; the Electron side has no Rust memory in-process — decode
-  // the proto bytes locally and update _podsCache so `pods_json()` reflects
-  // the mutation immediately. NAPI fan-out is fire-and-forget so the
-  // main-process Rust cache stays in sync for the few main-process consumers
-  // that depend on it.
+  // Decode locally so `pods_json()` reflects the mutation synchronously, AND
+  // fire-and-forget the same bytes to the `app_pod_*` commands so the
+  // main-process `runtime.state.pods` (the realtime dispatch + snapshot SSOT)
+  // gets the same fetch/user-action baseline. Not awaited — IPC latency would
+  // defeat the sync-cache invariant the renderer's _tick reactivity assumes.
 
   replace_cached_pods(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceCachedPodsRequestSchema, reqBytes);
     this._podsCache = JSON.stringify(req.pods.map(podToCache));
+    void invoke<void>("appPodReplaceCachedPods", Array.from(reqBytes)).catch(() => undefined);
   }
 
   append_cached_pods(reqBytes: Uint8Array): void {
@@ -119,6 +119,7 @@ export class ElectronPodService implements IPodService {
       if (!seen.has(c.pod_key as string)) existing.push(c as { pod_key: string });
     }
     this._podsCache = JSON.stringify(existing);
+    void invoke<void>("appPodAppendCachedPods", Array.from(reqBytes)).catch(() => undefined);
   }
 
   insert_created_pod(reqBytes: Uint8Array): void {
@@ -130,16 +131,39 @@ export class ElectronPodService implements IPodService {
     if (idx >= 0) cache[idx] = { ...cache[idx], ...c };
     else cache.unshift(c as { pod_key: string });
     this._podsCache = JSON.stringify(cache);
+    void invoke<void>("appPodInsertCreated", Array.from(reqBytes)).catch(() => undefined);
   }
 
   mark_pod_terminated(reqBytes: Uint8Array): void {
     const req = fromBinary(MarkPodTerminatedRequestSchema, reqBytes);
     this._podsCache = patchPodInCache(this._podsCache, req.podKey, { status: "terminated" });
+    void invoke<void>("appPodMarkTerminated", Array.from(reqBytes)).catch(() => undefined);
   }
 
   patch_pod_perpetual(reqBytes: Uint8Array): void {
     const req = fromBinary(PatchPodPerpetualRequestSchema, reqBytes);
     this._podsCache = patchPodInCache(this._podsCache, req.podKey, { perpetual: req.perpetual });
+    void invoke<void>("appPodPatchPerpetual", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  // Surgical realtime mirror: the main-pushed snapshot carries one Rust-computed
+  // pod. Update it in place ONLY if already cached — the pod sidebar is a
+  // FILTERED set, so adding an absent pod would corrupt the filtered view (a
+  // brand-new pod is added by the handler's fetchPod refetch instead).
+  apply_pod_snapshot(json: string): void {
+    let pod: { pod_key?: string };
+    try {
+      pod = JSON.parse(json) as { pod_key?: string };
+    } catch {
+      return;
+    }
+    if (!pod.pod_key) return;
+    const cache = JSON.parse(this._podsCache) as Array<Record<string, unknown>>;
+    const idx = cache.findIndex((p) => p.pod_key === pod.pod_key);
+    if (idx >= 0) {
+      cache[idx] = { ...cache[idx], ...pod };
+      this._podsCache = JSON.stringify(cache);
+    }
   }
 
   apply_pod_status_event(reqBytes: Uint8Array): void {

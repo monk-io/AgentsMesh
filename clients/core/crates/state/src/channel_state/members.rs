@@ -32,4 +32,20 @@ impl ChannelState {
     pub fn clear_channel_pods(&mut self, channel_id: i64) {
         self.pods_by_channel.remove(&channel_id);
     }
+
+    /// Mutate `channel.member_count` by `delta` (clamped at 0). Used by
+    /// the realtime `channel:member_added` / `:member_removed` dispatch
+    /// arms — the event itself doesn't carry the new count, only the
+    /// delta. Returns true if the channel exists and was updated.
+    pub fn patch_member_count(&mut self, channel_id: i64, delta: i32) -> bool {
+        if let Some(existing) = self.get_channel(channel_id).cloned() {
+            let mut next = existing;
+            let curr = next.member_count.unwrap_or(0);
+            next.member_count = Some((curr + delta as i64).max(0));
+            self.update_channel(channel_id, next);
+            true
+        } else {
+            false
+        }
+    }
 }

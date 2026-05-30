@@ -1,24 +1,73 @@
 // Multi-tab UI propagation for ticket:status_changed.
 //
-// FIXME(follow-up): Tickets page lists status badges per ticket — the
-// selector pattern is stable (`[data-ticket-slug]` on TicketCard.tsx),
-// but the status badge text varies per locale. To assert cross-tab UI
-// update we'd need either:
-//   (a) a `data-status` attribute on the status badge so we can assert
-//       on the machine-readable state regardless of i18n; or
-//   (b) lock the test locale to en-US and assert on translated text.
+// Both tabs land on /tickets after a ticket is created via Connect-RPC.
+// The board view places each ticket card under the column matching its
+// status — flipping the ticket through statuses moves the card across
+// columns. We assert the parent column's `data-column-status` to remain
+// locale-free.
 //
-// Wire-level coverage exists in tests/realtime/ticket-events-wire.spec.ts
-// (ticket:status_changed wire frames). The UI assertion this spec would
-// add is the badge swap from "in_progress" → "done" in tab B after tab A's
-// UpdateTicketStatus RPC.
-//
-// Tracking: follow-up issue "test(e2e-web): ticket status multi-tab UI
-// propagation" — depends on (a) above.
-import { test } from "../../fixtures/index";
+// Wire-level coverage in tests/realtime/ticket-events-wire.spec.ts;
+// this spec validates handler → updateTicketStatusFromEvent → React.
+import { test, expect } from "../../fixtures/index";
+import { clearAuthRateLimit } from "../../helpers/redis";
+import { TEST_ORG_SLUG } from "../../helpers/env";
 
 test.describe("Ticket status · multi-tab UI propagation", () => {
-  test.fixme("tab A status change → tab B badge updates", async () => {
-    // See file-level comment.
+  test.beforeEach(async () => { clearAuthRateLimit(); });
+
+  test("tab A status change → tab B ticket moves between board columns", async ({ context, api }) => {
+    const cc = await api.connect();
+
+    const stamp = Date.now().toString(36);
+    const t = (await cc.ticket.createTicket({
+      orgSlug: TEST_ORG_SLUG, title: `e2e-status-${stamp}`,
+    })) as { slug: string };
+
+    const tabA = await context.newPage();
+    const tabB = await context.newPage();
+    await Promise.all([
+      tabA.goto(`/${TEST_ORG_SLUG}/tickets`),
+      tabB.goto(`/${TEST_ORG_SLUG}/tickets`),
+    ]);
+
+    // CreateTicket defaults to "backlog" status; board view places the
+    // card in the column with matching data-column-status.
+    const cardIn = (status: string) =>
+      `[data-testid="kanban-column"][data-column-status="${status}"] [data-testid="ticket-card"][data-ticket-slug="${t.slug}"]`;
+
+    await Promise.all([
+      expect(tabA.locator(cardIn("backlog"))).toHaveCount(1, { timeout: 30_000 }),
+      expect(tabB.locator(cardIn("backlog"))).toHaveCount(1, { timeout: 30_000 }),
+    ]);
+
+    // EventSubscriptionManager bootstrap settle window before publish.
+    await tabA.waitForTimeout(1500);
+
+    await cc.ticket.updateTicketStatus({
+      orgSlug: TEST_ORG_SLUG, ticketSlug: t.slug, status: "in_progress",
+    });
+
+    await Promise.all([
+      expect(tabA.locator(cardIn("in_progress"))).toHaveCount(1, { timeout: 10_000 }),
+      expect(tabB.locator(cardIn("in_progress"))).toHaveCount(1, { timeout: 10_000 }),
+      expect(tabA.locator(cardIn("backlog"))).toHaveCount(0, { timeout: 10_000 }),
+      expect(tabB.locator(cardIn("backlog"))).toHaveCount(0, { timeout: 10_000 }),
+    ]);
+
+    // "in_review" stays in expanded columns; "done" defaults to collapsed
+    // (CollapsedColumn doesn't render individual tickets), so we assert
+    // the move into in_review where the card stays visible.
+    await cc.ticket.updateTicketStatus({
+      orgSlug: TEST_ORG_SLUG, ticketSlug: t.slug, status: "in_review",
+    });
+
+    await Promise.all([
+      expect(tabA.locator(cardIn("in_review"))).toHaveCount(1, { timeout: 10_000 }),
+      expect(tabB.locator(cardIn("in_review"))).toHaveCount(1, { timeout: 10_000 }),
+    ]);
+
+    await tabA.close();
+    await tabB.close();
+    await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug: t.slug }).catch(() => undefined);
   });
 });

@@ -72,6 +72,27 @@ _launch_ibazel() {
     )
 }
 
+# Reap any process LISTENING on a worktree-allocated port before launching a
+# host service on it. Ports are worktree-unique (offset×50), so this is scoped
+# to THIS worktree — unlike pkill-by-binary-path, which would match every
+# worktree's shared bazel-cached binary. Catches orphans whose pid/pgid files
+# were lost across sessions (the root cause of the "two backends → stale gRPC
+# command-stream registry → dispatch 503 runner-not-connected" failure: the
+# runner's heartbeat stream registers on one backend instance while the
+# command-sender lookup hits another, so create_pod returns NotFound).
+_reap_port() {
+    local port="$1" label="${2:-process}"
+    [[ -z "$port" ]] && return 0
+    local pids
+    pids=$(lsof -ti "tcp:${port}" -sTCP:LISTEN 2>/dev/null || true)
+    if [[ -n "$pids" ]]; then
+        info "Reaping stale ${label} on port ${port}: $(echo "$pids" | tr '\n' ' ')"
+        # shellcheck disable=SC2086
+        kill -9 $pids 2>/dev/null || true
+        sleep 1
+    fi
+}
+
 # Cross-compile the runner binary for linux/amd64 and copy it to
 # deploy/dev/runner-binary so docker compose can COPY it into the runner
 # image. macOS bazel-bin is a symlink chain to /private/var/... that
@@ -196,6 +217,12 @@ start_backend_host() {
         return 1
     }
 
+    # Reap any stale backend holding this worktree's ports before relaunch —
+    # otherwise a leftover instance + the fresh one split the runner gRPC
+    # streams and create_pod dispatch fails with "runner not connected" (503).
+    _reap_port "$BACKEND_HTTP_PORT" "backend HTTP"
+    _reap_port "$BACKEND_GRPC_PORT" "backend gRPC"
+
     _launch_ibazel backend //backend/cmd/server:server
 
     # 480s budget covers cold-CI's first protoc + protoc-gen-go-grpc C++
@@ -242,6 +269,7 @@ start_relay_host() {
         return 1
     }
 
+    _reap_port "$RELAY_HTTP_PORT" "relay"
     _launch_ibazel relay //relay/cmd/relay:relay
 
     if ! _wait_http "http://localhost:${RELAY_HTTP_PORT}/health" relay 60; then

@@ -226,3 +226,6 @@ third_party/swift/.build/
 # Bazel symlinks (created by build, never tracked)
 /node_modules
 /clients/desktop/out
+
+# Playwright JUnit report artifact (generated per CI run)
+/report.xml

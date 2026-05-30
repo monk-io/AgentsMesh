@@ -1,4 +1,8 @@
 pub mod apikey;
+pub mod app_autopilot;
+pub mod app_channel;
+pub mod app_pod;
+pub mod app_runner;
 pub mod auth_connect;
 pub mod autopilot;
 pub mod billing;
@@ -17,6 +21,7 @@ pub mod loop_service;
 pub mod mesh;
 pub mod pod;
 pub mod promocode;
+pub mod relay;
 pub mod runner;
 pub mod runner_api;
 pub mod sso;

@@ -28,6 +28,7 @@ vi.mock("@/lib/wasm-core", () => ({
     get_runner_info_json: mockGetRunnerInfoJson,
   }),
   getChannelService: () => noopSvc,
+  getChannelState: () => noopSvc,
 }));
 
 import {

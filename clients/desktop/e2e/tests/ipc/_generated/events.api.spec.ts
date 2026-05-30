@@ -17,6 +17,10 @@ test.describe("IPC · events", () => {
     await invokeIpcContract(sharedPage, { method: "eventsGetConnectionState", returnType: "string" });
   });
 
+  test("eventsGetTick", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "eventsGetTick", returnType: "number" });
+  });
+
   test("eventsUnsubscribe", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "eventsUnsubscribe", returnType: "void" }, 0);
   });

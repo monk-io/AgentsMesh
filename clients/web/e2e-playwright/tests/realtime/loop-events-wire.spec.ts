@@ -10,7 +10,7 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { withEventSubscription } from "../../helpers/eventbus-stream";
+import { withEventSubscription, subscribeEvents } from "../../helpers/eventbus-stream";
 import { terminateAllPods } from "../../helpers/pod-cleanup";
 
 test.describe("Realtime · loop_run events (wire)", () => {
@@ -56,18 +56,57 @@ test.describe("Realtime · loop_run events (wire)", () => {
     expect(Number(event.data.run_id)).toBeGreaterThan(0);
   });
 
-  test.fixme("loop_run:completed arrives after pod successful termination", async ({ api }) => {
-    // FIXME: loop_run:started fires before the pod is attached to the run
-    // (pod_key is empty in the event payload). The orchestrator wires the
-    // pod afterwards via SetRunPodKey. To trigger loop_run:completed we
-    // need to:
-    //   (a) wait for loop_run:started
-    //   (b) ListRuns to discover the attached pod_key
-    //   (c) terminate that pod and wait for loop_run:completed
-    // Step (b) is racy — pod attachment may lag the started event by a
-    // variable interval. Tracked as follow-up: harden orchestrator to
-    // delay loop_run:started until SetRunPodKey commits, or carry the
-    // pod_key in started event payload.
-    void api;
+  test("loop_run:completed arrives after pod successful termination", async ({ api }) => {
+    const cc = await api.connect();
+    const token = api.getToken();
+    if (!token) throw new Error("api fixture missing token");
+    const loop = await createLoop(api);
+
+    // Backend publishes loop_run:started twice: once at TriggerLoop time
+    // (before pod creation; pod_key empty) and once after SetRunPodKey
+    // commits (pod_key populated). We wait for the second emission so we
+    // can correlate the run to its pod for termination.
+    const ctrl = new AbortController();
+    let runPodKey: string | null = null;
+    let runId: number | null = null;
+
+    const startedListener = (async () => {
+      for await (const ev of subscribeEvents({ token, orgSlug: TEST_ORG_SLUG, signal: ctrl.signal })) {
+        if (ev.type !== "loop_run:started") continue;
+        const data = JSON.parse(ev.dataJson) as { pod_key?: string; run_id?: number | string };
+        if (data.pod_key && data.pod_key.length > 0) {
+          runPodKey = data.pod_key;
+          runId = Number(data.run_id);
+          ctrl.abort();
+          return;
+        }
+      }
+    })();
+
+    await new Promise((r) => setTimeout(r, 500));
+    await cc.loop.triggerLoop({ orgSlug: TEST_ORG_SLUG, loopSlug: loop.slug } as never);
+
+    const startedRace = await Promise.race([
+      startedListener.then(() => "got-pod" as const),
+      new Promise<"timeout">((r) => setTimeout(() => r("timeout"), 20_000)),
+    ]);
+    ctrl.abort();
+    expect(startedRace, "loop_run:started with pod_key must arrive within 20s").toBe("got-pod");
+    expect(runPodKey, "pod_key must be bound to the run").toBeTruthy();
+
+    const { event } = await withEventSubscription<unknown, { run_id?: number | string }>(
+      {
+        token, orgSlug: TEST_ORG_SLUG,
+        predicate: (type, data) =>
+          (type === "loop_run:completed" || type === "loop_run:failed") &&
+          Number(data.run_id) === runId,
+        timeoutMs: 20_000,
+      },
+      async () => {
+        await cc.pod.terminatePod({ orgSlug: TEST_ORG_SLUG, podKey: runPodKey! });
+      },
+    );
+
+    expect(Number(event.data.run_id)).toBe(runId);
   });
 });

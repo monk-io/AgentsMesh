@@ -4,7 +4,7 @@ import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import type { RunnerData } from "@/lib/api";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
-import { getRunnerService } from "@/lib/wasm-core";
+import { getRunnerState } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import {
   listRunners as listRunnersConnect,
@@ -40,7 +40,12 @@ interface RunnerState {
   clearError: () => void;
 }
 
-const svc = () => getRunnerService();
+// Runner state SSOT is the shared AppState (runtime.state) via getRunnerState
+// (web: WasmRunnerState; desktop: ElectronRunnerService). This is the SAME
+// state the EventBus dispatch + desktop snapshot mirror write, so realtime
+// runner changes flow without a JS pure-patch. Connect-RPC stays on the
+// runnerConnect facade (which still uses getRunnerService).
+const svc = () => getRunnerState();
 const bump = () => useRunnerStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 function orgSlug(): string {

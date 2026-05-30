@@ -25,16 +25,56 @@ impl ChannelState {
         true
     }
 
-    /// Handle a new incoming message (from realtime event).
-    /// Enriches sender, updates preview/last_activity_at on the Channel, adds to cache.
-    /// Unread increment stays with the handler — it has first-hand knowledge of
-    /// `isSelf` and `isViewing` which this layer would have to reconstruct.
+    /// Handle a new incoming message (from a realtime event). Rust Core is
+    /// the SSOT for ALL derived state here — front-ends only project the
+    /// result, they never reconstruct these rules:
+    ///   1. enrich sender (fill current_user when sender is self)
+    ///   2. compute + store the channel-list preview / last_activity_at
+    ///   3. persist to the message repo
+    ///   4. append to the in-memory cache
+    ///   5. increment unread — UNLESS the message is the current user's own,
+    ///      or they're actively viewing the channel
+    ///   6. increment mention — same gating, when the current user (or
+    ///      @channel) is mentioned
+    ///
+    /// Returns true when the message was newly added (false on dup id).
     pub fn on_new_message(&mut self, mut msg: ChannelMessage) -> bool {
         let channel_id = msg.channel_id;
         self.enrich_sender(&mut msg);
         let preview = Self::make_preview(&msg);
         self.set_last_message(channel_id, preview);
-        self.add_message(channel_id, msg)
+
+        // Read derived-count inputs before `msg` is moved into add_message.
+        let is_self =
+            msg.sender_user_id.is_some() && msg.sender_user_id == self.current_user_id();
+        let is_active = self.current_channel.as_ref().map(|c| c.id) == Some(channel_id);
+        let mentions_me = self.message_mentions_current_user(&msg);
+
+        let added = self.add_message(channel_id, msg);
+        if added && !is_self && !is_active {
+            self.increment_unread(channel_id);
+            if mentions_me {
+                self.increment_mention(channel_id);
+            }
+        }
+        added
+    }
+
+    /// True when `msg.mentions_json` targets the current user — either an
+    /// explicit user-id mention or an `@channel` broadcast. Mirrors the
+    /// web `MessageMentions` shape `{ pods?: string[], users?: i64[],
+    /// channel?: bool }`. Returns false when no current user is set.
+    fn message_mentions_current_user(&self, msg: &ChannelMessage) -> bool {
+        let Some(uid) = self.current_user_id() else { return false };
+        let Some(json) = msg.mentions_json.as_ref() else { return false };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(json) else { return false };
+        if v.get("channel").and_then(|c| c.as_bool()).unwrap_or(false) {
+            return true;
+        }
+        v.get("users")
+            .and_then(|u| u.as_array())
+            .map(|arr| arr.iter().any(|x| x.as_i64() == Some(uid)))
+            .unwrap_or(false)
     }
 
     pub fn update_message(&mut self, channel_id: i64, message: ChannelMessage) {

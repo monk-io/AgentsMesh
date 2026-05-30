@@ -53,16 +53,18 @@ const CHANNEL_PODS_FIXTURE = [
 const channelPodsCache = new Map<number, typeof CHANNEL_PODS_FIXTURE>();
 vi.mock("@/lib/wasm-core", async () => {
   const actual = await vi.importActual<typeof import("@/lib/wasm-core")>("@/lib/wasm-core");
+  const channelObj = {
+    get_channel_pods: async (id: bigint) => {
+      const num = Number(id);
+      channelPodsCache.set(num, CHANNEL_PODS_FIXTURE);
+      return JSON.stringify({ pods: CHANNEL_PODS_FIXTURE });
+    },
+    channel_pods_json: (id: bigint) => JSON.stringify(channelPodsCache.get(Number(id)) ?? []),
+  };
   return {
     ...actual,
-    getChannelService: () => ({
-      get_channel_pods: async (id: bigint) => {
-        const num = Number(id);
-        channelPodsCache.set(num, CHANNEL_PODS_FIXTURE);
-        return JSON.stringify({ pods: CHANNEL_PODS_FIXTURE });
-      },
-      channel_pods_json: (id: bigint) => JSON.stringify(channelPodsCache.get(Number(id)) ?? []),
-    }),
+    getChannelService: () => channelObj,
+    getChannelState: () => channelObj,
   };
 });
 

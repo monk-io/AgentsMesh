@@ -24,6 +24,16 @@ public struct CoreClient: Sendable {
     public var getPodRelayConnection: @Sendable (_ key: String) async throws -> PodConnectionInfoDto
     public var listRunners: @Sendable () async throws -> RunnerListResponseDto
 
+    // ── Realtime (EventBus → runtime.state SSOT)
+    /// Connect the realtime stream. The dispatch hook mutates runtime.state;
+    /// reducers re-read typed selectors (e.g. `podsDto`) on each tick.
+    public var eventsConnect: @Sendable () async -> Void
+    /// Typed pod selector over runtime.state (fetch baseline + realtime).
+    public var podsDto: @Sendable () -> [PodDto]
+    /// Emits after every realtime dispatch (CoreTickStore). Reducers iterate
+    /// this and re-read `podsDto` to drive UI from the Rust SSOT.
+    public var tickStream: @Sendable () -> AsyncStream<UInt64>
+
     // ── Infra (More tab destinations)
     public var getMeshTopology: @Sendable () async throws -> MeshTopologyDto
     public var listLoops: @Sendable () async throws -> LoopListResponseDto
@@ -80,6 +90,28 @@ extension CoreClient: DependencyKey {
             getPodRelayConnection: { key in try await core().getPodRelayConnection(podKey: key) },
             listRunners: { try await core().listRunners(status: nil) },
 
+            eventsConnect: { await core().eventsConnect() },
+            podsDto: { core().podsDto() },
+            // Poll the @MainActor CoreTickStore counter inside a MainActor Task
+            // so the outer @Sendable closure stays isolation-clean. Observation
+            // already pipes the callback on main; 100ms polling is cheap.
+            tickStream: {
+                AsyncStream { continuation in
+                    let task = Task { @MainActor in
+                        var last = CoreTickStore.shared.tick
+                        while !Task.isCancelled {
+                            if CoreTickStore.shared.tick != last {
+                                last = CoreTickStore.shared.tick
+                                continuation.yield(last)
+                            }
+                            try? await Task.sleep(nanoseconds: 100_000_000)
+                        }
+                        continuation.finish()
+                    }
+                    continuation.onTermination = { _ in task.cancel() }
+                }
+            },
+
             getMeshTopology: { try await core().getMeshTopology() },
             listLoops: { try await core().listLoops(status: nil, limit: nil, offset: nil) },
             listRepositories: { try await core().listRepositories() },
@@ -129,6 +161,9 @@ extension CoreClient: DependencyKey {
         terminatePod: unimplemented("CoreClient.terminatePod"),
         getPodRelayConnection: unimplemented("CoreClient.getPodRelayConnection"),
         listRunners: unimplemented("CoreClient.listRunners"),
+        eventsConnect: unimplemented("CoreClient.eventsConnect"),
+        podsDto: unimplemented("CoreClient.podsDto", placeholder: []),
+        tickStream: unimplemented("CoreClient.tickStream", placeholder: AsyncStream { $0.finish() }),
         getMeshTopology: unimplemented("CoreClient.getMeshTopology"),
         listLoops: unimplemented("CoreClient.listLoops"),
         listRepositories: unimplemented("CoreClient.listRepositories"),

@@ -24,6 +24,46 @@ export class AppState {
   apikeyListConnect(request: Array<number>): Promise<Array<number>>
   apikeyRevokeConnect(request: Array<number>): Promise<Array<number>>
   apikeyUpdateConnect(request: Array<number>): Promise<Array<number>>
+  appAutopilotControllersJson(): string
+  appAutopilotInsertController(reqBytes: Array<number>): void
+  appAutopilotIterationsJson(key: string): string
+  appAutopilotReplaceCachedControllers(reqBytes: Array<number>): void
+  appAutopilotReplaceCachedIterations(reqBytes: Array<number>): void
+  appAutopilotThinkingHistoryJson(key: string): string
+  appAutopilotThinkingJson(key: string): string
+  appAvailableRunnersJson(): string
+  appChannelApplyMessageEdited(reqBytes: Array<number>): void
+  appChannelClearUnread(channelId: number): void
+  appChannelInsertChannel(reqBytes: Array<number>): void
+  appChannelInsertMessage(reqBytes: Array<number>): void
+  appChannelMentionCountsJson(): string
+  appChannelMessagesJson(channelId: number): string
+  appChannelPatchMemberCount(reqBytes: Array<number>): void
+  appChannelPrependCachedMessages(reqBytes: Array<number>): void
+  appChannelRemoveMessage(channelId: number, messageId: number): void
+  appChannelReplaceCachedChannels(reqBytes: Array<number>): void
+  appChannelReplaceCachedMessages(reqBytes: Array<number>): void
+  appChannelReplaceUnreadCounts(reqBytes: Array<number>): void
+  appChannelsJson(): string
+  appChannelUnreadCountsJson(): string
+  appCurrentRunnerJson(): string
+  appGetPodJson(podKey: string): string
+  appPodAppendCachedPods(reqBytes: Array<number>): void
+  appPodInsertCreated(reqBytes: Array<number>): void
+  appPodMarkTerminated(reqBytes: Array<number>): void
+  appPodPatchPerpetual(reqBytes: Array<number>): void
+  appPodRemove(podKey: string): void
+  appPodReplaceCachedPods(reqBytes: Array<number>): void
+  appPodsJson(): string
+  appRunnerPatch(reqBytes: Array<number>): void
+  appRunnerRemove(reqBytes: Array<number>): void
+  appRunnerReplaceAvailable(reqBytes: Array<number>): void
+  appRunnerReplaceCached(reqBytes: Array<number>): void
+  appRunnerSetCurrent(reqBytes: Array<number>): void
+  appRunnersJson(): string
+  appSelectChannel(id: number | undefined | null): void
+  appSetCurrentChannel(id: number | undefined | null): void
+  appSetCurrentUser(userId: number | undefined | null): void
   authApplySessionProto(reqBytes: Array<number>): void
   authBootstrap(): Promise<string>
   authBootstrapProto(): Promise<Array<number>>
@@ -159,6 +199,7 @@ export class AppState {
   eventsConnect(): Promise<void>
   eventsDisconnect(): Promise<void>
   eventsGetConnectionState(): Promise<string>
+  eventsGetTick(): number
   eventsOnConnectionStateChange(callback: (err: unknown, arg: string) => void): Promise<number>
   eventsSubscribeAll(callback: (err: unknown, arg: string) => void): Promise<number>
   eventsUnsubscribe(id: number): Promise<void>
@@ -239,6 +280,19 @@ export class AppState {
   promocodeGetRedemptionHistoryConnect(request: Array<number>): Promise<Array<number>>
   promocodeRedeemPromoCodeConnect(request: Array<number>): Promise<Array<number>>
   promocodeValidatePromoCodeConnect(request: Array<number>): Promise<Array<number>>
+  relayDisconnect(podKey: string): Promise<void>
+  relayDisconnectAll(): Promise<void>
+  relayForceResize(podKey: string, cols: number, rows: number): Promise<void>
+  relayGetPodSize(podKey: string): Promise<Array<number>>
+  relayGetStatus(podKey: string): Promise<string>
+  relayIsRunnerDisconnected(podKey: string): Promise<boolean>
+  relayOnAcpMessage(podKey: string, onAcp: (err: unknown, arg: string) => void): Promise<void>
+  relayOnStatusChange(podKey: string, onStatus: (err: unknown, arg: string) => void): Promise<void>
+  relaySend(podKey: string, data: string): Promise<void>
+  relaySendAcpCommand(podKey: string, command: string): Promise<void>
+  relaySendResize(podKey: string, cols: number, rows: number): Promise<void>
+  relaySubscribe(podKey: string, subscriptionId: string, relayUrl: string, token: string, onOutput: (err: unknown, arg: Array<number>) => void): Promise<void>
+  relayUnsubscribe(podKey: string, subscriptionId: string): Promise<void>
   runnerAuthorizeRunner(requestBytes: Array<number>): Promise<Array<number>>
   runnerAvailableRunnersJson(): Promise<string>
   runnerCurrentRunnerJson(): Promise<string>

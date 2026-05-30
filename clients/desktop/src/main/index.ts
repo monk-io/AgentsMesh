@@ -8,6 +8,7 @@ import { createLocalRunnerStubs, type LocalRunnerStubMap } from "./local_runner_
 import { acquireSingleInstance } from "./single_instance";
 import { IPC_ALLOWLIST, IPC_ALLOWLIST_SET } from "./ipc-allowlist.generated";
 import { setupRealtimeBridge, type RealtimeBridge } from "./realtime";
+import { setupRelayBridge, type RelayBridge } from "./relay";
 import {
   registerProtocol,
   attachSecondInstanceUrlHandler,
@@ -49,6 +50,7 @@ let appState: AppState;
 let stubs: LocalRunnerStubMap | null = null;
 let mainWindow: BrowserWindow | null = null;
 let realtimeBridge: RealtimeBridge | null = null;
+let relayBridge: RelayBridge | null = null;
 const appStateHandlers = new Set<string>();
 
 const getMainWindow = () => mainWindow;
@@ -173,6 +175,10 @@ function rebindAppState(newApiUrl: string) {
     void realtimeBridge.dispose();
     realtimeBridge = null;
   }
+  if (relayBridge) {
+    relayBridge.dispose();
+    relayBridge = null;
+  }
   appState = new AppState(newApiUrl, storageDir);
   if (isHeadlessTest) {
     stubs = createLocalRunnerStubs();
@@ -181,6 +187,7 @@ function rebindAppState(newApiUrl: string) {
   void setupRealtimeBridge(appState, getMainWindow).then((bridge) => {
     realtimeBridge = bridge;
   });
+  relayBridge = setupRelayBridge(appState, getMainWindow);
   currentApiUrl = newApiUrl;
 }
 
@@ -616,6 +623,7 @@ app.whenReady().then(() => {
   void setupRealtimeBridge(appState, getMainWindow).then((bridge) => {
     realtimeBridge = bridge;
   });
+  relayBridge = setupRelayBridge(appState, getMainWindow);
   buildMenu();
   installOpenUrlHandler(getMainWindow);
   createWindow();

@@ -17,15 +17,3 @@ export {
   getRepoState,
   getAutopilotState, getRelayManager,
 } from "@agentsmesh/service-runtime";
-
-// Relay protocol codec — pure JS mirror of clients/core/crates/protocol. Desktop
-// renderer owns the relay WebSocket directly; no IPC hop is involved.
-export {
-  relay_encode_input,
-  relay_encode_resize,
-  relay_encode_ping,
-  relay_encode_control,
-  relay_encode_resync,
-  relay_encode_acp_command,
-  relay_decode_message,
-} from "@/lib/relay/codec-pure";

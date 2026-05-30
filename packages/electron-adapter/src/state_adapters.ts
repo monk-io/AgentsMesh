@@ -9,6 +9,9 @@
 // the ticket service (proto-state mutation API + dedicated WasmTicketState).
 import type { ITicketState } from "@agentsmesh/service-interface";
 
+export { ElectronRelayManager } from "./electron-relay-manager";
+
+
 // Desktop ticket state stub. Real ticket data flows through Connect-RPC on
 // every request — the in-memory cache only exists to keep the renderer's
 // store layer from crashing on getTicketState() reads. Future PR will mirror
@@ -49,20 +52,4 @@ export class ElectronAcpManager {
   add_log(_pk: string, _level: string, _msg: string) {}
   update_configuration(_req: Uint8Array) {}
   clear_session(_pk: string) {}
-}
-
-export class ElectronRelayManager {
-  async subscribe(_pk: string, _sid: string, _url: string, _token: string, _cb: Function) {}
-  async unsubscribe(_pk: string, _sid: string) {}
-  async send(_pk: string, _data: string) {}
-  async send_resize(_pk: string, _cols: number, _rows: number) {}
-  async force_resize(_pk: string, _cols: number, _rows: number) {}
-  async send_acp_command(_pk: string, _cmd: string) {}
-  async disconnect(_pk: string) {}
-  async disconnect_all() {}
-  async get_status(_pk: string): Promise<string> { return "disconnected"; }
-  async get_pod_size(_pk: string): Promise<unknown> { return null; }
-  async is_runner_disconnected(_pk: string): Promise<boolean> { return true; }
-  async on_status_change(_pk: string, _cb: Function) {}
-  async on_acp_message(_pk: string, _cb: Function) {}
 }

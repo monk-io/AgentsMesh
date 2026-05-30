@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { getErrorMessage } from "@/lib/utils";
-import { getChannelService } from "@/lib/wasm-core";
-import { readCurrentOrg } from "@/stores/auth";
+import { getChannelState } from "@/lib/wasm-core";
+import { readCurrentOrg, readCurrentUser } from "@/stores/auth";
 import {
   listChannels,
   getChannel as getChannelConnect,
@@ -28,7 +28,7 @@ import type { Channel } from "./channelTypes";
 export type { Channel, ChannelLastMessage, ChannelMember } from "./channelTypes";
 export { useChannels, useCurrentChannel, useChannelMembers, getLastMessage } from "./channelSelectors";
 
-const svc = () => getChannelService();
+const svc = () => getChannelState();
 const bump = () => useChannelStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 function orgSlug(): string {
@@ -91,6 +91,11 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         channels: items.map(channelToProtoChannel),
       });
       svc().replace_cached_channels(toBinary(ReplaceCachedChannelsRequestSchema, req));
+      // Teach Rust Core who the current user is so its realtime
+      // on_new_message can compute unread/mention with the self-message
+      // rule. Without this the SSOT can't tell "my own message" apart.
+      const uid = readCurrentUser()?.id;
+      svc().set_current_user_id(uid != null ? BigInt(uid) : undefined);
       bump();
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch channels") }); }
   },
@@ -100,6 +105,13 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     try {
       const channel = await getChannelConnect(orgSlug(), id);
       dispatchInsertChannel(channel as unknown as Channel);
+      // Re-anchor current_channel from the freshly-inserted entry. The async
+      // gap between `set({channelLoading})` above and here can trigger a
+      // useChannelChat cleanup that nulls current_channel; without this
+      // re-anchor the header reads stale defaults (member_count=0).
+      if (get().selectedChannelId === id) {
+        svc().set_current_channel(BigInt(id));
+      }
       set({ channelLoading: false, _tick: get()._tick + 1 });
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch channel"), channelLoading: false }); }
   },

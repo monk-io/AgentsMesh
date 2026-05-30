@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { getChannelService } from "@/lib/wasm-core";
+import { getChannelState } from "@/lib/wasm-core";
 import { useChannelMessageStore, readMessages } from "./channelMessageStore";
 import type { ChannelMessage } from "@/lib/api/facade/channel";
 
-const svc = () => getChannelService();
+const svc = () => getChannelState();
 
 // ── Selectors: Rust is SSOT. These hooks subscribe to tick counters so
 // components re-render when Rust state mutates — no parallel JS copy.

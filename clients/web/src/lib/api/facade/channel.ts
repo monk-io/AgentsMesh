@@ -1,5 +1,5 @@
 import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
-import { getChannelService } from "@/lib/wasm-core";
+import { getChannelState } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import {
@@ -91,7 +91,7 @@ export const channelApi = {
     const req = protoCreate(InsertChannelRequestSchema, {
       channel: channelDataToProtoChannel(channel),
     });
-    getChannelService().insert_channel(toBinary(InsertChannelRequestSchema, req));
+    getChannelState().insert_channel(toBinary(InsertChannelRequestSchema, req));
     return { channel };
   },
 
@@ -117,7 +117,7 @@ export const channelApi = {
       channelId: BigInt(id),
       pods: pods.map(channelPodSummaryToProtoPod),
     });
-    getChannelService().replace_channel_pods(toBinary(ReplaceChannelPodsRequestSchema, req));
+    getChannelState().replace_channel_pods(toBinary(ReplaceChannelPodsRequestSchema, req));
     return { pods, total };
   },
 
@@ -144,7 +144,7 @@ export const channelApi = {
       channelId: BigInt(id),
       userId: BigInt(userId),
     });
-    getChannelService().remove_channel_member(toBinary(RemoveChannelMemberRequestSchema, req));
+    getChannelState().remove_channel_member(toBinary(RemoveChannelMemberRequestSchema, req));
     return { message: "ok" };
   },
 
@@ -154,7 +154,7 @@ export const channelApi = {
       channelId: BigInt(id),
       members: members.map(channelMemberDataToProto),
     });
-    getChannelService().replace_channel_members(toBinary(ReplaceChannelMembersRequestSchema, req));
+    getChannelState().replace_channel_members(toBinary(ReplaceChannelMembersRequestSchema, req));
     return { members, total };
   },
 };

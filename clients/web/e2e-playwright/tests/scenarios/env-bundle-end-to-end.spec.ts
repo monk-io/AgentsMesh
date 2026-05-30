@@ -143,8 +143,14 @@ test.describe("EnvBundle end-to-end (Settings UI → Pod → child env)", () => 
       selectRuntimeBundleNames: [bundleName],
     });
 
-    const dump = await readEnvDumpFromRunner();
-    expect(dump).toContain(`${envKey}=${envValue}`);
+    // The agent's env dump is written by the spawned child, which can lag
+    // behind the pod reaching "running" (createPodAndWaitRunning only gates on
+    // pod status, not on the child having flushed its env). Poll the dump
+    // until the injected var lands rather than reading once and racing it.
+    await expect(async () => {
+      const dump = await readEnvDumpFromRunner();
+      expect(dump).toContain(`${envKey}=${envValue}`);
+    }).toPass({ timeout: 20_000 });
   });
 
   test("credential bundle: Settings UI → Pod create → env injected to child process", async ({
@@ -170,8 +176,11 @@ test.describe("EnvBundle end-to-end (Settings UI → Pod → child env)", () => 
       selectCredentialName: bundleName,
     });
 
-    const dump = await readEnvDumpFromRunner();
-    expect(dump).toContain(`${envKey}=${envValue}`);
+    // Same child-env-flush lag as the runtime bundle above — poll, don't race.
+    await expect(async () => {
+      const dump = await readEnvDumpFromRunner();
+      expect(dump).toContain(`${envKey}=${envValue}`);
+    }).toPass({ timeout: 20_000 });
   });
 
   test("default-auth selection: no credential bundle → no cred key in child env", async ({

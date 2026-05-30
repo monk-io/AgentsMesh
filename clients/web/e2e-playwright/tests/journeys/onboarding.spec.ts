@@ -42,9 +42,12 @@ test.describe("Journey: New User Onboarding", () => {
     await confirmPwd.fill(PASSWORD);
     await page.locator('button[type="submit"]').click();
 
-    // Should redirect away from register
+    // Should redirect away from register. First-hit of the post-register
+    // route can pay a Next dev cold-compile on top of the register round-trip,
+    // so give the redirect real headroom (the 15s ceiling flaked on a cold
+    // dev server; the retry — routes warm — always passed).
     await page.waitForURL((url) => !url.pathname.includes("/register"), {
-      timeout: 15_000,
+      timeout: 30_000,
     });
 
     // ── Step 2: Verify email via DB token ──

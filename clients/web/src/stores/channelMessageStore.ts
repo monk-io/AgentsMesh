@@ -1,7 +1,7 @@
 import { readCurrentUser, readCurrentOrg } from "@/stores/auth";
 import { create } from "zustand";
 import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
-import { getChannelService } from "@/lib/wasm-core";
+import { getChannelState } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
 import {
   listChannelMessages,
@@ -37,7 +37,7 @@ export const INITIAL_MESSAGE_LIMIT = 20;
 /** Number of messages to fetch when loading older history. */
 export const LOAD_MORE_MESSAGE_LIMIT = 30;
 
-const svc = () => getChannelService();
+const svc = () => getChannelState();
 
 function orgSlug(): string {
   return readCurrentOrg()?.slug ?? "";

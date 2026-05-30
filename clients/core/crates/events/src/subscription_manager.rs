@@ -9,8 +9,8 @@ use parking_lot::RwLock;
 
 use crate::event_types::EventType;
 use crate::types::{
-    ConnectionState, EventHandler, EventSubscriptionManagerOptions, RealtimeEvent, StateListener,
-    SubscriptionId,
+    ConnectionState, EventDispatchHook, EventHandler, EventSubscriptionManagerOptions,
+    RealtimeEvent, StateListener, SubscriptionId, TickListener,
 };
 
 static NEXT_SUB_ID: AtomicU64 = AtomicU64::new(1);
@@ -26,13 +26,30 @@ pub(crate) struct Inner {
     pub global_handlers: HashMap<SubscriptionId, EventHandler>,
     pub state_listeners: HashMap<SubscriptionId, StateListener>,
     pub connection_state: ConnectionState,
+    /// Optional Rust-SSOT dispatch hook. When set, every event is applied
+    /// to the registered hook (typically `AppState.dispatch`) BEFORE the
+    /// tick bump and BEFORE external handlers. See `EventDispatchHook`.
+    pub dispatch_hook: Option<Arc<dyn EventDispatchHook>>,
+    /// Monotonic counter incremented after every dispatched event. Read
+    /// by platform selectors via `useCoreTick()` / `getTick()` /
+    /// `TickCallback.on_tick` to invalidate cached views.
+    pub tick: AtomicU64,
+    /// Optional tick push-listener — fired after every event dispatched
+    /// to AppState + tick bump. Used by iOS (UniFFI) to kick SwiftUI's
+    /// reactive store; other platforms poll `tick()`.
+    pub tick_listener: Option<Arc<dyn TickListener>>,
+    /// Shutdown signal for the active connection_loop task. Moved into
+    /// `Inner` so `connect()` / `disconnect()` can take `&self` — this
+    /// lets binding facades hold `Arc<EventSubscriptionManager>` and
+    /// pass it to `AppRuntime` without `Rc<RefCell<...>>` or `&mut`
+    /// borrow contortions.
+    pub shutdown_tx: Option<mpsc::UnboundedSender<()>>,
 }
 
 pub struct EventSubscriptionManager<R: Runtime = PlatformRuntime> {
     pub(crate) inner: Arc<RwLock<Inner>>,
     pub(crate) options: EventSubscriptionManagerOptions,
     api_client: Arc<ApiClient>,
-    shutdown_tx: Option<mpsc::UnboundedSender<()>>,
     runtime: R,
 }
 
@@ -58,22 +75,51 @@ impl<R: Runtime> EventSubscriptionManager<R> {
                 global_handlers: HashMap::new(),
                 state_listeners: HashMap::new(),
                 connection_state: ConnectionState::Disconnected,
+                dispatch_hook: None,
+                tick: AtomicU64::new(0),
+                tick_listener: None,
+                shutdown_tx: None,
             })),
             options,
             api_client,
-            shutdown_tx: None,
             runtime,
         }
     }
 
-    pub async fn connect(&mut self) {
+    /// Install a Rust-SSOT dispatch hook. Called by binding facades
+    /// (wasm/napi/ffi) at construction time with an `AppStateDispatchHook`.
+    /// Subsequent calls replace any prior hook.
+    pub fn set_dispatch_hook(&self, hook: Arc<dyn EventDispatchHook>) {
+        self.inner.write().dispatch_hook = Some(hook);
+    }
+
+    /// Install a tick push-listener. iOS uses this to invalidate SwiftUI
+    /// state on each event. Other platforms can poll `tick()` instead.
+    /// Replaces any prior listener — single-slot, not a Vec.
+    pub fn set_tick_listener(&self, listener: Arc<dyn TickListener>) {
+        self.inner.write().tick_listener = Some(listener);
+    }
+
+    /// Clear the tick listener (e.g. on iOS app teardown).
+    pub fn clear_tick_listener(&self) {
+        self.inner.write().tick_listener = None;
+    }
+
+    /// Current tick value. Increments once per event dispatched, after
+    /// the dispatch hook has applied the event to AppState. Platform
+    /// selectors use this as the React `useSyncExternalStore` snapshot.
+    pub fn tick(&self) -> u64 {
+        self.inner.read().tick.load(Ordering::Acquire)
+    }
+
+    pub async fn connect(&self) {
         let state = self.inner.read().connection_state;
         if state == ConnectionState::Connected || state == ConnectionState::Connecting {
             return;
         }
 
         let (shutdown_tx, shutdown_rx) = mpsc::unbounded();
-        self.shutdown_tx = Some(shutdown_tx);
+        self.inner.write().shutdown_tx = Some(shutdown_tx);
 
         let inner = Arc::clone(&self.inner);
         let api_client = Arc::clone(&self.api_client);
@@ -85,8 +131,9 @@ impl<R: Runtime> EventSubscriptionManager<R> {
         ));
     }
 
-    pub async fn disconnect(&mut self) {
-        if let Some(tx) = self.shutdown_tx.take() {
+    pub async fn disconnect(&self) {
+        let tx = self.inner.write().shutdown_tx.take();
+        if let Some(tx) = tx {
             let _ = tx.unbounded_send(());
         }
         set_state(&self.inner, ConnectionState::Disconnected);
@@ -150,6 +197,45 @@ pub(crate) fn set_state(inner: &Arc<RwLock<Inner>>, state: ConnectionState) {
 }
 
 pub(crate) fn dispatch_event(inner: &Arc<RwLock<Inner>>, event: &RealtimeEvent) {
+    // Step 1: Rust-SSOT dispatch hook applies event to AppState. We clone
+    // the Arc out under read lock, then drop the events-side lock before
+    // calling the hook — the hook will acquire its own AppState write
+    // lock, and we must not hold the events lock during that operation
+    // to avoid lock-order inversion with reader paths.
+    let hook = inner.read().dispatch_hook.clone();
+    if let Some(h) = hook {
+        // Wrap in catch_unwind so a panic inside one event's apply logic
+        // never poisons the dispatcher. parking_lot doesn't poison locks
+        // but a panicking hook would still abort the connection loop.
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            h.dispatch(event);
+        }));
+        if result.is_err() {
+            tracing::error!(
+                event_type = ?event.event_type,
+                "events: dispatch hook panicked; continuing"
+            );
+        }
+    }
+
+    // Step 2: bump tick. Release ordering pairs with the Acquire load in
+    // `tick()` so platform selectors observe the AppState mutations
+    // above before reading the new tick value.
+    let new_tick = inner.read().tick.fetch_add(1, Ordering::Release) + 1;
+
+    // Step 2b: push tick to FFI listener (iOS). Wasm/napi poll instead.
+    let tick_listener = inner.read().tick_listener.clone();
+    if let Some(l) = tick_listener {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            l.on_tick(new_tick);
+        }));
+        if result.is_err() {
+            tracing::error!("events: tick listener panicked; continuing");
+        }
+    }
+
+    // Step 3: external handlers (legacy JS handler path; transition-only).
+    // Cloned out under read lock then invoked without holding it.
     let (typed, global): (Vec<EventHandler>, Vec<EventHandler>) = {
         let guard = inner.read();
         let typed = guard

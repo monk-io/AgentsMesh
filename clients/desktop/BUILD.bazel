@@ -196,4 +196,12 @@ playwright_test(
         [".env*"],
         allow_empty = True,
     ),
+    # helpers/env.ts walks up from cwd looking for `deploy/dev/.env` to
+    # learn worktree-specific ports + COMPOSE_PROJECT_NAME. Inside the
+    # Bazel sandbox the walk never finds it, so callers MUST forward the
+    # worktree-isolated values explicitly:
+    #   bazel test //clients/desktop:e2e \
+    #       --test_env=HTTP_PORT --test_env=POSTGRES_PORT \
+    #       --test_env=COMPOSE_PROJECT_NAME
+    # CI's bazel.yml already wires these via the per-shard ports step.
 )

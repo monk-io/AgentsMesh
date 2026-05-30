@@ -106,6 +106,11 @@ func (s *Service) CreateChannel(ctx context.Context, req *CreateChannelRequest) 
 
 	if req.CreatedByUserID != nil {
 		_ = s.repo.AddMemberWithRole(ctx, ch.ID, *req.CreatedByUserID, channel.RoleCreator)
+		// Publish channel:member_added so the creator's other tabs /
+		// devices see the new channel without manual reload. Without this,
+		// the sidebar's once-on-mount fetchChannels misses channels
+		// created after that tab loaded.
+		s.publishMemberEvent(ctx, ch.OrganizationID, ch.ID, *req.CreatedByUserID, eventbus.EventChannelMemberAdded, channel.RoleCreator)
 	}
 	validMembers := s.validateOrgMembers(ctx, req.OrganizationID, req.InitialMemberIDs)
 	for _, uid := range validMembers {
@@ -113,6 +118,7 @@ func (s *Service) CreateChannel(ctx context.Context, req *CreateChannelRequest) 
 			continue
 		}
 		_ = s.repo.AddMemberWithRole(ctx, ch.ID, uid, channel.RoleMember)
+		s.publishMemberEvent(ctx, ch.OrganizationID, ch.ID, uid, eventbus.EventChannelMemberAdded, channel.RoleMember)
 	}
 
 	slog.InfoContext(ctx, "channel created", "channel_id", ch.ID, "org_id", req.OrganizationID, "name", req.Name, "visibility", visibility)

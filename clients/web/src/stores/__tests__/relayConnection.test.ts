@@ -1,6 +1,29 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { registerServiceProvider, markServiceReady } from "@agentsmesh/service-runtime";
 
-vi.mock("@/lib/wasm-core", () => import("@/test/__mocks__/wasm-core"));
+// The adapter delegates all connection management to getRelayManager() (the
+// Rust pool via WasmRelayManager / ElectronRelayManager). These tests pin the
+// adapter's remaining responsibilities: endpoint delegation, the per-pod
+// listener fan-out, the legacy "none" status baseline, and the sync status
+// cache that isConnected()/getStatus() read. We drive getRelayManager() through
+// the real service registry rather than vi.mock — the workspace package isn't
+// reliably hoist-mockable, but registerServiceProvider() is the supported seam.
+const mgr = {
+  subscribe: vi.fn().mockResolvedValue(undefined),
+  unsubscribe: vi.fn().mockResolvedValue(undefined),
+  send: vi.fn().mockResolvedValue(undefined),
+  send_resize: vi.fn().mockResolvedValue(undefined),
+  force_resize: vi.fn().mockResolvedValue(undefined),
+  send_acp_command: vi.fn().mockResolvedValue(undefined),
+  disconnect: vi.fn().mockResolvedValue(undefined),
+  disconnect_all: vi.fn().mockResolvedValue(undefined),
+  get_status: vi.fn().mockResolvedValue("disconnected"),
+  is_runner_disconnected: vi.fn().mockResolvedValue(false),
+  get_pod_size: vi.fn().mockResolvedValue(null),
+  on_status_change: vi.fn().mockResolvedValue(undefined),
+  on_acp_message: vi.fn().mockResolvedValue(undefined),
+};
+
 vi.mock("@/lib/api/facade/podConnect", () => ({
   getPodConnection: vi.fn().mockResolvedValue({
     relay_url: "wss://relay.example.com",
@@ -9,202 +32,143 @@ vi.mock("@/lib/api/facade/podConnect", () => ({
   }),
 }));
 
-// Mock WebSocket
-class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
+type StatusRaw = { status: string; runnerDisconnected: boolean };
 
-  url: string;
-  readyState: number = MockWebSocket.CONNECTING;
-  binaryType: string = "blob";
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onerror: ((e: unknown) => void) | null = null;
-  onmessage: ((e: { data: unknown }) => void) | null = null;
-
-  constructor(url: string) {
-    this.url = url;
-    setTimeout(() => {
-      this.readyState = MockWebSocket.OPEN;
-      this.onopen?.();
-    }, 0);
-  }
-
-  send = vi.fn();
-  close = vi.fn(() => {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.();
-  });
+async function freshPool() {
+  delete (globalThis as Record<string, unknown>).__relayPool;
+  vi.resetModules();
+  return (await import("@/stores/relayConnection")).relayPool;
 }
 
-global.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+function lastStatusCb(): (raw: StatusRaw) => void {
+  return mgr.on_status_change.mock.calls.at(-1)![1] as (raw: StatusRaw) => void;
+}
+function lastAcpCb(): (mt: number, pl: unknown) => void {
+  return mgr.on_acp_message.mock.calls.at(-1)![1] as (mt: number, pl: unknown) => void;
+}
 
-describe("relayConnection", () => {
-  let pool: typeof import("@/stores/relayConnection").relayPool;
+describe("relayConnection adapter", () => {
+  let pool: Awaited<ReturnType<typeof freshPool>>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-    // Re-import to get fresh singleton
-    vi.resetModules();
-    const importedModule = await import("@/stores/relayConnection");
-    pool = importedModule.relayPool;
-  });
-
-  afterEach(() => {
-    pool?.disconnectAll();
-    vi.useRealTimers();
+    registerServiceProvider({ relayManager: mgr as never });
+    markServiceReady();
+    pool = await freshPool();
   });
 
   describe("subscribe", () => {
-    it("should create connection and return handle", async () => {
+    it("selects the endpoint then delegates to the manager and returns a handle", async () => {
       const onMessage = vi.fn();
-      const handlePromise = pool.subscribe("pod-1", "sub-1", onMessage);
+      const handle = await pool.subscribe("pod-1", "sub-1", onMessage);
 
-      await vi.runAllTimersAsync();
-      const handle = await handlePromise;
-
+      expect(mgr.subscribe).toHaveBeenCalledWith(
+        "pod-1", "sub-1", "wss://relay.example.com", "test-token", onMessage,
+      );
       expect(handle).toHaveProperty("send");
       expect(handle).toHaveProperty("unsubscribe");
+    });
+
+    it("registers exactly one upstream status listener per pod", async () => {
+      await pool.subscribe("pod-1", "sub-1", vi.fn());
+      pool.onStatusChange("pod-1", vi.fn());
+      await pool.subscribe("pod-1", "sub-2", vi.fn());
+
+      expect(mgr.on_status_change).toHaveBeenCalledTimes(1);
+    });
+
+    it("handle.send / handle.unsubscribe delegate to the manager", async () => {
+      const handle = await pool.subscribe("pod-1", "sub-1", vi.fn());
+      handle.send("x");
+      handle.unsubscribe();
+      expect(mgr.send).toHaveBeenCalledWith("pod-1", "x");
+      expect(mgr.unsubscribe).toHaveBeenCalledWith("pod-1", "sub-1");
+    });
+  });
+
+  describe("input / resize delegation (debounce + dedup live in the pool now)", () => {
+    it("send / sendResize / forceResize delegate; non-positive sizes are dropped", () => {
+      pool.send("pod-1", "data");
+      pool.sendResize("pod-1", 80, 24);
+      pool.forceResize("pod-1", 100, 40);
+      pool.sendResize("pod-1", 0, 24);
+      pool.forceResize("pod-1", 80, 0);
+
+      expect(mgr.send).toHaveBeenCalledWith("pod-1", "data");
+      expect(mgr.send_resize).toHaveBeenCalledExactlyOnceWith("pod-1", 80, 24);
+      expect(mgr.force_resize).toHaveBeenCalledExactlyOnceWith("pod-1", 100, 40);
+    });
+
+    it("sendAcpCommand JSON-encodes the command for the string-typed manager", () => {
+      pool.sendAcpCommand("pod-1", { type: "prompt", prompt: "hi" });
+      expect(mgr.send_acp_command).toHaveBeenCalledWith(
+        "pod-1", JSON.stringify({ type: "prompt", prompt: "hi" }),
+      );
+    });
+  });
+
+  describe("status fan-out + 'none' baseline", () => {
+    it("emits 'none' immediately for an unknown pod and maps pre-connect 'disconnected' to 'none'", () => {
+      const listener = vi.fn();
+      pool.onStatusChange("pod-1", listener);
+      expect(listener).toHaveBeenCalledWith({ status: "none", runnerDisconnected: false });
+
+      lastStatusCb()({ status: "disconnected", runnerDisconnected: false });
+      expect(listener).toHaveBeenLastCalledWith({ status: "none", runnerDisconnected: false });
+    });
+
+    it("passes through real statuses once subscribed and updates isConnected/getStatus", async () => {
+      const listener = vi.fn();
+      pool.onStatusChange("pod-1", listener);
+      await pool.subscribe("pod-1", "sub-1", vi.fn());
+
+      lastStatusCb()({ status: "connected", runnerDisconnected: false });
+      expect(listener).toHaveBeenLastCalledWith({ status: "connected", runnerDisconnected: false });
+      expect(pool.isConnected("pod-1")).toBe(true);
       expect(pool.getStatus("pod-1")).toBe("connected");
+
+      lastStatusCb()({ status: "disconnected", runnerDisconnected: true });
+      expect(pool.isConnected("pod-1")).toBe(false);
+      expect(pool.isRunnerDisconnected("pod-1")).toBe(true);
     });
 
-    it("should add new subscriber to existing connection without reconnecting", async () => {
-      const onMessage1 = vi.fn();
-      const onMessage2 = vi.fn();
-
-      await pool.subscribe("pod-1", "sub-1", onMessage1);
-      await vi.runAllTimersAsync();
-
-      // New subscriber joins existing connection (no disconnect/reconnect)
-      const handle2 = await pool.subscribe("pod-1", "sub-2", onMessage2);
-      await vi.runAllTimersAsync();
-
-      expect(handle2).toHaveProperty("send");
-      // Both subscribers should be registered on the same connection
-      expect(pool.getConnection("pod-1")?.subscribers.size).toBe(2);
-      expect(pool.getConnection("pod-1")?.subscribers.has("sub-1")).toBe(true);
-      expect(pool.getConnection("pod-1")?.subscribers.has("sub-2")).toBe(true);
-    });
-
-    it("should be idempotent - same subscriptionId replaces previous callback", async () => {
-      const onMessage1 = vi.fn();
-      const onMessage2 = vi.fn();
-
-      await pool.subscribe("pod-1", "sub-1", onMessage1);
-      await vi.runAllTimersAsync();
-
-      // Subscribe again with same subscriptionId
-      await pool.subscribe("pod-1", "sub-1", onMessage2);
-      await vi.runAllTimersAsync();
-
-      // Should still have only 1 subscriber (replaced, not added)
-      expect(pool.getConnection("pod-1")?.subscribers.size).toBe(1);
+    it("stops notifying a removed listener", () => {
+      const listener = vi.fn();
+      const off = pool.onStatusChange("pod-1", listener);
+      listener.mockClear();
+      off();
+      lastStatusCb()({ status: "connected", runnerDisconnected: false });
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 
-  describe("unsubscribe", () => {
-    it("should remove subscriber by subscriptionId", async () => {
-      const onMessage = vi.fn();
-      const handle = await pool.subscribe("pod-1", "sub-1", onMessage);
-      await vi.runAllTimersAsync();
+  describe("acp fan-out", () => {
+    it("routes manager ACP messages to registered listeners until removed", () => {
+      const listener = vi.fn();
+      const off = pool.onAcpMessage("pod-1", listener);
+      lastAcpCb()(0x0b, { type: "contentChunk" });
+      expect(listener).toHaveBeenCalledWith(0x0b, { type: "contentChunk" });
 
-      handle.unsubscribe();
-
-      // Subscriber should be removed
-      expect(pool.getConnection("pod-1")?.subscribers.size).toBe(0);
-    });
-
-    it("should delay disconnect when last subscriber leaves", async () => {
-      const onMessage = vi.fn();
-      const handle = await pool.subscribe("pod-1", "sub-1", onMessage);
-      await vi.runAllTimersAsync();
-
-      handle.unsubscribe();
-
-      // Connection should still exist (delayed disconnect)
-      expect(pool.getConnection("pod-1")).toBeDefined();
-
-      // Advance past disconnect delay (30s)
-      await vi.advanceTimersByTimeAsync(30000);
-
-      // Now connection should be gone
-      expect(pool.getConnection("pod-1")).toBeUndefined();
-      expect(pool.getStatus("pod-1")).toBe("none");
-    });
-
-    it("should cancel disconnect timer if new subscriber joins", async () => {
-      const onMessage1 = vi.fn();
-      const onMessage2 = vi.fn();
-
-      const handle1 = await pool.subscribe("pod-1", "sub-1", onMessage1);
-      await vi.runAllTimersAsync();
-
-      // Unsubscribe first subscriber
-      handle1.unsubscribe();
-
-      // Advance time partially (10s of 30s delay)
-      await vi.advanceTimersByTimeAsync(10000);
-
-      // New subscriber joins
-      await pool.subscribe("pod-1", "sub-2", onMessage2);
-
-      // Advance past original disconnect time
-      await vi.advanceTimersByTimeAsync(25000);
-
-      // Connection should still exist (timer was cancelled)
-      expect(pool.getConnection("pod-1")).toBeDefined();
-      expect(pool.getConnection("pod-1")?.subscribers.size).toBe(1);
+      off();
+      listener.mockClear();
+      lastAcpCb()(0x0b, { type: "more" });
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 
-  describe("getStatus", () => {
-    it("should return 'none' for unknown pod", () => {
+  describe("defaults for unknown pods", () => {
+    it("getStatus/isConnected/isRunnerDisconnected return safe defaults", () => {
       expect(pool.getStatus("unknown")).toBe("none");
-    });
-  });
-
-  describe("isConnected", () => {
-    it("should return false for unknown pod", () => {
       expect(pool.isConnected("unknown")).toBe(false);
-    });
-  });
-
-  describe("isRunnerDisconnected", () => {
-    it("should return false for unknown pod", () => {
       expect(pool.isRunnerDisconnected("unknown")).toBe(false);
     });
-  });
 
-  describe("disconnect", () => {
-    it("should close connection and remove from pool", async () => {
-      const onMessage = vi.fn();
-      await pool.subscribe("pod-1", "sub-1", onMessage);
-      await vi.runAllTimersAsync();
-
+    it("disconnect / disconnectAll delegate to the manager", async () => {
+      await pool.subscribe("pod-1", "sub-1", vi.fn());
       pool.disconnect("pod-1");
-
-      expect(pool.getStatus("pod-1")).toBe("none");
-    });
-
-    it("should be safe to call for non-existent pod", () => {
-      expect(() => pool.disconnect("unknown")).not.toThrow();
-    });
-  });
-
-  describe("disconnectAll", () => {
-    it("should disconnect all connections", async () => {
-      const onMessage = vi.fn();
-      await pool.subscribe("pod-1", "sub-1", onMessage);
-      await pool.subscribe("pod-2", "sub-2", onMessage);
-      await vi.runAllTimersAsync();
-
       pool.disconnectAll();
-
-      expect(pool.getStatus("pod-1")).toBe("none");
-      expect(pool.getStatus("pod-2")).toBe("none");
+      expect(mgr.disconnect).toHaveBeenCalledWith("pod-1");
+      expect(mgr.disconnect_all).toHaveBeenCalled();
     });
   });
 });

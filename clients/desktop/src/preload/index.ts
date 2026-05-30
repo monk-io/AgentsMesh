@@ -36,6 +36,31 @@ const api = {
     ipcRenderer.on("realtime:state", listener);
     return () => ipcRenderer.removeListener("realtime:state", listener);
   },
+  // Rust-computed domain snapshot pushed after each EventBus dispatch. The
+  // renderer mirrors it into the Electron service cache (the renderer has no
+  // in-process Rust; main owns the SSOT runtime.state). See main/realtime.ts.
+  onRealtimeStateSync: (handler: (snapshotJson: string) => void) => {
+    const listener = (_e: IpcRendererEvent, snapshotJson: string) => handler(snapshotJson);
+    ipcRenderer.on("realtime:state-sync", listener);
+    return () => ipcRenderer.removeListener("realtime:state-sync", listener);
+  },
+  // Relay (terminal data plane) push channels: the main-process Rust pool fans
+  // PTY output / status / ACP to the renderer. ElectronRelayManager subscribes.
+  onRelayOutput: (handler: (payload: { podKey: string; data: Uint8Array }) => void) => {
+    const listener = (_e: IpcRendererEvent, payload: { podKey: string; data: Uint8Array }) => handler(payload);
+    ipcRenderer.on("relay:output", listener);
+    return () => ipcRenderer.removeListener("relay:output", listener);
+  },
+  onRelayStatus: (handler: (payload: { podKey: string; json: string }) => void) => {
+    const listener = (_e: IpcRendererEvent, payload: { podKey: string; json: string }) => handler(payload);
+    ipcRenderer.on("relay:status", listener);
+    return () => ipcRenderer.removeListener("relay:status", listener);
+  },
+  onRelayAcp: (handler: (payload: { podKey: string; json: string }) => void) => {
+    const listener = (_e: IpcRendererEvent, payload: { podKey: string; json: string }) => handler(payload);
+    ipcRenderer.on("relay:acp", listener);
+    return () => ipcRenderer.removeListener("relay:acp", listener);
+  },
   serverConfig: {
     snapshot: serverConfigSnapshot,
     get: () => ipcRenderer.invoke("serverConfig:get"),

@@ -1558,6 +1558,13 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
+    "name": "eventsGetTick",
+    "group": "events",
+    "params": [],
+    "returnType": "number",
+    "ipcExposable": true
+  },
+  {
     "name": "eventsOnConnectionStateChange",
     "group": "events",
     "params": [
@@ -3022,6 +3029,653 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotControllersJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotInsertController",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotIterationsJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "key",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotReplaceCachedControllers",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotReplaceCachedIterations",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotThinkingHistoryJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "key",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotThinkingJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "key",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAvailableRunnersJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelApplyMessageEdited",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelClearUnread",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelInsertChannel",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelInsertMessage",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelMentionCountsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelMessagesJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelPatchMemberCount",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelPrependCachedMessages",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelRemoveMessage",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      },
+      {
+        "name": "messageId",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceCachedChannels",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceCachedMessages",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceUnreadCounts",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelUnreadCountsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appCurrentRunnerJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appGetPodJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodAppendCachedPods",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodInsertCreated",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodMarkTerminated",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodPatchPerpetual",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodRemove",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodReplaceCachedPods",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerPatch",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerRemove",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerReplaceAvailable",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerReplaceCached",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerSetCurrent",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnersJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appSelectChannel",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "id",
+        "type": "number | undefined | null"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appSetCurrentChannel",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "id",
+        "type": "number | undefined | null"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appSetCurrentUser",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "userId",
+        "type": "number | undefined | null"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayDisconnect",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayDisconnectAll",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayForceResize",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "cols",
+        "type": "number"
+      },
+      {
+        "name": "rows",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayGetPodSize",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayGetStatus",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayIsRunnerDisconnected",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "boolean",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayOnAcpMessage",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "onAcp",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relayOnStatusChange",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "onStatus",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relaySend",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "data",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relaySendAcpCommand",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "command",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relaySendResize",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "cols",
+        "type": "number"
+      },
+      {
+        "name": "rows",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relaySubscribe",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "subscriptionId",
+        "type": "string"
+      },
+      {
+        "name": "relayUrl",
+        "type": "string"
+      },
+      {
+        "name": "token",
+        "type": "string"
+      },
+      {
+        "name": "onOutput",
+        "type": "(err: unknown, arg: Array<number>) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relayUnsubscribe",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "subscriptionId",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
     "ipcExposable": true
   },
   {

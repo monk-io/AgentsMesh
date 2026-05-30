@@ -15,6 +15,7 @@ rust_library(
         "//clients/core/crates/persistence",
         "//clients/core/crates/protocol",
         "//clients/core/crates/types",
+        "@crates//:parking_lot",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:thiserror",

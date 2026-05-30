@@ -83,6 +83,7 @@ const mockService = {
 
 vi.mock('@/lib/wasm-core', () => ({
   getRunnerService: () => mockService,
+  getRunnerState: () => mockService,
 }))
 
 vi.mock('@/stores/auth', () => ({

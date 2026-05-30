@@ -80,11 +80,26 @@ func (d *daemonServer) handleClient(conn net.Conn) {
 		return
 	}
 
-	// Set as current client — swap pointer under lock, close old conn outside.
+	// Become the current client and replay buffered output, so a runner that
+	// attached after the child already produced output — or a runner that
+	// restarted (session recovery) — sees the full terminal state instead of a
+	// blank screen. connWriteMu is held across the swap+replay so ptyReader
+	// can't interleave live output ahead of the replay; history snapshot + the
+	// pointer swap happen under clientMu so a chunk racing in is delivered
+	// exactly once (either in this replay or live, never both/neither).
+	d.connWriteMu.Lock()
 	d.clientMu.Lock()
+	replay := make([]byte, len(d.history))
+	copy(replay, d.history)
 	oldClient := d.client
 	d.client = conn
 	d.clientMu.Unlock()
+	if len(replay) > 0 {
+		if err := WriteMessage(conn, MsgOutput, replay); err != nil {
+			log.Debug("replay buffered output failed", "error", err)
+		}
+	}
+	d.connWriteMu.Unlock()
 	if oldClient != nil {
 		oldClient.Close()
 	}
@@ -185,6 +200,7 @@ func (d *daemonServer) ptyReader() {
 			copy(data, buf[:n])
 
 			d.clientMu.Lock()
+			d.appendHistoryLocked(data)
 			client := d.client
 			d.clientMu.Unlock()
 

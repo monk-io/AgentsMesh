@@ -6,11 +6,9 @@ import {
 } from "@proto/channel_state/v1/mutations_pb";
 import { handleChannelEvent, handleInfraEvent } from "../realtimeEventHandlers";
 import { useChannelMessageStore } from "@/stores/channel";
-import { readMessages } from "@/stores/channelMessageStore";
 import { useAuthStore } from "@/stores/auth";
 import { getAuthManager } from "@/lib/wasm-core";
 import { useChannelStore } from "@/stores/channel";
-import type { RealtimeEvent } from "@/lib/realtime";
 
 const mockUpdateRunnerStatus = vi.fn();
 const mockUpdateTicketStatus = vi.fn();
@@ -18,6 +16,8 @@ const mockRemoveTicket = vi.fn();
 const mockFetchTickets = vi.fn();
 const mockFetchTicket = vi.fn();
 const mockFetchPod = vi.fn();
+const mockTicketSetState = vi.fn();
+const mockRunnerSetState = vi.fn();
 
 vi.mock("@/stores/pod", () => ({
   usePodStore: { getState: () => ({ pods: [{ id: 1, pod_key: "pk-1" }], fetchPod: mockFetchPod }) },
@@ -129,10 +129,14 @@ vi.mock("@/lib/wasm-core", async () => {
   };
 });
 vi.mock("@/stores/runner", () => ({
-  useRunnerStore: { getState: () => ({ updateRunnerStatus: mockUpdateRunnerStatus }) },
+  useRunnerStore: {
+    setState: (updater: unknown) => mockRunnerSetState(updater),
+    getState: () => ({ updateRunnerStatus: mockUpdateRunnerStatus }),
+  },
 }));
 vi.mock("@/stores/ticket", () => ({
   useTicketStore: {
+    setState: (updater: unknown) => mockTicketSetState(updater),
     getState: () => ({
       updateTicketStatusFromEvent: mockUpdateTicketStatus,
       removeTicketFromEvent: mockRemoveTicket,
@@ -144,199 +148,51 @@ vi.mock("@/stores/ticket", () => ({
 }));
 
 describe("handleChannelEvent", () => {
-  // Accessor for the shared WASM-mock unread map seeded in the vi.mock block.
-  const wasmUnread = () =>
-    (globalThis as unknown as { __channelUnread: Record<number, number> }).__channelUnread;
-
   beforeEach(() => {
-    // Reset shared WASM-mock buckets between tests.
-    const g = globalThis as unknown as {
-      __channelBuckets?: Map<number, Record<string, unknown>[]>;
-      __channelUnread?: Record<number, number>;
-    };
-    g.__channelBuckets?.clear();
-    if (g.__channelUnread) for (const k of Object.keys(g.__channelUnread)) delete g.__channelUnread[Number(k)];
-    useChannelMessageStore.setState({ cache: {}, _unreadTick: 0 });
     getAuthManager().apply_session(JSON.stringify({ token: "t", refresh_token: "r", user: { id: 1, email: "u@e.com", username: "u" } }));
-    useChannelStore.setState({ selectedChannelId: null } as never);
+    useChannelStore.setState({ selectedChannelId: null, currentChannel: null } as never);
+    useChannelMessageStore.setState({ cache: {}, _messagesTick: 0 } as never);
   });
 
+  // Message persistence + the unread/mention business rules now live in Rust
+  // Core (ChannelState::on_new_message, covered by channel_state_tests.rs).
+  // The JS handler only (a) triggers a React re-read and (b) refetches the
+  // channel list from the backend when the current user is added to a new
+  // channel that isn't in the cache yet.
   describe("channel:message", () => {
-    it("adds message to store with body and content", () => {
-      const content = { kind: "text", blocks: [{ type: "paragraph", elements: [{ type: "text", text: "hello" }] }] };
-      const mentions = { users: [3] };
-      const event: RealtimeEvent = {
+    it("triggers a message-store re-read tick without throwing", () => {
+      const before = (useChannelMessageStore.getState() as unknown as { _messagesTick: number })._messagesTick;
+      handleChannelEvent({
         type: "channel:message",
-        data: {
-          id: 10, channel_id: 1,
-          sender_user_id: 2, sender_name: "alice",
-          message_type: "text",
-          body: "hello",
-          content_json: JSON.stringify(content),
-          mentions_json: JSON.stringify(mentions),
-          created_at: "2024-01-01T00:00:00Z",
-        },
-        category: "entity",
-        organization_id: 1,
-        entity_type: "channel",
-        entity_id: "1",
-        timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      const view = readMessages(1);
-      expect(view.messages).toHaveLength(1);
-      expect(view.messages[0].body).toBe("hello");
-      expect(view.messages[0].content).toEqual(content);
-      expect(view.messages[0].mentions).toEqual(mentions);
-    });
-
-    it("includes sender_pod_info when present", () => {
-      const event: RealtimeEvent = {
-        type: "channel:message",
-        data: {
-          id: 11, channel_id: 1,
-          sender_pod: "pk-bot",
-          sender_pod_info: { pod_key: "pk-bot", alias: "MyBot", agent: { name: "Claude" } },
-          sender_name: "",
-          message_type: "text",
-          body: "agent message",
-          created_at: "2024-01-01T00:00:00Z",
-        },
+        data: { id: 10, channel_id: 1, sender_user_id: 2, body: "hi", message_type: "text", created_at: "2024-01-01T00:00:00Z" },
         category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      const msg = readMessages(1).messages[0];
-      expect(msg.sender_pod_info).toEqual({ pod_key: "pk-bot", alias: "MyBot", agent: { name: "Claude" } });
-    });
-
-    it("constructs sender_user from sender_name", () => {
-      const event: RealtimeEvent = {
-        type: "channel:message",
-        data: {
-          id: 12, channel_id: 1,
-          sender_user_id: 5, sender_name: "bob",
-          message_type: "text", body: "hi",
-          created_at: "2024-01-01T00:00:00Z",
-        },
-        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      const msg = readMessages(1).messages[0];
-      expect(msg.sender_user).toEqual({ id: 5, username: "bob", name: "bob" });
-    });
-
-    it("increments unread when message is from another user and not viewing", () => {
-      getAuthManager().apply_session(JSON.stringify({ token: "t", refresh_token: "r", user: { id: 1, email: "u@e.com", username: "u" } }));
-      useChannelStore.setState({ selectedChannelId: 999 } as never);
-
-      const event: RealtimeEvent = {
-        type: "channel:message",
-        data: {
-          id: 13, channel_id: 1, sender_user_id: 2,
-          sender_name: "",
-          message_type: "text", body: "hi",
-          created_at: "2024-01-01T00:00:00Z",
-        },
-        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      expect(wasmUnread()[1]).toBe(1);
-    });
-
-    it("does NOT increment unread for own message", () => {
-      getAuthManager().apply_session(JSON.stringify({ token: "t", refresh_token: "r", user: { id: 1, email: "u@e.com", username: "u" } }));
-
-      const event: RealtimeEvent = {
-        type: "channel:message",
-        data: {
-          id: 14, channel_id: 1, sender_user_id: 1,
-          sender_name: "",
-          message_type: "text", body: "self",
-          created_at: "2024-01-01T00:00:00Z",
-        },
-        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      expect(wasmUnread()[1]).toBeUndefined();
-    });
-
-    it("does NOT increment unread when viewing that channel", () => {
-      useChannelStore.setState({ selectedChannelId: 1 } as never);
-
-      const event: RealtimeEvent = {
-        type: "channel:message",
-        data: {
-          id: 15, channel_id: 1, sender_user_id: 2,
-          sender_name: "",
-          message_type: "text", body: "hi",
-          created_at: "2024-01-01T00:00:00Z",
-        },
-        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      expect(wasmUnread()[1]).toBeUndefined();
+      });
+      const after = (useChannelMessageStore.getState() as unknown as { _messagesTick: number })._messagesTick;
+      expect(after).toBeGreaterThan(before);
     });
   });
 
-  describe("channel:message_edited", () => {
-    it("updates message body and content in store", () => {
-      // Seed via addMessage so both WASM mock bucket and store cache are populated.
-      useChannelMessageStore.getState().addMessage(1, {
-        id: 20, channel_id: 1, body: "old", message_type: "text", created_at: "2024-01-01T00:00:00Z",
-      } as never);
-
-      const event: RealtimeEvent = {
-        type: "channel:message_edited",
-        data: {
-          id: 20, channel_id: 1,
-          body: "edited",
-          content_json: JSON.stringify({ kind: "text", blocks: [{ type: "paragraph", elements: [{ type: "text", text: "edited" }] }] }),
-          mentions_json: JSON.stringify({ users: [3] }),
-          edited_at: "2024-01-02T00:00:00Z",
-        },
-        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      const msg = readMessages(1).messages[0];
-      expect(msg.body).toBe("edited");
-      expect((msg as { edited_at: string }).edited_at).toBe("2024-01-02T00:00:00Z");
+  describe("channel:member_added", () => {
+    it("refetches channel list when the current user is added (new channel appears)", () => {
+      const fetchChannels = vi.fn();
+      useChannelStore.setState({ fetchChannels, currentChannel: null } as never);
+      handleChannelEvent({
+        type: "channel:member_added",
+        data: { channel_id: 5, user_id: 1, role: "member" }, // user 1 == current user
+        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "5", timestamp: Date.now(),
+      });
+      expect(fetchChannels).toHaveBeenCalledWith({ includeArchived: true });
     });
-  });
 
-  describe("channel:message_deleted", () => {
-    it("removes message from store", () => {
-      useChannelMessageStore.getState().addMessage(1, {
-        id: 30, channel_id: 1, body: "keep", message_type: "text", created_at: "2024-01-01T00:00:00Z",
-      } as never);
-      useChannelMessageStore.getState().addMessage(1, {
-        id: 31, channel_id: 1, body: "delete", message_type: "text", created_at: "2024-01-01T00:00:00Z",
-      } as never);
-
-      const event: RealtimeEvent = {
-        type: "channel:message_deleted",
-        data: { id: 31, channel_id: 1 },
-        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "1", timestamp: Date.now(),
-      };
-
-      handleChannelEvent(event);
-
-      const msgs = readMessages(1).messages;
-      expect(msgs).toHaveLength(1);
-      expect(msgs[0].id).toBe(30);
+    it("does NOT refetch when another user is added", () => {
+      const fetchChannels = vi.fn();
+      useChannelStore.setState({ fetchChannels, currentChannel: null } as never);
+      handleChannelEvent({
+        type: "channel:member_added",
+        data: { channel_id: 5, user_id: 99, role: "member" },
+        category: "entity", organization_id: 1, entity_type: "channel", entity_id: "5", timestamp: Date.now(),
+      });
+      expect(fetchChannels).not.toHaveBeenCalled();
     });
   });
 });
@@ -348,33 +204,42 @@ describe("handleInfraEvent", () => {
     vi.clearAllMocks();
   });
 
-  it("runner:online updates runner status", () => {
+  // Runner status now lives in Rust event_dispatch (update_runner_status in
+  // runtime.state); the JS handler only bumps the re-read tick.
+  it("runner:online bumps tick", () => {
     handleInfraEvent({ type: "runner:online", data: { runner_id: 1, node_id: "n1", status: "online" }, ...baseEvent });
-    expect(mockUpdateRunnerStatus).toHaveBeenCalledWith(1, "online");
+    expect(mockUpdateRunnerStatus).not.toHaveBeenCalled();
+    expect(mockRunnerSetState).toHaveBeenCalled();
   });
 
-  it("runner:offline updates runner status", () => {
+  it("runner:offline bumps tick", () => {
     handleInfraEvent({ type: "runner:offline", data: { runner_id: 2, node_id: "n2", status: "offline" }, ...baseEvent });
-    expect(mockUpdateRunnerStatus).toHaveBeenCalledWith(2, "offline");
+    expect(mockRunnerSetState).toHaveBeenCalled();
   });
 
-  it("ticket:status_changed updates ticket status", () => {
+  // Ticket status patch + deletion now live in Rust event_dispatch
+  // (update_ticket_status / remove_ticket). The JS handler only bumps the
+  // re-read tick and triggers the server refetch for full data.
+  it("ticket:status_changed bumps tick + refetches", () => {
     handleInfraEvent({
       type: "ticket:status_changed",
       data: { slug: "DEV-1", status: "in_progress", previous_status: "backlog" },
       ...baseEvent, entity_type: "ticket",
     });
-    expect(mockUpdateTicketStatus).toHaveBeenCalledWith("DEV-1", "in_progress", "backlog");
+    expect(mockUpdateTicketStatus).not.toHaveBeenCalled();
+    expect(mockTicketSetState).toHaveBeenCalled();
     expect(mockFetchTickets).toHaveBeenCalled();
   });
 
-  it("ticket:deleted removes ticket", () => {
+  it("ticket:deleted bumps tick + refetches", () => {
     handleInfraEvent({
       type: "ticket:deleted",
       data: { slug: "DEV-2", status: "" },
       ...baseEvent, entity_type: "ticket",
     });
-    expect(mockRemoveTicket).toHaveBeenCalledWith("DEV-2");
+    expect(mockRemoveTicket).not.toHaveBeenCalled();
+    expect(mockTicketSetState).toHaveBeenCalled();
+    expect(mockFetchTickets).toHaveBeenCalled();
   });
 
   it("ticket:created triggers refetch", () => {

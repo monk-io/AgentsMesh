@@ -519,7 +519,11 @@ function rustTypeToTs(rust: string): string {
   if (t === "String" || t === "&str" || t === "&String") return "string";
   if (t === "bool") return "boolean";
   if (t === "i64" || t === "u64") return "number";
-  if (t === "i32" || t === "u32" || t === "f32" || t === "f64" || t === "usize" || t === "isize") return "number";
+  if (
+    t === "i32" || t === "u32" || t === "i16" || t === "u16" ||
+    t === "i8" || t === "u8" || t === "f32" || t === "f64" ||
+    t === "usize" || t === "isize"
+  ) return "number";
   if (t === "Buffer" || t === "napi::bindgen_prelude::Buffer") return "Uint8Array";
   // Fallback — propagate raw Rust type; reviewer will see drift if any
   return t;

@@ -24,6 +24,7 @@ public struct PodListFeature {
         case onAppear
         case refreshRequested
         case dataLoaded(pods: [PodDto], runners: [RunnerDto])
+        case realtimeTick
         case loadFailed(String)
         case podTapped(String)
         case terminatePodRequested(String)
@@ -46,24 +47,43 @@ public struct PodListFeature {
 
     @Dependency(\.coreClient) var core
 
+    private enum CancelID { case ticks }
+
     public var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
             case .onAppear, .refreshRequested:
                 state.isLoading = true
                 state.errorMessage = nil
-                return .run { send in
-                    do {
-                        async let pods = core.listPods(nil)
-                        async let runners = core.listRunners()
-                        let (p, r) = try await (pods, runners)
-                        await send(.dataLoaded(pods: p.pods, runners: r.runners))
-                    } catch let err as CoreError {
-                        await send(.loadFailed(CoreErrorDescription.describe(err)))
-                    } catch {
-                        await send(.loadFailed(error.localizedDescription))
+                return .merge(
+                    .run { send in
+                        do {
+                            async let pods = core.listPods(nil)
+                            async let runners = core.listRunners()
+                            let (p, r) = try await (pods, runners)
+                            await send(.dataLoaded(pods: p.pods, runners: r.runners))
+                        } catch let err as CoreError {
+                            await send(.loadFailed(CoreErrorDescription.describe(err)))
+                        } catch {
+                            await send(.loadFailed(error.localizedDescription))
+                        }
+                    },
+                    // Realtime: re-read the Rust SSOT pod selector on every
+                    // dispatch tick. cancelInFlight keeps a single subscription
+                    // across re-appears/refreshes.
+                    .run { send in
+                        for await _ in core.tickStream() {
+                            await send(.realtimeTick)
+                        }
                     }
-                }
+                    .cancellable(id: CancelID.ticks, cancelInFlight: true)
+                )
+
+            case .realtimeTick:
+                // Rust dispatch already mutated runtime.state; pull the typed
+                // selector (no network) so the list reflects realtime changes.
+                state.pods = core.podsDto()
+                return .none
 
             case .dataLoaded(let pods, let runners):
                 state.isLoading = false

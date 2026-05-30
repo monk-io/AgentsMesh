@@ -2,16 +2,15 @@ import ComposableArchitecture
 import Foundation
 import AgentsMeshCore
 
-/// Swift-owned Relay WebSocket client. The relay framing protocol is
-/// implemented inline since the prior `relay_encode_*` Rust FFI was
-/// removed in favor of a Swift-side implementation.
+/// Relay terminal data plane for iOS. Delegates to the shared Rust
+/// `RelayConnectionPool` via the ffi `RelayManager` — the same pool web drives
+/// through WasmRelayManager. The pool owns framing/codec, reconnect/backoff,
+/// input dedup, resize debounce, and snapshot replay; Swift keeps only
+/// SwiftTerm rendering (fed by `PodOutputDispatcher`) and this thin client.
 ///
-/// Protocol (see clients/core/crates/protocol):
-///   First byte = MsgType, then payload.
-///   - 0x00 Input    : payload = raw stdin bytes
-///   - 0x01 Output   : payload = raw stdout bytes (server → client)
-///   - 0x02 Resize   : payload = cols_be(2) + rows_be(2)
-///   - 0x05 Ping     : zero-length payload (server → client)
+/// The prior Swift-side WebSocket + hand-rolled codec is gone — its MsgType
+/// bytes had drifted from the protocol crate; routing all framing through the
+/// Rust pool removes that divergence by construction.
 public struct RelayWebSocketClient: Sendable {
     public var connect: @Sendable (
         _ info: PodConnectionInfoDto,
@@ -26,14 +25,14 @@ public struct RelayWebSocketClient: Sendable {
 
 extension RelayWebSocketClient: DependencyKey {
     public static let liveValue: RelayWebSocketClient = {
-        let actor = RelaySession()
+        let session = RelaySession()
         return RelayWebSocketClient(
             connect: { info, podKey, cols, rows in
-                try await actor.connect(info: info, podKey: podKey, cols: cols, rows: rows)
+                try await session.connect(info: info, podKey: podKey, cols: cols, rows: rows)
             },
-            sendInput: { data in try await actor.sendInput(data) },
-            sendResize: { cols, rows in try await actor.sendResize(cols: cols, rows: rows) },
-            disconnect: { await actor.disconnect() }
+            sendInput: { data in try await session.sendInput(data) },
+            sendResize: { cols, rows in try await session.sendResize(cols: cols, rows: rows) },
+            disconnect: { await session.disconnect() }
         )
     }()
 
@@ -52,39 +51,12 @@ public extension DependencyValues {
     }
 }
 
-private enum RelayMsgType: UInt8 {
-    case input = 0x00
-    case output = 0x01
-    case resize = 0x02
-    case ping = 0x05
-}
-
-private func encodeInput(_ data: Data) -> Data {
-    var out = Data(capacity: data.count + 1)
-    out.append(RelayMsgType.input.rawValue)
-    out.append(data)
-    return out
-}
-
-private func encodeResize(cols: UInt16, rows: UInt16) -> Data {
-    var out = Data(capacity: 5)
-    out.append(RelayMsgType.resize.rawValue)
-    out.append(UInt8((cols >> 8) & 0xFF))
-    out.append(UInt8(cols & 0xFF))
-    out.append(UInt8((rows >> 8) & 0xFF))
-    out.append(UInt8(rows & 0xFF))
-    return out
-}
-
 actor RelaySession {
-    enum RelayError: Error {
-        case notConnected
-        case connectionClosed(String?)
-    }
+    enum RelayError: Error { case notConnected }
 
-    private var task: URLSessionWebSocketTask?
+    private let manager = RelayManager()
     private var podKey: String?
-    private var readerTask: Task<Void, Never>?
+    private var subscriptionId: String?
 
     func connect(
         info: PodConnectionInfoDto,
@@ -93,82 +65,37 @@ actor RelaySession {
         rows: UInt16
     ) async throws {
         await disconnect()
-        guard var components = URLComponents(string: info.relayUrl) else {
-            throw URLError(.badURL)
-        }
-        var queryItems = components.queryItems ?? []
-        queryItems.append(URLQueryItem(name: "token", value: info.token))
-        queryItems.append(URLQueryItem(name: "pod_key", value: info.podKey))
-        components.queryItems = queryItems
-        guard let url = components.url else { throw URLError(.badURL) }
-
-        let session = URLSession(configuration: .default)
-        let t = session.webSocketTask(with: url)
-        t.resume()
-        self.task = t
+        let subId = "terminal-\(podKey)"
         self.podKey = podKey
-
-        // Kick off the reader before sending the initial resize so we
-        // don't miss the server's hello frame.
-        startReader(task: t, podKey: podKey)
-
-        try await sendResize(cols: cols, rows: rows)
+        self.subscriptionId = subId
+        // PodOutputDispatcher routes the Rust OutputCallback by podKey to the
+        // attached TerminalView sink. The pool replays a snapshot on subscribe.
+        await manager.subscribe(
+            podKey: podKey,
+            subscriptionId: subId,
+            relayUrl: info.relayUrl,
+            token: info.token,
+            callback: PodOutputDispatcher.shared.callback
+        )
+        await manager.forceResize(podKey: podKey, cols: cols, rows: rows)
     }
 
     func sendInput(_ data: Data) async throws {
-        guard let t = task else { throw RelayError.notConnected }
-        try await t.send(.data(encodeInput(data)))
+        guard let key = podKey else { throw RelayError.notConnected }
+        await manager.send(podKey: key, data: String(decoding: data, as: UTF8.self))
     }
 
     func sendResize(cols: UInt16, rows: UInt16) async throws {
-        guard let t = task else { throw RelayError.notConnected }
-        try await t.send(.data(encodeResize(cols: cols, rows: rows)))
+        guard let key = podKey else { throw RelayError.notConnected }
+        await manager.sendResize(podKey: key, cols: cols, rows: rows)
     }
 
     func disconnect() async {
-        readerTask?.cancel()
-        readerTask = nil
-        task?.cancel(with: .goingAway, reason: nil)
-        task = nil
-        if let key = podKey {
+        if let key = podKey, let sub = subscriptionId {
+            await manager.unsubscribe(podKey: key, subscriptionId: sub)
             PodOutputDispatcher.shared.unregister(podKey: key)
-            podKey = nil
         }
-    }
-
-    private func startReader(task: URLSessionWebSocketTask, podKey: String) {
-        readerTask = Task.detached { [weak self] in
-            while !Task.isCancelled {
-                do {
-                    let msg = try await task.receive()
-                    let data: Data
-                    switch msg {
-                    case .data(let d): data = d
-                    case .string(let s): data = Data(s.utf8)
-                    @unknown default: continue
-                    }
-                    await self?.handleIncoming(data: data)
-                } catch {
-                    await self?.handleDisconnect(reason: error.localizedDescription)
-                    break
-                }
-            }
-        }
-    }
-
-    private func handleIncoming(data: Data) async {
-        guard data.count >= 1, let key = podKey else { return }
-        let kind = data[0]
-        let payload = data.dropFirst()
-        // MsgType::Output = 0x01
-        if kind == RelayMsgType.output.rawValue {
-            PodOutputDispatcher.shared.feed(podKey: key, data: Data(payload))
-        }
-        // ignore other kinds for MVP
-    }
-
-    private func handleDisconnect(reason: String?) async {
-        readerTask = nil
-        task = nil
+        podKey = nil
+        subscriptionId = nil
     }
 }

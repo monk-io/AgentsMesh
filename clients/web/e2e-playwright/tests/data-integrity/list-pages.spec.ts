@@ -94,17 +94,22 @@ test.describe("Data integrity: list pages match API counts", () => {
 
     await page.goto(`/${TEST_ORG_SLUG}/runners/${id}`);
     await page.waitForLoadState("load");
-    await page.waitForTimeout(2000); // initial mount
 
-    // Pods tab must be selected for rows to render. Click the tab using
-    // its stable testid (not text — i18n + text-collision-prone).
+    // Pods tab must be selected for rows to render (useRunnerDetail only
+    // fires loadPods when activeTab === "pods"). Tie the wait to the actual
+    // ListPods response instead of a fixed sleep: a heavily-populated runner
+    // makes the backend COUNT + loop-metadata join slow, so a fixed 4s
+    // budget flakes. waitForResponse is bounded by the real round-trip.
     const podsTab = page.locator('[data-testid="runner-detail-tab-pods"]');
-    if (await podsTab.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await podsTab.click();
-    }
-    // loadPods is async behind the click — wait for the first row or empty
-    // state to land before assertions.
-    await page.waitForTimeout(4000);
+    await expect(podsTab).toBeVisible({ timeout: 15_000 });
+    const podsResp = page
+      .waitForResponse(
+        (r) => r.url().includes("ListPods") && r.request().method() === "POST",
+        { timeout: 30_000 },
+      )
+      .catch(() => null);
+    await podsTab.click();
+    await podsResp;
 
     const expectedKeys = apiRes.items.map((p) => p.podKey);
     if (expectedKeys.length === 0) {

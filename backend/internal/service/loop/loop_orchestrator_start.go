@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	loopDomain "github.com/anthropics/agentsmesh/backend/internal/domain/loop"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	agentpodSvc "github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 )
 
@@ -115,6 +116,16 @@ func (o *LoopOrchestrator) StartRun(ctx context.Context, loop *loopDomain.Loop, 
 
 	if err := o.SetRunPodKey(ctx, run.ID, pod.PodKey, autopilotKey); err != nil {
 		o.logger.Error("failed to set run pod key", "run_id", run.ID, "error", err)
+	}
+	// Re-publish loop_run:started now that pod_key is bound to the run.
+	// The earlier publish in TriggerRun fired before pod creation, so
+	// subscribers (web + desktop realtime e2e) saw an empty pod_key and
+	// couldn't correlate the run to a pod for completion detection.
+	// Reload the run to capture the persisted PodKey before publishing.
+	if updated, err := o.loopRunService.GetByID(ctx, run.ID); err == nil {
+		o.publishRunEvent(loop.OrganizationID, eventbus.EventLoopRunStarted, updated)
+	} else {
+		o.logger.Warn("failed to reload run after SetRunPodKey for republish", "run_id", run.ID, "error", err)
 	}
 
 	o.logger.Info("loop run started",

@@ -61,19 +61,19 @@ export class ElectronRunnerService implements IRunnerService {
   replace_cached_runners(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceCachedRunnersRequestSchema, reqBytes);
     this._runnersCache = JSON.stringify(req.runners.map(runnerToCache));
-    void invoke<void>("runnerReplaceCachedRunners", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appRunnerReplaceCached", Array.from(reqBytes)).catch(() => undefined);
   }
 
   replace_available_runners(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceAvailableRunnersRequestSchema, reqBytes);
     this._availableRunnersCache = JSON.stringify(req.runners.map(runnerToCache));
-    void invoke<void>("runnerReplaceAvailableRunners", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appRunnerReplaceAvailable", Array.from(reqBytes)).catch(() => undefined);
   }
 
   set_current_runner_proto(reqBytes: Uint8Array): void {
     const req = fromBinary(SetCurrentRunnerRequestSchema, reqBytes);
     this._currentRunnerCache = req.runner ? JSON.stringify(runnerToCache(req.runner)) : null;
-    void invoke<void>("runnerSetCurrentRunnerProto", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appRunnerSetCurrent", Array.from(reqBytes)).catch(() => undefined);
   }
 
   patch_cached_runner(reqBytes: Uint8Array): void {
@@ -86,14 +86,24 @@ export class ElectronRunnerService implements IRunnerService {
       else list.push(patch as { id: number });
       this._runnersCache = JSON.stringify(list);
     }
-    void invoke<void>("runnerPatchCachedRunner", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appRunnerPatch", Array.from(reqBytes)).catch(() => undefined);
   }
 
   remove_cached_runner(reqBytes: Uint8Array): void {
     const req = fromBinary(RemoveCachedRunnerRequestSchema, reqBytes);
     const list = JSON.parse(this._runnersCache) as { id: number }[];
     this._runnersCache = JSON.stringify(list.filter((x) => x.id !== Number(req.runnerId)));
-    void invoke<void>("runnerRemoveCachedRunner", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appRunnerRemove", Array.from(reqBytes)).catch(() => undefined);
+  }
+
+  // Surgical realtime mirror: the main-pushed snapshot carries the Rust-computed
+  // runner lists (runners + available + current). Replace all three local caches
+  // so runners_json()/available_runners_json()/current_runner_json() reflect the
+  // SSOT. Empty string for current clears it.
+  apply_runners_snapshot(runnersJson: string, availableJson: string, currentJson: string): void {
+    if (runnersJson) this._runnersCache = runnersJson;
+    if (availableJson) this._availableRunnersCache = availableJson;
+    this._currentRunnerCache = currentJson ? currentJson : null;
   }
 
   update_runner_status(id: bigint, status: string): void {

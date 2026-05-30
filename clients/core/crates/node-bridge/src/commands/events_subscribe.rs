@@ -10,15 +10,13 @@ use crate::AppState;
 impl AppState {
     #[napi]
     pub async fn events_connect(&self) -> napi::Result<()> {
-        let mut events = self.events.lock().await;
-        events.connect().await;
+        self.events.connect().await;
         Ok(())
     }
 
     #[napi]
     pub async fn events_disconnect(&self) -> napi::Result<()> {
-        let mut events = self.events.lock().await;
-        events.disconnect().await;
+        self.events.disconnect().await;
         Ok(())
     }
 
@@ -36,15 +34,13 @@ impl AppState {
                 }
             }
         });
-        let events = self.events.lock().await;
-        let id = events.subscribe_all(handler).await;
+        let id = self.events.subscribe_all(handler).await;
         Ok(id.as_u64() as f64)
     }
 
     #[napi]
     pub async fn events_unsubscribe(&self, id: f64) -> napi::Result<()> {
-        let events = self.events.lock().await;
-        events
+        self.events
             .unsubscribe(SubscriptionId::from_u64(id as u64))
             .await;
         Ok(())
@@ -59,14 +55,20 @@ impl AppState {
         let listener: StateListener = Arc::new(move |state| {
             cb.call(Ok(state.to_string()), ThreadsafeFunctionCallMode::NonBlocking);
         });
-        let events = self.events.lock().await;
-        let id = events.on_connection_state_change(listener).await;
+        let id = self.events.on_connection_state_change(listener).await;
         Ok(id.as_u64() as f64)
     }
 
     #[napi]
     pub async fn events_get_connection_state(&self) -> napi::Result<String> {
-        let events = self.events.lock().await;
-        Ok(events.get_connection_state().await.to_string())
+        Ok(self.events.get_connection_state().await.to_string())
+    }
+
+    /// Snapshot of the dispatch tick — increments after every event has
+    /// been applied to AppState. Renderer reads via IPC and uses as the
+    /// `useSyncExternalStore` snapshot for cache invalidation.
+    #[napi]
+    pub fn events_get_tick(&self) -> napi::Result<f64> {
+        Ok(self.events.tick() as f64)
     }
 }

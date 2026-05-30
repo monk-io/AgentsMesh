@@ -8,10 +8,7 @@ import {
   decodeEventData,
   PodStatusChangedEventDataSchema,
   PodCreatedEventDataSchema,
-  PodTitleChangedEventDataSchema,
-  PodAliasChangedEventDataSchema,
   PodInitProgressEventDataSchema,
-  PodPerpetualChangedEventDataSchema,
   PodRestartingEventDataSchema,
 } from "@/lib/realtime";
 
@@ -38,6 +35,13 @@ function debouncedFetchTopology() {
   }, 500);
 }
 
+// Rust event_dispatch owns the pod state mutation (status/agent/title/alias/
+// perpetual) in runtime.state; this bump triggers the React selectors to
+// re-read it. On web getPodState() IS runtime.state; on desktop the main→
+// renderer snapshot mirror (realtime-mirror.ts) has already upserted the
+// renderer cache and bumped — this extra bump is a harmless no-op there.
+const bumpPods = () => usePodStore.setState((s) => ({ _tick: s._tick + 1 }));
+
 export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: DebounceRef) {
   switch (event.type) {
     case "pod:created": {
@@ -49,12 +53,12 @@ export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: Deboun
     }
     case "pod:status_changed": {
       const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
-      const podState = usePodStore.getState();
-      const existingPodJson = getPodState().get_pod_json(data.podKey);
-      if (!existingPodJson) {
-        podState.fetchPod?.(data.podKey);
+      // Rust dispatch patches a cached pod; a not-yet-cached pod needs the
+      // full entity from the server, which dispatch can't synthesize.
+      if (!getPodState().get_pod_json(data.podKey)) {
+        usePodStore.getState().fetchPod?.(data.podKey);
       } else {
-        podState.updatePodStatus(data.podKey, data.status as "running" | "initializing" | "failed" | "paused" | "terminated" | "error", data.agentStatus, data.errorCode, data.errorMessage);
+        bumpPods();
       }
       if (data.status === "terminated" || data.status === "failed" || data.status === "error") {
         useWorkspaceStore.getState().removePaneByPodKey(data.podKey);
@@ -64,29 +68,26 @@ export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: Deboun
       break;
     }
     case "pod:agent_status_changed": {
-      const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
-      if (data.agentStatus) usePodStore.getState().updateAgentStatus(data.podKey, data.agentStatus);
+      bumpPods();
       break;
     }
     case "pod:terminated": {
       const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
-      usePodStore.getState().updatePodStatus?.(data.podKey, "terminated");
       useWorkspaceStore.getState().removePaneByPodKey(data.podKey);
+      bumpPods();
       debouncedSidebarRefresh(sidebarDebounceRef);
       debouncedFetchTopology();
       break;
     }
-    case "pod:title_changed": {
-      const data = decodeEventData(PodTitleChangedEventDataSchema, event.data);
-      usePodStore.getState().updatePodTitle(data.podKey, data.title);
-      break;
-    }
-    case "pod:alias_changed": {
-      const data = decodeEventData(PodAliasChangedEventDataSchema, event.data);
-      usePodStore.getState().updatePodAliasFromEvent(data.podKey, data.alias ?? null);
+    case "pod:title_changed":
+    case "pod:alias_changed":
+    case "pod:perpetual_changed": {
+      bumpPods();
       break;
     }
     case "pod:init_progress": {
+      // Init progress lives in a transient side-map (creating-pod UI), not the
+      // pod list — keep the explicit apply path.
       const data = decodeEventData(PodInitProgressEventDataSchema, event.data);
       usePodStore.getState().updatePodInitProgress(data.podKey, data.phase, data.progress, data.message);
       break;
@@ -95,11 +96,6 @@ export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: Deboun
       const data = decodeEventData(PodRestartingEventDataSchema, event.data);
       usePodStore.getState().fetchPod?.(data.podKey);
       debouncedSidebarRefresh(sidebarDebounceRef);
-      break;
-    }
-    case "pod:perpetual_changed": {
-      const data = decodeEventData(PodPerpetualChangedEventDataSchema, event.data);
-      usePodStore.getState().updatePodPerpetualFromEvent(data.podKey, data.perpetual);
       break;
     }
   }

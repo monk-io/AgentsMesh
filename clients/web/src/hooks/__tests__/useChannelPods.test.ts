@@ -32,14 +32,17 @@ vi.mock("@/lib/api/facade/channel", async () => {
 
 vi.mock("@/lib/wasm-core", async () => {
   const actual = await vi.importActual<typeof import("@/lib/wasm-core")>("@/lib/wasm-core");
+  const channelObj = {
+    get_channel_pods: async (id: bigint) => {
+      return JSON.stringify({ pods: podsByChannel.get(Number(id)) ?? [] });
+    },
+    channel_pods_json: (id: bigint) => JSON.stringify(podsByChannel.get(Number(id)) ?? []),
+    replace_channel_pods: () => {},
+  };
   return {
     ...actual,
-    getChannelService: () => ({
-      get_channel_pods: async (id: bigint) => {
-        return JSON.stringify({ pods: podsByChannel.get(Number(id)) ?? [] });
-      },
-      channel_pods_json: (id: bigint) => JSON.stringify(podsByChannel.get(Number(id)) ?? []),
-    }),
+    getChannelService: () => channelObj,
+    getChannelState: () => channelObj,
   };
 });
 

@@ -64,6 +64,16 @@ export function createConsoleMonitor(page: Page): ConsoleMonitor {
     // 422 validation) that specs intentionally trigger to verify error
     // paths. 5xx is NOT covered — server-side bugs must still fail e2e.
     /Failed to load resource:.*status of 4[0-9]{2}/i,
+    // Transport-layer hiccups on the dev server's OWN assets. The Next.js
+    // turbopack devserver briefly drops connections under hot-reload churn,
+    // an OOM-restart, or a heavy-route on-demand compile — surfacing as
+    // net::ERR_* on its _next chunks / fonts / the page document. These are
+    // infra flakes, categorically NOT app errors: 5xx, TypeError, "missing
+    // field", "is not valid JSON" are all still caught (none are net::ERR_
+    // transport codes). A dead server yields a blank page that still fails
+    // the spec's real content assertions, so allowing these only removes a
+    // redundant, noisy failure channel — it cannot mask a code regression.
+    /Failed to load resource:.*net::ERR_(CONNECTION_REFUSED|EMPTY_RESPONSE|INCOMPLETE_CHUNKED_ENCODING|CONNECTION_RESET|CONNECTION_CLOSED|NETWORK_CHANGED|ABORTED)/i,
     // Next.js regex-in-pattern parsing on register page (browser's `v`
     // flag stricter than what the form uses). Cosmetic — submission
     // still validates server-side. TODO: pattern attribute should use

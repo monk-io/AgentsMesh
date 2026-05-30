@@ -81,7 +81,7 @@ export class ElectronAutopilotService implements IAutopilotService {
   replace_cached_controllers(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceCachedControllersRequestSchema, reqBytes);
     this._controllersCache = JSON.stringify(req.controllers.map(snapshotToController));
-    void invoke<void>("autopilotReplaceCachedControllers", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotReplaceCachedControllers", Array.from(reqBytes)).catch(() => undefined);
   }
 
   set_current_controller_proto(reqBytes: Uint8Array): void {
@@ -100,7 +100,7 @@ export class ElectronAutopilotService implements IAutopilotService {
       else ctrls.push(c as { autopilot_controller_key: string });
       this._controllersCache = JSON.stringify(ctrls);
     }
-    void invoke<void>("autopilotInsertController", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotInsertController", Array.from(reqBytes)).catch(() => undefined);
   }
 
   patch_controller(reqBytes: Uint8Array): void {
@@ -130,7 +130,7 @@ export class ElectronAutopilotService implements IAutopilotService {
       req.autopilotControllerKey,
       JSON.stringify(req.iterations.map(snapshotToIteration)),
     );
-    void invoke<void>("autopilotReplaceCachedIterations", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotReplaceCachedIterations", Array.from(reqBytes)).catch(() => undefined);
   }
 
   append_iteration(reqBytes: Uint8Array): void {
@@ -197,5 +197,22 @@ export class ElectronAutopilotService implements IAutopilotService {
 
   async handback_controller(key: string): Promise<void> {
     await invoke<void>("autopilotHandbackController", key);
+  }
+
+  // Realtime mirror: main pushes the Rust-computed controller list + the
+  // affected key's iterations/thinking/history after dispatch. Replace the
+  // local caches so the synchronous readers reflect the SSOT. Empty strings
+  // are ignored (nothing to mirror for that facet).
+  apply_autopilot_snapshot(
+    controllersJson: string,
+    key: string,
+    iterationsJson: string,
+    thinkingJson: string,
+    thinkingHistoryJson: string,
+  ): void {
+    if (controllersJson) this._controllersCache = controllersJson;
+    if (key && iterationsJson) this._iterationsCache.set(key, iterationsJson);
+    if (key && thinkingJson) this._thinkingCache.set(key, thinkingJson);
+    if (key && thinkingHistoryJson) this._thinkingHistoryCache.set(key, thinkingHistoryJson);
   }
 }

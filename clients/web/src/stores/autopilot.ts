@@ -7,7 +7,7 @@ import type {
 import { AutopilotThinkingData } from "@/lib/realtime/types";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
-import { getAutopilotService, parseWasmAny } from "@/lib/wasm-core";
+import { getAutopilotState, parseWasmAny } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import {
   listAutopilots as listAutopilotsConnect,
@@ -46,7 +46,11 @@ export {
 
 type Ctrl = AutopilotController;
 const ACTIVE = ["initializing", "running", "paused", "user_takeover", "waiting_approval"];
-const svc = () => getAutopilotService();
+// Autopilot state SSOT is the shared AppState (runtime.state) via
+// getAutopilotState — the SAME state the EventBus dispatch + desktop snapshot
+// mirror write, so realtime controller/iteration/thinking changes flow without
+// a JS pure-patch. Connect-RPC stays on the autopilotConnect facade.
+const svc = () => getAutopilotState();
 const bump = () => useAutopilotStore.setState((s) => ({ _tick: s._tick + 1 }));
 const slug = () => readCurrentOrg()?.slug ?? "";
 

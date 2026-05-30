@@ -7,8 +7,10 @@ use agentsmesh_api_client::{ApiClient, AuthTokenStore};
 use agentsmesh_auth::{AuthManager, PersistentStorage};
 use agentsmesh_events::{EventSubscriptionManager, EventSubscriptionManagerOptions};
 use agentsmesh_local_runner::LocalRunnerManager;
+use agentsmesh_relay::RelayConnectionPool;
 use agentsmesh_services::*;
 use agentsmesh_state::*;
+use agentsmesh_state::app_state::AppRuntime;
 use agentsmesh_transport::runtime::PlatformRuntime;
 
 mod file_storage;
@@ -51,7 +53,22 @@ pub struct AppState {
     // `EventsService.Subscribe` stream the web client uses; main process
     // owns the connection and ferries events to renderer via IPC. See
     // `commands/events_subscribe.rs` for the NAPI surface.
-    events: Arc<Mutex<EventSubscriptionManager<PlatformRuntime>>>,
+    //
+    // The dispatch hook on this manager is wired into
+    // `runtime.state.dispatch` at construction time. Stored as
+    // `Arc<EventSubscriptionManager>` (not `Mutex<...>`) — connect /
+    // disconnect / subscribe are all `&self` and serialize via the
+    // manager's internal `Arc<RwLock<Inner>>`.
+    events: Arc<EventSubscriptionManager<PlatformRuntime>>,
+    // Singleton AppRuntime shared across services + events manager.
+    // Holds `Arc<RwLock<AppState>>` for Phase 2 + the events Arc with
+    // dispatch hook installed.
+    runtime: Arc<AppRuntime>,
+    // Terminal data-plane relay pool (SSOT). The pool runs natively in the
+    // main process (tokio WS via transport::native); commands/relay.rs bridges
+    // it to the renderer over IPC. Construction is spawn-free — connect/send
+    // spawn inside the async relay_* commands (tokio context guaranteed there).
+    relay: RelayConnectionPool,
 }
 
 #[napi]
@@ -65,6 +82,14 @@ impl AppState {
         let local_runner = Arc::new(LocalRunnerManager::from_default_home(base_url.clone()));
         let client = Arc::new(ApiClient::new(base_url, auth.clone()));
         let c = client.clone();
+        // Construct shared events manager + AppRuntime. AppRuntime::new
+        // installs the dispatch hook so every event delivered through
+        // `events.connect()` flows into `runtime.state.dispatch`.
+        let events = Arc::new(EventSubscriptionManager::new(
+            c.clone(),
+            EventSubscriptionManagerOptions::default(),
+        ));
+        let runtime = AppRuntime::new(events.clone());
         Ok(Self {
             auth,
             pod: Arc::new(Mutex::new(PodService::new(c.clone(), pod_state::PodState::new()))),
@@ -95,10 +120,11 @@ impl AppState {
             ))),
             sso: Arc::new(Mutex::new(SSOService::new(c.clone()))),
             local_runner,
-            events: Arc::new(Mutex::new(EventSubscriptionManager::new(
-                c.clone(),
-                EventSubscriptionManagerOptions::default(),
-            ))),
+            events,
+            runtime,
+            // Drop the unsubscribe receiver: the renderer calls relay_unsubscribe
+            // directly (no ConnectionHandle round-trip), so the drain isn't needed.
+            relay: RelayConnectionPool::new().0,
             client: c,
         })
     }
