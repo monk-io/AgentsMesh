@@ -28,6 +28,9 @@ alias(
 
 go_test(
     name = "migrations_test",
-    srcs = ["embed_test.go"],
+    srcs = [
+        "embed_test.go",
+        "sequence_uniqueness_test.go",
+    ],
     embed = [":migrations"],
 )
