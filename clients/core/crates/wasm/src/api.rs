@@ -119,8 +119,7 @@ impl WasmApiClient {
     }
 
     pub fn create_pod_service(&self) -> crate::service_pod::WasmPodService {
-        let state = agentsmesh_state::pod_state::PodState::with_storage(crate::new_memory_backend());
-        crate::service_pod::WasmPodService::new(self.client.clone(), state)
+        crate::service_pod::WasmPodService::new(self.client.clone())
     }
 
     /// Create a WasmEventsManager backed by this client's ApiClient.
@@ -136,33 +135,27 @@ impl WasmApiClient {
     }
 
     pub fn create_ticket_service(&self) -> crate::service_ticket::WasmTicketService {
-        let state = agentsmesh_state::ticket_state::TicketState::with_storage(crate::new_memory_backend());
-        crate::service_ticket::WasmTicketService::new(self.client.clone(), state)
+        crate::service_ticket::WasmTicketService::new(self.client.clone())
     }
 
     pub fn create_channel_service(&self) -> crate::service_channel::WasmChannelService {
-        let state = agentsmesh_state::channel_state::ChannelState::with_storage(crate::new_memory_backend());
-        crate::service_channel::WasmChannelService::new(self.client.clone(), state)
+        crate::service_channel::WasmChannelService::new(self.client.clone())
     }
 
     pub fn create_runner_service(&self) -> crate::service_runner::WasmRunnerService {
-        let state = agentsmesh_state::runner_state::RunnerState::with_storage(crate::new_memory_backend());
-        crate::service_runner::WasmRunnerService::new(self.client.clone(), state)
+        crate::service_runner::WasmRunnerService::new(self.client.clone())
     }
 
     pub fn create_loop_service(&self) -> crate::service_loop::WasmLoopService {
-        let state = agentsmesh_state::loop_state::LoopState::with_storage(crate::new_memory_backend());
-        crate::service_loop::WasmLoopService::new(self.client.clone(), state)
+        crate::service_loop::WasmLoopService::new(self.client.clone())
     }
 
     pub fn create_autopilot_service(&self) -> crate::service_autopilot::WasmAutopilotService {
-        let state = agentsmesh_state::autopilot_state::AutopilotState::new();
-        crate::service_autopilot::WasmAutopilotService::new(self.client.clone(), state)
+        crate::service_autopilot::WasmAutopilotService::new(self.client.clone())
     }
 
     pub fn create_mesh_service(&self) -> crate::service_mesh::WasmMeshService {
-        let state = agentsmesh_state::mesh_state::MeshState::new();
-        crate::service_mesh::WasmMeshService::new(self.client.clone(), state)
+        crate::service_mesh::WasmMeshService::new(self.client.clone())
     }
 
     pub fn create_blockstore_service(&self) -> crate::service_blockstore::WasmBlockstoreService {

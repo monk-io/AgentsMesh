@@ -41,6 +41,21 @@ impl WasmTicketState {
         serde_json::to_string(self.state.read().tickets.get_tickets()).unwrap_or_default()
     }
 
+    // ticket→pods cache moved off the orphan TicketService onto runtime.state
+    // (the dispatch-hook SSOT). `useTicketPods` fetches via the service then
+    // mirrors the result here for synchronous React reads.
+    pub fn ticket_pods_json(&self, slug: &str) -> String {
+        serde_json::to_string(&self.state.read().tickets.get_ticket_pods(slug))
+            .unwrap_or_else(|_| "[]".to_string())
+    }
+
+    pub fn set_ticket_pods(&self, slug: &str, pods_json: &str) -> Result<(), JsValue> {
+        let pods: Vec<agentsmesh_types::proto_pod_v1::Pod> =
+            serde_json::from_str(pods_json).map_err(decode_err)?;
+        self.state.write().tickets.set_ticket_pods(slug, pods);
+        Ok(())
+    }
+
     pub fn board_columns_json(&self) -> String {
         serde_json::to_string(self.state.read().tickets.get_board_columns()).unwrap_or_default()
     }

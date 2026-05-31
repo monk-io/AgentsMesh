@@ -41,7 +41,10 @@ func (s *Server) ListEnvBundles(
 
 	items := make([]*ebv1.EnvBundle, 0, len(bundles))
 	for _, b := range bundles {
-		resp, _ := s.svc.ResponseWithValues(b)
+		resp, err := s.svc.ResponseWithValues(b)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
 		items = append(items, ToProtoEnvBundle(resp))
 	}
 	total := int64(len(items))
@@ -64,7 +67,10 @@ func (s *Server) GetEnvBundle(
 	if err != nil {
 		return nil, mapBundleError(err)
 	}
-	resp, _ := s.svc.ResponseWithValues(bundle)
+	resp, err := s.svc.ResponseWithValues(bundle)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(ToProtoEnvBundle(resp)), nil
 }
 
@@ -97,7 +103,10 @@ func (s *Server) CreateEnvBundle(
 	if err != nil {
 		return nil, mapBundleError(err)
 	}
-	resp, _ := s.svc.ResponseWithValues(bundle)
+	resp, err := s.svc.ResponseWithValues(bundle)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(ToProtoEnvBundle(resp)), nil
 }
 
@@ -130,7 +139,10 @@ func (s *Server) UpdateEnvBundle(
 	if err != nil {
 		return nil, mapBundleError(err)
 	}
-	resp, _ := s.svc.ResponseWithValues(bundle)
+	resp, err := s.svc.ResponseWithValues(bundle)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(ToProtoEnvBundle(resp)), nil
 }
 

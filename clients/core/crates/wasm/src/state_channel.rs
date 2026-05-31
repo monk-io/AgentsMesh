@@ -162,7 +162,7 @@ impl WasmChannelState {
         } else {
             serde_json::to_string(&req.mentions).ok()
         };
-        let mut patch = ChannelMessage {
+        let patch = ChannelMessage {
             id: req.message_id,
             channel_id: req.channel_id,
             body: req.body,
@@ -171,7 +171,6 @@ impl WasmChannelState {
             edited_at: Some(req.edited_at),
             ..ChannelMessage::default()
         };
-        let _ = &mut patch;
         self.state.write().channels.update_message(req.channel_id, patch);
         Ok(())
     }

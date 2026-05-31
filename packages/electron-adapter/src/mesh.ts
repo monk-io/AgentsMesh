@@ -91,7 +91,7 @@ export class ElectronMeshService implements IMeshService {
     // directly (PASS 3 SSOT alignment) — serialize the cached projection back
     // to JSON for the renderer's existing topology_json() consumers.
     this._topologyCache = req.topology ? JSON.stringify(meshTopologyToCache(req.topology)) : null;
-    void invoke<void>("meshReplaceTopology", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appMeshReplaceTopology", Array.from(reqBytes)).catch(() => undefined);
   }
 
   clear_topology(): void { this._topologyCache = null; }
@@ -100,10 +100,11 @@ export class ElectronMeshService implements IMeshService {
     this._selectedNode = podKey ?? null;
   }
 
-  async fetch_topology(): Promise<string> {
-    const result = await invoke<string>("meshFetchTopology");
-    this._topologyCache = result;
-    return result;
+  async fetch_topology(): Promise<Uint8Array> {
+    // Networking-only: returns ReplaceTopologyRequest bytes. The store feeds
+    // them to replace_topology (cache + runtime.state sync) — no local cache
+    // write here, else the projection would run twice.
+    return invoke<Uint8Array>("meshFetchTopology");
   }
 
   // Connect-RPC: proto.mesh.v1.MeshService. Binary wire — every method

@@ -8,6 +8,7 @@ import {
 } from "../useTicketPods";
 
 const podsBySlug = new Map<string, { pod_key: string; status?: string }[]>();
+const stateMirror = new Map<string, string>();
 let pendingFetch: ((_: void) => void) | null = null;
 const getTicketPodsMock = vi.fn(async (slug: string) => {
   if (pendingFetch) {
@@ -24,7 +25,14 @@ vi.mock("@/lib/wasm-core", async () => {
     ...actual,
     getTicketService: () => ({
       get_ticket_pods: getTicketPodsMock,
-      ticket_pods_json: (slug: string) => JSON.stringify(podsBySlug.get(slug) ?? []),
+    }),
+    // ticket→pods cache now lives on runtime.state (WasmTicketState): the
+    // fetch mirrors via set_ticket_pods, the sync read goes through it.
+    getTicketState: () => ({
+      ticket_pods_json: (slug: string) => stateMirror.get(slug) ?? "[]",
+      set_ticket_pods: (slug: string, podsJson: string) => {
+        stateMirror.set(slug, podsJson);
+      },
     }),
   };
 });
@@ -36,6 +44,7 @@ function seed(slug: string, pods: { pod_key: string; status?: string }[]) {
 describe("useTicketPods", () => {
   beforeEach(() => {
     podsBySlug.clear();
+    stateMirror.clear();
     pendingFetch = null;
     getTicketPodsMock.mockClear();
     __resetTicketPodsCacheForTests();

@@ -61,6 +61,11 @@ const api = {
     ipcRenderer.on("relay:acp", listener);
     return () => ipcRenderer.removeListener("relay:acp", listener);
   },
+  onRelayPodDisconnected: (handler: (payload: { podKey: string }) => void) => {
+    const listener = (_e: IpcRendererEvent, payload: { podKey: string }) => handler(payload);
+    ipcRenderer.on("relay:pod-disconnected", listener);
+    return () => ipcRenderer.removeListener("relay:pod-disconnected", listener);
+  },
   serverConfig: {
     snapshot: serverConfigSnapshot,
     get: () => ipcRenderer.invoke("serverConfig:get"),

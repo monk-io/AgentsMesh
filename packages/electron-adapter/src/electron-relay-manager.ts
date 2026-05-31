@@ -8,6 +8,7 @@ interface RelayPushApi {
   onRelayOutput?: (h: (p: { podKey: string; data: Uint8Array }) => void) => () => void;
   onRelayStatus?: (h: (p: { podKey: string; json: string }) => void) => () => void;
   onRelayAcp?: (h: (p: { podKey: string; json: string }) => void) => () => void;
+  onRelayPodDisconnected?: (h: (p: { podKey: string }) => void) => () => void;
 }
 
 // Renderer-side mirror of WASM's WasmRelayManager. The main-process Rust pool
@@ -24,6 +25,7 @@ export class ElectronRelayManager {
   private outputCbs = new Map<string, Map<string, OutputCb>>();
   private statusCbs = new Map<string, Set<StatusCb>>();
   private acpCbs = new Map<string, Set<AcpCb>>();
+  private disconnectCbs = new Set<(podKey: string) => void>();
 
   constructor() {
     const api = (globalThis as { window?: { electronAPI?: RelayPushApi } }).window?.electronAPI;
@@ -41,6 +43,14 @@ export class ElectronRelayManager {
       const { msgType, payload } = JSON.parse(json) as { msgType: number; payload: unknown };
       const s = this.acpCbs.get(podKey);
       if (s) for (const cb of s) cb(msgType, payload);
+    });
+    api.onRelayPodDisconnected?.(({ podKey }) => {
+      // Pool tore the pod down + cleared its Rust listeners. Drop our mirror's
+      // per-pod sets so the next subscribe re-registers cleanly (no dupes), then
+      // notify the relayConnection adapter to reset its upstream guard.
+      this.statusCbs.delete(podKey);
+      this.acpCbs.delete(podKey);
+      for (const cb of this.disconnectCbs) cb(podKey);
     });
   }
 
@@ -81,5 +91,9 @@ export class ElectronRelayManager {
     let s = this.acpCbs.get(podKey);
     if (!s) { s = new Set(); this.acpCbs.set(podKey, s); }
     s.add(cb);
+  }
+
+  async on_pod_disconnected(cb: (podKey: string) => void) {
+    this.disconnectCbs.add(cb);
   }
 }

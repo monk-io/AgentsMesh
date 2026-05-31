@@ -331,7 +331,8 @@ function registerLegacyApiAliases() {
   // exposes these aliases for desktop e2e specs that still invoke through
   // IPC by name. The cache update is necessary because main's AppState
   // holds a separate Rust state from the renderer wasm — without the
-  // ReplaceChannelPods fan-out, channelChannelPodsJson stays empty.
+  // app_channel_replace_pods fan-out into runtime.state, appChannelPodsJson
+  // returns empty.
   //
   // Connect-JSON serializes int64 as a JSON string to preserve precision —
   // IPC callers parse the channel response and forward `id` to us as a
@@ -418,8 +419,8 @@ function registerLegacyApiAliases() {
     // handler (called from renderer through serialised IPC) sees the value
     // as an opaque object without a `length` accessor. Materialise as a
     // plain array to match the rest of the proto-bytes NAPI surface.
-    await (appState as { channelReplaceChannelPods: (b: number[]) => Promise<void> })
-      .channelReplaceChannelPods(Array.from(bytes));
+    await (appState as { appChannelReplacePods: (b: number[]) => Promise<void> })
+      .appChannelReplacePods(Array.from(bytes));
   };
 
   const fetchChannelEnvelope = async (channelId: number): Promise<string> => {
@@ -462,8 +463,8 @@ function registerLegacyApiAliases() {
     // legacy envelope `{pods: [...], total: N}` so it can mirror the array
     // into its renderer-side cache. The Rust cache JSON is a bare array —
     // wrap it back into the legacy shape.
-    const cacheJson = await (appState as { channelChannelPodsJson: (id: number) => Promise<string> })
-      .channelChannelPodsJson(channelId);
+    const cacheJson = await (appState as { appChannelPodsJson: (id: number) => Promise<string> })
+      .appChannelPodsJson(channelId);
     const pods = JSON.parse(cacheJson) as unknown[];
     return JSON.stringify({ pods, total: pods.length });
   });

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::AutopilotService;
-use agentsmesh_state::autopilot_state::AutopilotState;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -10,77 +9,8 @@ pub struct WasmAutopilotService(pub(crate) AutopilotService);
 
 #[wasm_bindgen]
 impl WasmAutopilotService {
-    pub(crate) fn new(client: Arc<ApiClient>, state: AutopilotState) -> Self {
-        Self(AutopilotService::new(client, state))
-    }
-
-    pub fn controllers_json(&self) -> String { self.0.controllers_json() }
-
-    pub fn current_controller_json(&self) -> JsValue {
-        match self.0.current_controller_json() {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn get_controller_by_pod_key_json(&self, pod_key: &str) -> JsValue {
-        match self.0.get_controller_by_pod_key_json(pod_key) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn get_iterations_json(&self, key: &str) -> JsValue {
-        match self.0.get_iterations_json(key) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn get_thinking_json(&self, key: &str) -> JsValue {
-        match self.0.get_thinking_json(key) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn get_thinking_history_json(&self, key: &str) -> JsValue {
-        match self.0.get_thinking_history_json(key) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn replace_cached_controllers(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.replace_cached_controllers(req_bytes)
-    }
-
-    pub fn set_current_controller_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.set_current_controller_proto(req_bytes)
-    }
-
-    pub fn insert_controller(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.insert_controller(req_bytes)
-    }
-
-    pub fn patch_controller(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.patch_controller(req_bytes)
-    }
-
-    pub fn remove_controller_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.remove_controller_proto(req_bytes)
-    }
-
-    pub fn replace_cached_iterations(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.replace_cached_iterations(req_bytes)
-    }
-
-    pub fn append_iteration(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.append_iteration(req_bytes)
-    }
-
-    pub fn update_thinking_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
-        self.0.update_thinking_proto(req_bytes)
+    pub(crate) fn new(client: Arc<ApiClient>) -> Self {
+        Self(AutopilotService::new(client))
     }
 
     // -------- Connect-RPC (binary wire) --------

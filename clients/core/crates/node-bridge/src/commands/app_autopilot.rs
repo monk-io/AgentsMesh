@@ -2,8 +2,10 @@ use napi_derive::napi;
 
 use agentsmesh_state::autopilot_state::{AutopilotController, AutopilotIteration};
 use agentsmesh_types::proto_autopilot_state_v1::{
-    AutopilotControllerSnapshot, AutopilotIterationSnapshot, InsertControllerRequest,
-    ReplaceCachedControllersRequest, ReplaceCachedIterationsRequest,
+    AppendIterationRequest, AutopilotControllerSnapshot, AutopilotIterationSnapshot,
+    InsertControllerRequest, PatchControllerRequest, RemoveControllerRequest,
+    ReplaceCachedControllersRequest, ReplaceCachedIterationsRequest, SetCurrentControllerRequest,
+    UpdateThinkingRequest,
 };
 use prost::Message as _;
 
@@ -115,6 +117,59 @@ impl AppState {
             .write()
             .autopilot
             .set_iterations(req.autopilot_controller_key, iters);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn app_autopilot_set_current_controller_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = SetCurrentControllerRequest::decode(&req_bytes[..]).map_err(decode_err)?;
+        self.runtime
+            .state
+            .write()
+            .autopilot
+            .set_current_controller(req.controller.map(from_snapshot));
+        Ok(())
+    }
+
+    #[napi]
+    pub fn app_autopilot_patch_controller(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = PatchControllerRequest::decode(&req_bytes[..]).map_err(decode_err)?;
+        if let Some(c) = req.controller {
+            self.runtime
+                .state
+                .write()
+                .autopilot
+                .update_controller(&req.autopilot_controller_key, from_snapshot(c));
+        }
+        Ok(())
+    }
+
+    #[napi]
+    pub fn app_autopilot_remove_controller_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = RemoveControllerRequest::decode(&req_bytes[..]).map_err(decode_err)?;
+        self.runtime.state.write().autopilot.remove_controller(&req.autopilot_controller_key);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn app_autopilot_append_iteration(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = AppendIterationRequest::decode(&req_bytes[..]).map_err(decode_err)?;
+        if let Some(iter) = req.iteration {
+            self.runtime
+                .state
+                .write()
+                .autopilot
+                .add_iteration(req.autopilot_controller_key, from_iteration_snapshot(iter));
+        }
+        Ok(())
+    }
+
+    #[napi]
+    pub fn app_autopilot_update_thinking_proto(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = UpdateThinkingRequest::decode(&req_bytes[..]).map_err(decode_err)?;
+        if let Ok(v) = serde_json::from_str(&req.thinking_json) {
+            self.runtime.state.write().autopilot.update_thinking(req.autopilot_controller_key, v);
+        }
         Ok(())
     }
 }

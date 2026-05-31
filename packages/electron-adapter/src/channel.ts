@@ -259,14 +259,14 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
   replace_channel_pods(reqBytes: Uint8Array): Promise<void> {
     const req = fromBinary(ReplaceChannelPodsRequestSchema, reqBytes);
     this.set_channel_pods(req.channelId, JSON.stringify(req.pods.map(podToCache)));
-    void invoke<void>("channelReplaceChannelPods", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelReplacePods", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
   replace_channel_members(reqBytes: Uint8Array): Promise<void> {
     const req = fromBinary(ReplaceChannelMembersRequestSchema, reqBytes);
     this.set_channel_members(req.channelId, JSON.stringify(req.members.map(memberToCache)));
-    void invoke<void>("channelReplaceChannelMembers", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelReplaceMembers", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 
@@ -277,7 +277,7 @@ export class ElectronChannelService extends ChannelLocalState implements IChanne
     const members = JSON.parse(json) as Array<{ user_id: number }>;
     const filtered = members.filter((m) => m.user_id !== Number(req.userId));
     this._membersByChannel.set(key, JSON.stringify(filtered));
-    void invoke<void>("channelRemoveChannelMember", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appChannelRemoveMember", Array.from(reqBytes)).catch(() => undefined);
     return Promise.resolve();
   }
 

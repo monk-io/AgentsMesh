@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import type { AutopilotControllerData, AutopilotIterationData } from "@/lib/viewModels/autopilot";
 import type { AutopilotThinkingData } from "@/lib/realtime/types";
-import { getAutopilotService, parseWasmAny } from "@/lib/wasm-core";
+import { getAutopilotState, parseWasmAny } from "@/lib/wasm-core";
 import { useAutopilotStore } from "./autopilot";
 
 type Ctrl = AutopilotControllerData;
-const svc = () => getAutopilotService();
+const svc = () => getAutopilotState();
 
 export function useAutopilotControllers(): Ctrl[] {
   const tick = useAutopilotStore((s) => s._tick);

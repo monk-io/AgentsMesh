@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { useMemo } from "react";
 import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import type { LoopData, LoopRunData, RunStatus, CreateLoopRequest, UpdateLoopRequest } from "@/lib/viewModels/loop";
-import { getLoopService } from "@/lib/wasm-core";
+import { getLoopState } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
@@ -29,7 +29,7 @@ import { loopToProtoLoop, loopRunToProtoLoopRun } from "@/lib/api/loopProtoMap";
 
 export type { LoopData, LoopRunData, RunStatus };
 
-const svc = () => getLoopService();
+const svc = () => getLoopState();
 const bump = () => useLoopStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 function orgSlug(): string {

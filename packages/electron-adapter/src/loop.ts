@@ -77,19 +77,19 @@ export class ElectronLoopService implements ILoopService {
   replace_cached_loops(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceCachedLoopsRequestSchema, reqBytes);
     this._loopsCache = JSON.stringify(req.loops.map(loopToCache));
-    void invoke<void>("loopSvcReplaceCachedLoops", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopReplaceCachedLoops", Array.from(reqBytes)).catch(() => undefined);
   }
 
   set_current_loop(reqBytes: Uint8Array): void {
     const req = fromBinary(SetCurrentLoopRequestSchema, reqBytes);
     this._currentLoopCache = req.loop ? JSON.stringify(loopToCache(req.loop)) : null;
-    void invoke<void>("loopSvcSetCurrentLoop", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopSetCurrentLoop", Array.from(reqBytes)).catch(() => undefined);
   }
 
   clear_current_loop(reqBytes: Uint8Array): void {
     fromBinary(ClearCurrentLoopRequestSchema, reqBytes);
     this._currentLoopCache = null;
-    void invoke<void>("loopSvcClearCurrentLoop", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopClearCurrentLoop", Array.from(reqBytes)).catch(() => undefined);
   }
 
   patch_loop_from_action(reqBytes: Uint8Array): void {
@@ -101,7 +101,7 @@ export class ElectronLoopService implements ILoopService {
       if (idx >= 0) list[idx] = { ...list[idx], ...patch } as { slug: string };
       this._loopsCache = JSON.stringify(list);
     }
-    void invoke<void>("loopSvcPatchLoopFromAction", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopPatchLoopFromAction", Array.from(reqBytes)).catch(() => undefined);
   }
 
   insert_loop_run(reqBytes: Uint8Array): void {
@@ -111,13 +111,13 @@ export class ElectronLoopService implements ILoopService {
       runs.push(runToCache(req.run));
       this._runsCache = JSON.stringify(runs);
     }
-    void invoke<void>("loopSvcInsertLoopRun", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopInsertLoopRun", Array.from(reqBytes)).catch(() => undefined);
   }
 
   replace_cached_runs(reqBytes: Uint8Array): void {
     const req = fromBinary(ReplaceCachedRunsRequestSchema, reqBytes);
     this._runsCache = JSON.stringify(req.runs.map(runToCache));
-    void invoke<void>("loopSvcReplaceCachedRuns", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopReplaceCachedRuns", Array.from(reqBytes)).catch(() => undefined);
   }
 
   append_cached_runs(reqBytes: Uint8Array): void {
@@ -125,7 +125,7 @@ export class ElectronLoopService implements ILoopService {
     const existing = JSON.parse(this._runsCache) as unknown[];
     const newer = req.runs.map(runToCache);
     this._runsCache = JSON.stringify([...existing, ...newer]);
-    void invoke<void>("loopSvcAppendCachedRuns", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopAppendCachedRuns", Array.from(reqBytes)).catch(() => undefined);
   }
 
   patch_loop_run_status(reqBytes: Uint8Array): void {
@@ -134,12 +134,12 @@ export class ElectronLoopService implements ILoopService {
     const r = runs.find(x => x.id === Number(req.runId));
     if (r) r.status = req.status;
     this._runsCache = JSON.stringify(runs);
-    void invoke<void>("loopSvcPatchLoopRunStatus", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopPatchLoopRunStatus", Array.from(reqBytes)).catch(() => undefined);
   }
 
   clear_loop_runs(reqBytes: Uint8Array): void {
     fromBinary(ClearLoopRunsRequestSchema, reqBytes);
     this._runsCache = "[]";
-    void invoke<void>("loopSvcClearLoopRuns", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appLoopClearLoopRuns", Array.from(reqBytes)).catch(() => undefined);
   }
 }

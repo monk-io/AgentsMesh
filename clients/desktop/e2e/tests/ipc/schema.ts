@@ -385,164 +385,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "autopilotAppendIteration",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotControllersJson",
-    "group": "autopilot",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotCurrentControllerJson",
-    "group": "autopilot",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotGetControllerByPodKeyJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotGetIterationsJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotGetThinkingHistoryJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotGetThinkingJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotInsertController",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotPatchController",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotRemoveControllerProto",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotReplaceCachedControllers",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotReplaceCachedIterations",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotSetCurrentControllerProto",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "autopilotUpdateThinkingProto",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
     "name": "bindingAcceptBindingConnect",
     "group": "binding",
     "params": [
@@ -907,30 +749,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "channelApplyChannelMessageEditedEvent",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelApplyIncomingChannelMessage",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "boolean",
-    "ipcExposable": true
-  },
-  {
     "name": "channelArchiveChannelConnect",
     "group": "channel",
     "params": [
@@ -943,61 +761,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "channelChannelMembersJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelChannelPodsJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelChannelsJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelClearChannelMentions",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelClearChannelUnread",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
     "name": "channelCreateChannelConnect",
     "group": "channel",
     "params": [
@@ -1007,13 +770,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelCurrentChannelJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string",
     "ipcExposable": true
   },
   {
@@ -1041,22 +797,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "channelFilterChannelsJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "query",
-        "type": "string"
-      },
-      {
-        "name": "includeArchived",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
     "name": "channelGetChannelConnect",
     "group": "channel",
     "params": [
@@ -1069,18 +809,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "channelGetChannelJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
     "name": "channelGetChannelUnreadCountsConnect",
     "group": "channel",
     "params": [
@@ -1090,102 +818,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelGetLastMessageJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelGetMentionCount",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "number",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelGetMessagesJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelGetUnreadCount",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "number",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelIncrementMention",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelIncrementUnread",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelInsertChannel",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelInsertChannelMessage",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
     "ipcExposable": true
   },
   {
@@ -1237,137 +869,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "channelMentionCountsJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelPatchChannelMemberCount",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelPrependCachedChannelMessages",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelRemoveChannelMember",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelRemoveMessage",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "messageId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelReplaceCachedChannelMessages",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelReplaceCachedChannels",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelReplaceChannelMembers",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelReplaceChannelPods",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelReplaceChannelUnreadCounts",
-    "group": "channel",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelSelectChannel",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
     "name": "channelSendChannelMessageConnect",
     "group": "channel",
     "params": [
@@ -1380,60 +881,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "channelSetCurrentChannel",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelSetCurrentUserId",
-    "group": "channel",
-    "params": [
-      {
-        "name": "userId",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelSortedChannelIdsJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "mode",
-        "type": "string"
-      },
-      {
-        "name": "includeArchived",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelTotalMentionCount",
-    "group": "channel",
-    "params": [],
-    "returnType": "number",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelTotalUnreadCount",
-    "group": "channel",
-    "params": [],
-    "returnType": "number",
-    "ipcExposable": true
-  },
-  {
     "name": "channelUnarchiveChannelConnect",
     "group": "channel",
     "params": [
@@ -1443,13 +890,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>",
-    "ipcExposable": true
-  },
-  {
-    "name": "channelUnreadCountsJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string",
     "ipcExposable": true
   },
   {
@@ -2057,147 +1497,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "loopSvcAppendCachedRuns",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcClearCurrentLoop",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcClearLoopRuns",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcCurrentLoopJson",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcGetLoopBySlugJson",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcInsertLoopRun",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcLoopsJson",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcPatchLoopFromAction",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcPatchLoopRunStatus",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcReplaceCachedLoops",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcReplaceCachedRuns",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcRunsJson",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "loopSvcSetCurrentLoop",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
     "name": "meshBatchGetTicketPodsConnect",
     "group": "mesh",
     "params": [
@@ -2207,13 +1506,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Uint8Array",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshClearTopology",
-    "group": "mesh",
-    "params": [],
-    "returnType": "void",
     "ipcExposable": true
   },
   {
@@ -2232,38 +1524,7 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "meshFetchTopology",
     "group": "mesh",
     "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshGetActiveNodesJson",
-    "group": "mesh",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshGetChannelsForNodeJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshGetEdgesForNodeJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
+    "returnType": "Uint8Array",
     "ipcExposable": true
   },
   {
@@ -2279,42 +1540,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "meshGetNodeJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshGetNodesByRunnerJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "runnerId",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshGetRunnerInfoJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "runnerId",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
     "name": "meshGetTicketPodsConnect",
     "group": "mesh",
     "params": [
@@ -2324,70 +1549,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Uint8Array",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshReplaceTopology",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshSelectedNode",
-    "group": "mesh",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshSelectNode",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string | undefined | null"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "meshTopologyJson",
-    "group": "mesh",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "podCurrentPodJson",
-    "group": "pod",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "podGetPodJson",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "podPodsJson",
-    "group": "pod",
-    "params": [],
-    "returnType": "string",
     "ipcExposable": true
   },
   {
@@ -2439,20 +1600,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "runnerAvailableRunnersJson",
-    "group": "runner",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerCurrentRunnerJson",
-    "group": "runner",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
     "name": "runnerGetAuthStatus",
     "group": "runner",
     "params": [
@@ -2462,101 +1609,6 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "Array<number>",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerGetRunnerJson",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerPatchCachedRunner",
-    "group": "runner",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerRemoveCachedRunner",
-    "group": "runner",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerReplaceAvailableRunners",
-    "group": "runner",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerReplaceCachedRunners",
-    "group": "runner",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerRunnersJson",
-    "group": "runner",
-    "params": [],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerSetCurrentRunnerProto",
-    "group": "runner",
-    "params": [
-      {
-        "name": "reqBytes",
-        "type": "Array<number>"
-      }
-    ],
-    "returnType": "void",
-    "ipcExposable": true
-  },
-  {
-    "name": "runnerUpdateRunnerStatus",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "returnType": "void",
     "ipcExposable": true
   },
   {
@@ -2852,18 +1904,6 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
-    "name": "ticketTicketPodsJson",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "string",
-    "ipcExposable": true
-  },
-  {
     "name": "ticketUpdateLabelConnect",
     "group": "ticket",
     "params": [
@@ -3032,6 +2072,18 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
+    "name": "appAutopilotAppendIteration",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
     "name": "appAutopilotControllersJson",
     "group": "uncategorized",
     "params": [],
@@ -3063,6 +2115,30 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
+    "name": "appAutopilotPatchController",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotRemoveControllerProto",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
     "name": "appAutopilotReplaceCachedControllers",
     "group": "uncategorized",
     "params": [
@@ -3076,6 +2152,18 @@ export const ipcSchema: IpcMethodSchema[] = [
   },
   {
     "name": "appAutopilotReplaceCachedIterations",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotSetCurrentControllerProto",
     "group": "uncategorized",
     "params": [
       {
@@ -3108,6 +2196,18 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotUpdateThinkingProto",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
     "ipcExposable": true
   },
   {
@@ -3197,7 +2297,31 @@ export const ipcSchema: IpcMethodSchema[] = [
     "ipcExposable": true
   },
   {
+    "name": "appChannelPodsJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
     "name": "appChannelPrependCachedMessages",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelRemoveMember",
     "group": "uncategorized",
     "params": [
       {
@@ -3238,6 +2362,30 @@ export const ipcSchema: IpcMethodSchema[] = [
   },
   {
     "name": "appChannelReplaceCachedMessages",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceMembers",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplacePods",
     "group": "uncategorized",
     "params": [
       {
@@ -3291,6 +2439,126 @@ export const ipcSchema: IpcMethodSchema[] = [
       }
     ],
     "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopAppendCachedRuns",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopClearCurrentLoop",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopClearLoopRuns",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopInsertLoopRun",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopPatchLoopFromAction",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopPatchLoopRunStatus",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopReplaceCachedLoops",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopReplaceCachedRuns",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopSetCurrentLoop",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appMeshReplaceTopology",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
     "ipcExposable": true
   },
   {
@@ -3560,6 +2828,18 @@ export const ipcSchema: IpcMethodSchema[] = [
       },
       {
         "name": "onAcp",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relayOnPodDisconnected",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "onDisconnect",
         "type": "(err: unknown, arg: string) => void"
       }
     ],

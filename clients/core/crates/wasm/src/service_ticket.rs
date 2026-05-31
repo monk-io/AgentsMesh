@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::TicketService;
-use agentsmesh_state::ticket_state::TicketState;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -10,22 +9,18 @@ pub struct WasmTicketService(pub(crate) TicketService);
 
 #[wasm_bindgen]
 impl WasmTicketService {
-    pub(crate) fn new(client: Arc<ApiClient>, state: TicketState) -> Self {
-        Self(TicketService::new(client, state))
+    pub(crate) fn new(client: Arc<ApiClient>) -> Self {
+        Self(TicketService::new(client))
     }
 
-    // -------- Ticket→Pod lookup (MeshService domain) — kept on this
-    // service because the per-ticket pod cache is tied to the ticket
-    // detail view, not the ticket list cache.
+    // -------- Ticket→Pod lookup (MeshService domain). Fetch-only now: the
+    // result is mirrored into runtime.state via WasmTicketState.set_ticket_pods
+    // by the caller (useTicketPods), so the cache is the shared SSOT.
 
     pub async fn get_ticket_pods(
         &self, slug: &str, active_only: Option<bool>,
     ) -> Result<String, String> {
         self.0.get_ticket_pods(slug, active_only).await
-    }
-
-    pub fn ticket_pods_json(&self, slug: &str) -> String {
-        self.0.ticket_pods_json(slug)
     }
 
     // -------- Connect-RPC (binary wire) --------

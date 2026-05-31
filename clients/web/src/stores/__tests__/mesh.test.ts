@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act } from "@testing-library/react";
 
 const mockFetchTopology = vi.fn();
+const mockReplaceTopology = vi.fn();
 const mockSelectNode = vi.fn();
 const mockSelectedNode = vi.fn();
 const mockGetNodeJson = vi.fn();
@@ -16,8 +17,13 @@ const noopSvc = new Proxy({}, {
 });
 
 vi.mock("@/lib/wasm-core", () => ({
+  // networking-only after the SSOT migration
   getMeshService: () => ({
     fetch_topology: mockFetchTopology,
+  }),
+  // runtime.state.mesh surface: reads + select + replace
+  getMeshState: () => ({
+    replace_topology: mockReplaceTopology,
     select_node: mockSelectNode,
     selected_node: mockSelectedNode,
     get_node_json: mockGetNodeJson,

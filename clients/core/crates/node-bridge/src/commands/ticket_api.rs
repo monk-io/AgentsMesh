@@ -114,10 +114,4 @@ impl AppState {
         let svc = self.ticket.lock().await;
         svc.get_ticket_pods(&slug, active_only).await.map_err(err)
     }
-
-    #[napi]
-    pub async fn ticket_ticket_pods_json(&self, slug: String) -> napi::Result<String> {
-        let svc = self.ticket.lock().await;
-        Ok(svc.ticket_pods_json(&slug))
-    }
 }

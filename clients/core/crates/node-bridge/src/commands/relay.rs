@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use agentsmesh_protocol::MsgType;
-use agentsmesh_relay::{AcpCallback, OutputCallback, RelayStatusInfo, StatusCallback};
+use agentsmesh_relay::{AcpCallback, DisconnectCallback, OutputCallback, RelayStatusInfo, StatusCallback};
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi_derive::napi;
 
@@ -133,6 +133,22 @@ impl AppState {
             cb.call(Ok(json), ThreadsafeFunctionCallMode::NonBlocking);
         });
         self.relay.on_acp_message(&pod_key, listener).await;
+        Ok(())
+    }
+
+    /// Pod-disconnected sink — `(podKey: string) => void`; main forwards as a
+    /// `relay:pod-disconnected` IPC event so the renderer adapter resets its
+    /// register-once guard and re-wires status/ACP on the next subscribe.
+    #[napi]
+    pub async fn relay_on_pod_disconnected(
+        &self,
+        on_disconnect: ThreadsafeFunction<String>,
+    ) -> napi::Result<()> {
+        let cb = Arc::new(on_disconnect);
+        let listener: DisconnectCallback = Arc::new(move |pod_key: String| {
+            cb.call(Ok(pod_key), ThreadsafeFunctionCallMode::NonBlocking);
+        });
+        self.relay.set_on_pod_disconnected(listener);
         Ok(())
     }
 }

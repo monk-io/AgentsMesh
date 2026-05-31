@@ -395,7 +395,7 @@ export interface ILoopState {
 
 export interface IMeshService {
   clear_topology(): void;
-  fetch_topology(): Promise<string>;
+  fetch_topology(): Promise<Uint8Array>;
   get_active_nodes_json(): string;
   get_channels_for_node_json(pod_key: string): string;
   get_edges_for_node_json(pod_key: string): string;

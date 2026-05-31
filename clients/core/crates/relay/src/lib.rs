@@ -10,8 +10,8 @@ pub mod types;
 pub use error::RelayError;
 pub use pool::RelayConnectionPool;
 pub use types::{
-    AcpCallback, ConnectionHandle, OutputCallback, RelayStatus, RelayStatusInfo, SnapshotData,
-    StatusCallback,
+    AcpCallback, ConnectionHandle, DisconnectCallback, OutputCallback, RelayStatus,
+    RelayStatusInfo, SnapshotData, StatusCallback,
 };
 
 #[cfg(test)]

@@ -162,14 +162,19 @@ impl<R: Runtime> RelayConnectionPool<R> {
             conn.ws_write_tx = None;
         }
         inner.last_inputs.remove(pod_key);
-        // status_listeners and acp_listeners are pod-scoped, not
-        // connection-scoped: a consumer registers them once and expects them to
-        // keep firing across a disconnect→reconnect (e.g. ACP after a runner
-        // restart). Neither this pool nor the WASM/FFI managers expose an
-        // off_* method, so callers register once per pod; clearing here would
-        // silently drop those callbacks with no way to re-register.
+        // The pod connection is fully torn down (no remaining subscribers).
+        // Clear its pod-scoped listeners and notify the adapter so it drops its
+        // register-once guard and re-registers on the next subscribe. A
+        // transient runner restart takes the RunnerDisconnected dispatch path
+        // (keeps the connection) and never reaches here, so live terminals keep
+        // their status/ACP listeners across runner churn.
+        inner.status_listeners.remove(pod_key);
+        inner.acp_listeners.remove(pod_key);
         if let Some(h) = inner.resize_debounce.remove(pod_key) {
             h.abort();
+        }
+        if let Some(cb) = &inner.on_pod_disconnected {
+            cb(pod_key.to_string());
         }
     }
 

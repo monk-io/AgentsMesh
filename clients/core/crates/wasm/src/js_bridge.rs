@@ -71,6 +71,15 @@ pub(crate) fn make_acp_callback(
     )
 }
 
+pub(crate) fn make_disconnect_callback(
+    f: js_sys::Function,
+) -> agentsmesh_relay::DisconnectCallback {
+    let f = JsFunction(f);
+    Arc::new(move |pod_key: String| {
+        f.call1(&pod_key.into());
+    })
+}
+
 pub(crate) fn make_event_handler(
     f: js_sys::Function,
 ) -> agentsmesh_events::EventHandler {

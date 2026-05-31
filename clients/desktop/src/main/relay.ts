@@ -97,6 +97,15 @@ export function setupRelayBridge(
     ipcMain.handle(channel, (_e, ...args) => (fn as (...a: unknown[]) => unknown)(...args));
   }
 
+  // Single pod-disconnected sink: the pool fires this once a pod's connection
+  // is fully torn down (having already cleared that pod's status/ACP listeners).
+  // Reset the per-pod wired guard so the next subscribe re-registers them, and
+  // tell the renderer's mirror to drop its guards too.
+  void appState.relayOnPodDisconnected((_e: unknown, podKey: string) => {
+    listenersWired.delete(podKey);
+    send("relay:pod-disconnected", { podKey });
+  });
+
   return {
     dispose: () => {
       for (const channel of Object.keys(handlers)) ipcMain.removeHandler(channel);

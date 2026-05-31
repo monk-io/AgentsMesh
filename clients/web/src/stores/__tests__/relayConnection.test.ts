@@ -22,6 +22,7 @@ const mgr = {
   get_pod_size: vi.fn().mockResolvedValue(null),
   on_status_change: vi.fn().mockResolvedValue(undefined),
   on_acp_message: vi.fn().mockResolvedValue(undefined),
+  on_pod_disconnected: vi.fn(),
 };
 
 vi.mock("@/lib/api/facade/podConnect", () => ({

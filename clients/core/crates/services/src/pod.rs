@@ -1,33 +1,19 @@
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_state::pod_state::PodState;
 use agentsmesh_types::proto_pod_v1 as pod_proto;
 use prost::Message;
 
+// Networking-only service for the pod domain. The pod cache lives in the
+// shared `AppState.pods` (dispatch-hook SSOT), reached via the wasm/napi
+// `app_pod*` surface — this service speaks only the Connect-RPC wire.
 pub struct PodService {
     client: Arc<ApiClient>,
-    state: RwLock<PodState>,
 }
 
 impl PodService {
-    pub fn new(client: Arc<ApiClient>, state: PodState) -> Self {
-        Self { client, state: RwLock::new(state) }
-    }
-
-    pub fn pods_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().pods()).unwrap_or_default()
-    }
-
-    pub fn current_pod_json(&self) -> Option<String> {
-        self.state.read().unwrap().current_pod()
-            .map(|pod| serde_json::to_string(pod).unwrap_or_default())
-    }
-
-    pub fn get_pod_json(&self, pod_key: &str) -> Option<String> {
-        self.state.read().unwrap().get_pod(pod_key)
-            .map(|pod| serde_json::to_string(pod).unwrap_or_default())
+    pub fn new(client: Arc<ApiClient>) -> Self {
+        Self { client }
     }
 
     // -------- Connect-RPC (binary wire) --------

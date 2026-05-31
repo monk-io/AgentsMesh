@@ -1,5 +1,11 @@
 import type { ApiFixture } from "../fixtures/api.fixture";
 import { TEST_ORG_SLUG, getApiBaseUrl } from "./env";
+import { pollUntil } from "./retry";
+
+// Mirror of backend agentpod.IsPodStatusActive — the exact predicate the
+// GetPodConnection gate uses (connect/pod/connection.go). A pod outside this
+// set 400s with "pod is not active".
+const CONNECTABLE_STATUSES = ["initializing", "running", "paused", "disconnected"];
 
 // Slug of the built-in e2e-mock-agent AgentFile, owned by the
 // universal-mock plan. See backend/migrations/000151_e2e_echo_dual_mode.
@@ -66,6 +72,23 @@ export async function createMockAgentPod(
   if (!podKey) {
     throw new Error(`createMockAgentPod missing podKey: ${JSON.stringify(resp)}`);
   }
+
+  // CreatePod returns before the runner spawns the pod process, so the pod sits
+  // in a pre-active status. Navigating now would race the create→active
+  // transition and GetPodConnection would 400 ("pod is not active"), surfacing
+  // as an uncaught pageerror that the default-deny monitor flags. Gate on the
+  // same predicate the backend connect gate uses so the returned pod is
+  // connectable.
+  await pollUntil(
+    async () => {
+      const { items } = (await cc.pod.listPods({ orgSlug: TEST_ORG_SLUG })) as {
+        items?: Array<{ podKey?: string; status?: string }>;
+      };
+      const mine = items?.find((p) => p.podKey === podKey);
+      return !!mine && CONNECTABLE_STATUSES.includes(mine.status ?? "");
+    },
+    { maxAttempts: 30, intervalMs: 1000, label: `pod-${podKey}-connectable` },
+  );
 
   return {
     podKey,

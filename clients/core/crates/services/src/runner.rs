@@ -1,84 +1,20 @@
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_state::runner_state::RunnerState;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::proto_runner_api_v1::Runner;
-use agentsmesh_types::proto_runner_state_v1::{
-    PatchCachedRunnerRequest, RemoveCachedRunnerRequest, ReplaceAvailableRunnersRequest,
-    ReplaceCachedRunnersRequest, SetCurrentRunnerRequest,
-};
 use prost::Message;
 
+// Networking-only service for the runner domain. The runner cache lives in the
+// shared `AppState.runners` (dispatch-hook SSOT), reached via the wasm/napi
+// `app_runner*` surface — this service speaks only the Connect-RPC wire
+// (including the registration-bootstrap auth RPCs).
 pub struct RunnerService {
     client: Arc<ApiClient>,
-    state: RwLock<RunnerState>,
 }
 
 impl RunnerService {
-    pub fn new(client: Arc<ApiClient>, state: RunnerState) -> Self {
-        Self { client, state: RwLock::new(state) }
-    }
-
-    pub fn runners_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().runners()).unwrap_or_default()
-    }
-
-    pub fn available_runners_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().available_runners()).unwrap_or_default()
-    }
-
-    pub fn current_runner_json(&self) -> Option<String> {
-        self.state.read().unwrap().current_runner()
-            .map(|r| serde_json::to_string(r).unwrap_or_default())
-    }
-
-    pub fn get_runner_json(&self, id: i64) -> Option<String> {
-        self.state.read().unwrap().get_runner(id)
-            .map(|r| serde_json::to_string(r).unwrap_or_default())
-    }
-
-    pub fn replace_cached_runners(&self, req_bytes: &[u8]) -> Result<(), String> {
-        let req = ReplaceCachedRunnersRequest::decode(req_bytes)
-            .map_err(|e| format!("decode replace_cached_runners: {e}"))?;
-        self.state.write().unwrap().set_runners(req.runners);
-        Ok(())
-    }
-
-    pub fn replace_available_runners(&self, req_bytes: &[u8]) -> Result<(), String> {
-        let req = ReplaceAvailableRunnersRequest::decode(req_bytes)
-            .map_err(|e| format!("decode replace_available_runners: {e}"))?;
-        self.state.write().unwrap().set_available_runners(req.runners);
-        Ok(())
-    }
-
-    pub fn set_current_runner_proto(&self, req_bytes: &[u8]) -> Result<(), String> {
-        let req = SetCurrentRunnerRequest::decode(req_bytes)
-            .map_err(|e| format!("decode set_current_runner: {e}"))?;
-        self.state.write().unwrap().set_current_runner(req.runner);
-        Ok(())
-    }
-
-    pub fn patch_cached_runner(&self, req_bytes: &[u8]) -> Result<(), String> {
-        let req = PatchCachedRunnerRequest::decode(req_bytes)
-            .map_err(|e| format!("decode patch_cached_runner: {e}"))?;
-        if let Some(r) = req.runner {
-            let id = r.id;
-            self.state.write().unwrap().update_runner(id, r);
-        }
-        Ok(())
-    }
-
-    pub fn remove_cached_runner(&self, req_bytes: &[u8]) -> Result<(), String> {
-        let req = RemoveCachedRunnerRequest::decode(req_bytes)
-            .map_err(|e| format!("decode remove_cached_runner: {e}"))?;
-        self.state.write().unwrap().remove_runner(req.runner_id);
-        Ok(())
-    }
-
-    pub fn update_runner_status(&self, id: i64, status: &str) {
-        self.state.write().unwrap().update_runner_status(id, status);
+    pub fn new(client: Arc<ApiClient>) -> Self {
+        Self { client }
     }
 
     pub async fn get_auth_status_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {

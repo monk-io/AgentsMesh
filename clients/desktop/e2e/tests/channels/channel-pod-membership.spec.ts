@@ -72,7 +72,7 @@ test.describe("Channel × Pod membership (Electron IPC, issue #400)", () => {
       expect(joined.agent_count).toBe(1);
 
       // Verify Rust core's pods_by_channel cache is populated (set by join_channel).
-      const cachedJson = await invokeIpc<string>(page, "channelChannelPodsJson", channel.id);
+      const cachedJson = await invokeIpc<string>(page, "appChannelPodsJson", channel.id);
       const cached = JSON.parse(cachedJson) as Array<{ pod_key: string }>;
       expect(cached.length, "pods_by_channel cache after channelJoinChannel").toBe(1);
       expect(cached[0]?.pod_key).toBe(pod.podKey);
@@ -121,7 +121,7 @@ test.describe("Channel × Pod membership (Electron IPC, issue #400)", () => {
         // Trigger an explicit refresh through ElectronChannelService.get_channel_pods,
         // which mirrors the backend response into _podsByChannel.
         await svc.invoke("channelGetChannelPods", id);
-        return svc.invoke("channelChannelPodsJson", id) as Promise<string>;
+        return svc.invoke("appChannelPodsJson", id) as Promise<string>;
       }, { id: channel.id });
       const cachedAfterLeave = JSON.parse(afterLeaveCache) as Array<{ pod_key: string }>;
       expect(cachedAfterLeave.length, "channel_pods_json after leave").toBe(1);

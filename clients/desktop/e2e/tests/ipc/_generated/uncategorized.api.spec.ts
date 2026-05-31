@@ -5,6 +5,10 @@ import { invokeIpcContract } from "../../../helpers/ipc-contract";
 test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · uncategorized", () => {
+  test("appAutopilotAppendIteration", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appAutopilotAppendIteration", returnType: "void" }, []);
+  });
+
   test("appAutopilotControllersJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appAutopilotControllersJson", returnType: "string" });
   });
@@ -17,6 +21,14 @@ test.describe("IPC · uncategorized", () => {
     await invokeIpcContract(sharedPage, { method: "appAutopilotIterationsJson", returnType: "string" }, "");
   });
 
+  test("appAutopilotPatchController", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appAutopilotPatchController", returnType: "void" }, []);
+  });
+
+  test("appAutopilotRemoveControllerProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appAutopilotRemoveControllerProto", returnType: "void" }, []);
+  });
+
   test("appAutopilotReplaceCachedControllers", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appAutopilotReplaceCachedControllers", returnType: "void" }, []);
   });
@@ -25,12 +37,20 @@ test.describe("IPC · uncategorized", () => {
     await invokeIpcContract(sharedPage, { method: "appAutopilotReplaceCachedIterations", returnType: "void" }, []);
   });
 
+  test("appAutopilotSetCurrentControllerProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appAutopilotSetCurrentControllerProto", returnType: "void" }, []);
+  });
+
   test("appAutopilotThinkingHistoryJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appAutopilotThinkingHistoryJson", returnType: "string" }, "");
   });
 
   test("appAutopilotThinkingJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appAutopilotThinkingJson", returnType: "string" }, "");
+  });
+
+  test("appAutopilotUpdateThinkingProto", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appAutopilotUpdateThinkingProto", returnType: "void" }, []);
   });
 
   test("appAvailableRunnersJson", async ({ sharedPage }) => {
@@ -65,8 +85,16 @@ test.describe("IPC · uncategorized", () => {
     await invokeIpcContract(sharedPage, { method: "appChannelPatchMemberCount", returnType: "void" }, []);
   });
 
+  test("appChannelPodsJson", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appChannelPodsJson", returnType: "string" }, 0);
+  });
+
   test("appChannelPrependCachedMessages", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appChannelPrependCachedMessages", returnType: "void" }, []);
+  });
+
+  test("appChannelRemoveMember", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appChannelRemoveMember", returnType: "void" }, []);
   });
 
   test("appChannelRemoveMessage", async ({ sharedPage }) => {
@@ -79,6 +107,14 @@ test.describe("IPC · uncategorized", () => {
 
   test("appChannelReplaceCachedMessages", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appChannelReplaceCachedMessages", returnType: "void" }, []);
+  });
+
+  test("appChannelReplaceMembers", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appChannelReplaceMembers", returnType: "void" }, []);
+  });
+
+  test("appChannelReplacePods", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appChannelReplacePods", returnType: "void" }, []);
   });
 
   test("appChannelReplaceUnreadCounts", async ({ sharedPage }) => {
@@ -99,6 +135,46 @@ test.describe("IPC · uncategorized", () => {
 
   test("appGetPodJson", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "appGetPodJson", returnType: "string" }, "");
+  });
+
+  test("appLoopAppendCachedRuns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopAppendCachedRuns", returnType: "void" }, []);
+  });
+
+  test("appLoopClearCurrentLoop", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopClearCurrentLoop", returnType: "void" }, []);
+  });
+
+  test("appLoopClearLoopRuns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopClearLoopRuns", returnType: "void" }, []);
+  });
+
+  test("appLoopInsertLoopRun", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopInsertLoopRun", returnType: "void" }, []);
+  });
+
+  test("appLoopPatchLoopFromAction", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopPatchLoopFromAction", returnType: "void" }, []);
+  });
+
+  test("appLoopPatchLoopRunStatus", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopPatchLoopRunStatus", returnType: "void" }, []);
+  });
+
+  test("appLoopReplaceCachedLoops", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopReplaceCachedLoops", returnType: "void" }, []);
+  });
+
+  test("appLoopReplaceCachedRuns", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopReplaceCachedRuns", returnType: "void" }, []);
+  });
+
+  test("appLoopSetCurrentLoop", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appLoopSetCurrentLoop", returnType: "void" }, []);
+  });
+
+  test("appMeshReplaceTopology", async ({ sharedPage }) => {
+    await invokeIpcContract(sharedPage, { method: "appMeshReplaceTopology", returnType: "void" }, []);
   });
 
   test("appPodAppendCachedPods", async ({ sharedPage }) => {

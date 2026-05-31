@@ -23,12 +23,9 @@ fn err(e: impl std::fmt::Display) -> napi::Error {
 #[napi]
 pub struct AppState {
     auth: Arc<AuthManager>,
-    pod: Arc<Mutex<PodService>>,
     runner: Arc<Mutex<RunnerService>>,
     ticket: Arc<Mutex<TicketService>>,
     channel: Arc<Mutex<ChannelService>>,
-    loop_svc: Arc<Mutex<LoopService>>,
-    autopilot: Arc<Mutex<AutopilotService>>,
     mesh: Arc<Mutex<MeshService>>,
     billing: Arc<Mutex<BillingService>>,
     extension: Arc<Mutex<ExtensionService>>,
@@ -92,13 +89,10 @@ impl AppState {
         let runtime = AppRuntime::new(events.clone());
         Ok(Self {
             auth,
-            pod: Arc::new(Mutex::new(PodService::new(c.clone(), pod_state::PodState::new()))),
-            runner: Arc::new(Mutex::new(RunnerService::new(c.clone(), runner_state::RunnerState::new()))),
-            ticket: Arc::new(Mutex::new(TicketService::new(c.clone(), ticket_state::TicketState::new()))),
-            channel: Arc::new(Mutex::new(ChannelService::new(c.clone(), channel_state::ChannelState::new()))),
-            loop_svc: Arc::new(Mutex::new(LoopService::new(c.clone(), loop_state::LoopState::new()))),
-            autopilot: Arc::new(Mutex::new(AutopilotService::new(c.clone(), autopilot_state::AutopilotState::new()))),
-            mesh: Arc::new(Mutex::new(MeshService::new(c.clone(), mesh_state::MeshState::new()))),
+            runner: Arc::new(Mutex::new(RunnerService::new(c.clone()))),
+            ticket: Arc::new(Mutex::new(TicketService::new(c.clone()))),
+            channel: Arc::new(Mutex::new(ChannelService::new(c.clone()))),
+            mesh: Arc::new(Mutex::new(MeshService::new(c.clone()))),
             billing: Arc::new(Mutex::new(BillingService::new(c.clone()))),
             extension: Arc::new(Mutex::new(ExtensionService::new(c.clone()))),
             invitation: Arc::new(Mutex::new(InvitationService::new(c.clone()))),

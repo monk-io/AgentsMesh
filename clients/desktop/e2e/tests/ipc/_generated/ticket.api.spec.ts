@@ -65,10 +65,6 @@ test.describe("IPC · ticket", () => {
     await invokeIpcContract(sharedPage, { method: "ticketRemoveLabelConnect", returnType: "Array<number>" }, []);
   });
 
-  test("ticketTicketPodsJson", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "ticketTicketPodsJson", returnType: "string" }, "");
-  });
-
   test("ticketUpdateLabelConnect", async ({ sharedPage }) => {
     await invokeIpcContract(sharedPage, { method: "ticketUpdateLabelConnect", returnType: "Array<number>" }, []);
   });

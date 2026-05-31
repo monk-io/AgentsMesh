@@ -30,6 +30,7 @@ class RelayConnectionPool {
   private connectedPods = new Set<string>();
   private statusUpstream = new Set<string>();
   private acpUpstream = new Set<string>();
+  private disconnectHookWired = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -132,7 +133,22 @@ class RelayConnectionPool {
     return undefined;
   }
 
+  // The Rust pool clears a pod's status/ACP listeners on full teardown
+  // (disconnect_inner) and fires this once. Drop our register-once guard so the
+  // next subscribe re-registers the upstream listeners; local listeners persist
+  // (the terminal component stays mounted across a transient drop).
+  private ensureDisconnectHook(): void {
+    if (this.disconnectHookWired) return;
+    this.disconnectHookWired = true;
+    void this.mgr().on_pod_disconnected((podKey: string) => {
+      this.statusUpstream.delete(podKey);
+      this.acpUpstream.delete(podKey);
+      this.statusCache.delete(podKey);
+    });
+  }
+
   private ensureStatusUpstream(podKey: string): void {
+    this.ensureDisconnectHook();
     if (this.statusUpstream.has(podKey)) return;
     this.statusUpstream.add(podKey);
     void this.mgr().on_status_change(podKey, (raw: StatusInfoRaw) => {
@@ -150,6 +166,7 @@ class RelayConnectionPool {
   }
 
   private ensureAcpUpstream(podKey: string): void {
+    this.ensureDisconnectHook();
     if (this.acpUpstream.has(podKey)) return;
     this.acpUpstream.add(podKey);
     void this.mgr().on_acp_message(podKey, (msgType: number, payload: unknown) => {

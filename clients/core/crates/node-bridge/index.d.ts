@@ -24,13 +24,18 @@ export class AppState {
   apikeyListConnect(request: Array<number>): Promise<Array<number>>
   apikeyRevokeConnect(request: Array<number>): Promise<Array<number>>
   apikeyUpdateConnect(request: Array<number>): Promise<Array<number>>
+  appAutopilotAppendIteration(reqBytes: Array<number>): void
   appAutopilotControllersJson(): string
   appAutopilotInsertController(reqBytes: Array<number>): void
   appAutopilotIterationsJson(key: string): string
+  appAutopilotPatchController(reqBytes: Array<number>): void
+  appAutopilotRemoveControllerProto(reqBytes: Array<number>): void
   appAutopilotReplaceCachedControllers(reqBytes: Array<number>): void
   appAutopilotReplaceCachedIterations(reqBytes: Array<number>): void
+  appAutopilotSetCurrentControllerProto(reqBytes: Array<number>): void
   appAutopilotThinkingHistoryJson(key: string): string
   appAutopilotThinkingJson(key: string): string
+  appAutopilotUpdateThinkingProto(reqBytes: Array<number>): void
   appAvailableRunnersJson(): string
   appChannelApplyMessageEdited(reqBytes: Array<number>): void
   appChannelClearUnread(channelId: number): void
@@ -39,15 +44,29 @@ export class AppState {
   appChannelMentionCountsJson(): string
   appChannelMessagesJson(channelId: number): string
   appChannelPatchMemberCount(reqBytes: Array<number>): void
+  appChannelPodsJson(channelId: number): string
   appChannelPrependCachedMessages(reqBytes: Array<number>): void
+  appChannelRemoveMember(reqBytes: Array<number>): void
   appChannelRemoveMessage(channelId: number, messageId: number): void
   appChannelReplaceCachedChannels(reqBytes: Array<number>): void
   appChannelReplaceCachedMessages(reqBytes: Array<number>): void
+  appChannelReplaceMembers(reqBytes: Array<number>): void
+  appChannelReplacePods(reqBytes: Array<number>): void
   appChannelReplaceUnreadCounts(reqBytes: Array<number>): void
   appChannelsJson(): string
   appChannelUnreadCountsJson(): string
   appCurrentRunnerJson(): string
   appGetPodJson(podKey: string): string
+  appLoopAppendCachedRuns(reqBytes: Array<number>): void
+  appLoopClearCurrentLoop(reqBytes: Array<number>): void
+  appLoopClearLoopRuns(reqBytes: Array<number>): void
+  appLoopInsertLoopRun(reqBytes: Array<number>): void
+  appLoopPatchLoopFromAction(reqBytes: Array<number>): void
+  appLoopPatchLoopRunStatus(reqBytes: Array<number>): void
+  appLoopReplaceCachedLoops(reqBytes: Array<number>): void
+  appLoopReplaceCachedRuns(reqBytes: Array<number>): void
+  appLoopSetCurrentLoop(reqBytes: Array<number>): void
+  appMeshReplaceTopology(reqBytes: Array<number>): void
   appPodAppendCachedPods(reqBytes: Array<number>): void
   appPodInsertCreated(reqBytes: Array<number>): void
   appPodMarkTerminated(reqBytes: Array<number>): void
@@ -95,20 +114,6 @@ export class AppState {
   authSetCurrentOrgProto(reqBytes: Array<number>): void
   authSetOrganizationsProto(reqBytes: Array<number>): void
   authSwitchOrg(slug: string): void
-  autopilotAppendIteration(reqBytes: Array<number>): Promise<void>
-  autopilotControllersJson(): Promise<string>
-  autopilotCurrentControllerJson(): Promise<string>
-  autopilotGetControllerByPodKeyJson(podKey: string): Promise<string>
-  autopilotGetIterationsJson(key: string): Promise<string>
-  autopilotGetThinkingHistoryJson(key: string): Promise<string>
-  autopilotGetThinkingJson(key: string): Promise<string>
-  autopilotInsertController(reqBytes: Array<number>): Promise<void>
-  autopilotPatchController(reqBytes: Array<number>): Promise<void>
-  autopilotRemoveControllerProto(reqBytes: Array<number>): Promise<void>
-  autopilotReplaceCachedControllers(reqBytes: Array<number>): Promise<void>
-  autopilotReplaceCachedIterations(reqBytes: Array<number>): Promise<void>
-  autopilotSetCurrentControllerProto(reqBytes: Array<number>): Promise<void>
-  autopilotUpdateThinkingProto(reqBytes: Array<number>): Promise<void>
   bindingAcceptBindingConnect(request: Uint8Array): Promise<Uint8Array>
   bindingApproveScopesConnect(request: Uint8Array): Promise<Uint8Array>
   bindingCheckBindingConnect(request: Uint8Array): Promise<Uint8Array>
@@ -142,53 +147,18 @@ export class AppState {
   blockstoreUpsertRefs(reqBytes: Array<number>): Promise<void>
   blockstoreUpsertWorkspace(reqBytes: Array<number>): Promise<void>
   blockstoreWorkspacesJson(): Promise<string>
-  channelApplyChannelMessageEditedEvent(reqBytes: Array<number>): Promise<void>
-  channelApplyIncomingChannelMessage(reqBytes: Array<number>): Promise<boolean>
   channelArchiveChannelConnect(request: Array<number>): Promise<Array<number>>
-  channelChannelMembersJson(id: number): Promise<string>
-  channelChannelPodsJson(id: number): Promise<string>
-  channelChannelsJson(): Promise<string>
-  channelClearChannelMentions(channelId: number): Promise<void>
-  channelClearChannelUnread(channelId: number): Promise<void>
   channelCreateChannelConnect(request: Array<number>): Promise<Array<number>>
-  channelCurrentChannelJson(): Promise<string>
   channelDeleteChannelMessageConnect(request: Array<number>): Promise<Array<number>>
   channelEditChannelMessageConnect(request: Array<number>): Promise<Array<number>>
-  channelFilterChannelsJson(query: string, includeArchived: boolean): Promise<string>
   channelGetChannelConnect(request: Array<number>): Promise<Array<number>>
-  channelGetChannelJson(id: number): Promise<string>
   channelGetChannelUnreadCountsConnect(request: Array<number>): Promise<Array<number>>
-  channelGetLastMessageJson(channelId: number): Promise<string>
-  channelGetMentionCount(channelId: number): Promise<number>
-  channelGetMessagesJson(channelId: number): Promise<string>
-  channelGetUnreadCount(channelId: number): Promise<number>
-  channelIncrementMention(channelId: number): Promise<void>
-  channelIncrementUnread(channelId: number): Promise<void>
-  channelInsertChannel(reqBytes: Array<number>): Promise<void>
-  channelInsertChannelMessage(reqBytes: Array<number>): Promise<void>
   channelListChannelMembersConnect(request: Array<number>): Promise<Array<number>>
   channelListChannelMessagesConnect(request: Array<number>): Promise<Array<number>>
   channelListChannelsConnect(request: Array<number>): Promise<Array<number>>
   channelMarkChannelReadConnect(request: Array<number>): Promise<Array<number>>
-  channelMentionCountsJson(): Promise<string>
-  channelPatchChannelMemberCount(reqBytes: Array<number>): Promise<void>
-  channelPrependCachedChannelMessages(reqBytes: Array<number>): Promise<void>
-  channelRemoveChannelMember(reqBytes: Array<number>): Promise<void>
-  channelRemoveMessage(channelId: number, messageId: number): Promise<void>
-  channelReplaceCachedChannelMessages(reqBytes: Array<number>): Promise<void>
-  channelReplaceCachedChannels(reqBytes: Array<number>): Promise<void>
-  channelReplaceChannelMembers(reqBytes: Array<number>): Promise<void>
-  channelReplaceChannelPods(reqBytes: Array<number>): Promise<void>
-  channelReplaceChannelUnreadCounts(reqBytes: Array<number>): Promise<void>
-  channelSelectChannel(id: number | undefined | null): Promise<string>
   channelSendChannelMessageConnect(request: Array<number>): Promise<Array<number>>
-  channelSetCurrentChannel(id: number | undefined | null): Promise<void>
-  channelSetCurrentUserId(userId: number | undefined | null): Promise<void>
-  channelSortedChannelIdsJson(mode: string, includeArchived: boolean): Promise<string>
-  channelTotalMentionCount(): Promise<number>
-  channelTotalUnreadCount(): Promise<number>
   channelUnarchiveChannelConnect(request: Array<number>): Promise<Array<number>>
-  channelUnreadCountsJson(): Promise<string>
   channelUpdateChannelConnect(request: Array<number>): Promise<Array<number>>
   envBundleCreateEnvBundleConnect(request: Array<number>): Promise<Array<number>>
   envBundleDeleteEnvBundleConnect(request: Array<number>): Promise<Array<number>>
@@ -245,38 +215,11 @@ export class AppState {
   localRunnerServiceStatus(): Promise<string>
   localRunnerServiceStop(): Promise<void>
   localRunnerServiceUninstall(): Promise<void>
-  loopSvcAppendCachedRuns(reqBytes: Array<number>): Promise<void>
-  loopSvcClearCurrentLoop(reqBytes: Array<number>): Promise<void>
-  loopSvcClearLoopRuns(reqBytes: Array<number>): Promise<void>
-  loopSvcCurrentLoopJson(): Promise<string>
-  loopSvcGetLoopBySlugJson(slug: string): Promise<string>
-  loopSvcInsertLoopRun(reqBytes: Array<number>): Promise<void>
-  loopSvcLoopsJson(): Promise<string>
-  loopSvcPatchLoopFromAction(reqBytes: Array<number>): Promise<void>
-  loopSvcPatchLoopRunStatus(reqBytes: Array<number>): Promise<void>
-  loopSvcReplaceCachedLoops(reqBytes: Array<number>): Promise<void>
-  loopSvcReplaceCachedRuns(reqBytes: Array<number>): Promise<void>
-  loopSvcRunsJson(): Promise<string>
-  loopSvcSetCurrentLoop(reqBytes: Array<number>): Promise<void>
   meshBatchGetTicketPodsConnect(request: Uint8Array): Promise<Uint8Array>
-  meshClearTopology(): Promise<void>
   meshCreatePodForTicketConnect(request: Uint8Array): Promise<Uint8Array>
-  meshFetchTopology(): Promise<string>
-  meshGetActiveNodesJson(): Promise<string>
-  meshGetChannelsForNodeJson(podKey: string): Promise<string>
-  meshGetEdgesForNodeJson(podKey: string): Promise<string>
+  meshFetchTopology(): Promise<Uint8Array>
   meshGetMeshTopologyConnect(request: Uint8Array): Promise<Uint8Array>
-  meshGetNodeJson(podKey: string): Promise<string>
-  meshGetNodesByRunnerJson(runnerId: number): Promise<string>
-  meshGetRunnerInfoJson(runnerId: number): Promise<string>
   meshGetTicketPodsConnect(request: Uint8Array): Promise<Uint8Array>
-  meshReplaceTopology(reqBytes: Array<number>): Promise<void>
-  meshSelectedNode(): Promise<string>
-  meshSelectNode(podKey: string | undefined | null): Promise<void>
-  meshTopologyJson(): Promise<string>
-  podCurrentPodJson(): Promise<string>
-  podGetPodJson(podKey: string): Promise<string>
-  podPodsJson(): Promise<string>
   promocodeGetRedemptionHistoryConnect(request: Array<number>): Promise<Array<number>>
   promocodeRedeemPromoCodeConnect(request: Array<number>): Promise<Array<number>>
   promocodeValidatePromoCodeConnect(request: Array<number>): Promise<Array<number>>
@@ -287,6 +230,7 @@ export class AppState {
   relayGetStatus(podKey: string): Promise<string>
   relayIsRunnerDisconnected(podKey: string): Promise<boolean>
   relayOnAcpMessage(podKey: string, onAcp: (err: unknown, arg: string) => void): Promise<void>
+  relayOnPodDisconnected(onDisconnect: (err: unknown, arg: string) => void): Promise<void>
   relayOnStatusChange(podKey: string, onStatus: (err: unknown, arg: string) => void): Promise<void>
   relaySend(podKey: string, data: string): Promise<void>
   relaySendAcpCommand(podKey: string, command: string): Promise<void>
@@ -294,17 +238,7 @@ export class AppState {
   relaySubscribe(podKey: string, subscriptionId: string, relayUrl: string, token: string, onOutput: (err: unknown, arg: Array<number>) => void): Promise<void>
   relayUnsubscribe(podKey: string, subscriptionId: string): Promise<void>
   runnerAuthorizeRunner(requestBytes: Array<number>): Promise<Array<number>>
-  runnerAvailableRunnersJson(): Promise<string>
-  runnerCurrentRunnerJson(): Promise<string>
   runnerGetAuthStatus(requestBytes: Array<number>): Promise<Array<number>>
-  runnerGetRunnerJson(id: number): Promise<string>
-  runnerPatchCachedRunner(reqBytes: Array<number>): Promise<void>
-  runnerRemoveCachedRunner(reqBytes: Array<number>): Promise<void>
-  runnerReplaceAvailableRunners(reqBytes: Array<number>): Promise<void>
-  runnerReplaceCachedRunners(reqBytes: Array<number>): Promise<void>
-  runnerRunnersJson(): Promise<string>
-  runnerSetCurrentRunnerProto(reqBytes: Array<number>): Promise<void>
-  runnerUpdateRunnerStatus(id: number, status: string): Promise<void>
   ssoDiscoverConnect(request: Array<number>): Promise<Array<number>>
   ssoLdapAuthConnect(request: Array<number>): Promise<Array<number>>
   supportTicketAddSupportTicketMessageConnect(request: Array<number>): Promise<Array<number>>
@@ -340,7 +274,6 @@ export class AppState {
   ticketRelationsUpdateCommentConnect(request: Array<number>): Promise<Array<number>>
   ticketRemoveAssigneeConnect(request: Array<number>): Promise<Array<number>>
   ticketRemoveLabelConnect(request: Array<number>): Promise<Array<number>>
-  ticketTicketPodsJson(slug: string): Promise<string>
   ticketUpdateLabelConnect(request: Array<number>): Promise<Array<number>>
   ticketUpdateTicketConnect(request: Array<number>): Promise<Array<number>>
   ticketUpdateTicketStatusConnect(request: Array<number>): Promise<Array<number>>

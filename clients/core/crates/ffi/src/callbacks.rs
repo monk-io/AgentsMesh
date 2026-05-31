@@ -22,6 +22,13 @@ pub trait AcpCallback: Send + Sync {
     fn on_acp(&self, pod_key: String, msg_type: u8, payload_json: String);
 }
 
+/// Fired once when a pod connection is fully torn down so the Swift relay
+/// adapter can drop its register-once guard and re-wire on the next subscribe.
+#[uniffi::export(callback_interface)]
+pub trait PodDisconnectedCallback: Send + Sync {
+    fn on_pod_disconnected(&self, pod_key: String);
+}
+
 
 #[uniffi::export(callback_interface)]
 pub trait EventCallback: Send + Sync {

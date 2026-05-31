@@ -302,3 +302,40 @@ async fn force_resize_sends_immediately() {
     let msg = ws_rx.recv().await.unwrap();
     assert!(!msg.is_empty());
 }
+
+#[tokio::test]
+async fn disconnect_clears_pod_listeners_and_fires_event() {
+    let (pool, _rx) = RelayConnectionPool::new();
+
+    let fired = Arc::new(Mutex::new(Vec::<String>::new()));
+    let fr = fired.clone();
+    pool.set_on_pod_disconnected(Arc::new(move |pk: String| fr.lock().unwrap().push(pk)));
+
+    let status_cb: crate::types::StatusCallback = Arc::new(|_| {});
+    pool.on_status_change("pod-x", status_cb).await;
+    let acp_cb: crate::types::AcpCallback = Arc::new(|_, _| {});
+    pool.on_acp_message("pod-x", acp_cb).await;
+    insert_conn(&pool, "pod-x").await;
+
+    {
+        let inner = pool.inner.read();
+        assert!(inner.status_listeners.contains_key("pod-x"));
+        assert!(inner.acp_listeners.contains_key("pod-x"));
+    }
+
+    pool.disconnect("pod-x").await;
+
+    {
+        let inner = pool.inner.read();
+        assert!(!inner.status_listeners.contains_key("pod-x"), "status listeners cleared on disconnect");
+        assert!(!inner.acp_listeners.contains_key("pod-x"), "acp listeners cleared on disconnect");
+        assert!(!inner.connections.contains_key("pod-x"), "connection removed");
+    }
+    assert_eq!(*fired.lock().unwrap(), vec!["pod-x".to_string()], "pod-disconnected event fired once");
+
+    // The adapter, having cleared its register-once guard on the event above,
+    // re-registers on the next subscribe — the cleared slot accepts it.
+    let status_cb2: crate::types::StatusCallback = Arc::new(|_| {});
+    pool.on_status_change("pod-x", status_cb2).await;
+    assert!(pool.inner.read().status_listeners.contains_key("pod-x"), "re-register after disconnect works");
+}

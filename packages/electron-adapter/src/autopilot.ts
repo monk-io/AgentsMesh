@@ -87,7 +87,7 @@ export class ElectronAutopilotService implements IAutopilotService {
   set_current_controller_proto(reqBytes: Uint8Array): void {
     const req = fromBinary(SetCurrentControllerRequestSchema, reqBytes);
     this._currentControllerCache = req.controller ? JSON.stringify(snapshotToController(req.controller)) : null;
-    void invoke<void>("autopilotSetCurrentControllerProto", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotSetCurrentControllerProto", Array.from(reqBytes)).catch(() => undefined);
   }
 
   insert_controller(reqBytes: Uint8Array): void {
@@ -112,7 +112,7 @@ export class ElectronAutopilotService implements IAutopilotService {
       if (idx >= 0) ctrls[idx] = { ...ctrls[idx], ...c };
       this._controllersCache = JSON.stringify(ctrls);
     }
-    void invoke<void>("autopilotPatchController", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotPatchController", Array.from(reqBytes)).catch(() => undefined);
   }
 
   remove_controller_proto(reqBytes: Uint8Array): void {
@@ -121,7 +121,7 @@ export class ElectronAutopilotService implements IAutopilotService {
     this._controllersCache = JSON.stringify(
       ctrls.filter(x => x.autopilot_controller_key !== req.autopilotControllerKey),
     );
-    void invoke<void>("autopilotRemoveControllerProto", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotRemoveControllerProto", Array.from(reqBytes)).catch(() => undefined);
   }
 
   replace_cached_iterations(reqBytes: Uint8Array): void {
@@ -140,13 +140,13 @@ export class ElectronAutopilotService implements IAutopilotService {
       iters.push(snapshotToIteration(req.iteration));
       this._iterationsCache.set(req.autopilotControllerKey, JSON.stringify(iters));
     }
-    void invoke<void>("autopilotAppendIteration", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotAppendIteration", Array.from(reqBytes)).catch(() => undefined);
   }
 
   update_thinking_proto(reqBytes: Uint8Array): void {
     const req = fromBinary(UpdateThinkingRequestSchema, reqBytes);
     this._thinkingCache.set(req.autopilotControllerKey, req.thinkingJson);
-    void invoke<void>("autopilotUpdateThinkingProto", Array.from(reqBytes)).catch(() => undefined);
+    void invoke<void>("appAutopilotUpdateThinkingProto", Array.from(reqBytes)).catch(() => undefined);
   }
 
   async fetch_controllers(): Promise<string> {

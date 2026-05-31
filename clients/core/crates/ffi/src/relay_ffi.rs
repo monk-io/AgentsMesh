@@ -4,7 +4,7 @@ use agentsmesh_protocol::MsgType;
 use agentsmesh_relay::{RelayConnectionPool, RelayStatusInfo};
 use agentsmesh_transport::runtime::PlatformRuntime;
 
-use crate::callbacks::{AcpCallback, OutputCallback, StatusCallback};
+use crate::callbacks::{AcpCallback, OutputCallback, PodDisconnectedCallback, StatusCallback};
 use crate::error::CoreError;
 
 /// Terminal data-plane SSOT for iOS — a uniffi wrapper over the shared Rust
@@ -88,6 +88,16 @@ impl RelayManager {
             cb.on_acp(pk.clone(), mt as u8, payload.to_string());
         });
         self.pool.on_acp_message(&pod_key, listener).await;
+    }
+
+    /// Register the single pod-disconnected sink. The Swift adapter clears its
+    /// register-once guard so the next subscribe re-registers status/ACP.
+    pub fn on_pod_disconnected(&self, callback: Box<dyn PodDisconnectedCallback>) {
+        let cb: Arc<Box<dyn PodDisconnectedCallback>> = Arc::new(callback);
+        let listener: agentsmesh_relay::DisconnectCallback = Arc::new(move |pod_key: String| {
+            cb.on_pod_disconnected(pod_key);
+        });
+        self.pool.set_on_pod_disconnected(listener);
     }
 
     pub async fn get_status(&self, pod_key: String) -> String {

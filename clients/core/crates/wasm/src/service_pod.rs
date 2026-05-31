@@ -2,32 +2,18 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::PodService;
-use agentsmesh_state::pod_state::PodState;
 use wasm_bindgen::prelude::*;
 
+// Networking-only wasm handle for the pod domain. The pod cache lives in the
+// shared `AppState.pods` (reached via `WasmPodState`); this service exposes
+// only the Connect-RPC `*_connect` surface.
 #[wasm_bindgen]
 pub struct WasmPodService(pub(crate) PodService);
 
 #[wasm_bindgen]
 impl WasmPodService {
-    pub(crate) fn new(client: Arc<ApiClient>, state: PodState) -> Self {
-        Self(PodService::new(client, state))
-    }
-
-    pub fn pods_json(&self) -> String { self.0.pods_json() }
-
-    pub fn current_pod_json(&self) -> JsValue {
-        match self.0.current_pod_json() {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn get_pod_json(&self, pod_key: &str) -> JsValue {
-        match self.0.get_pod_json(pod_key) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
+    pub(crate) fn new(client: Arc<ApiClient>) -> Self {
+        Self(PodService::new(client))
     }
 
     // -------- Connect-RPC (binary wire) --------

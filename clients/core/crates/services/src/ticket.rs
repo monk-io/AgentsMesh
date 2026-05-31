@@ -1,19 +1,19 @@
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_state::ticket_state::TicketState;
 use agentsmesh_types::proto_ticket_v1 as ticket_proto;
 use prost::Message;
 
+// Networking-only service for the ticket domain. The ticket cache (tickets,
+// board, labels, ticket→pods) lives in the shared `AppState.tickets` (reached
+// via `WasmTicketState`) — this service speaks only the Connect-RPC wire.
 pub struct TicketService {
     client: Arc<ApiClient>,
-    state: RwLock<TicketState>,
 }
 
 impl TicketService {
-    pub fn new(client: Arc<ApiClient>, state: TicketState) -> Self {
-        Self { client, state: RwLock::new(state) }
+    pub fn new(client: Arc<ApiClient>) -> Self {
+        Self { client }
     }
 
     pub async fn get_ticket_pods(
@@ -43,7 +43,6 @@ impl TicketService {
             started_at: n.started_at.clone(),
             ..Default::default()
         }).collect();
-        self.state.write().unwrap().set_ticket_pods(slug, pods.clone());
         let envelope = serde_json::json!({
             "pods": pods,
             "total": serde_json::Value::Null,
@@ -51,11 +50,6 @@ impl TicketService {
             "offset": serde_json::Value::Null,
         });
         serde_json::to_string(&envelope).map_err(crate::wire)
-    }
-
-    pub fn ticket_pods_json(&self, slug: &str) -> String {
-        let pods = self.state.read().unwrap().get_ticket_pods(slug);
-        serde_json::to_string(&pods).unwrap_or_else(|_| "[]".into())
     }
 }
 
