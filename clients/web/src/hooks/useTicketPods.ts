@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from "react";
-import { getTicketService } from "@/lib/wasm-core";
+import { getTicketService, getTicketState } from "@/lib/wasm-core";
 
 export interface TicketPodSummary {
   pod_key: string;
@@ -39,9 +39,17 @@ async function fetchTicketPods(slug: string): Promise<TicketPodSummary[]> {
     .get_ticket_pods(slug, true)
     .then((json: string) => {
       const parsed = JSON.parse(json) as { pods?: TicketPodSummary[] };
+      const pods = parsed.pods ?? [];
+      // Mirror the fetched pods into runtime.state (the SSOT) so the
+      // synchronous readPodsFromRust reflects them.
+      try {
+        getTicketState().set_ticket_pods(slug, JSON.stringify(pods));
+      } catch {
+        /* state mirror is best-effort; the returned pods still drive this call */
+      }
       inflight.delete(slug);
       notify(slug);
-      return parsed.pods ?? [];
+      return pods;
     })
     .catch((err: unknown) => {
       inflight.delete(slug);
@@ -55,7 +63,7 @@ async function fetchTicketPods(slug: string): Promise<TicketPodSummary[]> {
 function readPodsFromRust(slug: string | null): TicketPodSummary[] {
   if (!slug) return [];
   try {
-    return JSON.parse(svc().ticket_pods_json(slug)) as TicketPodSummary[];
+    return JSON.parse(getTicketState().ticket_pods_json(slug)) as TicketPodSummary[];
   } catch {
     return [];
   }

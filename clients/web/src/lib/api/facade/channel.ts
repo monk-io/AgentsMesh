@@ -1,6 +1,18 @@
 import type { MessageContent, MessageMentions } from "@/lib/viewModels/channelMessage";
-import { getChannelService } from "@/lib/wasm-core";
+import { getChannelState } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
+import {
+  InsertChannelRequestSchema,
+  ReplaceChannelPodsRequestSchema,
+  ReplaceChannelMembersRequestSchema,
+  RemoveChannelMemberRequestSchema,
+} from "@proto/channel_state/v1/mutations_pb";
+import {
+  channelDataToProtoChannel,
+  channelPodSummaryToProtoPod,
+  channelMemberDataToProto,
+} from "@/lib/api/channelProtoMap";
 import {
   updateChannel as updateChannelConnect,
   archiveChannel as archiveChannelConnect,
@@ -76,7 +88,10 @@ function orgSlug(): string {
 export const channelApi = {
   update: async (id: number, data: { name?: string; description?: string; document?: string }) => {
     const channel = await updateChannelConnect(orgSlug(), id, data);
-    getChannelService().update_channel_local(BigInt(id), JSON.stringify(channel));
+    const req = protoCreate(InsertChannelRequestSchema, {
+      channel: channelDataToProtoChannel(channel),
+    });
+    getChannelState().insert_channel(toBinary(InsertChannelRequestSchema, req));
     return { channel };
   },
 
@@ -98,7 +113,11 @@ export const channelApi = {
   getPods: async (id: number) => {
     const { pods, total } = await listChannelPodsConnect(orgSlug(), id);
     // Fan out to Rust SSOT so useChannelPods (reads channel_pods_json) sees it.
-    getChannelService().set_channel_pods_local(BigInt(id), JSON.stringify(pods));
+    const req = protoCreate(ReplaceChannelPodsRequestSchema, {
+      channelId: BigInt(id),
+      pods: pods.map(channelPodSummaryToProtoPod),
+    });
+    getChannelState().replace_channel_pods(toBinary(ReplaceChannelPodsRequestSchema, req));
     return { pods, total };
   },
 
@@ -119,14 +138,23 @@ export const channelApi = {
 
   removeMember: async (id: number, userId: number) => {
     await removeChannelMemberConnect(orgSlug(), id, userId);
-    // Mirror Rust wasm path: remove from cached members so selector re-reads it gone.
-    getChannelService().remove_channel_member_local(BigInt(id), BigInt(userId));
+    // Mirror Rust wasm path: remove from cached members via proto-bytes
+    // mutator so selector re-reads observe the absence immediately.
+    const req = protoCreate(RemoveChannelMemberRequestSchema, {
+      channelId: BigInt(id),
+      userId: BigInt(userId),
+    });
+    getChannelState().remove_channel_member(toBinary(RemoveChannelMemberRequestSchema, req));
     return { message: "ok" };
   },
 
   listMembers: async (id: number) => {
     const { members, total } = await listChannelMembersConnect(orgSlug(), id);
-    getChannelService().set_channel_members_local(BigInt(id), JSON.stringify(members));
+    const req = protoCreate(ReplaceChannelMembersRequestSchema, {
+      channelId: BigInt(id),
+      members: members.map(channelMemberDataToProto),
+    });
+    getChannelState().replace_channel_members(toBinary(ReplaceChannelMembersRequestSchema, req));
     return { members, total };
   },
 };

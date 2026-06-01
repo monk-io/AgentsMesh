@@ -3,15 +3,19 @@ package podconnect
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 
 	"connectrpc.com/connect"
 
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
+	podDomain "github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	"github.com/anthropics/agentsmesh/backend/pkg/policy"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	podv1 "github.com/anthropics/agentsmesh/proto/gen/go/pod/v1"
 )
 
@@ -56,12 +60,45 @@ func (s *Server) CreatePod(
 		return nil, mapServiceError(err)
 	}
 
+	s.publishPodCreated(ctx, result.Pod)
+
 	resp := &podv1.CreatePodResponse{Pod: ToProtoPod(result.Pod)}
 	if result.Warning != "" {
 		w := result.Warning
 		resp.Warning = &w
 	}
 	return connect.NewResponse(resp), nil
+}
+
+// pod:created fired immediately after the orchestrator allocates a Pod
+// row. The existing status-callback path (cmd/server/eventbus_pod.go) is
+// race-prone: it only fires on initializing → running transitions, which
+// a fast-starting mock agent often skips entirely. Publishing here gives
+// renderers a deterministic "pod exists" signal independent of runner
+// timing. Duplicates with the status-callback path are harmless — handlers
+// debounce sidebar refetch.
+func (s *Server) publishPodCreated(ctx context.Context, pod *podDomain.Pod) {
+	if s.eventBus == nil || pod == nil {
+		return
+	}
+	data := &eventsv1.PodCreatedEventData{
+		PodKey:      pod.PodKey,
+		Status:      pod.Status,
+		AgentStatus: pod.AgentStatus,
+		RunnerId:    pod.RunnerID,
+		CreatedById: pod.CreatedByID,
+	}
+	if pod.TicketID != nil {
+		data.TicketId = pod.TicketID
+	}
+	event, err := eventbus.NewEntityEvent(eventbus.EventPodCreated, pod.OrganizationID, "pod", pod.PodKey, data)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to build pod:created event", "pod_key", pod.PodKey, "error", err)
+		return
+	}
+	if err := s.eventBus.Publish(ctx, event); err != nil {
+		slog.ErrorContext(ctx, "failed to publish pod:created event", "pod_key", pod.PodKey, "error", err)
+	}
 }
 
 // TerminatePod — REST analogue: POST /api/v1/organizations/:slug/pods/:key/terminate.
@@ -128,7 +165,30 @@ func (s *Server) UpdatePodAlias(
 	if err := s.podSvc.UpdateAlias(ctx, podKey, alias); err != nil {
 		return nil, mapServiceError(err)
 	}
+	s.publishPodAliasChanged(ctx, pod.OrganizationID, podKey, alias)
 	return connect.NewResponse(&podv1.UpdatePodAliasResponse{Message: "Pod alias updated"}), nil
+}
+
+// Realtime fan-out for UpdatePodAlias. Renderer / desktop bridge already
+// subscribe to pod:alias_changed (see clients/web/src/providers/
+// realtimePodHandlers.ts); without this publish the wire stayed empty
+// and multi-tab clients fell out of sync until a manual refetch.
+func (s *Server) publishPodAliasChanged(ctx context.Context, orgID int64, podKey string, alias *string) {
+	if s.eventBus == nil {
+		return
+	}
+	data := &eventsv1.PodAliasChangedEventData{PodKey: podKey}
+	if alias != nil {
+		data.Alias = alias
+	}
+	event, err := eventbus.NewEntityEvent(eventbus.EventPodAliasChanged, orgID, "pod", podKey, data)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to build pod:alias_changed event", "pod_key", podKey, "error", err)
+		return
+	}
+	if err := s.eventBus.Publish(ctx, event); err != nil {
+		slog.ErrorContext(ctx, "failed to publish pod:alias_changed event", "pod_key", podKey, "error", err)
+	}
 }
 
 // UpdatePodPerpetual — REST analogue: PATCH /api/v1/organizations/:slug/pods/:key/perpetual.
@@ -161,7 +221,23 @@ func (s *Server) UpdatePodPerpetual(
 	if s.commandSender != nil {
 		_ = s.commandSender.SendUpdatePodPerpetual(ctx, pod.RunnerID, podKey, perpetual)
 	}
+	s.publishPodPerpetualChanged(ctx, pod.OrganizationID, podKey, perpetual)
 	return connect.NewResponse(&podv1.UpdatePodPerpetualResponse{Message: "Pod perpetual mode updated"}), nil
+}
+
+func (s *Server) publishPodPerpetualChanged(ctx context.Context, orgID int64, podKey string, perpetual bool) {
+	if s.eventBus == nil {
+		return
+	}
+	data := &eventsv1.PodPerpetualChangedEventData{PodKey: podKey, Perpetual: perpetual}
+	event, err := eventbus.NewEntityEvent(eventbus.EventPodPerpetualChanged, orgID, "pod", podKey, data)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to build pod:perpetual_changed event", "pod_key", podKey, "error", err)
+		return
+	}
+	if err := s.eventBus.Publish(ctx, event); err != nil {
+		slog.ErrorContext(ctx, "failed to publish pod:perpetual_changed event", "pod_key", podKey, "error", err)
+	}
 }
 
 // SendPodPrompt — REST analogue: POST /api/v1/orgs/:slug/pods/:key/prompt.

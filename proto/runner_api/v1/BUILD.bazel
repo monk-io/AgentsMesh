@@ -19,6 +19,7 @@ proto_library(
     name = "runner_api_proto",
     srcs = ["runner.proto"],
     data = [":runner_api_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
     deps = ["//proto/codegen/v1:codegen_proto"],
 )

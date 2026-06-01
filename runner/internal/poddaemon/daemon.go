@@ -117,16 +117,41 @@ type daemonServer struct {
 	// Defaults to 60s in production; tests can inject a shorter value.
 	orphanCheckInterval time.Duration
 
-	// clientMu protects the client pointer only. Hold briefly to read/swap
-	// the pointer — never hold while doing network I/O.
+	// clientMu protects the client pointer AND the output history buffer. Hold
+	// briefly to read/swap the pointer or append history — never hold while
+	// doing network I/O.
 	clientMu sync.Mutex
 	client   net.Conn
+
+	// history is a bounded ring of recent PTY output, replayed to a client on
+	// attach. Without it, output the child produced before the runner attaches
+	// (the runner connects a few hundred ms after the daemon spawns the child)
+	// is dropped — invisible for agents that redraw continuously, fatal for an
+	// agent that prints once then idles. Also lets a runner that restarted
+	// (session recovery) repaint the terminal. Guarded by clientMu.
+	history []byte
 
 	// connWriteMu serializes writes to the IPC connection. This is separate
 	// from clientMu so that ptyReader's potentially slow data writes don't
 	// block control-plane operations (Pong, Exit notification) from acquiring
 	// the client pointer.
 	connWriteMu sync.Mutex
+}
+
+// outputHistoryLimit caps the replay buffer (bytes). Large enough to carry a
+// startup banner plus a full-screen redraw; the runner-side VirtualTerminal
+// owns the authoritative scrollback.
+const outputHistoryLimit = 256 * 1024
+
+// appendHistoryLocked records output for replay to a future attach. Caller
+// must hold clientMu. Re-copies on trim so the backing array stays bounded.
+func (d *daemonServer) appendHistoryLocked(data []byte) {
+	d.history = append(d.history, data...)
+	if len(d.history) > outputHistoryLimit {
+		trimmed := make([]byte, outputHistoryLimit)
+		copy(trimmed, d.history[len(d.history)-outputHistoryLimit:])
+		d.history = trimmed
+	}
 }
 
 func (d *daemonServer) run() {

@@ -157,6 +157,9 @@ func mountPodService(mux *http.ServeMux, svc *serviceContainer, rest *v1.Service
 	if rest.Grant != nil {
 		serverOpts = append(serverOpts, podconnect.WithGrantService(rest.Grant))
 	}
+	if rest.EventBus != nil {
+		serverOpts = append(serverOpts, podconnect.WithEventBus(rest.EventBus))
+	}
 	srv := podconnect.NewServer(svc.pod, svc.org, serverOpts...)
 	podconnect.Mount(mux, srv, opts...)
 }
@@ -213,7 +216,11 @@ func mountAutopilotService(mux *http.ServeMux, svc *serviceContainer, rest *v1.S
 			cmdSender = s
 		}
 	}
-	srv := autopilotconnect.NewServer(svc.autopilot, svc.org, svc.pod, cmdSender)
+	var apOpts []autopilotconnect.Option
+	if rest != nil && rest.EventBus != nil {
+		apOpts = append(apOpts, autopilotconnect.WithEventBus(rest.EventBus))
+	}
+	srv := autopilotconnect.NewServer(svc.autopilot, svc.org, svc.pod, cmdSender, apOpts...)
 	autopilotconnect.Mount(mux, srv, opts...)
 }
 

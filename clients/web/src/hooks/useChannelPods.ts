@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from "react";
 import { channelApi } from "@/lib/api/facade/channel";
-import { getChannelService } from "@/lib/wasm-core";
+import { getChannelState } from "@/lib/wasm-core";
 
 export interface ChannelPodSummary {
   pod_key: string;
@@ -11,7 +11,7 @@ export interface ChannelPodSummary {
 
 const inflight = new Map<number, Promise<ChannelPodSummary[]>>();
 const listeners = new Map<number, Set<() => void>>();
-const svc = () => getChannelService();
+const svc = () => getChannelState();
 
 function notify(channelId: number): void {
   listeners.get(channelId)?.forEach((fn) => fn());

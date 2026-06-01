@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 
 mod api;
 mod auth;
+mod auth_proto_convert;
 mod events_manager;
 mod js_bridge;
 mod protocol;

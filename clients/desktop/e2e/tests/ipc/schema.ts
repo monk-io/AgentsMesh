@@ -16,102 +16,164 @@ export const ipcSchema: IpcMethodSchema[] = [
     "name": "apikeyCreateConnect",
     "group": "apikey",
     "params": [],
-    "returnType": "any"
+    "returnType": "any",
+    "ipcExposable": true
   },
   {
     "name": "apikeyDeleteConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyGetConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyListConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyRevokeConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "apikeyUpdateConnect",
     "group": "apikey",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "authApplySession",
+    "name": "authApplySessionProto",
     "group": "auth",
     "params": [
       {
-        "name": "sessionJson",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authBootstrap",
     "group": "auth",
     "params": [],
-    "returnType": "any"
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "authBootstrapProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authClearSession",
     "group": "auth",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authFetchOrganizations",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "authFetchOrganizationsProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authGetCurrentOrgJson",
     "group": "auth",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetCurrentUserJson",
     "group": "auth",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
+  },
+  {
+    "name": "authGetCurrentUserProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number> | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetExpiresAt",
     "group": "auth",
     "params": [],
-    "returnType": "any"
+    "returnType": "number | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authGetOrganizationsJson",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "authGetToken",
     "group": "auth",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "authIsAuthenticated",
     "group": "auth",
     "params": [],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "authLogin",
@@ -126,41 +188,69 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "authLoginProto",
+    "group": "auth",
+    "params": [
+      {
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "password",
+        "type": "string"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authLogout",
     "group": "auth",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authRefreshToken",
     "group": "auth",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
-    "name": "authSetCurrentOrg",
+    "name": "authRefreshTokenProto",
+    "group": "auth",
+    "params": [],
+    "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "authSetCurrentOrgProto",
     "group": "auth",
     "params": [
       {
-        "name": "orgJson",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
-    "name": "authSetOrganizations",
+    "name": "authSetOrganizationsProto",
     "group": "auth",
     "params": [
       {
-        "name": "orgsJson",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authSwitchOrg",
@@ -171,7 +261,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "authConnectForgotPasswordConnect",
@@ -182,7 +273,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectLoginConnect",
@@ -193,7 +285,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectLogoutConnect",
@@ -204,7 +297,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectOauthCallbackConnect",
@@ -215,7 +309,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectOauthRedirectConnect",
@@ -226,7 +321,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectRefreshTokenConnect",
@@ -237,7 +333,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectRegisterConnect",
@@ -248,7 +345,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectResendVerificationConnect",
@@ -259,7 +357,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectResetPasswordConnect",
@@ -270,7 +369,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "authConnectVerifyEmailConnect",
@@ -281,261 +381,154 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "autopilotAddController",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotAddIteration",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotControllersJson",
-    "group": "autopilot",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "autopilotCurrentControllerJson",
-    "group": "autopilot",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "autopilotGetControllerByPodKeyJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "autopilotGetIterationsJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "autopilotGetThinkingHistoryJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "autopilotGetThinkingJson",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "autopilotRemoveController",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotSetControllers",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotSetCurrentController",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotSetIterations",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotUpdateController",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "autopilotUpdateThinking",
-    "group": "autopilot",
-    "params": [
-      {
-        "name": "key",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "bindingAcceptBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingApproveScopesConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingCheckBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingGetBoundPodsConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingGetPendingBindingsConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingListBindingsConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingRejectBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingRequestBindingConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingRequestScopesConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "bindingUnbindConnect",
     "group": "binding",
-    "params": [],
-    "returnType": "any"
-  },
-  {
-    "name": "blockstoreApplyOps",
-    "group": "blockstore",
     "params": [
       {
-        "name": "reqJson",
-        "type": "string"
+        "name": "request",
+        "type": "Uint8Array"
       }
     ],
-    "returnType": "string"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreApplyRemoteOp",
     "group": "blockstore",
     "params": [
       {
-        "name": "opJson",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreBacklinksJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreBlocksJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreCatchup",
@@ -546,13 +539,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreEnsureDefaultWorkspace",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreGetBlockJson",
@@ -563,7 +558,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLastOpId",
@@ -574,13 +570,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "number"
+    "returnType": "number",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLastOpIdsJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreListBacklinksJson",
@@ -591,7 +589,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreListChildrenJson",
@@ -602,13 +601,15 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreListWorkspaces",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLoadSubtree",
@@ -623,7 +624,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreLoadTypeDefs",
@@ -634,34 +636,46 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreNestChildrenJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "blockstoreProjectLocalOps",
+    "group": "blockstore",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreRefsJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
-    "name": "blockstoreSemanticSearch",
+    "name": "blockstoreReplaceWorkspaces",
     "group": "blockstore",
     "params": [
       {
-        "name": "workspaceId",
-        "type": "string"
-      },
-      {
-        "name": "reqJson",
-        "type": "string"
+        "name": "reqBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreSetLastOpId",
@@ -676,7 +690,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "number"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreTypeDefsJson",
@@ -687,501 +702,415 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "blockstoreUpsertBlocks",
+    "group": "blockstore",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "blockstoreUpsertRefs",
+    "group": "blockstore",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "blockstoreUpsertWorkspace",
+    "group": "blockstore",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "blockstoreWorkspacesJson",
     "group": "blockstore",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
-    "name": "channelAddChannelLocal",
+    "name": "channelArchiveChannelConnect",
     "group": "channel",
     "params": [
       {
-        "name": "json",
-        "type": "string"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelAddMessage",
+    "name": "channelCreateChannelConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelChannelMembersJson",
+    "name": "channelDeleteChannelMessageConnect",
     "group": "channel",
     "params": [
       {
-        "name": "id",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelChannelPodsJson",
+    "name": "channelEditChannelMessageConnect",
     "group": "channel",
     "params": [
       {
-        "name": "id",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelChannelsJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "channelClearChannelMentions",
+    "name": "channelGetChannelConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelClearChannelUnread",
+    "name": "channelGetChannelUnreadCountsConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelCurrentChannelJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "channelFilterChannelsJson",
+    "name": "channelListChannelMembersConnect",
     "group": "channel",
     "params": [
       {
-        "name": "query",
-        "type": "string"
-      },
-      {
-        "name": "includeArchived",
-        "type": "boolean"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelGetChannelJson",
+    "name": "channelListChannelMessagesConnect",
     "group": "channel",
     "params": [
       {
-        "name": "id",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelGetLastMessageJson",
+    "name": "channelListChannelsConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelGetMentionCount",
+    "name": "channelMarkChannelReadConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "number"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelGetMessagesJson",
+    "name": "channelSendChannelMessageConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelGetUnreadCount",
+    "name": "channelUnarchiveChannelConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "number"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
-    "name": "channelIncrementMention",
+    "name": "channelUpdateChannelConnect",
     "group": "channel",
     "params": [
       {
-        "name": "channelId",
-        "type": "number"
+        "name": "request",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelIncrementUnread",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelMentionCountsJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "channelOnNewMessage",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "boolean"
-  },
-  {
-    "name": "channelPrependMessages",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      },
-      {
-        "name": "hasMore",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelRemoveChannelLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelRemoveMessageLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "messageId",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSelectChannel",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "channelSetChannelPodsLocal",
-    "group": "channel",
-    "params": [],
-    "returnType": "any"
-  },
-  {
-    "name": "channelSetChannels",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetCurrentChannel",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetCurrentUser",
-    "group": "channel",
-    "params": [
-      {
-        "name": "userJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetCurrentUserId",
-    "group": "channel",
-    "params": [
-      {
-        "name": "userId",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetLastMessage",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetMentionCounts",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetMessages",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      },
-      {
-        "name": "hasMore",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSetUnreadCounts",
-    "group": "channel",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelSortedChannelIdsJson",
-    "group": "channel",
-    "params": [
-      {
-        "name": "mode",
-        "type": "string"
-      },
-      {
-        "name": "includeArchived",
-        "type": "boolean"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "channelTotalMentionCount",
-    "group": "channel",
-    "params": [],
-    "returnType": "number"
-  },
-  {
-    "name": "channelTotalUnreadCount",
-    "group": "channel",
-    "params": [],
-    "returnType": "number"
-  },
-  {
-    "name": "channelUnreadCountsJson",
-    "group": "channel",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "channelUpdateChannelLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "channelUpdateMessageLocal",
-    "group": "channel",
-    "params": [
-      {
-        "name": "channelId",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleCreateEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleDeleteEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleGetEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleListEnvBundlesConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleSetPrimaryEnvBundleConnect",
     "group": "env_bundle",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "envBundleUpdateEnvBundleConnect",
     "group": "env_bundle",
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsConnect",
+    "group": "events",
     "params": [],
-    "returnType": "any"
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsDisconnect",
+    "group": "events",
+    "params": [],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsGetConnectionState",
+    "group": "events",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsGetTick",
+    "group": "events",
+    "params": [],
+    "returnType": "number",
+    "ipcExposable": true
+  },
+  {
+    "name": "eventsOnConnectionStateChange",
+    "group": "events",
+    "params": [
+      {
+        "name": "callback",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "number",
+    "ipcExposable": false
+  },
+  {
+    "name": "eventsSubscribeAll",
+    "group": "events",
+    "params": [
+      {
+        "name": "callback",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "number",
+    "ipcExposable": false
+  },
+  {
+    "name": "eventsUnsubscribe",
+    "group": "events",
+    "params": [
+      {
+        "name": "id",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "extensionCreateSkillRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionDeleteSkillRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallCustomMcpServerConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallMcpFromMarketConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallSkillFromGithubConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallSkillFromMarketConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionInstallSkillFromUploadedFileConnect",
@@ -1192,43 +1121,80 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListMarketMcpServersConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListMarketSkillsConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListRepoMcpServersConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListRepoSkillsConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListSkillRegistriesConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionListSkillRegistryOverridesConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionPresignSkillUploadConnect",
@@ -1239,43 +1205,80 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionSyncSkillRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionTogglePlatformRegistryConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUninstallMcpServerConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUninstallSkillConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUpdateMcpServerConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "extensionUpdateSkillConnect",
     "group": "extension",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "fileUploadFile",
@@ -1294,7 +1297,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "invitationAcceptInvitationConnect",
@@ -1305,7 +1309,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationCreateInvitationConnect",
@@ -1316,7 +1321,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationGetInvitationByTokenConnect",
@@ -1327,7 +1333,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationListInvitationsConnect",
@@ -1338,7 +1345,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationListPendingInvitationsConnect",
@@ -1349,7 +1357,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationResendInvitationConnect",
@@ -1360,7 +1369,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "invitationRevokeInvitationConnect",
@@ -1371,25 +1381,29 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerBinaryPath",
     "group": "local_runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerFallbackVersion",
     "group": "local_runner",
     "params": [],
-    "returnType": "any"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerHostTarget",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerInstallBinary",
@@ -1404,31 +1418,36 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string | undefined | null"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerInstalledVersion",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerIsInstalled",
     "group": "local_runner",
     "params": [],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerIsRegistered",
     "group": "local_runner",
     "params": [],
-    "returnType": "boolean"
+    "returnType": "boolean",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerLocalNodeId",
     "group": "local_runner",
     "params": [],
-    "returnType": "string | null"
+    "returnType": "string | undefined | null",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerRegister",
@@ -1439,391 +1458,98 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "string"
       }
     ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceInstall",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceStart",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceStatus",
     "group": "local_runner",
     "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceStop",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "localRunnerServiceUninstall",
     "group": "local_runner",
     "params": [],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcAddRun",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcAppendRuns",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcClearRuns",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcCurrentLoopJson",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "loopSvcGetLoopBySlugJson",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "loopSvcLoopsJson",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "loopSvcRunsJson",
-    "group": "loop_svc",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "loopSvcSetCurrentLoop",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcSetLoops",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcSetRuns",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcUpdateLoopLocal",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "loopSvcUpdateRunStatus",
-    "group": "loop_svc",
-    "params": [
-      {
-        "name": "runId",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "meshBatchGetTicketPodsConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
-  },
-  {
-    "name": "meshClearTopology",
-    "group": "mesh",
-    "params": [],
-    "returnType": "void"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshCreatePodForTicketConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Uint8Array"
+      }
+    ],
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshFetchTopology",
     "group": "mesh",
     "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "meshGetActiveNodesJson",
-    "group": "mesh",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "meshGetChannelsForNodeJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "meshGetEdgesForNodeJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshGetMeshTopologyConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
-  },
-  {
-    "name": "meshGetNodeJson",
-    "group": "mesh",
     "params": [
       {
-        "name": "podKey",
-        "type": "string"
+        "name": "request",
+        "type": "Uint8Array"
       }
     ],
-    "returnType": "string"
-  },
-  {
-    "name": "meshGetNodesByRunnerJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "runnerId",
-        "type": "number"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "meshGetRunnerInfoJson",
-    "group": "mesh",
-    "params": [
-      {
-        "name": "runnerId",
-        "type": "number"
-      }
-    ],
-    "returnType": "string"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "meshGetTicketPodsConnect",
     "group": "mesh",
-    "params": [],
-    "returnType": "any"
-  },
-  {
-    "name": "meshSelectedNode",
-    "group": "mesh",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "meshSelectNode",
-    "group": "mesh",
     "params": [
       {
-        "name": "podKey",
-        "type": "string | undefined | null"
+        "name": "request",
+        "type": "Uint8Array"
       }
     ],
-    "returnType": "void"
-  },
-  {
-    "name": "meshTopologyJson",
-    "group": "mesh",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "podCurrentPodJson",
-    "group": "pod",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "podGetPodJson",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "podPodsJson",
-    "group": "pod",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "podRemovePod",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdateAgentStatus",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "agentStatus",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdatePodAlias",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "alias",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdatePodStatus",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      },
-      {
-        "name": "agentStatus",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "errorCode",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "errorMessage",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "timestamp",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "podUpdatePodTitle",
-    "group": "pod",
-    "params": [
-      {
-        "name": "podKey",
-        "type": "string"
-      },
-      {
-        "name": "title",
-        "type": "string"
-      },
-      {
-        "name": "timestamp",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Uint8Array",
+    "ipcExposable": true
   },
   {
     "name": "promocodeGetRedemptionHistoryConnect",
@@ -1834,7 +1560,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "promocodeRedeemPromoCodeConnect",
@@ -1845,7 +1572,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "promocodeValidatePromoCodeConnect",
@@ -1856,170 +1584,32 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "runnerAuthorizeRunner",
     "group": "runner",
     "params": [
       {
-        "name": "requestJson",
-        "type": "string"
+        "name": "requestBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerAvailableRunnersJson",
-    "group": "runner",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerCurrentRunnerJson",
-    "group": "runner",
-    "params": [],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "runnerGetAuthStatus",
     "group": "runner",
     "params": [
       {
-        "name": "authKey",
-        "type": "string"
+        "name": "requestBytes",
+        "type": "Array<number>"
       }
     ],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerGetRunnerJson",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerListRunnerPods",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "string | undefined | null"
-      },
-      {
-        "name": "limit",
-        "type": "number | undefined | null"
-      },
-      {
-        "name": "offset",
-        "type": "number | undefined | null"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerRemoveRunnerLocal",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerRunnersJson",
-    "group": "runner",
-    "params": [],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerSetAvailableRunners",
-    "group": "runner",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerSetCurrentRunner",
-    "group": "runner",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerSetRunners",
-    "group": "runner",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerUpdateRunner",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "requestJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "runnerUpdateRunnerLocal",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "runnerUpdateRunnerStatus",
-    "group": "runner",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ssoDiscoverConnect",
@@ -2030,7 +1620,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ssoLdapAuthConnect",
@@ -2041,25 +1632,44 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketAddSupportTicketMessageConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketAssociateAttachmentsConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketCreateSupportTicketConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketGetAttachmentUrlConnect",
@@ -2070,7 +1680,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketGetSupportTicketConnect",
@@ -2081,7 +1692,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketListSupportTicketsConnect",
@@ -2092,13 +1704,20 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "supportTicketPresignAttachmentUploadConnect",
     "group": "support_ticket",
-    "params": [],
-    "returnType": "any"
+    "params": [
+      {
+        "name": "request",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketAddAssigneeConnect",
@@ -2109,18 +1728,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketAddLabel",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketAddLabelConnect",
@@ -2131,39 +1740,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketAddTicket",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketAppendColumnTickets",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "status",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketBoardColumnsJson",
-    "group": "ticket",
-    "params": [],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketCreateLabelConnect",
@@ -2174,7 +1752,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketCreateTicketConnect",
@@ -2185,13 +1764,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketCurrentTicketJson",
-    "group": "ticket",
-    "params": [],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketDeleteLabelConnect",
@@ -2202,7 +1776,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketDeleteTicketConnect",
@@ -2213,30 +1788,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketFilterTicketsJson",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "search",
-        "type": "string"
-      },
-      {
-        "name": "statusesJson",
-        "type": "string"
-      },
-      {
-        "name": "prioritiesJson",
-        "type": "string"
-      },
-      {
-        "name": "repositoryIdsJson",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetActiveTicketsConnect",
@@ -2247,7 +1800,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetBoardConnect",
@@ -2258,7 +1812,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetSubTicketsConnect",
@@ -2269,18 +1824,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketGetTicketBySlugJson",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetTicketConnect",
@@ -2291,7 +1836,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketGetTicketPods",
@@ -2306,13 +1852,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "boolean | undefined | null"
       }
     ],
-    "returnType": "string"
-  },
-  {
-    "name": "ticketLabelsJson",
-    "group": "ticket",
-    "params": [],
-    "returnType": "string"
+    "returnType": "string",
+    "ipcExposable": true
   },
   {
     "name": "ticketListLabelsConnect",
@@ -2323,7 +1864,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketListTicketsConnect",
@@ -2334,7 +1876,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRemoveAssigneeConnect",
@@ -2345,18 +1888,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketRemoveLabel",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "id",
-        "type": "number"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRemoveLabelConnect",
@@ -2367,79 +1900,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketRemoveTicket",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetBoardColumns",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetCurrentTicket",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetLabels",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketSetTickets",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
-  },
-  {
-    "name": "ticketTicketPodsJson",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      }
-    ],
-    "returnType": "string"
-  },
-  {
-    "name": "ticketTicketsJson",
-    "group": "ticket",
-    "params": [],
-    "returnType": "string"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketUpdateLabelConnect",
@@ -2450,7 +1912,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketUpdateTicketConnect",
@@ -2461,22 +1924,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketUpdateTicketLocal",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      },
-      {
-        "name": "json",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketUpdateTicketStatusConnect",
@@ -2487,22 +1936,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
-  },
-  {
-    "name": "ticketUpdateTicketStatusLocal",
-    "group": "ticket",
-    "params": [
-      {
-        "name": "slug",
-        "type": "string"
-      },
-      {
-        "name": "status",
-        "type": "string"
-      }
-    ],
-    "returnType": "void"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsCreateCommentConnect",
@@ -2513,7 +1948,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsCreateRelationConnect",
@@ -2524,7 +1960,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsDeleteCommentConnect",
@@ -2535,7 +1972,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsDeleteRelationConnect",
@@ -2546,7 +1984,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsLinkCommitConnect",
@@ -2557,7 +1996,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListCommentsConnect",
@@ -2568,7 +2008,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListCommitsConnect",
@@ -2579,7 +2020,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListMergeRequestsConnect",
@@ -2590,7 +2032,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsListRelationsConnect",
@@ -2601,7 +2044,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsUnlinkCommitConnect",
@@ -2612,7 +2056,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "ticketRelationsUpdateCommentConnect",
@@ -2623,7 +2068,895 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotAppendIteration",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotControllersJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotInsertController",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotIterationsJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "key",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotPatchController",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotRemoveControllerProto",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotReplaceCachedControllers",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotReplaceCachedIterations",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotSetCurrentControllerProto",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotThinkingHistoryJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "key",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotThinkingJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "key",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAutopilotUpdateThinkingProto",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appAvailableRunnersJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelApplyMessageEdited",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelClearUnread",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelInsertChannel",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelInsertMessage",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelMentionCountsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelMessagesJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelPatchMemberCount",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelPodsJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelPrependCachedMessages",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelRemoveMember",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelRemoveMessage",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "channelId",
+        "type": "number"
+      },
+      {
+        "name": "messageId",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceCachedChannels",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceCachedMessages",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceMembers",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplacePods",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelReplaceUnreadCounts",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appChannelUnreadCountsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appCurrentRunnerJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appGetPodJson",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopAppendCachedRuns",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopClearCurrentLoop",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopClearLoopRuns",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopInsertLoopRun",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopPatchLoopFromAction",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopPatchLoopRunStatus",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopReplaceCachedLoops",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopReplaceCachedRuns",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appLoopSetCurrentLoop",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appMeshReplaceTopology",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodAppendCachedPods",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodInsertCreated",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodMarkTerminated",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodPatchPerpetual",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodRemove",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodReplaceCachedPods",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appPodsJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerPatch",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerRemove",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerReplaceAvailable",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerReplaceCached",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnerSetCurrent",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "reqBytes",
+        "type": "Array<number>"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appRunnersJson",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "appSelectChannel",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "id",
+        "type": "number | undefined | null"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appSetCurrentChannel",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "id",
+        "type": "number | undefined | null"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "appSetCurrentUser",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "userId",
+        "type": "number | undefined | null"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayDisconnect",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayDisconnectAll",
+    "group": "uncategorized",
+    "params": [],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayForceResize",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "cols",
+        "type": "number"
+      },
+      {
+        "name": "rows",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayGetPodSize",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "Array<number>",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayGetStatus",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "string",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayIsRunnerDisconnected",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      }
+    ],
+    "returnType": "boolean",
+    "ipcExposable": true
+  },
+  {
+    "name": "relayOnAcpMessage",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "onAcp",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relayOnPodDisconnected",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "onDisconnect",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relayOnStatusChange",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "onStatus",
+        "type": "(err: unknown, arg: string) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relaySend",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "data",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relaySendAcpCommand",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "command",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relaySendResize",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "cols",
+        "type": "number"
+      },
+      {
+        "name": "rows",
+        "type": "number"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
+  },
+  {
+    "name": "relaySubscribe",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "subscriptionId",
+        "type": "string"
+      },
+      {
+        "name": "relayUrl",
+        "type": "string"
+      },
+      {
+        "name": "token",
+        "type": "string"
+      },
+      {
+        "name": "onOutput",
+        "type": "(err: unknown, arg: Array<number>) => void"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": false
+  },
+  {
+    "name": "relayUnsubscribe",
+    "group": "uncategorized",
+    "params": [
+      {
+        "name": "podKey",
+        "type": "string"
+      },
+      {
+        "name": "subscriptionId",
+        "type": "string"
+      }
+    ],
+    "returnType": "void",
+    "ipcExposable": true
   },
   {
     "name": "userChangePasswordConnect",
@@ -2634,7 +2967,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userDeleteIdentityConnect",
@@ -2645,7 +2979,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userGetMeConnect",
@@ -2656,7 +2991,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userListIdentitiesConnect",
@@ -2667,7 +3003,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userSearchUsersConnect",
@@ -2678,7 +3015,8 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   },
   {
     "name": "userUpdateMeConnect",
@@ -2689,6 +3027,7 @@ export const ipcSchema: IpcMethodSchema[] = [
         "type": "Array<number>"
       }
     ],
-    "returnType": "Array<number>"
+    "returnType": "Array<number>",
+    "ipcExposable": true
   }
 ];

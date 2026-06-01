@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
@@ -17,9 +15,14 @@ use crate::js_bridge::{make_event_handler, make_state_listener};
 /// — Connect server-streaming over HTTP, NOT WebSocket (see R5-11). The
 /// `ws_url` constructor parameter is gone; the auth token, base URL,
 /// and org slug all come from the `ApiClient` / auth store.
+///
+/// Backed by `Arc<EventSubscriptionManager>` (not `Rc<RefCell<...>>`) so
+/// the same manager can be shared with `AppRuntime` — its `connect` /
+/// `disconnect` methods take `&self` and serialize mutation through the
+/// internal `Arc<RwLock<Inner>>`.
 #[wasm_bindgen]
 pub struct WasmEventsManager {
-    inner: Rc<RefCell<EventSubscriptionManager<PlatformRuntime>>>,
+    inner: Arc<EventSubscriptionManager<PlatformRuntime>>,
 }
 
 impl WasmEventsManager {
@@ -30,7 +33,7 @@ impl WasmEventsManager {
             EventSubscriptionManagerOptions::default(),
         );
         Self {
-            inner: Rc::new(RefCell::new(manager)),
+            inner: Arc::new(manager),
         }
     }
 
@@ -41,19 +44,33 @@ impl WasmEventsManager {
         let manager =
             EventSubscriptionManager::with_runtime(PlatformRuntime, client, options);
         Self {
-            inner: Rc::new(RefCell::new(manager)),
+            inner: Arc::new(manager),
         }
+    }
+
+    /// Wrap an externally-constructed shared `EventSubscriptionManager`
+    /// (the one owned by `AppRuntime`). This is the path
+    /// `WasmApiClient::create_events_manager` takes — single manager
+    /// instance, single dispatch hook.
+    pub(crate) fn from_shared(manager: Arc<EventSubscriptionManager<PlatformRuntime>>) -> Self {
+        Self { inner: manager }
+    }
+
+    /// Internal accessor for binding facades that need to hand the same
+    /// manager to `AppRuntime` for dispatch-hook installation.
+    pub(crate) fn manager_arc(&self) -> Arc<EventSubscriptionManager<PlatformRuntime>> {
+        Arc::clone(&self.inner)
     }
 }
 
 #[wasm_bindgen]
 impl WasmEventsManager {
     pub async fn connect(&self) {
-        self.inner.borrow_mut().connect().await;
+        self.inner.connect().await;
     }
 
     pub async fn disconnect(&self) {
-        self.inner.borrow_mut().disconnect().await;
+        self.inner.disconnect().await;
     }
 
     pub async fn subscribe(
@@ -63,37 +80,36 @@ impl WasmEventsManager {
     ) -> Result<f64, String> {
         let et = parse_event_type(&event_type)?;
         let handler = make_event_handler(callback);
-        let id = self.inner.borrow().subscribe(et, handler).await;
+        let id = self.inner.subscribe(et, handler).await;
         Ok(sub_id_to_f64(id))
     }
 
     pub async fn subscribe_all(&self, callback: js_sys::Function) -> f64 {
         let handler = make_event_handler(callback);
-        let id = self.inner.borrow().subscribe_all(handler).await;
+        let id = self.inner.subscribe_all(handler).await;
         sub_id_to_f64(id)
     }
 
     pub async fn unsubscribe(&self, id: f64) {
         let sid = f64_to_sub_id(id);
-        self.inner.borrow().unsubscribe(sid).await;
+        self.inner.unsubscribe(sid).await;
     }
 
     pub async fn on_connection_state_change(&self, callback: js_sys::Function) -> f64 {
         let listener = make_state_listener(callback);
-        let id = self
-            .inner
-            .borrow()
-            .on_connection_state_change(listener)
-            .await;
+        let id = self.inner.on_connection_state_change(listener).await;
         sub_id_to_f64(id)
     }
 
     pub async fn get_connection_state(&self) -> String {
-        self.inner
-            .borrow()
-            .get_connection_state()
-            .await
-            .to_string()
+        self.inner.get_connection_state().await.to_string()
+    }
+
+    /// Snapshot of the dispatch tick — increments after every event has
+    /// been applied to AppState. React/SwiftUI selectors read this to
+    /// decide whether to re-derive cached views.
+    pub fn tick(&self) -> f64 {
+        self.inner.tick() as f64
     }
 }
 

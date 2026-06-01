@@ -1,5 +1,5 @@
 import {
-  WasmApiClient, WasmAuthManager, WasmPodState,
+  WasmApiClient, WasmAuthManager,
   WasmPodService, WasmTicketService, WasmChannelService,
   WasmRunnerService, WasmLoopService, WasmAutopilotService,
   WasmMeshService, WasmBillingService, WasmRepositoryService,
@@ -11,9 +11,7 @@ import {
   WasmAgentService, WasmTicketRelationsService, WasmFileService,
   WasmSupportTicketService, WasmAuthConnectService,
   WasmBlockstoreService,
-  WasmRunnerState, WasmMeshState, WasmTicketState, WasmChannelState,
-  WasmLoopState, WasmAcpSessionManager,
-  WasmRepoState, WasmAutopilotState, WasmRelayManager,
+  WasmRelayManager,
 } from "agentsmesh-wasm";
 import { registerServiceProvider } from "@agentsmesh/service-runtime";
 
@@ -21,11 +19,18 @@ import { registerServiceProvider } from "@agentsmesh/service-runtime";
 // Caller constructs AuthManager first, passes it to ApiClient, then both here.
 // org_slug is read from AuthManager's PersistedSession on every request — no
 // renderer-side `set_org_slug()` needed.
+//
+// As of the Rust SSOT refactor (Phase 2), all WasmXxxState instances are
+// VIEWS over the SINGLE `AppRuntime.state` owned by the WasmApiClient.
+// Events delivered via the realtime stream (handled in Rust through
+// `EventSubscriptionManager` → `AppState.dispatch`) are immediately
+// visible to every selector here. Do NOT `new WasmPodState()` etc. —
+// those construct disjoint state and silently drop realtime events.
 export function registerAll(client: WasmApiClient, authManager: WasmAuthManager) {
   registerServiceProvider({
     apiClient: client,
     authManager,
-    podState: new WasmPodState(),
+    podState: client.get_pod_state(),
     podService: client.create_pod_service(),
     ticketService: client.create_ticket_service(),
     channelService: client.create_channel_service(),
@@ -54,14 +59,14 @@ export function registerAll(client: WasmApiClient, authManager: WasmAuthManager)
     supportTicketService: client.create_support_ticket_service(),
     authConnectService: client.create_auth_connect_service(),
     blockstoreService: client.create_blockstore_service(),
-    runnerState: new WasmRunnerState(),
-    meshState: new WasmMeshState(),
-    ticketState: new WasmTicketState(),
-    channelState: new WasmChannelState(),
-    loopState: new WasmLoopState(),
-    acpManager: new WasmAcpSessionManager(),
-    repoState: new WasmRepoState(),
-    autopilotState: new WasmAutopilotState(),
+    runnerState: client.get_runner_state(),
+    meshState: client.get_mesh_state(),
+    ticketState: client.get_ticket_state(),
+    channelState: client.get_channel_state(),
+    loopState: client.get_loop_state(),
+    acpManager: client.get_acp_manager(),
+    repoState: client.get_repo_state(),
+    autopilotState: client.get_autopilot_state(),
     relayManager: new WasmRelayManager(),
   });
 }
@@ -85,3 +90,4 @@ export {
   getRepoState,
   getAutopilotState, getRelayManager, getBlockstoreService,
 } from "@agentsmesh/service-runtime";
+

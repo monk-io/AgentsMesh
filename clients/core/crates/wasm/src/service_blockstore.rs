@@ -3,10 +3,16 @@ use std::sync::Arc;
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::BlockstoreService;
 use agentsmesh_state::blockstore_state::BlockstoreState;
+use agentsmesh_types::proto_blockstore_state_v1::ApplyRemoteOpRequest;
+use prost::Message;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmBlockstoreService(pub(crate) BlockstoreService);
+
+fn decode_err<E: std::fmt::Display>(e: E) -> String {
+    format!("decode: {e}")
+}
 
 #[wasm_bindgen]
 impl WasmBlockstoreService {
@@ -105,10 +111,6 @@ impl WasmBlockstoreService {
     // legacy methods bridge to the existing REST path; the Connect methods
     // above run in parallel for the proto-migration's binary wire.
 
-    pub async fn apply_ops(&self, req_json: String) -> Result<String, String> {
-        self.0.apply_ops(&req_json).await
-    }
-
     pub async fn list_workspaces(&self) -> Result<String, String> {
         self.0.list_workspaces().await
     }
@@ -129,14 +131,9 @@ impl WasmBlockstoreService {
         self.0.catchup(&workspace_id).await
     }
 
-    pub async fn semantic_search(
-        &self, workspace_id: String, req_json: String,
-    ) -> Result<String, String> {
-        self.0.semantic_search(&workspace_id, &req_json).await
-    }
-
-    pub fn apply_remote_op(&self, op_json: &str) -> Result<(), String> {
-        self.0.apply_remote_op(op_json)
+    pub fn apply_remote_op(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = ApplyRemoteOpRequest::decode(req_bytes).map_err(decode_err)?;
+        self.0.apply_remote_op(&req.op_json)
     }
 
     // ── Sync getters ──
@@ -170,27 +167,27 @@ impl WasmBlockstoreService {
         self.0.set_last_op_id(workspace_id, id);
     }
 
-    // ── Bulk state population (JS Connect adapter pushes server results
-    // here so the SSOT cache stays warm without the legacy fetch path).
+    // ── Bulk state population (proto-bytes envelopes; JSON internals carried
+    // through opaquely per blockstore_state.proto YAGNI rationale).
 
-    pub fn replace_workspaces_json(&self, list_json: &str) -> Result<(), String> {
-        self.0.replace_workspaces_json(list_json)
+    pub fn replace_workspaces(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.replace_workspaces(req_bytes)
     }
 
-    pub fn upsert_workspace_json(&self, ws_json: &str) -> Result<(), String> {
-        self.0.upsert_workspace_json(ws_json)
+    pub fn upsert_workspace(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.upsert_workspace(req_bytes)
     }
 
-    pub fn upsert_blocks_json(&self, blocks_json: &str) -> Result<(), String> {
-        self.0.upsert_blocks_json(blocks_json)
+    pub fn upsert_blocks(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.upsert_blocks(req_bytes)
     }
 
-    pub fn upsert_refs_json(&self, refs_json: &str) -> Result<(), String> {
-        self.0.upsert_refs_json(refs_json)
+    pub fn upsert_refs(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.upsert_refs(req_bytes)
     }
 
-    pub fn project_local_ops(&self, req_json: &str, res_json: &str) -> Result<(), String> {
-        self.0.project_local_ops(req_json, res_json)
+    pub fn project_local_ops(&self, req_bytes: &[u8]) -> Result<(), String> {
+        self.0.project_local_ops(req_bytes)
     }
 
     pub fn blocks_json(&self) -> String { self.0.blocks_json() }

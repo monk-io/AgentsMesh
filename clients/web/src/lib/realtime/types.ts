@@ -1,3 +1,5 @@
+import { fromJson, type DescMessage, type MessageShape } from "@bufbuild/protobuf";
+
 export type EventType =
   | "pod:created"
   | "pod:status_changed"
@@ -64,30 +66,66 @@ export type ConnectionState =
   | "connected"
   | "reconnecting";
 
-export type {
-  PodStatusChangedData,
-  PodCreatedData,
-  RunnerStatusData,
-  TicketStatusChangedData,
-  PodTitleChangedData,
-  PodAliasChangedData,
-  PodPerpetualChangedData,
-  PodInitProgressData,
-  ChannelMessageData,
-  ChannelMessageEditedData,
-  ChannelMessageDeletedData,
-  ChannelMemberChangedData,
-} from "./entityEventTypes";
+// Decode a realtime event's `data` field against a proto-es schema. The wire
+// is `protojson` (UseProtoNames=true) so snake_case keys land here as plain
+// JSON; `fromJson` rebuilds a fully-typed message instance (incl. bigint for
+// int64). Unknown keys are ignored so backend can add fields without breaking
+// older clients.
+export function decodeEventData<Desc extends DescMessage>(
+  schema: Desc,
+  data: unknown,
+): MessageShape<Desc> {
+  return fromJson(schema, data as never, { ignoreUnknownFields: true });
+}
 
 export type {
-  AutopilotStatusChangedData,
-  AutopilotIterationData,
-  AutopilotCreatedData,
-  AutopilotTerminatedData,
-  AutopilotThinkingData,
-  MREventData,
+  PodStatusChangedEventData,
+  PodCreatedEventData,
+  PodTitleChangedEventData,
+  PodAliasChangedEventData,
+  PodInitProgressEventData,
+  PodRestartingEventData,
+  PodPerpetualChangedEventData,
+  RunnerStatusEventData,
+  TicketStatusChangedEventData,
+  ChannelMessageEventData,
+  ChannelMessageEditedEventData,
+  ChannelMessageDeletedEventData,
+  ChannelMemberChangedEventData,
+  AutopilotStatusChangedEventData,
+  AutopilotIterationEventData,
+  AutopilotCreatedEventData,
+  AutopilotTerminatedEventData,
+  AutopilotThinkingEventData,
+  MrEventData,
   PipelineEventData,
   LoopRunEventData,
-  NotificationPayloadData,
-  LoopRunWarningData,
-} from "./featureEventTypes";
+  LoopRunWarningEventData,
+  NotificationPayloadEventData,
+} from "@proto/events/v1/event_data_pb";
+
+export {
+  PodStatusChangedEventDataSchema,
+  PodCreatedEventDataSchema,
+  PodTitleChangedEventDataSchema,
+  PodAliasChangedEventDataSchema,
+  PodInitProgressEventDataSchema,
+  PodRestartingEventDataSchema,
+  PodPerpetualChangedEventDataSchema,
+  RunnerStatusEventDataSchema,
+  TicketStatusChangedEventDataSchema,
+  ChannelMessageEventDataSchema,
+  ChannelMessageEditedEventDataSchema,
+  ChannelMessageDeletedEventDataSchema,
+  ChannelMemberChangedEventDataSchema,
+  AutopilotStatusChangedEventDataSchema,
+  AutopilotIterationEventDataSchema,
+  AutopilotCreatedEventDataSchema,
+  AutopilotTerminatedEventDataSchema,
+  AutopilotThinkingEventDataSchema,
+  MrEventDataSchema,
+  PipelineEventDataSchema,
+  LoopRunEventDataSchema,
+  LoopRunWarningEventDataSchema,
+  NotificationPayloadEventDataSchema,
+} from "@proto/events/v1/event_data_pb";

@@ -35,8 +35,13 @@ electron_vite_build(
         # through `node_modules/@agentsmesh/<name>` walking up from
         # the sandbox CWD.
         "//:node_modules/@agentsmesh/electron-adapter",
+        "//:node_modules/@agentsmesh/proto",
         "//:node_modules/@agentsmesh/service-interface",
         "//:node_modules/@agentsmesh/service-runtime",
+        # @bufbuild/protobuf is the runtime for the generated TS proto
+        # classes — electron-adapter's channel mutators call
+        # fromBinary() on incoming proto-bytes from the renderer.
+        "//:node_modules/@bufbuild/protobuf",
         # Generated TS proto message classes — clients/web/src/lib/api/
         # imports `@proto/*`, aliased to `../../proto/gen/ts/*` in
         # electron.vite.config.ts. The sandbox needs the staged .ts
@@ -191,4 +196,12 @@ playwright_test(
         [".env*"],
         allow_empty = True,
     ),
+    # helpers/env.ts walks up from cwd looking for `deploy/dev/.env` to
+    # learn worktree-specific ports + COMPOSE_PROJECT_NAME. Inside the
+    # Bazel sandbox the walk never finds it, so callers MUST forward the
+    # worktree-isolated values explicitly:
+    #   bazel test //clients/desktop:e2e \
+    #       --test_env=HTTP_PORT --test_env=POSTGRES_PORT \
+    #       --test_env=COMPOSE_PROJECT_NAME
+    # CI's bazel.yml already wires these via the per-shard ports step.
 )

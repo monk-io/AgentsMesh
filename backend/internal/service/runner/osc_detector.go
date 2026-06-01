@@ -2,11 +2,11 @@ package runner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 type NotifyFunc func(ctx context.Context, orgID int64, source, entityID, title, body, link, resolver string)
@@ -60,17 +60,21 @@ func (d *OSCDetector) PublishTitle(ctx context.Context, podKey, title string) bo
 	if err := d.podInfoGetter.UpdatePodTitle(ctx, podKey, title); err != nil {
 	}
 
-	titleData, _ := json.Marshal(map[string]string{
-		"pod_key": podKey,
-		"title":   title,
+	titleData, err := eventbus.MarshalEventData(&eventsv1.PodTitleChangedEventData{
+		PodKey: podKey,
+		Title:  title,
 	})
+	if err != nil {
+		slog.Error("failed to marshal pod title event", "error", err)
+		return false
+	}
 	d.eventBus.Publish(ctx, &eventbus.Event{
 		Type:           eventbus.EventPodTitleChanged,
 		Category:       eventbus.CategoryEntity,
 		OrganizationID: orgID,
 		EntityType:     "pod",
 		EntityID:       podKey,
-		Data:           json.RawMessage(titleData),
+		Data:           titleData,
 	})
 
 	return true

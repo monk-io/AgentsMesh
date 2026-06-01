@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 type EventBusPublisher struct {
@@ -44,8 +45,8 @@ func (p *EventBusPublisher) PublishTicketEvent(ctx context.Context, eventType Ti
 		return
 	}
 
-	data := &eventbus.TicketStatusChangedData{
-		Slug:            slug,
+	data := &eventsv1.TicketStatusChangedEventData{
+		Slug:           slug,
 		Status:         status,
 		PreviousStatus: previousStatus,
 	}

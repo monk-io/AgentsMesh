@@ -57,7 +57,19 @@ export function usePodCreationData(enabled: boolean): PodCreationData {
         }
         if (agentsRes.status === "fulfilled") {
           const res = agentsRes.value;
-          const agentList = [...res.builtin_agents, ...res.custom_agents, ...res.agents];
+          // listAgents() returns three overlapping arrays (builtin / custom /
+          // org-level); the backend may include the same slug in more than
+          // one, which trips React's "duplicate key" warning when the select
+          // iterates `agents.map((a) => <option key={a.slug}>)`. Dedupe by
+          // slug, keeping the first occurrence (precedence:
+          // builtin > custom > org-level).
+          const seen = new Set<string>();
+          const agentList: AgentData[] = [];
+          for (const a of [...res.builtin_agents, ...res.custom_agents, ...res.agents]) {
+            if (seen.has(a.slug)) continue;
+            seen.add(a.slug);
+            agentList.push(a);
+          }
           setAgents(agentList);
         }
       } catch (err) {

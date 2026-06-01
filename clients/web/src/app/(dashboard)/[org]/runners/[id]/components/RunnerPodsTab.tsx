@@ -144,7 +144,7 @@ export function RunnerPodsTab({
               const canResume = isInactive && sandboxStatus?.can_resume;
 
               return (
-                <tr key={pod.pod_key} className="hover:bg-muted/50">
+                <tr key={pod.pod_key} data-testid="runner-pod-row" data-pod-key={pod.pod_key} className="hover:bg-muted/50">
                   <td className="px-4 py-3">
                     <span className="text-sm font-medium text-foreground">
                       {pod.pod_key}

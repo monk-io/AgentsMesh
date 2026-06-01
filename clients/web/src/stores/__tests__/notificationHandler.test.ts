@@ -12,11 +12,13 @@ vi.mock("sonner", () => ({
 import { toast } from "sonner";
 
 function makeEvent(channels: { toast?: boolean; browser?: boolean }, priority = "normal", link?: string): RealtimeEvent {
+  const data: Record<string, unknown> = { source: "test", title: "Test", body: "Body", priority, channels };
+  if (link !== undefined) data.link = link;
   return {
     type: "notification",
     category: "notification",
     organization_id: 1,
-    data: { source: "test", title: "Test", body: "Body", priority, channels, link },
+    data,
     timestamp: Date.now(),
   } as RealtimeEvent;
 }

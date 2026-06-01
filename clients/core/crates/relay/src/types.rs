@@ -40,6 +40,10 @@ pub struct RelayStatusInfo {
 
 pub type StatusCallback = Arc<dyn Fn(RelayStatusInfo) + Send + Sync>;
 pub type AcpCallback = Arc<dyn Fn(MsgType, serde_json::Value) + Send + Sync>;
+// Fired once when a pod connection is fully torn down (disconnect_inner) so
+// adapters can drop their register-once guard and re-register listeners on the
+// next subscribe. Carries the pod_key.
+pub type DisconnectCallback = Arc<dyn Fn(String) + Send + Sync>;
 
 pub struct ConnectionHandle {
     pub pod_key: String,

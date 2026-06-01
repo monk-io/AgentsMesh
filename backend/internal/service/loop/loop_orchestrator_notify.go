@@ -9,6 +9,7 @@ import (
 
 	loopDomain "github.com/anthropics/agentsmesh/backend/internal/domain/loop"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func (o *LoopOrchestrator) publishRunEvent(orgID int64, eventType eventbus.EventType, run *loopDomain.LoopRun) {
@@ -16,13 +17,17 @@ func (o *LoopOrchestrator) publishRunEvent(orgID int64, eventType eventbus.Event
 		return
 	}
 
-	data, _ := json.Marshal(map[string]interface{}{
-		"loop_id":    run.LoopID,
-		"run_id":     run.ID,
-		"run_number": run.RunNumber,
-		"status":     run.Status,
-		"pod_key":    run.PodKey,
+	data, err := eventbus.MarshalEventData(&eventsv1.LoopRunEventData{
+		LoopId:    run.LoopID,
+		RunId:     run.ID,
+		RunNumber: int32(run.RunNumber),
+		Status:    run.Status,
+		PodKey:    run.PodKey,
 	})
+	if err != nil {
+		o.logger.Warn("failed to marshal loop run event", "error", err)
+		return
+	}
 
 	_ = o.eventBus.Publish(context.Background(), &eventbus.Event{
 		Type:           eventType,
@@ -40,13 +45,17 @@ func (o *LoopOrchestrator) publishWarningEvent(orgID int64, loopID int64, runID 
 		return
 	}
 
-	data, _ := json.Marshal(eventbus.LoopRunWarningData{
-		LoopID:    loopID,
-		RunID:     runID,
-		RunNumber: runNumber,
+	data, err := eventbus.MarshalEventData(&eventsv1.LoopRunWarningEventData{
+		LoopId:    loopID,
+		RunId:     runID,
+		RunNumber: int32(runNumber),
 		Warning:   warning,
 		Detail:    detail,
 	})
+	if err != nil {
+		o.logger.Warn("failed to marshal loop warning event", "error", err)
+		return
+	}
 
 	_ = o.eventBus.Publish(context.Background(), &eventbus.Event{
 		Type:           eventbus.EventLoopRunWarning,

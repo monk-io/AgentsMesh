@@ -5,9 +5,13 @@ use napi_derive::napi;
 
 use agentsmesh_api_client::{ApiClient, AuthTokenStore};
 use agentsmesh_auth::{AuthManager, PersistentStorage};
+use agentsmesh_events::{EventSubscriptionManager, EventSubscriptionManagerOptions};
 use agentsmesh_local_runner::LocalRunnerManager;
+use agentsmesh_relay::RelayConnectionPool;
 use agentsmesh_services::*;
 use agentsmesh_state::*;
+use agentsmesh_state::app_state::AppRuntime;
+use agentsmesh_transport::runtime::PlatformRuntime;
 
 mod file_storage;
 use file_storage::FileStorage;
@@ -19,12 +23,9 @@ fn err(e: impl std::fmt::Display) -> napi::Error {
 #[napi]
 pub struct AppState {
     auth: Arc<AuthManager>,
-    pod: Arc<Mutex<PodService>>,
     runner: Arc<Mutex<RunnerService>>,
     ticket: Arc<Mutex<TicketService>>,
     channel: Arc<Mutex<ChannelService>>,
-    loop_svc: Arc<Mutex<LoopService>>,
-    autopilot: Arc<Mutex<AutopilotService>>,
     mesh: Arc<Mutex<MeshService>>,
     billing: Arc<Mutex<BillingService>>,
     extension: Arc<Mutex<ExtensionService>>,
@@ -45,6 +46,26 @@ pub struct AppState {
     sso: Arc<Mutex<SSOService>>,
     local_runner: Arc<LocalRunnerManager>,
     client: Arc<ApiClient>,
+    // Realtime EventBus stream manager. Backed by the same Connect-RPC
+    // `EventsService.Subscribe` stream the web client uses; main process
+    // owns the connection and ferries events to renderer via IPC. See
+    // `commands/events_subscribe.rs` for the NAPI surface.
+    //
+    // The dispatch hook on this manager is wired into
+    // `runtime.state.dispatch` at construction time. Stored as
+    // `Arc<EventSubscriptionManager>` (not `Mutex<...>`) — connect /
+    // disconnect / subscribe are all `&self` and serialize via the
+    // manager's internal `Arc<RwLock<Inner>>`.
+    events: Arc<EventSubscriptionManager<PlatformRuntime>>,
+    // Singleton AppRuntime shared across services + events manager.
+    // Holds `Arc<RwLock<AppState>>` for Phase 2 + the events Arc with
+    // dispatch hook installed.
+    runtime: Arc<AppRuntime>,
+    // Terminal data-plane relay pool (SSOT). The pool runs natively in the
+    // main process (tokio WS via transport::native); commands/relay.rs bridges
+    // it to the renderer over IPC. Construction is spawn-free — connect/send
+    // spawn inside the async relay_* commands (tokio context guaranteed there).
+    relay: RelayConnectionPool,
 }
 
 #[napi]
@@ -58,15 +79,20 @@ impl AppState {
         let local_runner = Arc::new(LocalRunnerManager::from_default_home(base_url.clone()));
         let client = Arc::new(ApiClient::new(base_url, auth.clone()));
         let c = client.clone();
+        // Construct shared events manager + AppRuntime. AppRuntime::new
+        // installs the dispatch hook so every event delivered through
+        // `events.connect()` flows into `runtime.state.dispatch`.
+        let events = Arc::new(EventSubscriptionManager::new(
+            c.clone(),
+            EventSubscriptionManagerOptions::default(),
+        ));
+        let runtime = AppRuntime::new(events.clone());
         Ok(Self {
             auth,
-            pod: Arc::new(Mutex::new(PodService::new(c.clone(), pod_state::PodState::new()))),
-            runner: Arc::new(Mutex::new(RunnerService::new(c.clone(), runner_state::RunnerState::new()))),
-            ticket: Arc::new(Mutex::new(TicketService::new(c.clone(), ticket_state::TicketState::new()))),
-            channel: Arc::new(Mutex::new(ChannelService::new(c.clone(), channel_state::ChannelState::new()))),
-            loop_svc: Arc::new(Mutex::new(LoopService::new(c.clone(), loop_state::LoopState::new()))),
-            autopilot: Arc::new(Mutex::new(AutopilotService::new(c.clone(), autopilot_state::AutopilotState::new()))),
-            mesh: Arc::new(Mutex::new(MeshService::new(c.clone(), mesh_state::MeshState::new()))),
+            runner: Arc::new(Mutex::new(RunnerService::new(c.clone()))),
+            ticket: Arc::new(Mutex::new(TicketService::new(c.clone()))),
+            channel: Arc::new(Mutex::new(ChannelService::new(c.clone()))),
+            mesh: Arc::new(Mutex::new(MeshService::new(c.clone()))),
             billing: Arc::new(Mutex::new(BillingService::new(c.clone()))),
             extension: Arc::new(Mutex::new(ExtensionService::new(c.clone()))),
             invitation: Arc::new(Mutex::new(InvitationService::new(c.clone()))),
@@ -88,6 +114,11 @@ impl AppState {
             ))),
             sso: Arc::new(Mutex::new(SSOService::new(c.clone()))),
             local_runner,
+            events,
+            runtime,
+            // Drop the unsubscribe receiver: the renderer calls relay_unsubscribe
+            // directly (no ConnectionHandle round-trip), so the drain isn't needed.
+            relay: RelayConnectionPool::new().0,
             client: c,
         })
     }
@@ -157,31 +188,6 @@ impl AppState {
     }
 
     #[napi]
-    pub fn auth_apply_session(&self, session_json: String) -> napi::Result<()> {
-        let session: agentsmesh_state::auth_types::AuthSession = serde_json::from_str(&session_json).map_err(err)?;
-        self.auth.apply_session(&session);
-        Ok(())
-    }
-
-    #[napi]
-    pub fn auth_set_organizations(&self, orgs_json: String) -> napi::Result<()> {
-        let orgs: Vec<agentsmesh_state::auth_types::Organization> = serde_json::from_str(&orgs_json).map_err(err)?;
-        self.auth.replace_organizations(orgs);
-        Ok(())
-    }
-
-    #[napi]
-    pub fn auth_set_current_org(&self, org_json: String) -> napi::Result<()> {
-        if org_json.is_empty() {
-            self.auth.set_current_org(None);
-        } else {
-            let org: agentsmesh_state::auth_types::Organization = serde_json::from_str(&org_json).map_err(err)?;
-            self.auth.set_current_org(Some(org));
-        }
-        Ok(())
-    }
-
-    #[napi]
     pub fn auth_clear_session(&self) {
         self.auth.clear();
     }
@@ -201,3 +207,5 @@ pub fn log_event(level: String, target: String, msg: String) {
 }
 
 mod commands;
+mod auth_proto;
+mod auth_proto_convert;

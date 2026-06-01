@@ -33,8 +33,16 @@ pub mod proto_apikey_v1 {
     pub use ::apikey_proto::proto::apikey::v1::*;
 }
 
+pub mod proto_app_state_v1 {
+    pub use ::app_state_proto::proto::app_state::v1::*;
+}
+
 pub mod proto_auth_v1 {
     pub use ::auth_proto::proto::auth::v1::*;
+}
+
+pub mod proto_auth_state_v1 {
+    pub use ::auth_state_proto::proto::auth_state::v1::*;
 }
 
 pub mod proto_autopilot_v1 {
@@ -51,6 +59,10 @@ pub mod proto_binding_v1 {
 
 pub mod proto_blockstore_v1 {
     pub use ::blockstore_proto::proto::blockstore::v1::*;
+}
+
+pub mod proto_blockstore_state_v1 {
+    pub use ::blockstore_state_proto::proto::blockstore_state::v1::*;
 }
 
 pub mod proto_channel_v1 {
@@ -95,8 +107,16 @@ pub mod proto_loop_v1 {
     pub use ::loop_proto::proto::r#loop::v1::*;
 }
 
+pub mod proto_loop_state_v1 {
+    pub use ::loop_state_proto::proto::loop_state::v1::*;
+}
+
 pub mod proto_mesh_v1 {
     pub use ::mesh_proto::proto::mesh::v1::*;
+}
+
+pub mod proto_mesh_state_v1 {
+    pub use ::mesh_state_proto::proto::mesh_state::v1::*;
 }
 
 pub mod proto_notification_v1 {
@@ -111,6 +131,10 @@ pub mod proto_pod_v1 {
     pub use ::pod_proto::proto::pod::v1::*;
 }
 
+pub mod proto_pod_state_v1 {
+    pub use ::pod_state_proto::proto::pod_state::v1::*;
+}
+
 pub mod proto_promocode_v1 {
     pub use ::promocode_proto::proto::promocode::v1::*;
 }
@@ -119,8 +143,24 @@ pub mod proto_repository_v1 {
     pub use ::repository_proto::proto::repository::v1::*;
 }
 
+pub mod proto_repo_state_v1 {
+    pub use ::repo_state_proto::proto::repo_state::v1::*;
+}
+
 pub mod proto_runner_api_v1 {
     pub use ::runner_api_proto::proto::runner_api::v1::*;
+}
+
+pub mod proto_runner_state_v1 {
+    pub use ::runner_state_proto::proto::runner_state::v1::*;
+}
+
+pub mod proto_autopilot_state_v1 {
+    pub use ::autopilot_state_proto::proto::autopilot_state::v1::*;
+}
+
+pub mod proto_acp_state_v1 {
+    pub use ::acp_state_proto::proto::acp_state::v1::*;
 }
 
 pub mod proto_sso_v1 {
@@ -133,6 +173,10 @@ pub mod proto_support_ticket_v1 {
 
 pub mod proto_ticket_v1 {
     pub use ::ticket_proto::proto::ticket::v1::*;
+}
+
+pub mod proto_ticket_state_v1 {
+    pub use ::ticket_state_proto::proto::ticket_state::v1::*;
 }
 
 pub mod proto_ticket_relations_v1 {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/api/connect/interceptors"
 	"github.com/anthropics/agentsmesh/backend/internal/domain/agentpod"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	agentpodsvc "github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	apv1 "github.com/anthropics/agentsmesh/proto/gen/go/autopilot/v1"
@@ -62,6 +63,7 @@ type Server struct {
 	orgSvc        middleware.OrganizationService
 	podSvc        PodLookup
 	commandSender CommandSender
+	eventBus      *eventbus.EventBus
 }
 
 func NewServer(
@@ -69,13 +71,29 @@ func NewServer(
 	orgSvc middleware.OrganizationService,
 	podSvc PodLookup,
 	cmdSender CommandSender,
+	opts ...Option,
 ) *Server {
-	return &Server{
+	s := &Server{
 		svc:           svc,
 		orgSvc:        orgSvc,
 		podSvc:        podSvc,
 		commandSender: cmdSender,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// Option configures a Server.
+type Option func(*Server)
+
+// WithEventBus enables realtime autopilot:created event publishing on
+// CreateAutopilotController. Without it the handler skips publishing —
+// the desktop / web clients then never know an autopilot was attached
+// until their next ListAutopilotControllers poll.
+func WithEventBus(eb *eventbus.EventBus) Option {
+	return func(s *Server) { s.eventBus = eb }
 }
 
 func Mount(mux *http.ServeMux, srv *Server, opts ...connect.HandlerOption) {

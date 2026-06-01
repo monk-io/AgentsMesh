@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { create, toBinary } from '@bufbuild/protobuf'
+import { create, toBinary, fromBinary } from '@bufbuild/protobuf'
 import {
   ListRunnersResponseSchema,
   ListAvailableRunnersResponseSchema,
@@ -9,26 +9,66 @@ import {
   DeleteRunnerResponseSchema,
   type Runner as ProtoRunner,
 } from '@proto/runner_api/v1/runner_pb'
-import { getRunnerStatusInfo, canAcceptPods, formatHostInfo, Runner, useRunnerStore } from '../runner'
+import {
+  ReplaceCachedRunnersRequestSchema,
+  ReplaceAvailableRunnersRequestSchema,
+  SetCurrentRunnerRequestSchema,
+  PatchCachedRunnerRequestSchema,
+  RemoveCachedRunnerRequestSchema,
+} from '@proto/runner_state/v1/runner_state_pb'
+import { getRunnerStatusInfo, formatHostInfo, Runner, useRunnerStore } from '../runner'
 
 let mockRunnersList: Runner[] = []
 let mockAvailableRunners: Runner[] = []
 let mockCurrentRunner: Runner | null = null
 
+function protoRunnerToData(r: ProtoRunner): Runner {
+  const out: Runner = {
+    id: Number(r.id),
+    node_id: r.nodeId,
+    status: r.status as Runner['status'],
+    last_heartbeat: r.lastHeartbeat,
+    current_pods: r.currentPods,
+    max_concurrent_pods: r.maxConcurrentPods,
+    is_enabled: r.isEnabled,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+  }
+  if (r.description) out.description = r.description
+  if (r.runnerVersion) out.runner_version = r.runnerVersion
+  if (r.visibility) out.visibility = r.visibility as Runner['visibility']
+  return out
+}
+
 const mockService = {
-  set_runners: vi.fn((j: string) => { mockRunnersList = JSON.parse(j) }),
-  set_available_runners: vi.fn((j: string) => { mockAvailableRunners = JSON.parse(j) }),
-  set_current_runner: vi.fn((j: string) => { mockCurrentRunner = j ? JSON.parse(j) : null }),
-  update_runner_status: vi.fn(),
-  update_runner: vi.fn((id: bigint, j: string) => {
-    const r = JSON.parse(j) as Runner
-    const idx = mockRunnersList.findIndex((x) => x.id === Number(id))
-    if (idx >= 0) mockRunnersList[idx] = r
+  replace_cached_runners: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(ReplaceCachedRunnersRequestSchema, bytes)
+    mockRunnersList = req.runners.map(protoRunnerToData)
   }),
-  remove_runner: vi.fn((id: bigint) => {
-    mockRunnersList = mockRunnersList.filter((x) => x.id !== Number(id))
-    mockAvailableRunners = mockAvailableRunners.filter((x) => x.id !== Number(id))
+  replace_available_runners: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(ReplaceAvailableRunnersRequestSchema, bytes)
+    mockAvailableRunners = req.runners.map(protoRunnerToData)
   }),
+  set_current_runner_proto: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(SetCurrentRunnerRequestSchema, bytes)
+    mockCurrentRunner = req.runner ? protoRunnerToData(req.runner) : null
+  }),
+  patch_cached_runner: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(PatchCachedRunnerRequestSchema, bytes)
+    if (req.runner) {
+      const r = protoRunnerToData(req.runner)
+      const idx = mockRunnersList.findIndex((x) => x.id === r.id)
+      if (idx >= 0) mockRunnersList[idx] = r
+      else mockRunnersList.push(r)
+    }
+  }),
+  remove_cached_runner: vi.fn((bytes: Uint8Array) => {
+    const req = fromBinary(RemoveCachedRunnerRequestSchema, bytes)
+    const id = Number(req.runnerId)
+    mockRunnersList = mockRunnersList.filter((x) => x.id !== id)
+    mockAvailableRunners = mockAvailableRunners.filter((x) => x.id !== id)
+  }),
+  apply_runner_status_event: vi.fn(),
   runners_json: vi.fn(() => JSON.stringify(mockRunnersList)),
   available_runners_json: vi.fn(() => JSON.stringify(mockAvailableRunners)),
   current_runner_json: vi.fn(() => (mockCurrentRunner ? JSON.stringify(mockCurrentRunner) : null)),
@@ -43,6 +83,7 @@ const mockService = {
 
 vi.mock('@/lib/wasm-core', () => ({
   getRunnerService: () => mockService,
+  getRunnerState: () => mockService,
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -298,7 +339,7 @@ describe('Runner Store Actions', () => {
       mockListAvailable([runner])
       await useRunnerStore.getState().fetchAvailableRunners()
 
-      mockService.update_runner_status.mockImplementation(() => {
+      mockService.apply_runner_status_event.mockImplementation(() => {
         mockRunnersList = [{ ...runner, status: 'offline' }]
         mockAvailableRunners = []
       })
@@ -316,7 +357,7 @@ describe('Runner Store Actions', () => {
       mockListAvailable([runner])
       await useRunnerStore.getState().fetchAvailableRunners()
 
-      mockService.update_runner_status.mockImplementation(() => {
+      mockService.apply_runner_status_event.mockImplementation(() => {
         // State stays the same since status is already online
       })
 
@@ -372,56 +413,6 @@ describe('Runner Store Helper Functions', () => {
         color: 'text-orange-600 dark:text-orange-400',
         dotColor: 'bg-orange-500',
       })
-    })
-  })
-
-  describe('canAcceptPods', () => {
-    const createRunner = (overrides: Partial<Runner> = {}): Runner => ({
-      id: 1,
-      node_id: 'test-runner',
-      status: 'online',
-      is_enabled: true,
-      current_pods: 0,
-      max_concurrent_pods: 5,
-      last_heartbeat: '2024-01-01T00:00:00Z',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-      ...overrides,
-    })
-
-    it('should return true for online runner with available slots', () => {
-      const runner = createRunner({ status: 'online', current_pods: 2, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(true)
-    })
-
-    it('should return false for offline runner', () => {
-      const runner = createRunner({ status: 'offline' })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false for maintenance runner', () => {
-      const runner = createRunner({ status: 'maintenance' })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false for busy runner', () => {
-      const runner = createRunner({ status: 'busy' })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false when at max capacity', () => {
-      const runner = createRunner({ status: 'online', current_pods: 5, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return false when over max capacity', () => {
-      const runner = createRunner({ status: 'online', current_pods: 6, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(false)
-    })
-
-    it('should return true with zero current pods', () => {
-      const runner = createRunner({ status: 'online', current_pods: 0, max_concurrent_pods: 5 })
-      expect(canAcceptPods(runner)).toBe(true)
     })
   })
 

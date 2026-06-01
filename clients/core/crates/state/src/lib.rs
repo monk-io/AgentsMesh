@@ -24,6 +24,8 @@ mod acp_session_tests;
 #[cfg(test)]
 mod acp_dispatch_tests;
 #[cfg(test)]
+mod app_runtime_tests;
+#[cfg(test)]
 mod blockstore_state_tests;
 #[cfg(test)]
 mod channel_state_tests;

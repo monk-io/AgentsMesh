@@ -38,6 +38,8 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
     <div
       className="cursor-pointer rounded-md border border-border bg-card p-3.5 transition-colors hover:border-border-strong"
       onClick={onClick}
+      data-testid="ticket-card"
+      data-ticket-slug={ticket.slug}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <Link
@@ -50,6 +52,8 @@ export function TicketCard({ ticket, onClick, showRepository = true, showStatus 
         {showStatus && (
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusInfo.bgColor} ${statusInfo.color}`}
+            data-testid="ticket-status-badge"
+            data-status={ticket.status}
           >
             <StatusIcon status={ticket.status} size="xs" />
             {t(`tickets.status.${ticket.status}`)}

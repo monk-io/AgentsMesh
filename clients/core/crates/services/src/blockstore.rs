@@ -3,15 +3,15 @@ use std::sync::{Arc, RwLock};
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_state::blockstore_state::BlockstoreState;
 use agentsmesh_state::blockstore_types::{
-    ApplyOpsRequest, ApplyOpsResult, Block, BlockOp, BlockRef, OpKind,
-    SearchHit, SemanticSearchRequest, Workspace,
+    ApplyOpsRequest, ApplyOpsResult, BlockOp, OpKind, Workspace,
 };
 use agentsmesh_types::proto_blockstore_v1 as blockstore_proto;
+use agentsmesh_types::proto_blockstore_state_v1 as blockstore_state_proto;
 use prost::Message;
 
 use crate::blockstore_proto_convert::{
     block_from_proto, block_op_from_proto, block_ref_from_proto, chrono_like_now,
-    op_envelope_to_proto, search_hit_from_proto, synthesize_op, workspace_from_proto,
+    op_envelope_from_proto, synthesize_op, workspace_from_proto,
 };
 
 pub struct BlockstoreService {
@@ -27,29 +27,6 @@ impl BlockstoreService {
     pub(crate) fn client(&self) -> &ApiClient { &self.client }
 
     fn org_slug(&self) -> String { self.client.current_org_slug() }
-
-    // ── Mutations ──
-
-    pub async fn apply_ops(&self, req_json: &str) -> Result<String, String> {
-        let req: ApplyOpsRequest = serde_json::from_str(req_json)
-            .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
-        let proto_req = blockstore_proto::ApplyOpsRequest {
-            org_slug: self.org_slug(),
-            workspace_id: req.workspace_id.clone(),
-            ops: req.ops.iter().map(op_envelope_to_proto).collect(),
-            idempotency_key: req.idempotency_key.clone(),
-            parent_op_id: req.parent_op_id,
-        };
-        let resp = self.client.blockstore_apply_ops_connect(&proto_req).await
-            .map_err(crate::wire)?;
-        let res = ApplyOpsResult {
-            op_ids: resp.op_ids,
-            was_replay: resp.was_replay,
-            parent_op_id: resp.parent_op_id,
-        };
-        self.apply_local_ops(&req, &res);
-        serde_json::to_string(&res).map_err(crate::wire)
-    }
 
     fn apply_local_ops(&self, req: &ApplyOpsRequest, res: &ApplyOpsResult) {
         if res.was_replay { return; }
@@ -142,23 +119,6 @@ impl BlockstoreService {
         Ok(())
     }
 
-    pub async fn semantic_search(&self, workspace_id: &str, req_json: &str) -> Result<String, String> {
-        let req: SemanticSearchRequest = serde_json::from_str(req_json)
-            .map_err(|e| format!("invalid search request: {e}"))?;
-        let proto_req = blockstore_proto::SemanticSearchRequest {
-            org_slug: self.org_slug(),
-            workspace_id: workspace_id.to_string(),
-            query: req.query,
-            top_k: req.top_k.map(|v| v as i32),
-            min_score: req.min_score.map(|v| v as f32),
-            r#type: req.block_type,
-        };
-        let resp = self.client.blockstore_semantic_search_connect(&proto_req).await
-            .map_err(crate::wire)?;
-        let hits: Vec<SearchHit> = resp.hits.into_iter().map(search_hit_from_proto).collect();
-        serde_json::to_string(&serde_json::json!({ "hits": hits })).map_err(crate::wire)
-    }
-
     // ── Remote op stream (realtime) ──
 
     pub fn apply_remote_op(&self, op_json: &str) -> Result<(), String> {
@@ -198,49 +158,67 @@ impl BlockstoreService {
         self.state.write().unwrap().set_last_op_id(workspace_id, id);
     }
 
-    // ── Bulk state population (consumed by JS Connect adapter callers
-    // who fetched via the binary wire and need to push results into the
-    // local cache). Each method accepts a JSON-serialized payload and
-    // upserts into the SSOT state in a single critical section.
+    // ── Bulk state population (consumed by JS Connect adapter callers who
+    // fetched via the binary wire and need to push results into the local
+    // cache). Each method accepts a prost-encoded request envelope carrying
+    // the typed proto.blockstore.v1.* container. Per-blocktype data/meta
+    // fields inside Block / BlockRef remain JSON strings (200+ subschemas).
 
-    pub fn replace_workspaces_json(&self, list_json: &str) -> Result<(), String> {
-        let list: Vec<Workspace> = serde_json::from_str(list_json)
-            .map_err(|e| format!("invalid workspaces JSON: {e}"))?;
+    pub fn replace_workspaces(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::ReplaceWorkspacesRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ReplaceWorkspacesRequest: {e}"))?;
+        let list: Vec<Workspace> = req.workspaces.into_iter().map(workspace_from_proto).collect();
         self.state.write().unwrap().replace_workspaces(list);
         Ok(())
     }
 
-    pub fn upsert_workspace_json(&self, ws_json: &str) -> Result<(), String> {
-        let ws: Workspace = serde_json::from_str(ws_json)
-            .map_err(|e| format!("invalid workspace JSON: {e}"))?;
-        self.state.write().unwrap().upsert_workspace(ws);
+    pub fn upsert_workspace(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::UpsertWorkspaceRequest::decode(req_bytes)
+            .map_err(|e| format!("decode UpsertWorkspaceRequest: {e}"))?;
+        let ws = req.workspace.ok_or_else(|| "missing workspace".to_string())?;
+        self.state.write().unwrap().upsert_workspace(workspace_from_proto(ws));
         Ok(())
     }
 
-    pub fn upsert_blocks_json(&self, blocks_json: &str) -> Result<(), String> {
-        let blocks: Vec<Block> = serde_json::from_str(blocks_json)
-            .map_err(|e| format!("invalid blocks JSON: {e}"))?;
+    pub fn upsert_blocks(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::UpsertBlocksRequest::decode(req_bytes)
+            .map_err(|e| format!("decode UpsertBlocksRequest: {e}"))?;
         let mut state = self.state.write().unwrap();
-        for b in blocks { state.upsert_block(b); }
+        for b in req.blocks {
+            state.upsert_block(block_from_proto(b)?);
+        }
         Ok(())
     }
 
-    pub fn upsert_refs_json(&self, refs_json: &str) -> Result<(), String> {
-        let refs: Vec<BlockRef> = serde_json::from_str(refs_json)
-            .map_err(|e| format!("invalid refs JSON: {e}"))?;
+    pub fn upsert_refs(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = blockstore_state_proto::UpsertRefsRequest::decode(req_bytes)
+            .map_err(|e| format!("decode UpsertRefsRequest: {e}"))?;
         let mut state = self.state.write().unwrap();
-        for r in refs { state.upsert_ref(r); }
+        for r in req.refs {
+            state.upsert_ref(block_ref_from_proto(r)?);
+        }
         Ok(())
     }
 
     /// Project an ApplyOps envelope/result pair into the local cache.
-    /// Mirrors `apply_ops`'s side effect so JS callers using the Connect
-    /// path can keep the same local-replay semantics.
-    pub fn project_local_ops(&self, req_json: &str, res_json: &str) -> Result<(), String> {
-        let req: ApplyOpsRequest = serde_json::from_str(req_json)
-            .map_err(|e| format!("invalid ApplyOpsRequest JSON: {e}"))?;
-        let res: ApplyOpsResult = serde_json::from_str(res_json)
-            .map_err(|e| format!("invalid ApplyOpsResult JSON: {e}"))?;
+    /// Mirrors `apply_ops_connect`'s side effect so JS callers using the
+    /// Connect path keep the same local-replay semantics.
+    pub fn project_local_ops(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let envelope = blockstore_state_proto::ProjectLocalOpsRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ProjectLocalOpsRequest: {e}"))?;
+        let proto_req = envelope.request.ok_or_else(|| "missing request".to_string())?;
+        let proto_res = envelope.result.ok_or_else(|| "missing result".to_string())?;
+        let req = ApplyOpsRequest {
+            workspace_id: proto_req.workspace_id,
+            ops: proto_req.ops.iter().map(op_envelope_from_proto).collect::<Result<_, String>>()?,
+            idempotency_key: proto_req.idempotency_key,
+            parent_op_id: proto_req.parent_op_id,
+        };
+        let res = ApplyOpsResult {
+            op_ids: proto_res.op_ids,
+            was_replay: proto_res.was_replay,
+            parent_op_id: proto_res.parent_op_id,
+        };
         self.apply_local_ops(&req, &res);
         Ok(())
     }

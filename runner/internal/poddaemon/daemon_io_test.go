@@ -231,6 +231,48 @@ func TestPtyReaderNoClientDiscards(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
+// TestEarlyOutputReplayedOnAttach is the regression guard for the dropped
+// startup-banner bug: an agent that writes output BEFORE the runner attaches
+// (the runner connects a few hundred ms after the daemon spawns the child),
+// then idles, must still have that output replayed on attach. Without the
+// daemon-side history buffer ptyReader dropped it (no client yet) and the idle
+// agent produced nothing more — a permanently blank terminal (total_reads=0).
+func TestEarlyOutputReplayedOnAttach(t *testing.T) {
+	d, proc, ipcPath := setupDaemonServer(t)
+
+	go d.ptyReader()
+	go d.acceptLoop()
+
+	// Child emits its banner before any client attaches, then idles.
+	proc.readCh <- []byte("ready\r\n")
+	time.Sleep(100 * time.Millisecond) // let ptyReader buffer it into history
+
+	conn, err := Dial(ipcPath)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	require.NoError(t, WriteMessage(conn, MsgAttach, testAttachPayload()))
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	msgType, _, err := ReadMessage(conn) // AttachAck
+	require.NoError(t, err)
+	require.Equal(t, MsgAttachAck, msgType)
+
+	// The buffered banner must be replayed as the first MsgOutput after the ack.
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	msgType, payload, err := ReadMessage(conn)
+	require.NoError(t, err)
+	assert.Equal(t, MsgOutput, msgType)
+	assert.Equal(t, "ready\r\n", string(payload))
+
+	// Live output produced after attach still flows, in order, after the replay.
+	proc.readCh <- []byte("after-attach")
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	msgType, payload, err = ReadMessage(conn)
+	require.NoError(t, err)
+	assert.Equal(t, MsgOutput, msgType)
+	assert.Equal(t, "after-attach", string(payload))
+}
+
 // TestHandleClientRejectsInvalidToken verifies that the daemon disconnects
 // a client that sends a wrong auth token.
 func TestHandleClientRejectsInvalidToken(t *testing.T) {

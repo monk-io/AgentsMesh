@@ -4,7 +4,13 @@ import { create, toBinary } from "@bufbuild/protobuf";
 import { ListPodsResponseSchema, PodSchema } from "@proto/pod/v1/pod_pb";
 import { usePodStore, SIDEBAR_STATUS_MAP, Pod } from "../pod";
 import { getAuthManager, getPodService } from "@/lib/wasm-core";
-import { mockPod, mockPod2, resetPodStore, seedPods, readPods } from "./pod-test-utils";
+import {
+  mockPod,
+  mockPod2,
+  resetPodStore,
+  seedPods,
+  lastAppendCachedPods,
+} from "./pod-test-utils";
 
 interface MockService {
   list_pods_connect: ReturnType<typeof vi.fn>;
@@ -198,7 +204,10 @@ describe("Pod Store — loadMorePods", () => {
     });
 
     expect(svc().list_pods_connect).toHaveBeenCalled();
-    expect(readPods()).toHaveLength(2);
+    // The append-cached bridge call carries the new page payload.
+    const appended = lastAppendCachedPods();
+    expect(appended).toHaveLength(1);
+    expect(appended[0].pod_key).toBe(mockPod2.pod_key);
   });
 
   it("should skip when no more pods", async () => {
@@ -232,7 +241,11 @@ describe("Pod Store — loadMorePods", () => {
       await usePodStore.getState().loadMorePods();
     });
 
-    expect(readPods()).toHaveLength(2);
+    // The bridge handles dedup on the wasm side; the store hands the new
+    // page over without checking. Production assertion: append was called.
+    expect(svc().list_pods_connect).toHaveBeenCalled();
+    const appended = lastAppendCachedPods();
+    expect(appended.map((p) => p.pod_key)).toEqual([mockPod2.pod_key]);
   });
 
   it("should load mine filter when user is logged in", async () => {
@@ -246,6 +259,7 @@ describe("Pod Store — loadMorePods", () => {
     });
 
     expect(svc().list_pods_connect).toHaveBeenCalled();
-    expect(readPods()).toHaveLength(2);
+    const appended = lastAppendCachedPods();
+    expect(appended.map((p) => p.pod_key)).toEqual([mockPod2.pod_key]);
   });
 });

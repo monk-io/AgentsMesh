@@ -191,6 +191,7 @@ export function MessageList({
         ref={containerRef}
         className="h-full overflow-y-auto py-2"
         onScroll={handleScroll}
+        data-testid="channel-message-list"
       >
         {hasMore && <div ref={sentinelRef} className="h-1" />}
         {loadingMore && (

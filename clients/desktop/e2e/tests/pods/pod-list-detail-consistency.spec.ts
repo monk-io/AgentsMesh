@@ -14,8 +14,8 @@ test("Pods · list and detail views stay consistent", async ({ page }) => {
       electronAPI: { invoke: (ch: string, ...a: unknown[]) => Promise<unknown> };
     }).electronAPI;
 
-    const listJson = await api.invoke("podPodsJson") as string;
-    // pod_pods_json() serializes the state's pods() Vec directly — top-level array.
+    const listJson = await api.invoke("appPodsJson") as string;
+    // app_pods_json() serializes runtime.state pods() directly — top-level array.
     const list = JSON.parse(listJson) as Array<{ pod_key: string; status: string }>;
 
     // Only verify pods that claim to be live — terminated pods are allowed
@@ -25,8 +25,8 @@ test("Pods · list and detail views stay consistent", async ({ page }) => {
     const missing: string[] = [];
     for (const pod of live.slice(0, 10)) {
       try {
-        const podJson = await api.invoke("podGetPodJson", pod.pod_key) as string;
-        // get_pod_json returns "" when missing (unwrap_or_default on Option<String>).
+        const podJson = await api.invoke("appGetPodJson", pod.pod_key) as string;
+        // app_get_pod_json returns "" when the pod isn't in runtime.state.
         if (!podJson || podJson === "") {
           missing.push(`${pod.pod_key}: not found in detail`);
         }

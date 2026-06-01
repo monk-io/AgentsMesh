@@ -1,10 +1,9 @@
 import type { Page } from "@playwright/test";
 import type { ApiFixture } from "../fixtures/api.fixture";
 import {
-  collectConsoleErrors,
-  collectPageErrors,
   assertNoWasmRecursiveBorrow,
-} from "./console-errors";
+  type ConsoleMonitor,
+} from "./console-monitor";
 import {
   createMockAgentPod,
   workspaceUrlForPod,
@@ -16,29 +15,27 @@ import {
 // reach for exactly what it needs without a fixture explosion.
 export interface SetupAcpScenarioResult {
   pod: MockAgentPod;
-  consoleErrors: () => string[];
-  pageErrors: () => string[];
   /** Asserts the wasm-bindgen recursive-borrow guard is intact. */
   assertWasmHealthy: () => void;
 }
 
 // setupAcpScenarioPage encapsulates the 4-step prologue every ACP UI spec
-// repeats: spawn mock pod → wire console/error collectors → navigate to the
-// workspace → wait for network idle. Throws when no runner is online —
-// the e2e suite contract is "dev env has at least one online runner", so
-// returning null here would silently mask a missing prerequisite.
+// repeats: spawn mock pod → navigate to the workspace → wait for load →
+// expose `assertWasmHealthy` so the spec can check the borrow guard at
+// any point. Throws when no runner is online — the e2e suite contract is
+// "dev env has at least one online runner", so returning null here would
+// silently mask a missing prerequisite.
 //
-// The returned object holds the live error collectors as functions; calling
-// them returns the current snapshot, which lets specs assert the recursive-
-// borrow guard at any point without recomputing the wiring.
+// Console/page error collection is owned by the auto-attached `monitor`
+// fixture (see fixtures/index.ts) — callers pass it in so this helper
+// doesn't re-attach listeners and so teardown's default-deny assert sees
+// the same buffer the recursive-borrow guard inspects.
 export async function setupAcpScenarioPage(
   page: Page,
   api: ApiFixture,
+  monitor: ConsoleMonitor,
   opts: CreateMockPodOptions,
 ): Promise<SetupAcpScenarioResult> {
-  const consoleErrors = collectConsoleErrors(page);
-  const pageErrors = collectPageErrors(page);
-
   const pod = await createMockAgentPod(api, opts);
   if (!pod) {
     throw new Error("setupAcpScenarioPage: createMockAgentPod returned null — dev env must have an online runner");
@@ -53,11 +50,8 @@ export async function setupAcpScenarioPage(
 
   return {
     pod,
-    consoleErrors: () => consoleErrors,
-    pageErrors: () => pageErrors,
     assertWasmHealthy: () => {
-      assertNoWasmRecursiveBorrow(consoleErrors);
-      assertNoWasmRecursiveBorrow(pageErrors);
+      assertNoWasmRecursiveBorrow(monitor.errors());
     },
   };
 }

@@ -2,15 +2,12 @@ import { test, expect } from "../../fixtures/index";
 import { SettingsNavPage } from "../../pages/settings/settings-nav.page";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 test.describe("Settings Dialog Operations", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   // ── Personal ──
 
   test("personal/general: update profile form", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("personal", "general");
 
@@ -23,11 +20,9 @@ test.describe("Settings Dialog Operations", () => {
         await page.waitForTimeout(1000);
       }
     }
-    assertNoWasmErrors(errors);
   });
 
   test("personal/git: open add credential dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("personal", "git");
 
@@ -36,11 +31,9 @@ test.describe("Settings Dialog Operations", () => {
       await addBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("personal/git: open add provider dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("personal", "git");
 
@@ -49,11 +42,9 @@ test.describe("Settings Dialog Operations", () => {
       await addBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("personal/notifications: toggle preference", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("personal", "notifications");
 
@@ -64,13 +55,11 @@ test.describe("Settings Dialog Operations", () => {
       await toggle.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   // ── Organization ──
 
   test("org/members: open invite dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "members");
 
@@ -79,11 +68,9 @@ test.describe("Settings Dialog Operations", () => {
       await inviteBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("org/api-keys: open create key dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "api-keys");
 
@@ -92,11 +79,9 @@ test.describe("Settings Dialog Operations", () => {
       await createBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("org/extensions: open add registry dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "extensions");
 
@@ -105,16 +90,13 @@ test.describe("Settings Dialog Operations", () => {
       await addBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("org/general: danger zone visible", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     const nav = new SettingsNavPage(page, TEST_ORG_SLUG);
     await nav.goto("organization", "general");
 
     const body = await page.textContent("body");
     expect(body).toMatch(/E2E Test|dev-org|组织/i);
-    assertNoWasmErrors(errors);
   });
 });

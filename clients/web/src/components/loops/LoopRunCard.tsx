@@ -84,7 +84,11 @@ export function LoopRunCard({ run, t, onOpen, onCancel }: LoopRunCardProps) {
   ].filter(Boolean) as string[];
 
   return (
-    <div className={cn("flex items-center gap-3 rounded-md border p-3", tone.wrap)}>
+    <div className={cn("flex items-center gap-3 rounded-md border p-3", tone.wrap)}
+      data-testid="loop-run-card"
+      data-run-id={String(run.id)}
+      data-run-status={run.status}
+    >
       <span className={cn("h-2 w-2 flex-shrink-0 rounded-full", RUN_DOT[run.status] ?? "bg-muted-foreground")} />
 
       <div className="min-w-0 flex-1">

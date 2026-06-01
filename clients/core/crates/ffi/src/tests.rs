@@ -63,6 +63,27 @@ fn from_auth_not_authenticated() {
     assert!(matches!(err, CoreError::AuthExpired));
 }
 
+// ── D6: runtime.state selector consumed by the tick-driven PodListReducer ──
+// The realtime dispatch hook + `list_pods` both write `runtime.state.pods`;
+// the iOS reducer re-reads `pods_dto()` on each tick. Verify the selector
+// reflects the SSOT (the read side; the tick callback wiring is Swift-side).
+#[test]
+fn pods_dto_reflects_runtime_state() {
+    use agentsmesh_types::proto_pod_v1::Pod;
+    let core = make_core();
+    assert!(core.pods_dto().is_empty());
+    assert_eq!(core.pods_json(), "[]");
+
+    core.runtime.state.write().pods.set_pods(vec![Pod {
+        pod_key: "pk-smoke".into(),
+        ..Default::default()
+    }]);
+
+    let pods = core.pods_dto();
+    assert_eq!(pods.len(), 1);
+    assert!(core.pods_json().contains("pk-smoke"));
+}
+
 #[test]
 fn from_auth_server_error() {
     let err: CoreError = AuthError::Server {
@@ -219,12 +240,20 @@ fn core_get_organizations_empty() {
 // entry point now; bootstrap_tests.rs (auth crate) covers empty / corrupt /
 // base_url mismatch / legacy-purge paths through the new protocol.
 
-// ── relay_ffi ──
+// ── relay_ffi: RelayManager wraps the shared Rust pool ──
 
 #[test]
-fn relay_placeholder_returns_expected() {
-    let core = make_core();
-    assert_eq!(core.relay_placeholder(), "relay integration pending");
+fn relay_manager_defaults_for_unknown_pod() {
+    let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
+    rt.block_on(async {
+        let mgr = crate::RelayManager::new();
+        // No subscription yet → pool reports the unconnected defaults. This
+        // exercises the uniffi wrapper end-to-end against the real pool
+        // (construction + async method dispatch through the tokio runtime).
+        assert_eq!(mgr.get_status("ghost".into()).await, "disconnected");
+        assert!(!mgr.is_runner_disconnected("ghost".into()).await);
+        assert!(mgr.get_pod_size("ghost".into()).await.is_none());
+    });
 }
 
 // ── auth_ffi: switch_org error path ──

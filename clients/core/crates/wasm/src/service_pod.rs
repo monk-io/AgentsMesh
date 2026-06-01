@@ -2,55 +2,19 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_services::PodService;
-use agentsmesh_state::pod_state::PodState;
 use wasm_bindgen::prelude::*;
 
+// Networking-only wasm handle for the pod domain. The pod cache lives in the
+// shared `AppState.pods` (reached via `WasmPodState`); this service exposes
+// only the Connect-RPC `*_connect` surface.
 #[wasm_bindgen]
 pub struct WasmPodService(pub(crate) PodService);
 
 #[wasm_bindgen]
 impl WasmPodService {
-    pub(crate) fn new(client: Arc<ApiClient>, state: PodState) -> Self {
-        Self(PodService::new(client, state))
+    pub(crate) fn new(client: Arc<ApiClient>) -> Self {
+        Self(PodService::new(client))
     }
-
-    pub fn pods_json(&self) -> String { self.0.pods_json() }
-
-    pub fn current_pod_json(&self) -> JsValue {
-        match self.0.current_pod_json() {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn get_pod_json(&self, pod_key: &str) -> JsValue {
-        match self.0.get_pod_json(pod_key) {
-            Some(s) => JsValue::from_str(&s),
-            None => JsValue::NULL,
-        }
-    }
-
-    pub fn update_pod_status(
-        &self, pod_key: &str, status: &str,
-        agent_status: Option<String>, error_code: Option<String>,
-        error_message: Option<String>, timestamp: Option<i64>,
-    ) {
-        self.0.update_pod_status(pod_key, status, agent_status, error_code, error_message, timestamp);
-    }
-
-    pub fn update_pod_title(&self, pod_key: &str, title: &str, timestamp: Option<i64>) {
-        self.0.update_pod_title(pod_key, title, timestamp);
-    }
-
-    pub fn update_pod_alias(&self, pod_key: &str, alias: &str) {
-        self.0.update_pod_alias(pod_key, alias);
-    }
-
-    pub fn update_agent_status(&self, pod_key: &str, agent_status: &str) {
-        self.0.update_agent_status(pod_key, agent_status);
-    }
-
-    pub fn remove_pod(&self, pod_key: &str) { self.0.remove_pod(pod_key); }
 
     // -------- Connect-RPC (binary wire) --------
     //

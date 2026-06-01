@@ -1,14 +1,16 @@
 import { usePodStore } from "@/stores/pod";
 import { useRunnerStore } from "@/stores/runner";
-import { getTicketService, getPodState, parseWasmAny } from "@/lib/wasm-core";
+import { getTicketState, getPodState, parseWasmAny } from "@/lib/wasm-core";
 import { useTicketStore } from "@/stores/ticket";
 import { useChannelStore, useChannelMessageStore } from "@/stores/channel";
 import { readCurrentUser } from "@/stores/auth";
 import type { PodData } from "@/lib/api/facade/pod";
-import type {
-  RealtimeEvent, RunnerStatusData, TicketStatusChangedData,
-  ChannelMessageData, ChannelMessageEditedData, ChannelMessageDeletedData,
-  ChannelMemberChangedData, MREventData, PipelineEventData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  ChannelMemberChangedEventDataSchema,
+  MrEventDataSchema,
+  PipelineEventDataSchema,
 } from "@/lib/realtime";
 
 export { handlePodEvent } from "./realtimePodHandlers";
@@ -18,56 +20,50 @@ export { handleBlockstoreEvent } from "@/stores/blockstoreSubscribe";
 export type DebounceRef = React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 
 export function handleChannelEvent(event: RealtimeEvent, channelDebounceRef?: DebounceRef) {
-  const msgState = useChannelMessageStore.getState();
   switch (event.type) {
-    case "channel:message": {
-      const data = event.data as ChannelMessageData;
-      msgState.addMessage(data.channel_id, {
-        id: data.id, channel_id: data.channel_id, sender_pod: data.sender_pod,
-        sender_user_id: data.sender_user_id,
-        message_type: data.message_type,
-        body: data.body, content: data.content, mentions: data.mentions,
-        reply_to: data.reply_to, created_at: data.created_at,
-        ...(data.sender_pod_info ? { sender_pod_info: data.sender_pod_info } : {}),
-        ...(data.sender_user_id && data.sender_name ? {
-          sender_user: { id: data.sender_user_id, username: data.sender_name, name: data.sender_name },
-        } : {}),
-      });
-      const currentUserId = readCurrentUser()?.id;
-      const viewingChannelId = useChannelStore.getState().selectedChannelId;
-      const isSelf = currentUserId != null && data.sender_user_id === currentUserId;
-      const isViewing = viewingChannelId === data.channel_id;
-      if (!isSelf && !isViewing) {
-        msgState.incrementUnread(data.channel_id);
-      }
-      break;
-    }
-    case "channel:message_edited": {
-      const data = event.data as ChannelMessageEditedData;
-      msgState.updateMessage(data.channel_id, { id: data.id, body: data.body, content: data.content, mentions: data.mentions, edited_at: data.edited_at });
-      break;
-    }
+    case "channel:message":
+    case "channel:message_edited":
     case "channel:message_deleted": {
-      const data = event.data as ChannelMessageDeletedData;
-      msgState.removeMessage(data.channel_id, data.id);
+      // Rust Core (event_dispatch.rs → on_new_message / update_message /
+      // remove_message) owns ALL state mutation here — message persistence,
+      // preview, and the unread/mention business rules (self-message +
+      // active-channel gating). The renderer only re-reads the result.
+      bumpChannelStores();
       break;
     }
     case "channel:member_added":
     case "channel:member_removed": {
-      const data = event.data as ChannelMemberChangedData;
+      // Member count is owned by Rust dispatch (patch_member_count). The
+      // ONLY thing JS still does is the server-data refetch that Rust can't
+      // synthesize: when *I* am added, a brand-new channel appears that
+      // isn't in my cached list yet, so pull the list from the backend.
+      const data = decodeEventData(ChannelMemberChangedEventDataSchema, event.data);
+      const channelId = Number(data.channelId);
+      const userId = Number(data.userId);
+      const currentUserId = readCurrentUser()?.id;
       const chState = useChannelStore.getState();
-      const delta = event.type === "channel:member_added" ? 1 : -1;
-      chState.patchChannelMemberCount?.(data.channel_id, delta);
-      if (chState.currentChannel?.id === data.channel_id && channelDebounceRef) {
+      if (currentUserId != null && userId === currentUserId) {
+        chState.fetchChannels?.({ includeArchived: true });
+      } else if (chState.currentChannel?.id === channelId && channelDebounceRef) {
         if (channelDebounceRef.current) clearTimeout(channelDebounceRef.current);
         channelDebounceRef.current = setTimeout(() => {
           channelDebounceRef.current = null;
-          useChannelStore.getState().fetchChannel?.(data.channel_id);
+          useChannelStore.getState().fetchChannel?.(channelId);
         }, 300);
       }
+      bumpChannelStores();
       break;
     }
   }
+}
+
+// Trigger React re-read of Rust-updated channel state. Rust dispatch has
+// already mutated AppState by the time this runs (the dispatch hook fires
+// before external handlers); these bumps are the only thing the renderer
+// needs to do for channel realtime.
+function bumpChannelStores() {
+  useChannelStore.setState((s) => ({ _tick: s._tick + 1 }));
+  useChannelMessageStore.setState((s) => ({ _messagesTick: s._messagesTick + 1 }));
 }
 
 export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: DebounceRef) {
@@ -75,8 +71,10 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
     case "runner:online":
     case "runner:offline":
     case "runner:updated": {
-      const data = event.data as RunnerStatusData;
-      useRunnerStore.getState().updateRunnerStatus(data.runner_id, data.status as "online" | "offline" | "maintenance" | "busy");
+      // Rust event_dispatch owns runner status (update_runner_status in
+      // runtime.state, in all three lists); bump triggers the React selectors
+      // to re-read. Desktop mirrors via the main-pushed runner snapshot.
+      useRunnerStore.setState((s) => ({ _tick: s._tick + 1 }));
       break;
     }
     case "ticket:created":
@@ -84,15 +82,11 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
     case "ticket:status_changed":
     case "ticket:moved":
     case "ticket:deleted": {
-      const data = event.data as TicketStatusChangedData;
-      const ticketState = useTicketStore.getState();
-
-      if (event.type === "ticket:status_changed" && data.slug && data.status) {
-        ticketState.updateTicketStatusFromEvent?.(data.slug, data.status, data.previous_status);
-      } else if (event.type === "ticket:deleted" && data.slug) {
-        ticketState.removeTicketFromEvent?.(data.slug);
-      }
-
+      // Rust event_dispatch owns the status patch (update_ticket_status) and
+      // deletion (remove_ticket) in runtime.state; bump triggers the React
+      // selectors to re-read. The debounced refetch pulls full server data
+      // (newly-created tickets / fields the partial event can't synthesize).
+      useTicketStore.setState((s) => ({ _tick: s._tick + 1 }));
       debouncedTicketRefetch(ticketDebounceRef);
       break;
     }
@@ -100,21 +94,23 @@ export function handleInfraEvent(event: RealtimeEvent, ticketDebounceRef?: Debou
     case "mr:updated":
     case "mr:merged":
     case "mr:closed": {
-      const data = event.data as MREventData;
-      if (data.ticket_slug) useTicketStore.getState().fetchTicket?.(data.ticket_slug);
-      if (data.pod_id) {
+      const data = decodeEventData(MrEventDataSchema, event.data);
+      if (data.ticketSlug) useTicketStore.getState().fetchTicket?.(data.ticketSlug);
+      if (data.podId != null) {
+        const podId = Number(data.podId);
         const pods = JSON.parse(getPodState().pods_json()) as PodData[];
-        const pod = pods.find((p) => p.id === data.pod_id);
+        const pod = pods.find((p) => p.id === podId);
         if (pod) usePodStore.getState().fetchPod?.(pod.pod_key);
       }
       break;
     }
     case "pipeline:updated": {
-      const data = event.data as PipelineEventData;
-      if (data.ticket_slug) useTicketStore.getState().fetchTicket?.(data.ticket_slug);
-      if (data.pod_id) {
+      const data = decodeEventData(PipelineEventDataSchema, event.data);
+      if (data.ticketSlug) useTicketStore.getState().fetchTicket?.(data.ticketSlug);
+      if (data.podId != null) {
+        const podId = Number(data.podId);
         const pods = JSON.parse(getPodState().pods_json()) as PodData[];
-        const pod = pods.find((p) => p.id === data.pod_id);
+        const pod = pods.find((p) => p.id === podId);
         if (pod) usePodStore.getState().fetchPod?.(pod.pod_key);
       }
       break;
@@ -132,7 +128,7 @@ function debouncedTicketRefetch(debounceRef: DebounceRef | undefined) {
     debounceRef.current = null;
     const s = useTicketStore.getState();
     s.fetchTickets?.();
-    const currentTicket = parseWasmAny<{ slug: string }>(getTicketService().current_ticket_json());
+    const currentTicket = parseWasmAny<{ slug: string }>(getTicketState().current_ticket_json());
     if (currentTicket?.slug) {
       s.fetchTicket?.(currentTicket.slug);
     }

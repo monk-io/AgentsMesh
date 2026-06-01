@@ -74,8 +74,11 @@ test.describe("Channel UI", () => {
     // Send message
     await channels.sendMessage("Hello from Playwright!");
 
-    // Message should appear in the chat
-    await expect(page.getByText("Hello from Playwright!")).toBeVisible({ timeout: 5000 });
+    // Message should appear in the chat. Scope to the message list — the
+    // sidebar last-message preview also carries this text.
+    await expect(
+      page.getByTestId("channel-message-list").getByText("Hello from Playwright!"),
+    ).toBeVisible({ timeout: 5000 });
   });
 
   /**

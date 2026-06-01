@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import type {
   AutopilotControllerData, AutopilotIterationData,
   CreateAutopilotControllerRequest, ApproveRequest,
@@ -6,7 +7,7 @@ import type {
 import { AutopilotThinkingData } from "@/lib/realtime/types";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
-import { getAutopilotService, parseWasmAny } from "@/lib/wasm-core";
+import { getAutopilotState, parseWasmAny } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import {
   listAutopilots as listAutopilotsConnect,
@@ -22,6 +23,17 @@ import {
   type AutopilotControllerWire,
   type AutopilotIterationWire,
 } from "@/lib/api/facade/autopilotConnect";
+import {
+  ReplaceCachedControllersRequestSchema,
+  SetCurrentControllerRequestSchema,
+  InsertControllerRequestSchema,
+  PatchControllerRequestSchema,
+  ReplaceCachedIterationsRequestSchema,
+  AppendIterationRequestSchema,
+  UpdateThinkingRequestSchema,
+  RemoveControllerRequestSchema,
+} from "@proto/autopilot_state/v1/autopilot_state_pb";
+import { controllerToProto, iterationToProto } from "@/lib/api/autopilotProtoMap";
 
 export type AutopilotController = AutopilotControllerData;
 export type AutopilotIteration = AutopilotIterationData;
@@ -34,12 +46,14 @@ export {
 
 type Ctrl = AutopilotController;
 const ACTIVE = ["initializing", "running", "paused", "user_takeover", "waiting_approval"];
-const svc = () => getAutopilotService();
+// Autopilot state SSOT is the shared AppState (runtime.state) via
+// getAutopilotState — the SAME state the EventBus dispatch + desktop snapshot
+// mirror write, so realtime controller/iteration/thinking changes flow without
+// a JS pure-patch. Connect-RPC stays on the autopilotConnect facade.
+const svc = () => getAutopilotState();
 const bump = () => useAutopilotStore.setState((s) => ({ _tick: s._tick + 1 }));
 const slug = () => readCurrentOrg()?.slug ?? "";
 
-// Proto AutopilotIteration drops legacy fields. Map back to the renderer-
-// facing shape: iteration_number→iteration, status→phase, result→summary.
 function fromWireIteration(w: AutopilotIterationWire): AutopilotIterationData {
   return {
     id: w.id, autopilot_controller_id: 0,
@@ -48,16 +62,70 @@ function fromWireIteration(w: AutopilotIterationWire): AutopilotIterationData {
   };
 }
 
-// AutopilotControllerWire and AutopilotControllerData are JSON-compatible
-// (snake_case + number). Union-type strictness needs an unknown bridge.
 const fromWireCtrl = (w: AutopilotControllerWire): Ctrl => w as unknown as Ctrl;
+
+function dispatchReplaceControllers(items: Ctrl[]) {
+  const req = protoCreate(ReplaceCachedControllersRequestSchema, {
+    controllers: items.map(controllerToProto),
+  });
+  svc().replace_cached_controllers(toBinary(ReplaceCachedControllersRequestSchema, req));
+}
+
+function dispatchSetCurrentController(c: Ctrl | null) {
+  const req = protoCreate(SetCurrentControllerRequestSchema, {
+    controller: c ? controllerToProto(c) : undefined,
+  });
+  svc().set_current_controller_proto(toBinary(SetCurrentControllerRequestSchema, req));
+}
+
+function dispatchInsertController(c: Ctrl) {
+  const req = protoCreate(InsertControllerRequestSchema, { controller: controllerToProto(c) });
+  svc().insert_controller(toBinary(InsertControllerRequestSchema, req));
+}
+
+function dispatchPatchController(key: string, c: Ctrl) {
+  const req = protoCreate(PatchControllerRequestSchema, {
+    autopilotControllerKey: key,
+    controller: controllerToProto(c),
+  });
+  svc().patch_controller(toBinary(PatchControllerRequestSchema, req));
+}
+
+function dispatchReplaceIterations(key: string, items: AutopilotIteration[]) {
+  const req = protoCreate(ReplaceCachedIterationsRequestSchema, {
+    autopilotControllerKey: key,
+    iterations: items.map(iterationToProto),
+  });
+  svc().replace_cached_iterations(toBinary(ReplaceCachedIterationsRequestSchema, req));
+}
+
+function dispatchAppendIteration(key: string, it: AutopilotIteration) {
+  const req = protoCreate(AppendIterationRequestSchema, {
+    autopilotControllerKey: key,
+    iteration: iterationToProto(it),
+  });
+  svc().append_iteration(toBinary(AppendIterationRequestSchema, req));
+}
+
+function dispatchUpdateThinking(key: string, thinking: AutopilotThinking) {
+  const req = protoCreate(UpdateThinkingRequestSchema, {
+    autopilotControllerKey: key,
+    thinkingJson: JSON.stringify(thinking),
+  });
+  svc().update_thinking_proto(toBinary(UpdateThinkingRequestSchema, req));
+}
+
+function dispatchRemoveController(key: string) {
+  const req = protoCreate(RemoveControllerRequestSchema, { autopilotControllerKey: key });
+  svc().remove_controller_proto(toBinary(RemoveControllerRequestSchema, req));
+}
 
 function patchCtrl(key: string, patch: Partial<Ctrl> | ((c: Ctrl) => Partial<Ctrl>)) {
   const ctrls: Ctrl[] = JSON.parse(svc().controllers_json());
   const target = ctrls.find((c) => c.autopilot_controller_key === key);
   if (!target) return;
   const next = { ...target, ...(typeof patch === "function" ? patch(target) : patch) };
-  svc().update_controller(key, JSON.stringify(next));
+  dispatchPatchController(key, next);
 }
 
 interface AutopilotState { _tick: number; loading: boolean; error: string | null; }
@@ -97,7 +165,7 @@ export const useAutopilotStore = create<AutopilotState & AutopilotActions>((set,
     set({ loading: true, error: null });
     try {
       const items = await listAutopilotsConnect(slug());
-      svc().set_controllers(JSON.stringify(items.map(fromWireCtrl)));
+      dispatchReplaceControllers(items.map(fromWireCtrl));
       set({ loading: false, _tick: get()._tick + 1 });
     } catch (e) { set({ error: getErrorMessage(e, "Failed to fetch controllers"), loading: false }); }
   },
@@ -105,8 +173,8 @@ export const useAutopilotStore = create<AutopilotState & AutopilotActions>((set,
   fetchAutopilotController: async (key) => {
     try {
       const ctrl = fromWireCtrl(await getAutopilotConnect(slug(), key));
-      svc().add_controller(JSON.stringify(ctrl));
-      svc().set_current_controller(JSON.stringify(ctrl));
+      dispatchInsertController(ctrl);
+      dispatchSetCurrentController(ctrl);
       bump();
     } catch (e) { set({ error: getErrorMessage(e, "Failed to fetch controller") }); }
   },
@@ -120,8 +188,8 @@ export const useAutopilotStore = create<AutopilotState & AutopilotActions>((set,
         approvalTimeoutMin: data.approval_timeout_min, controlAgentSlug: data.control_agent_slug,
         controlPromptTemplate: data.control_prompt_template, mcpConfigJson: data.mcp_config_json,
       }));
-      svc().add_controller(JSON.stringify(ctrl));
-      svc().set_current_controller(JSON.stringify(ctrl));
+      dispatchInsertController(ctrl);
+      dispatchSetCurrentController(ctrl);
       bump();
       return ctrl;
     } catch (e) { set({ error: getErrorMessage(e, "Failed to create") }); throw e; }
@@ -147,7 +215,7 @@ export const useAutopilotStore = create<AutopilotState & AutopilotActions>((set,
   fetchIterations: async (key) => {
     try {
       const items = await getAutopilotIterationsConnect(slug(), key);
-      svc().set_iterations(key, JSON.stringify(items.map(fromWireIteration)));
+      dispatchReplaceIterations(key, items.map(fromWireIteration));
       bump();
     } catch (e) { set({ error: getErrorMessage(e, "Failed to fetch iterations") }); }
   },
@@ -160,10 +228,10 @@ export const useAutopilotStore = create<AutopilotState & AutopilotActions>((set,
     bump();
   },
 
-  addIteration: (key, iter) => { svc().add_iteration(key, JSON.stringify(iter)); bump(); },
-  updateThinking: (key, t) => { svc().update_thinking(key, JSON.stringify(t)); bump(); },
-  setCurrentAutopilotController: (c) => { svc().set_current_controller(c ? JSON.stringify(c) : ""); bump(); },
-  removeAutopilotController: (key) => { svc().remove_controller(key); bump(); },
+  addIteration: (key, iter) => { dispatchAppendIteration(key, iter); bump(); },
+  updateThinking: (key, t) => { dispatchUpdateThinking(key, t); bump(); },
+  setCurrentAutopilotController: (c) => { dispatchSetCurrentController(c); bump(); },
+  removeAutopilotController: (key) => { dispatchRemoveController(key); bump(); },
   clearError: () => set({ error: null }),
 
   getAutopilotControllerByPodKey: (podKey) => {

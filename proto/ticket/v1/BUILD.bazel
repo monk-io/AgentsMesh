@@ -19,6 +19,7 @@ proto_library(
     name = "ticket_proto",
     srcs = ["ticket.proto"],
     data = [":ticket_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
 )
 

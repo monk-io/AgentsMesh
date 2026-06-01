@@ -3,8 +3,59 @@
 import { useState, useCallback } from "react";
 import { RepositoryData } from "@/lib/api";
 import type { RepositoryProviderData, ProviderRepositoryData } from "@/lib/viewModels/repositoryProvider";
-import { getRepositoryService, getUserCredentialService } from "@/lib/wasm-core";
+import {
+  listRepositoryProviders as listRepoProvidersConnect,
+  listProviderRepositories as listProviderRepositoriesConnect,
+} from "@/lib/api/facade/userRepositoryProvider";
+import { createRepository as createRepositoryConnect } from "@/lib/api/facade/repositoryConnect";
+import { readCurrentOrg } from "@/stores/auth";
 import type { ImportWizardState, ImportWizardActions, ImportWizardStep } from "./types";
+
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
+
+// Project proto RepositoryProvider (camelCase) → UI's snake_case
+// RepositoryProviderData. The wizard still consumes snake_case, so we
+// flatten the proto shape at the adapter boundary.
+function fromProtoProvider(
+  p: { id: bigint; userId?: bigint; providerType: string; name: string; baseUrl: string;
+       clientId?: string; hasClientId: boolean; hasBotToken: boolean; hasIdentity: boolean;
+       isDefault: boolean; isActive: boolean; createdAt: string; updatedAt: string },
+): RepositoryProviderData {
+  return {
+    id: Number(p.id),
+    user_id: p.userId !== undefined ? Number(p.userId) : undefined,
+    provider_type: p.providerType,
+    name: p.name,
+    base_url: p.baseUrl,
+    client_id: p.clientId,
+    has_client_id: p.hasClientId,
+    has_bot_token: p.hasBotToken,
+    has_identity: p.hasIdentity,
+    is_default: p.isDefault,
+    is_active: p.isActive,
+    created_at: p.createdAt,
+    updated_at: p.updatedAt,
+  };
+}
+
+function fromProtoProviderRepo(
+  r: { id: string; name: string; slug: string; description: string; defaultBranch: string;
+       visibility: string; httpCloneUrl: string; sshCloneUrl: string; webUrl: string },
+): ProviderRepositoryData {
+  return {
+    id: r.id,
+    name: r.name,
+    slug: r.slug,
+    description: r.description,
+    default_branch: r.defaultBranch,
+    visibility: r.visibility,
+    http_clone_url: r.httpCloneUrl,
+    ssh_clone_url: r.sshCloneUrl,
+    web_url: r.webUrl,
+  };
+}
 
 function createInitialState(): ImportWizardState {
   return {
@@ -51,9 +102,10 @@ export function useImportWizard({
   const loadProviders = useCallback(async () => {
     try {
       setState(s => ({ ...s, loadingProviders: true }));
-      const response: { providers: RepositoryProviderData[] } = JSON.parse(await getUserCredentialService().list_repo_providers());
-      const activeProviders = (response.providers || []).filter(
-        (p: RepositoryProviderData) => p.is_active && (p.has_identity || p.has_bot_token)
+      const { items } = await listRepoProvidersConnect();
+      const providers = items.map(fromProtoProvider);
+      const activeProviders = providers.filter(
+        (p) => p.is_active && (p.has_identity || p.has_bot_token)
       );
       setState(s => ({ ...s, providers: activeProviders, loadingProviders: false }));
     } catch (err) {
@@ -70,17 +122,16 @@ export function useImportWizard({
     if (!state.selectedProvider) return;
     try {
       setState(s => ({ ...s, loadingRepos: true, error: null }));
-      const response: { repositories: ProviderRepositoryData[] } = JSON.parse(
-        await getUserCredentialService().list_provider_repositories(
-          BigInt(state.selectedProvider.id),
-          state.page,
-          20,
-          state.search || undefined,
-        )
-      );
+      const { items } = await listProviderRepositoriesConnect({
+        id: state.selectedProvider.id,
+        page: state.page,
+        per_page: 20,
+        search: state.search || undefined,
+      });
+      const repositories = items.map(fromProtoProviderRepo);
       setState(s => ({
         ...s,
-        repositories: response.repositories || [],
+        repositories,
         loadingRepos: false,
       }));
     } catch (err) {
@@ -96,23 +147,23 @@ export function useImportWizard({
   const selectProvider = useCallback((provider: RepositoryProviderData) => {
     setState(s => ({ ...s, selectedProvider: provider, step: "browse", loadingRepos: true }));
 
-    getUserCredentialService().list_provider_repositories(
-      BigInt(provider.id), 1, 20, undefined,
-    ).then((response: string) => {
-      const parsed: { repositories: ProviderRepositoryData[] } = JSON.parse(response);
-      setState(s => ({
-        ...s,
-        repositories: parsed.repositories || [],
-        loadingRepos: false,
-      }));
-    }).catch((err: unknown) => {
-      console.error("Failed to load repositories:", err);
-      setState(s => ({
-        ...s,
-        error: t("repositories.modal.failedToLoadRepos"),
-        loadingRepos: false,
-      }));
-    });
+    listProviderRepositoriesConnect({ id: provider.id, page: 1, per_page: 20 })
+      .then(({ items }) => {
+        const repositories = items.map(fromProtoProviderRepo);
+        setState(s => ({
+          ...s,
+          repositories,
+          loadingRepos: false,
+        }));
+      })
+      .catch((err: unknown) => {
+        console.error("Failed to load repositories:", err);
+        setState(s => ({
+          ...s,
+          error: t("repositories.modal.failedToLoadRepos"),
+          loadingRepos: false,
+        }));
+      });
   }, [t]);
 
   const actions: ImportWizardActions = {
@@ -197,18 +248,18 @@ export function useImportWizard({
         const httpCloneUrl = state.selectedRepo?.http_clone_url || state.manualCloneURL || undefined;
         const sshCloneUrl = state.selectedRepo?.ssh_clone_url || undefined;
 
-        await getRepositoryService().create(JSON.stringify({
+        await createRepositoryConnect(orgSlug(), {
           provider_type: state.manualProviderType,
           provider_base_url: state.manualBaseURL,
           http_clone_url: httpCloneUrl,
           ssh_clone_url: sshCloneUrl,
-          external_id: state.selectedRepo?.id || state.manualSlug.replace(/[^a-zA-Z0-9]/g, "-"),
+          external_id: String(state.selectedRepo?.id || state.manualSlug.replace(/[^a-zA-Z0-9]/g, "-")),
           name: state.manualName,
           slug: state.manualSlug,
           default_branch: state.manualDefaultBranch || "main",
           ticket_prefix: state.ticketPrefix || undefined,
           visibility: state.visibility,
-        }));
+        });
         onImported?.();
         onClose();
       } catch (err) {

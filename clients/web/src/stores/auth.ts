@@ -4,6 +4,11 @@ import { initWasmCore, getAuthManager } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
 import { useWorkspaceStore } from "./workspace";
 import { resetOrgScopedServices } from "@/lib/org-scope/registry";
+import {
+  encodeApplySession,
+  encodeSetCurrentOrg,
+  encodeSetOrganizations,
+} from "./authProtoEncode";
 
 interface User {
   id: number;
@@ -181,18 +186,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAuth: async (token, user, refreshToken) => {
     try {
-      await mgr().apply_session(JSON.stringify({
-        token,
-        refresh_token: refreshToken || "",
-        user,
-      }));
+      await mgr().apply_session(encodeApplySession(token, user, refreshToken));
     } catch { /* WASM not ready yet */ }
     set({ error: null });
     bump();
   },
 
   setOrganizations: async (organizations) => {
-    try { await mgr().set_organizations(JSON.stringify(organizations)); } catch { /* noop */ }
+    try { await mgr().set_organizations(encodeSetOrganizations(organizations)); } catch { /* noop */ }
     bump();
   },
 
@@ -203,7 +204,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     // /workspace?pod=<key> just added via addPane, leaving the user with an
     // empty workspace on deep-link navigation.
     const previousSlug = readCurrentOrg()?.slug;
-    try { await mgr().set_current_org(JSON.stringify(org)); } catch { /* noop */ }
+    try { await mgr().set_current_org(encodeSetCurrentOrg(org)); } catch { /* noop */ }
     if (previousSlug !== org.slug) {
       try {
         useWorkspaceStore.getState().clearAllPanes();

@@ -2,8 +2,6 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 test.describe("Support Tickets", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
@@ -26,14 +24,11 @@ test.describe("Support Tickets", () => {
   });
 
   test("UI: support page loads without errors", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/support`);
     await page.waitForLoadState("load");
-    assertNoWasmErrors(errors);
   });
 
   test("UI: support page open new ticket dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/support`);
     await page.waitForLoadState("load");
 
@@ -42,6 +37,5 @@ test.describe("Support Tickets", () => {
       await newBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
   });
 });

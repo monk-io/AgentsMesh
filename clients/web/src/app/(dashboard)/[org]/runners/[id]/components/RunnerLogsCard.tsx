@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { FileText, Upload, Download, Loader2 } from "lucide-react";
-import { listRunnerLogs, requestLogUpload } from "@/lib/api/connect/runnerConnect";
+import { listRunnerLogs, requestLogUpload } from "@/lib/api/facade/runnerConnect";
 import type { RunnerLogData } from "@/lib/viewModels/runner";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";

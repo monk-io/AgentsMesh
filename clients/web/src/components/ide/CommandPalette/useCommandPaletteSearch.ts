@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPodService, getTicketService } from "@/lib/wasm-core";
+import { listPods as listPodsConnect } from "@/lib/api/facade/podConnect";
+import { listTickets as listTicketsConnect } from "@/lib/api/facade/ticketConnect";
+import { readCurrentOrg } from "@/stores/auth";
 import { useRepositories, useRepositoryStore } from "@/stores/repository";
 import type { SearchResults, PodSearchResult, TicketSearchResult, RepositorySearchResult } from "./types";
+
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
 
 export function useCommandPaletteSearch(search: string): SearchResults {
   const [pods, setPods] = useState<PodSearchResult[]>([]);
@@ -26,21 +32,24 @@ export function useCommandPaletteSearch(search: string): SearchResults {
     const loadSearchResults = async () => {
       setLoading(true);
       try {
+        const slug = orgSlug();
         const [podsRes, ticketsRes] = await Promise.all([
-          getPodService().fetch_pods(null, null, null, null, null).then((j: string) => JSON.parse(j)).catch(() => ({ pods: [] })),
-          getTicketService().fetch_tickets(undefined, 500, undefined).then((j: string) => JSON.parse(j)).catch(() => ({ tickets: [] })),
+          listPodsConnect(slug, {}).catch(() => ({ items: [] as { pod_key: string }[] })),
+          listTicketsConnect(slug, { limit: 500 }).catch(
+            () => ({ items: [] as { slug: string; title: string }[] }),
+          ),
         ]);
 
         const searchLower = search.toLowerCase();
         setPods(
-          (podsRes.pods || [])
-            .filter((p: { pod_key: string }) => p.pod_key.toLowerCase().includes(searchLower))
+          (podsRes.items as PodSearchResult[])
+            .filter((p) => p.pod_key.toLowerCase().includes(searchLower))
             .slice(0, 5)
         );
         setTickets(
-          (ticketsRes.tickets || [])
+          (ticketsRes.items as TicketSearchResult[])
             .filter(
-              (ticket: { slug: string; title: string }) =>
+              (ticket) =>
                 ticket.slug.toLowerCase().includes(searchLower) ||
                 ticket.title.toLowerCase().includes(searchLower)
             )

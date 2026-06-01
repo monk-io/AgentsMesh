@@ -122,6 +122,7 @@ go_library(
         "//backend/internal/service/user",
         "//backend/migrations",
         "//backend/pkg/crypto",
+        "//proto/events/v1:events_go_proto",
         "//proto/runner/v1:runner_go_proto",
         "@com_connectrpc_connect//:connect",
         "@com_github_golang_migrate_migrate_v4//:migrate",
@@ -130,6 +131,7 @@ go_library(
         "@com_github_redis_go_redis_extra_redisotel_v9//:redisotel",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@io_gorm_gorm//:gorm",
+        "@org_golang_google_protobuf//encoding/protojson",
     ],
 )
 

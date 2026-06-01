@@ -19,6 +19,7 @@ proto_library(
     name = "repository_proto",
     srcs = ["repository.proto"],
     data = [":repository_serde_transform"],
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
 )
 

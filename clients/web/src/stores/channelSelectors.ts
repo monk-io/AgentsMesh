@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { getChannelService } from "@/lib/wasm-core";
+import { getChannelState } from "@/lib/wasm-core";
 import { useChannelStore } from "./channelStore";
 import type { Channel, ChannelLastMessage, ChannelMember } from "./channelTypes";
 
-const svc = () => getChannelService();
+const svc = () => getChannelState();
 
 export function useChannels(): Channel[] {
   const tick = useChannelStore((s) => s._tick);

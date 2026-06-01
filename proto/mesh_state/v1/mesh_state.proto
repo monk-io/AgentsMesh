@@ -1,0 +1,20 @@
+// proto.mesh_state.v1 — client-side mesh state mutation contract.
+//
+// MeshTopology is a flat container (nodes / edges / channels / runners are
+// `repeated` typed proto messages, no variant-shaped JSONMap). The state
+// mutation carries the wire MeshTopology directly — no JSON wrapping.
+
+syntax = "proto3";
+
+package proto.mesh_state.v1;
+
+import "mesh/v1/mesh.proto";
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/mesh_state/v1;meshstatev1";
+
+// Replace the cached mesh topology — used after MeshService.fetch_topology
+// returns. Carries the wire-level MeshTopology directly so Rust state can
+// drop it into the cache without any JSON intermediate.
+message ReplaceTopologyRequest {
+  proto.mesh.v1.MeshTopology topology = 1;
+}

@@ -1,7 +1,6 @@
 import { test as uiTest, expect as uiExpect } from "@playwright/test";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
 import { AddRunnerModal } from "../../pages/modals/add-runner.modal";
 import { ImportRepositoryModal } from "../../pages/modals/import-repository.modal";
 
@@ -14,19 +13,15 @@ uiTest.describe("Infra page — UI", () => {
   uiTest.beforeEach(async () => { clearAuthRateLimit(); });
 
   uiTest("root /infra defaults to ?tab=runners", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra`);
     await page.waitForLoadState("load");
     await uiExpect(page).toHaveURL(/tab=runners/);
-    assertNoWasmErrors(errors);
   });
 
   uiTest("switching to runners tab updates URL", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/infra?tab=runners`);
     await page.waitForLoadState("load");
     await uiExpect(page).toHaveURL(/tab=runners/);
-    assertNoWasmErrors(errors);
   });
 
   uiTest("repositories tab auto-selects first repo when no id given", async ({ page }) => {

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { useMemo } from "react";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
-import { getMeshService } from "@/lib/wasm-core";
+import { getMeshService, getMeshState } from "@/lib/wasm-core";
 import { useIDEStore } from "./ide";
 import { useChannelStore } from "./channel";
 
@@ -41,7 +41,10 @@ export interface CreatePodForTicketRequest {
   permission_mode?: string;
 }
 
-const svc = getMeshService;
+// mesh has no realtime → runtime.state.mesh (getMeshState) is the read/write
+// SSOT; getMeshService is networking-only (fetch_topology).
+const svc = getMeshState;
+const net = getMeshService;
 const bump = () => useMeshStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 export function useTopology(): MeshTopology | null {
@@ -91,7 +94,8 @@ export const useMeshStore = create<MeshState>((set, get) => ({
       topologyDebounceTimer = null;
       set({ loading: true, error: null });
       try {
-        await svc().fetch_topology();
+        const bytes = await net().fetch_topology();
+        svc().replace_topology(bytes);
         set({ loading: false, _tick: get()._tick + 1 });
       } catch (error: unknown) {
         set({ error: getErrorMessage(error, "Failed to fetch topology"), loading: false });

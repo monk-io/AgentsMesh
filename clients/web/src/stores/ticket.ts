@@ -1,11 +1,25 @@
 import { useMemo } from "react";
 import { create } from "zustand";
+import { create as protoCreate, toBinary, fromBinary } from "@bufbuild/protobuf";
 import type { TicketData, TicketStatus, TicketPriority, BoardColumn } from "@/lib/api";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
-import { getTicketService, parseWasmAny } from "@/lib/wasm-core";
+import { getTicketState, parseWasmAny } from "@/lib/wasm-core";
 import * as ticketApi from "@/lib/api/facade/ticketConnect";
 import { readCurrentOrg } from "@/stores/auth";
+import {
+  ApplyTicketStatusEventRequestSchema, ApplyTicketDeletedEventRequestSchema,
+  ReplaceCachedTicketsRequestSchema, InsertCreatedTicketRequestSchema,
+  PatchCachedTicketRequestSchema, ReplaceBoardColumnsRequestSchema,
+  AppendBoardColumnTicketsRequestSchema, SetCurrentTicketRequestSchema,
+  ReplaceCachedLabelsRequestSchema, InsertCreatedLabelRequestSchema,
+  RemoveCachedLabelRequestSchema, FilterTicketsRequestSchema,
+  FilterTicketsResponseSchema,
+} from "@proto/ticket_state/v1/ticket_state_pb";
+import {
+  ticketsToProto, ticketToProto, labelsToProto, labelToProto,
+  boardColumnsToProto, protoTicketToTicket,
+} from "@/lib/api/ticketProtoMap";
 
 export type { TicketStatus, TicketPriority };
 export interface Label { id: number; name: string; color: string }
@@ -25,7 +39,7 @@ const initPag = (cols: BoardColumn[]) => Object.fromEntries(
   cols.map((c) => [c.status, { offset: c.tickets.length, hasMore: c.tickets.length < c.count, loading: false }]),
 ) as Record<string, ColumnPagination>;
 
-const svc = () => getTicketService();
+const state = () => getTicketState();
 const bump = () => useTicketStore.setState((s) => ({ _tick: s._tick + 1 }));
 const orgSlug = (): string => readCurrentOrg()?.slug || "";
 
@@ -51,27 +65,27 @@ interface TicketState {
 
 export function useTickets(): Ticket[] {
   const tick = useTicketStore((s) => s._tick);
-  return useMemo(() => JSON.parse(svc().tickets_json()) as Ticket[], [tick]);
+  return useMemo(() => JSON.parse(state().tickets_json()) as Ticket[], [tick]);
 }
 
 export function useCurrentTicket(): Ticket | null {
   const tick = useTicketStore((s) => s._tick);
-  return useMemo(() => parseWasmAny<Ticket>(svc().current_ticket_json()), [tick]);
+  return useMemo(() => parseWasmAny<Ticket>(state().current_ticket_json()), [tick]);
 }
 
 export function useBoardColumns(): BoardColumn[] {
   const tick = useTicketStore((s) => s._tick);
-  return useMemo(() => { const raw = svc().board_columns_json(); return raw ? JSON.parse(raw) : []; }, [tick]);
+  return useMemo(() => { const raw = state().board_columns_json(); return raw ? JSON.parse(raw) : []; }, [tick]);
 }
 
 export function useLabels(): Label[] {
   const tick = useTicketStore((s) => s._tick);
-  return useMemo(() => JSON.parse(svc().labels_json()) as Label[], [tick]);
+  return useMemo(() => JSON.parse(state().labels_json()) as Label[], [tick]);
 }
 
 export const useTicketStore = create<TicketState>((set, get) => {
   const refresh = () => {
-    const cols = JSON.parse(svc().board_columns_json() || "[]") as BoardColumn[];
+    const cols = JSON.parse(state().board_columns_json() || "[]") as BoardColumn[];
     if (cols.length > 0) get().fetchBoard(get().filters); else get().fetchTickets(get().filters);
   };
   return {
@@ -84,7 +98,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
       const m = { ...get().filters, ...filters }; set({ error: null, filters: m });
       try {
         const r = await ticketApi.listTickets(orgSlug(), { status: m.status, limit: 500 });
-        svc().set_tickets(JSON.stringify(r.items));
+        const req = protoCreate(ReplaceCachedTicketsRequestSchema, { tickets: ticketsToProto(r.items as Ticket[]) });
+        state().replace_cached_tickets(toBinary(ReplaceCachedTicketsRequestSchema, req));
         set({ totalCount: r.total || 0, priorityCounts: {}, columnPagination: {}, _tick: get()._tick + 1 });
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch tickets") }); }
     },
@@ -93,7 +108,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
       const m = { ...get().filters, ...filters }; set({ error: null, filters: m });
       try {
         const columns = await ticketApi.getBoard(orgSlug(), { repository_id: m.repositoryId });
-        svc().set_board_columns(JSON.stringify(columns));
+        const req = protoCreate(ReplaceBoardColumnsRequestSchema, { columns: boardColumnsToProto(columns) });
+        state().replace_board_columns(toBinary(ReplaceBoardColumnsRequestSchema, req));
         set({
           totalCount: columns.reduce((s: number, c: BoardColumn) => s + c.count, 0),
           priorityCounts: {},
@@ -109,7 +125,10 @@ export const useTicketStore = create<TicketState>((set, get) => {
       set({ columnPagination: { ...cp, [status]: { ...pag, loading: true } } });
       try {
         const r = await ticketApi.listTickets(orgSlug(), { status, offset: pag.offset, limit: 20 });
-        svc().append_column_tickets(status, JSON.stringify(r.items));
+        const req = protoCreate(AppendBoardColumnTicketsRequestSchema, {
+          status, tickets: ticketsToProto(r.items as Ticket[]),
+        });
+        state().append_board_column_tickets(toBinary(AppendBoardColumnTicketsRequestSchema, req));
         const off = pag.offset + r.items.length;
         set({
           columnPagination: { ...get().columnPagination, [status]: { offset: off, hasMore: off < (r.total || 0), loading: false } },
@@ -121,7 +140,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     fetchTicket: async (slug) => {
       try {
         const ticket = await ticketApi.getTicket(orgSlug(), slug);
-        svc().set_current_ticket(JSON.stringify(ticket));
+        const req = protoCreate(SetCurrentTicketRequestSchema, { ticket: ticketToProto(ticket as Ticket) });
+        state().set_current_ticket(toBinary(SetCurrentTicketRequestSchema, req));
         bump();
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch ticket") }); }
     },
@@ -138,7 +158,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
           labels: data.labels,
           parent_ticket_slug: data.parent_ticket_slug,
         });
-        svc().add_ticket(JSON.stringify(t));
+        const req = protoCreate(InsertCreatedTicketRequestSchema, { ticket: ticketToProto(t as Ticket) });
+        state().insert_created_ticket(toBinary(InsertCreatedTicketRequestSchema, req));
         refresh();
         return t as Ticket;
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create ticket") }); throw e; }
@@ -155,7 +176,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
           assignee_ids: data.assigneeIds,
           labels: data.labels,
         });
-        svc().update_ticket_local(slug, JSON.stringify(t));
+        const req = protoCreate(PatchCachedTicketRequestSchema, { slug, ticket: ticketToProto(t as Ticket) });
+        state().patch_cached_ticket(toBinary(PatchCachedTicketRequestSchema, req));
         bump();
         refresh();
         return t as Ticket;
@@ -165,7 +187,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     deleteTicket: async (slug) => {
       try {
         await ticketApi.deleteTicket(orgSlug(), slug);
-        svc().remove_ticket(slug);
+        const req = protoCreate(ApplyTicketDeletedEventRequestSchema, { slug });
+        state().apply_ticket_deleted_event(toBinary(ApplyTicketDeletedEventRequestSchema, req));
         bump();
         refresh();
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete ticket") }); throw e; }
@@ -174,7 +197,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     updateTicketStatus: async (slug, status) => {
       try {
         await ticketApi.updateTicketStatus(orgSlug(), slug, status);
-        svc().update_ticket_status_local(slug, status);
+        const req = protoCreate(ApplyTicketStatusEventRequestSchema, { slug, status });
+        state().apply_ticket_status_event(toBinary(ApplyTicketStatusEventRequestSchema, req));
         bump();
         refresh();
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update status") }); throw e; }
@@ -183,7 +207,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     fetchLabels: async (repositoryId) => {
       try {
         const labels = await ticketApi.listLabels(orgSlug(), { repository_id: repositoryId });
-        svc().set_labels(JSON.stringify(labels));
+        const req = protoCreate(ReplaceCachedLabelsRequestSchema, { labels: labelsToProto(labels) });
+        state().replace_cached_labels(toBinary(ReplaceCachedLabelsRequestSchema, req));
         bump();
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch labels") }); }
     },
@@ -191,7 +216,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     createLabel: async (name, color, repositoryId) => {
       try {
         const l = await ticketApi.createLabel(orgSlug(), name, color, { repository_id: repositoryId });
-        svc().add_label(JSON.stringify(l));
+        const req = protoCreate(InsertCreatedLabelRequestSchema, { label: labelToProto(l) });
+        state().insert_created_label(toBinary(InsertCreatedLabelRequestSchema, req));
         bump();
         return l as Label;
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create label") }); throw e; }
@@ -200,7 +226,8 @@ export const useTicketStore = create<TicketState>((set, get) => {
     deleteLabel: async (id) => {
       try {
         await ticketApi.deleteLabel(orgSlug(), id);
-        svc().remove_label(id);
+        const req = protoCreate(RemoveCachedLabelRequestSchema, { id: BigInt(id) });
+        state().remove_cached_label(toBinary(RemoveCachedLabelRequestSchema, req));
         bump();
       } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete label") }); throw e; }
     },
@@ -212,19 +239,26 @@ export const useTicketStore = create<TicketState>((set, get) => {
     toggleRepository: (id) => set((s) => ({ uiFilters: { ...s.uiFilters, selectedRepositoryIds: toggle(s.uiFilters.selectedRepositoryIds, id) } })),
     clearUIFilters: () => set({ uiFilters: EMPTY_UI }), setViewMode: (mode) => set({ viewMode: mode }),
     setCurrentTicket: (ticket) => {
-      svc().set_current_ticket(ticket ? JSON.stringify(ticket) : "");
+      const req = protoCreate(SetCurrentTicketRequestSchema, {
+        ticket: ticket ? ticketToProto(ticket) : undefined,
+      });
+      state().set_current_ticket(toBinary(SetCurrentTicketRequestSchema, req));
       bump();
     },
     setSelectedTicketSlug: (slug) => set({ selectedTicketSlug: slug }),
     setDoneCollapsed: (collapsed) => set({ doneCollapsed: collapsed }), clearError: () => set({ error: null }),
 
-    updateTicketStatusFromEvent: (slug, status) => {
-      svc().update_ticket_status_local(slug, status);
+    updateTicketStatusFromEvent: (slug, status, previousStatus) => {
+      const req = protoCreate(ApplyTicketStatusEventRequestSchema, {
+        slug, status, previousStatus,
+      });
+      state().apply_ticket_status_event(toBinary(ApplyTicketStatusEventRequestSchema, req));
       bump();
     },
 
     removeTicketFromEvent: (slug) => {
-      svc().remove_ticket(slug);
+      const req = protoCreate(ApplyTicketDeletedEventRequestSchema, { slug });
+      state().apply_ticket_deleted_event(toBinary(ApplyTicketDeletedEventRequestSchema, req));
       bump();
     },
   };
@@ -236,14 +270,17 @@ export function useFilteredTickets(): Ticket[] {
   const { selectedStatuses, selectedPriorities, selectedRepositoryIds } = useTicketStore((s) => s.uiFilters);
   return useMemo(() => {
     if (search || selectedStatuses.length || selectedPriorities.length || selectedRepositoryIds.length) {
-      return JSON.parse(getTicketService().filter_tickets_json(
-        search || "",
-        JSON.stringify(selectedStatuses),
-        JSON.stringify(selectedPriorities),
-        JSON.stringify(selectedRepositoryIds),
-      )) as Ticket[];
+      const req = protoCreate(FilterTicketsRequestSchema, {
+        search: search || "",
+        statuses: selectedStatuses,
+        priorities: selectedPriorities,
+        repositoryIds: selectedRepositoryIds.map((n) => BigInt(n)),
+      });
+      const respBytes = state().filter_tickets(toBinary(FilterTicketsRequestSchema, req));
+      const resp = fromBinary(FilterTicketsResponseSchema, respBytes);
+      return resp.tickets.map(protoTicketToTicket);
     }
-    return JSON.parse(svc().tickets_json()) as Ticket[];
+    return JSON.parse(state().tickets_json()) as Ticket[];
   }, [tick, search, selectedStatuses, selectedPriorities, selectedRepositoryIds]);
 }
 

@@ -116,7 +116,7 @@ export async function getUsageConnect(
     usageType: usageType ?? undefined,
   });
   const bytes = toBinary(GetUsageRequestSchema, req);
-  const respBytes = await getBillingService().get_usage_connect(bytes);
+  const respBytes = await getBillingService().getUsageConnect(bytes);
   const resp = fromBinary(GetUsageResponseSchema, new Uint8Array(respBytes));
   const out: UsageQueryResponse = {};
   if (resp.metricValue !== undefined) {
@@ -150,7 +150,7 @@ export async function getUsageHistoryConnect(
     months: opts.months ?? 3,
   });
   const bytes = toBinary(GetUsageHistoryRequestSchema, req);
-  const respBytes = await getBillingService().get_usage_history_connect(bytes);
+  const respBytes = await getBillingService().getUsageHistoryConnect(bytes);
   const resp = fromBinary(GetUsageHistoryResponseSchema, new Uint8Array(respBytes));
   return {
     records: resp.records.map((r) => ({
@@ -172,7 +172,7 @@ export async function checkQuotaConnect(
 ): Promise<{ available: boolean }> {
   const req = create(CheckQuotaRequestSchema, { orgSlug, resource, amount });
   const bytes = toBinary(CheckQuotaRequestSchema, req);
-  const respBytes = await getBillingService().check_quota_connect(bytes);
+  const respBytes = await getBillingService().checkQuotaConnect(bytes);
   const resp = fromBinary(CheckQuotaResponseSchema, new Uint8Array(respBytes));
   return { available: resp.available };
 }
@@ -184,7 +184,7 @@ export async function setCustomQuotaConnect(
 ): Promise<{ message: string }> {
   const req = create(SetCustomQuotaRequestSchema, { orgSlug, resource, limit });
   const bytes = toBinary(SetCustomQuotaRequestSchema, req);
-  const respBytes = await getBillingService().set_custom_quota_connect(bytes);
+  const respBytes = await getBillingService().setCustomQuotaConnect(bytes);
   const resp = fromBinary(SetCustomQuotaResponseSchema, new Uint8Array(respBytes));
   return { message: resp.message };
 }
@@ -197,7 +197,7 @@ export async function createCustomerPortalConnect(
 ): Promise<CustomerPortalResponse> {
   const req = create(CreateCustomerPortalRequestSchema, { orgSlug, returnUrl });
   const bytes = toBinary(CreateCustomerPortalRequestSchema, req);
-  const respBytes = await getBillingService().create_customer_portal_connect(bytes);
+  const respBytes = await getBillingService().createCustomerPortalConnect(bytes);
   const resp = fromBinary(CreateCustomerPortalResponseSchema, new Uint8Array(respBytes));
   return { url: resp.url };
 }

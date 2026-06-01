@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/grant"
+	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/middleware"
 	"github.com/anthropics/agentsmesh/backend/internal/service/agentpod"
 	"github.com/anthropics/agentsmesh/backend/internal/service/geo"
@@ -59,18 +60,8 @@ type Server struct {
 	tokenGenerator *relay.TokenGenerator
 	geoResolver    geo.Resolver
 	grantSvc       *grantservice.Service
-	eventBus       EventPublisher
+	eventBus       *eventbus.EventBus
 }
-
-// EventPublisher is the subset of eventbus.EventBus the handler depends on.
-// Kept as an interface so unit tests can substitute a no-op.
-type EventPublisher interface {
-	Publish(ctx context.Context, ev EventPublisherEvent) error
-}
-
-// EventPublisherEvent is an opaque event payload. Concrete shape lives in
-// the eventbus package — handlers only need to publish, not introspect.
-type EventPublisherEvent = any
 
 // NewServer constructs a Server. Optional dependencies can be left nil; the
 // corresponding handlers degrade gracefully (CodeUnavailable for missing
@@ -123,7 +114,7 @@ func WithGrantService(gs *grantservice.Service) Option {
 	return func(s *Server) { s.grantSvc = gs }
 }
 
-func WithEventBus(eb EventPublisher) Option {
+func WithEventBus(eb *eventbus.EventBus) Option {
 	return func(s *Server) { s.eventBus = eb }
 }
 

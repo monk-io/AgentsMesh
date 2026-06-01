@@ -1,0 +1,141 @@
+// proto.channel_state.v1 — channel state mutation contract.
+//
+// Companion to channel_state.proto in the same package. channel_state.proto
+// describes the in-memory cache shape (Channel / ChannelMessage / ...);
+// this file holds the mutation request messages issued by TS / Swift via
+// the wasm-bindgen / UniFFI / NAPI bridge.
+//
+// See proto/pod_state/v1/pod_state.proto for the full naming convention.
+
+syntax = "proto3";
+
+package proto.channel_state.v1;
+
+import "channel_state/v1/channel_state.proto";
+import "pod/v1/pod.proto";
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/channel_state/v1;channelstatev1";
+
+// ---------------------------------------------------------------------------
+// Realtime channel:member_count_changed event. Patches only member_count
+// — the rest of the Channel record stays as-is in the cache. Renderer
+// previously pulled the whole Channel, mutated one field, pushed it back;
+// this message replaces that 3-step dance.
+// ---------------------------------------------------------------------------
+message PatchChannelMemberCountRequest {
+  int64 channel_id = 1;
+  int32 delta = 2;  // signed; +N for joins, -N for leaves
+}
+
+// ---------------------------------------------------------------------------
+// Realtime channel:new_message event. Inserts the message into the
+// channel's cached message list and updates the last_message/last_activity
+// fields on the Channel record.
+// ---------------------------------------------------------------------------
+message ApplyIncomingChannelMessageRequest {
+  int64 channel_id = 1;
+  ChannelMessage message = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Realtime channel:message_edited event.
+// ---------------------------------------------------------------------------
+message ApplyChannelMessageEditedEventRequest {
+  int64 channel_id = 1;
+  int64 message_id = 2;
+  string body = 3;
+  optional string content = 4;       // JSON-serialized AST; proto.string
+                                     // wire-aligned with backend (Any
+                                     // upgrade is a future follow-up)
+  map<string, string> mentions = 5;
+  string edited_at = 6;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached channel list — used by sidebar after a listChannels
+// fetch returns. Wholesale replaces the cache so the displayed list
+// reflects the active org / includeArchived filter combination.
+// ---------------------------------------------------------------------------
+message ReplaceCachedChannelsRequest {
+  repeated Channel channels = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Insert or upsert a single channel — used after getChannel, createChannel,
+// updateChannel, archive/unarchive. Idempotent on `channel.id`: inserts at
+// the head of the list when absent, replaces the existing row when present.
+// ---------------------------------------------------------------------------
+message InsertChannelRequest {
+  Channel channel = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached channel messages — used by initial listChannelMessages
+// fetch. Drops the previous cache for `channel_id` and seeds it with the
+// returned page.
+// ---------------------------------------------------------------------------
+message ReplaceCachedChannelMessagesRequest {
+  int64 channel_id = 1;
+  repeated ChannelMessage messages = 2;
+  bool has_more = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Prepend older messages to the cache — used by paginated load-more.
+// Deduplicates by `id`; merges in front of the current page.
+// ---------------------------------------------------------------------------
+message PrependCachedChannelMessagesRequest {
+  int64 channel_id = 1;
+  repeated ChannelMessage messages = 2;
+  bool has_more = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Insert a single channel message — used after sendChannelMessage succeeds
+// (the POST response payload is fed back into the cache so the optimistic
+// UI flips to the canonical server row).
+// ---------------------------------------------------------------------------
+message InsertChannelMessageRequest {
+  int64 channel_id = 1;
+  ChannelMessage message = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Replace unread counts across all cached channels — used after a
+// `/channels/unread` fetch. Channels not present in the map have their
+// unread_count zeroed.
+// ---------------------------------------------------------------------------
+message ReplaceChannelUnreadCountsRequest {
+  map<int64, uint32> counts = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached pods joined to a channel — used after a
+// listChannelPods fetch. Drops the previous list for `channel_id` and
+// seeds it with the returned set. Carries the wire-level Pod so the
+// cache stays compatible with proto.pod.v1 consumers (only the
+// summary fields will be populated by the renderer).
+// ---------------------------------------------------------------------------
+message ReplaceChannelPodsRequest {
+  int64 channel_id = 1;
+  repeated proto.pod.v1.Pod pods = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached members of a channel — used after a listChannelMembers
+// fetch. Wholesale replaces the cached list for `channel_id`.
+// ---------------------------------------------------------------------------
+message ReplaceChannelMembersRequest {
+  int64 channel_id = 1;
+  repeated ChannelMember members = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Remove a single user from the cached members of a channel — used after
+// a removeChannelMember Connect-RPC succeeds. Selector re-reads pick up
+// the absence without a full list refetch.
+// ---------------------------------------------------------------------------
+message RemoveChannelMemberRequest {
+  int64 channel_id = 1;
+  int64 user_id = 2;
+}

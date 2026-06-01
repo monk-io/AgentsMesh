@@ -33,6 +33,10 @@ impl AgentsMeshCore {
             runner_id,
         };
         let resp = self.api.list_pods_connect(&req).await?;
+        // Mirror the fetched baseline into the shared runtime.state so the
+        // `pods_json()` selector (read by the tick-driven reducer) reflects
+        // fetch + realtime dispatch together — the iOS SSOT, matching desktop.
+        self.runtime.state.write().pods.set_pods(resp.items.clone());
         Ok(resp.into())
     }
 

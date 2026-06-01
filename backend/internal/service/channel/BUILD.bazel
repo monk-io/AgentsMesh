@@ -31,11 +31,13 @@ go_library(
         "//backend/internal/infra/eventbus",
         "//backend/pkg/displaykit",
         "//backend/pkg/slugkit",
+        "//proto/events/v1:events_go_proto",
         "@com_github_yuin_goldmark//:goldmark",
         "@com_github_yuin_goldmark//ast",
         "@com_github_yuin_goldmark//extension",
         "@com_github_yuin_goldmark//extension/ast",
         "@com_github_yuin_goldmark//text",
+        "@org_golang_google_protobuf//proto",
     ],
 )
 
@@ -81,6 +83,7 @@ go_test(
         "//backend/internal/infra/eventbus",
         "//backend/internal/testkit",
         "//backend/pkg/slugkit",
+        "//proto/events/v1:events_go_proto",
         "@com_github_stretchr_testify//assert",
         "@io_gorm_gorm//:gorm",
     ],

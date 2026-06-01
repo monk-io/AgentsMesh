@@ -113,6 +113,7 @@ export async function listPods(
   opts: {
     status?: string;
     created_by_id?: number;
+    runner_id?: number;
     limit?: number;
     offset?: number;
   } = {},
@@ -121,6 +122,7 @@ export async function listPods(
     orgSlug,
     status: opts.status,
     createdById: opts.created_by_id === undefined ? undefined : BigInt(opts.created_by_id),
+    runnerId: opts.runner_id === undefined ? undefined : BigInt(opts.runner_id),
     limit: opts.limit,
     offset: opts.offset,
   });

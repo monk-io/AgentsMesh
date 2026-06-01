@@ -3,7 +3,9 @@ use agentsmesh_transport::runtime::{PlatformRuntime, Runtime};
 use futures::stream::StreamExt;
 use wasm_bindgen::prelude::*;
 
-use crate::js_bridge::{make_acp_callback, make_output_callback, make_status_callback};
+use crate::js_bridge::{
+    make_acp_callback, make_disconnect_callback, make_output_callback, make_status_callback,
+};
 
 #[wasm_bindgen]
 pub struct WasmRelayManager {
@@ -98,6 +100,14 @@ impl WasmRelayManager {
     ) {
         let cb = make_acp_callback(callback);
         self.pool.on_acp_message(&pod_key, cb).await;
+    }
+
+    /// Register the single pod-disconnected sink — `(podKey: string) => void`.
+    /// The relay adapter clears its register-once guard so the next subscribe
+    /// re-registers status/ACP listeners.
+    pub fn on_pod_disconnected(&self, callback: js_sys::Function) {
+        self.pool
+            .set_on_pod_disconnected(make_disconnect_callback(callback));
     }
 
     pub async fn get_status(&self, pod_key: String) -> String {

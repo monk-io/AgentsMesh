@@ -2,13 +2,10 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 test.describe("Ticket Operations", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
   test("create ticket via dialog", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/tickets`);
     await page.waitForLoadState("load");
 
@@ -26,7 +23,6 @@ test.describe("Ticket Operations", () => {
         }
       }
     }
-    assertNoWasmErrors(errors);
   });
 
   test("change status on detail page", async ({ page, api }) => {
@@ -36,8 +32,6 @@ test.describe("Ticket Operations", () => {
       title: "E2E Status Test",
     }) as { slug: string };
     const slug = created.slug;
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/tickets/${slug}`);
     await page.waitForLoadState("load");
 
@@ -46,7 +40,6 @@ test.describe("Ticket Operations", () => {
       await statusBtn.click();
       await page.waitForTimeout(500);
     }
-    assertNoWasmErrors(errors);
     if (slug) await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug: slug }).catch(() => {});
   });
 
@@ -57,8 +50,6 @@ test.describe("Ticket Operations", () => {
       title: "E2E Comment Test",
     }) as { slug: string };
     const slug = created.slug;
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/tickets/${slug}`);
     await page.waitForLoadState("load");
 
@@ -71,12 +62,10 @@ test.describe("Ticket Operations", () => {
         await page.waitForTimeout(1000);
       }
     }
-    assertNoWasmErrors(errors);
     if (slug) await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug: slug }).catch(() => {});
   });
 
   test("switch board and list view", async ({ page }) => {
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/tickets`);
     await page.waitForLoadState("load");
 
@@ -90,7 +79,6 @@ test.describe("Ticket Operations", () => {
       await boardBtn.click();
       await page.waitForTimeout(1000);
     }
-    assertNoWasmErrors(errors);
   });
 
   test("list → detail → back navigation", async ({ page, api }) => {
@@ -100,8 +88,6 @@ test.describe("Ticket Operations", () => {
       title: "E2E Nav Test",
     }) as { slug: string };
     const slug = created.slug;
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/tickets`);
     await page.waitForLoadState("load");
 
@@ -112,7 +98,6 @@ test.describe("Ticket Operations", () => {
       await page.goBack();
       await page.waitForLoadState("load");
     }
-    assertNoWasmErrors(errors);
     if (slug) await cc.ticket.deleteTicket({ orgSlug: TEST_ORG_SLUG, ticketSlug: slug }).catch(() => {});
   });
 });

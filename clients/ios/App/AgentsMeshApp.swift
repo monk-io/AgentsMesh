@@ -28,6 +28,10 @@ struct AgentsMeshApp: App {
     var body: some Scene {
         WindowGroup {
             AppView(store: Store(initialState: AppFeature.State()) { AppFeature() })
+                // Wire the Rust dispatch tick → CoreTickStore once per launch.
+                // Reducers observe it (via CoreClient.tickStream) to re-derive
+                // state from runtime.state selectors after each realtime event.
+                .task { CoreTickStore.shared.install(on: CoreBridge.shared.core) }
         }
     }
 }

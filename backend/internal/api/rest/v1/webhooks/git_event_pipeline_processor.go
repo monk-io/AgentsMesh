@@ -2,11 +2,11 @@ package webhooks
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/domain/ticket"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func (r *WebhookRouter) processPipelineEvent(ctx *WebhookContext) (map[string]interface{}, error) {
@@ -66,20 +66,24 @@ func (r *WebhookRouter) publishPipelineEvent(ctx *WebhookContext, pipelineID int
 		return
 	}
 
-	pipelineEventData := &eventbus.PipelineEventData{
-		PipelineID:     pipelineID,
+	pipelineEventData := &eventsv1.PipelineEventData{
+		PipelineId:     pipelineID,
 		PipelineStatus: pipelineStatus,
-		PipelineURL:    pipelineURL,
+		PipelineUrl:    pipelineURL,
 		SourceBranch:   ref,
-		TicketID:       ticketID,
-		PodID:          podID,
-		RepositoryID:   ctx.RepoID,
+		TicketId:       ticketID,
+		PodId:          podID,
+		RepositoryId:   ctx.RepoID,
 	}
 	if mr != nil {
-		pipelineEventData.MRID = mr.ID
+		pipelineEventData.MrId = mr.ID
 	}
 
-	eventData, _ := json.Marshal(pipelineEventData)
+	eventData, err := eventbus.MarshalEventData(pipelineEventData)
+	if err != nil {
+		r.logger.Error("failed to marshal pipeline event data", "error", err)
+		return
+	}
 	r.eventBus.Publish(ctx.Context, &eventbus.Event{
 		Type:           eventbus.EventPipelineUpdated,
 		Category:       eventbus.CategoryEntity,

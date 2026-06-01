@@ -22,6 +22,11 @@ proto_library(
         "pod.proto",
     ],
     data = [":pod_serde_transform"],
+    # Strip the `proto/` workspace prefix so downstream `proto_library`
+    # targets can `import "pod/v1/pod.proto"` (the form buf v2's
+    # module-root `path: proto` config emits). Required for cross-package
+    # imports from proto/pod_state/v1/.
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
     deps = ["//proto/codegen/v1:codegen_proto"],
 )

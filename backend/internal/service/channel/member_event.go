@@ -2,12 +2,12 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func (s *Service) publishMemberEvent(ctx context.Context, ch_orgID, channelID, userID int64, eventType eventbus.EventType, role string) {
@@ -15,9 +15,9 @@ func (s *Service) publishMemberEvent(ctx context.Context, ch_orgID, channelID, u
 		return
 	}
 
-	data, err := json.Marshal(eventbus.ChannelMemberChangedData{
-		ChannelID: channelID,
-		UserID:    userID,
+	data, err := eventbus.MarshalEventData(&eventsv1.ChannelMemberChangedEventData{
+		ChannelId: channelID,
+		UserId:    userID,
 		Role:      role,
 	})
 	if err != nil {

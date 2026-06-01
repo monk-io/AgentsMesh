@@ -22,7 +22,10 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     resolve: {
-      alias: { "@": resolve(__dirname, "src/main") },
+      alias: [
+        { find: /^@\/(.*)$/, replacement: resolve(__dirname, "src/main") + "/$1" },
+        { find: /^@proto\/(.*)$/, replacement: resolve(protoGen, "$1") },
+      ],
     },
     build: {
       rollupOptions: {

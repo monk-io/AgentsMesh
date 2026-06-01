@@ -167,3 +167,22 @@ pub(super) fn op_envelope_to_proto(env: &OpEnvelope) -> blockstore_proto::OpEnve
         payload_json: serde_json::to_string(&env.payload).unwrap_or_else(|_| "null".into()),
     }
 }
+
+pub(super) fn op_envelope_from_proto(env: &blockstore_proto::OpEnvelope) -> Result<OpEnvelope, String> {
+    let op = match env.op.as_str() {
+        "createBlock" => OpKind::CreateBlock,
+        "updateBlock" => OpKind::UpdateBlock,
+        "deleteBlock" => OpKind::DeleteBlock,
+        "addRef" => OpKind::AddRef,
+        "removeRef" => OpKind::RemoveRef,
+        "updateRef" => OpKind::UpdateRef,
+        other => return Err(format!("unknown OpKind: {other}")),
+    };
+    let payload = if env.payload_json.is_empty() {
+        serde_json::Value::Null
+    } else {
+        serde_json::from_str(&env.payload_json)
+            .map_err(|e| format!("invalid OpEnvelope.payload_json: {e}"))?
+    };
+    Ok(OpEnvelope { op, payload })
+}

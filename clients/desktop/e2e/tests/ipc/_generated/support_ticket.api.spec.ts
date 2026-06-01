@@ -6,15 +6,15 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("IPC · support_ticket", () => {
   test("supportTicketAddSupportTicketMessageConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "supportTicketAddSupportTicketMessageConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "supportTicketAddSupportTicketMessageConnect", returnType: "Array<number>" }, []);
   });
 
   test("supportTicketAssociateAttachmentsConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "supportTicketAssociateAttachmentsConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "supportTicketAssociateAttachmentsConnect", returnType: "Array<number>" }, []);
   });
 
   test("supportTicketCreateSupportTicketConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "supportTicketCreateSupportTicketConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "supportTicketCreateSupportTicketConnect", returnType: "Array<number>" }, []);
   });
 
   test("supportTicketGetAttachmentUrlConnect", async ({ sharedPage }) => {
@@ -30,6 +30,6 @@ test.describe("IPC · support_ticket", () => {
   });
 
   test("supportTicketPresignAttachmentUploadConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "supportTicketPresignAttachmentUploadConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "supportTicketPresignAttachmentUploadConnect", returnType: "Array<number>" }, []);
   });
 });

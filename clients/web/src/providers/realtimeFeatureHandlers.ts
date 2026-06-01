@@ -2,42 +2,30 @@ import { useAutopilotStore } from "@/stores/autopilot";
 import { useLoopStore } from "@/stores/loop";
 import { getLoopService, parseWasmAny } from "@/lib/wasm-core";
 import type { DebounceRef } from "./realtimeEventHandlers";
-import type {
-  RealtimeEvent,
-  AutopilotStatusChangedData, AutopilotIterationData,
-  AutopilotTerminatedData, AutopilotThinkingData,
-  LoopRunEventData, LoopRunWarningData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  LoopRunEventDataSchema,
+  LoopRunWarningEventDataSchema,
 } from "@/lib/realtime";
 
 export function handleAutopilotEvent(event: RealtimeEvent) {
   const store = useAutopilotStore.getState();
   switch (event.type) {
-    case "autopilot:status_changed": {
-      const data = event.data as AutopilotStatusChangedData;
-      store.updateAutopilotControllerStatus(data.autopilot_controller_key, data.phase, data.current_iteration, data.max_iterations, data.circuit_breaker_state, data.circuit_breaker_reason);
-      break;
-    }
-    case "autopilot:iteration": {
-      const data = event.data as AutopilotIterationData;
-      store.addIteration(data.autopilot_controller_key, {
-        id: 0, autopilot_controller_id: 0, iteration: data.iteration, phase: data.phase,
-        summary: data.summary, files_changed: data.files_changed, duration_ms: data.duration_ms,
-        created_at: new Date().toISOString(),
-      });
+    case "autopilot:status_changed":
+    case "autopilot:iteration":
+    case "autopilot:thinking":
+    case "autopilot:terminated": {
+      // Rust event_dispatch owns the controller/iteration/thinking mutation in
+      // runtime.state (update_controller / add_iteration / update_thinking /
+      // remove_controller); bump triggers the React selectors to re-read. On
+      // desktop the main-pushed autopilot snapshot mirrors the renderer caches.
+      useAutopilotStore.setState((s) => ({ _tick: s._tick + 1 }));
       break;
     }
     case "autopilot:created": {
+      // New controller needs its full payload from the server.
       store.fetchAutopilotControllers?.();
-      break;
-    }
-    case "autopilot:terminated": {
-      const data = event.data as AutopilotTerminatedData;
-      store.removeAutopilotController(data.autopilot_controller_key);
-      break;
-    }
-    case "autopilot:thinking": {
-      const data = event.data as AutopilotThinkingData;
-      store.updateThinking(data.autopilot_controller_key, data);
       break;
     }
   }
@@ -60,7 +48,8 @@ export function handleLoopEvent(
         const s = useLoopStore.getState();
         s.fetchLoops?.();
         const currentLoop = parseWasmAny<{ id: number; slug: string }>(getLoopService().current_loop_json());
-        if (currentLoop?.id === (event.data as LoopRunEventData).loop_id) {
+        const loopRunData = decodeEventData(LoopRunEventDataSchema, event.data);
+        if (currentLoop?.id === Number(loopRunData.loopId)) {
           s.fetchLoop?.(currentLoop.slug);
           s.fetchRuns?.(currentLoop.slug, { limit: 20, offset: 0 });
         }
@@ -68,8 +57,8 @@ export function handleLoopEvent(
       break;
     }
     case "loop_run:warning": {
-      const data = event.data as LoopRunWarningData;
-      showWarning(t("loops.runWarningTitle", { runNumber: data.run_number }), data.detail || data.warning);
+      const data = decodeEventData(LoopRunWarningEventDataSchema, event.data);
+      showWarning(t("loops.runWarningTitle", { runNumber: data.runNumber }), data.detail || data.warning);
       break;
     }
   }

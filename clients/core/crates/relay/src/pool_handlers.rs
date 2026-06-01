@@ -162,9 +162,19 @@ impl<R: Runtime> RelayConnectionPool<R> {
             conn.ws_write_tx = None;
         }
         inner.last_inputs.remove(pod_key);
+        // The pod connection is fully torn down (no remaining subscribers).
+        // Clear its pod-scoped listeners and notify the adapter so it drops its
+        // register-once guard and re-registers on the next subscribe. A
+        // transient runner restart takes the RunnerDisconnected dispatch path
+        // (keeps the connection) and never reaches here, so live terminals keep
+        // their status/ACP listeners across runner churn.
+        inner.status_listeners.remove(pod_key);
         inner.acp_listeners.remove(pod_key);
         if let Some(h) = inner.resize_debounce.remove(pod_key) {
             h.abort();
+        }
+        if let Some(cb) = &inner.on_pod_disconnected {
+            cb(pod_key.to_string());
         }
     }
 

@@ -10,8 +10,8 @@ pub mod types;
 pub use error::RelayError;
 pub use pool::RelayConnectionPool;
 pub use types::{
-    AcpCallback, ConnectionHandle, OutputCallback, RelayStatus, RelayStatusInfo, SnapshotData,
-    StatusCallback,
+    AcpCallback, ConnectionHandle, DisconnectCallback, OutputCallback, RelayStatus,
+    RelayStatusInfo, SnapshotData, StatusCallback,
 };
 
 #[cfg(test)]
@@ -20,5 +20,7 @@ mod connection_tests;
 mod dispatch_tests;
 #[cfg(test)]
 mod handler_tests;
+#[cfg(test)]
+mod integration_tests;
 #[cfg(test)]
 mod pool_tests;

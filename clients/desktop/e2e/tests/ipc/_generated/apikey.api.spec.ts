@@ -10,22 +10,22 @@ test.describe("IPC · apikey", () => {
   });
 
   test("apikeyDeleteConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "apikeyDeleteConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "apikeyDeleteConnect", returnType: "Array<number>" }, []);
   });
 
   test("apikeyGetConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "apikeyGetConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "apikeyGetConnect", returnType: "Array<number>" }, []);
   });
 
   test("apikeyListConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "apikeyListConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "apikeyListConnect", returnType: "Array<number>" }, []);
   });
 
   test("apikeyRevokeConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "apikeyRevokeConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "apikeyRevokeConnect", returnType: "Array<number>" }, []);
   });
 
   test("apikeyUpdateConnect", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "apikeyUpdateConnect", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "apikeyUpdateConnect", returnType: "Array<number>" }, []);
   });
 });

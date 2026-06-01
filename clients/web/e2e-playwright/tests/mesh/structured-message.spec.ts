@@ -463,7 +463,12 @@ uiTest.describe("Structured Message — UI Rendering", () => {
     await channels.selectChannel(name);
 
     await channels.sendMessage("Simple plain text message");
-    await uiExpect(page.getByText("Simple plain text message")).toBeVisible({ timeout: 5000 });
+    // Scope to the chat message list — the sidebar last-message preview
+    // (now populated by Rust on_new_message) also contains this text, so a
+    // page-wide getByText matches two elements.
+    await uiExpect(
+      page.getByTestId("channel-message-list").getByText("Simple plain text message"),
+    ).toBeVisible({ timeout: 5000 });
   });
 
   uiTest("multiline message renders multiple lines", async ({ page }) => {
@@ -481,8 +486,9 @@ uiTest.describe("Structured Message — UI Rendering", () => {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(500);
 
-    await uiExpect(page.getByText("Line one")).toBeVisible({ timeout: 5000 });
-    await uiExpect(page.getByText("Line two")).toBeVisible({ timeout: 5000 });
+    const list = page.getByTestId("channel-message-list");
+    await uiExpect(list.getByText("Line one")).toBeVisible({ timeout: 5000 });
+    await uiExpect(list.getByText("Line two")).toBeVisible({ timeout: 5000 });
   });
 
   // Issue an authed Connect call from inside the UI test (uses the same

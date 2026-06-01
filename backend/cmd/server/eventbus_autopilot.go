@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 )
 
-func protoToEventbusThinking(data *runnerv1.AutopilotThinkingEvent) *eventbus.AutopilotThinkingData {
-	result := &eventbus.AutopilotThinkingData{
+func protoToEventbusThinking(data *runnerv1.AutopilotThinkingEvent) *eventsv1.AutopilotThinkingEventData {
+	result := &eventsv1.AutopilotThinkingEventData{
 		AutopilotControllerKey: data.GetAutopilotKey(),
 		Iteration:              data.GetIteration(),
 		DecisionType:           data.GetDecisionType(),
@@ -15,7 +15,7 @@ func protoToEventbusThinking(data *runnerv1.AutopilotThinkingEvent) *eventbus.Au
 	}
 
 	if action := data.GetAction(); action != nil {
-		result.Action = &eventbus.AutopilotActionData{
+		result.Action = &eventsv1.AutopilotActionEventData{
 			Type:    action.GetType(),
 			Content: action.GetContent(),
 			Reason:  action.GetReason(),
@@ -23,7 +23,7 @@ func protoToEventbusThinking(data *runnerv1.AutopilotThinkingEvent) *eventbus.Au
 	}
 
 	if progress := data.GetProgress(); progress != nil {
-		result.Progress = &eventbus.AutopilotProgressData{
+		result.Progress = &eventsv1.AutopilotProgressEventData{
 			Summary:        progress.GetSummary(),
 			CompletedSteps: progress.GetCompletedSteps(),
 			RemainingSteps: progress.GetRemainingSteps(),
@@ -32,13 +32,13 @@ func protoToEventbusThinking(data *runnerv1.AutopilotThinkingEvent) *eventbus.Au
 	}
 
 	if helpReq := data.GetHelpRequest(); helpReq != nil {
-		result.HelpRequest = &eventbus.AutopilotHelpRequestData{
+		result.HelpRequest = &eventsv1.AutopilotHelpRequestEventData{
 			Reason:          helpReq.GetReason(),
 			Context:         helpReq.GetContext(),
 			TerminalExcerpt: helpReq.GetTerminalExcerpt(),
 		}
 		for _, s := range helpReq.GetSuggestions() {
-			result.HelpRequest.Suggestions = append(result.HelpRequest.Suggestions, eventbus.AutopilotHelpSuggestionData{
+			result.HelpRequest.Suggestions = append(result.HelpRequest.Suggestions, &eventsv1.AutopilotHelpSuggestionEventData{
 				Action: s.GetAction(),
 				Label:  s.GetLabel(),
 			})

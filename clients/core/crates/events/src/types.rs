@@ -66,6 +66,31 @@ impl SubscriptionId {
 pub type EventHandler = Arc<dyn Fn(&RealtimeEvent) + Send + Sync>;
 pub type StateListener = Arc<dyn Fn(ConnectionState) + Send + Sync>;
 
+/// Hook invoked synchronously inside `dispatch_event` BEFORE external
+/// handlers and BEFORE the tick bump. Implementations (in `state` crate)
+/// apply the event to the in-memory `AppState`. Keeping this in the events
+/// crate lets `state` impl the trait without inverting the dep direction.
+///
+/// Contract: implementations MUST NOT call back into
+/// `EventSubscriptionManager`. They may acquire their own locks but must
+/// drop them before returning. The dispatcher holds no events-side lock
+/// while calling the hook.
+pub trait EventDispatchHook: Send + Sync {
+    fn dispatch(&self, event: &RealtimeEvent);
+}
+
+/// Fires once per dispatched realtime event AFTER the AppState mutation
+/// + tick increment. Used by FFI bindings (iOS) to push a "state may
+/// have changed, re-read selectors" signal to Swift's `@Observable`
+/// store without piping the raw event JSON.
+///
+/// Wasm + napi platforms poll the tick via getter instead — push only
+/// matters where the platform's reactive system needs an explicit kick
+/// (SwiftUI Observation, Kotlin StateFlow).
+pub trait TickListener: Send + Sync {
+    fn on_tick(&self, tick: u64);
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct PingMessage {
     #[serde(rename = "type")]

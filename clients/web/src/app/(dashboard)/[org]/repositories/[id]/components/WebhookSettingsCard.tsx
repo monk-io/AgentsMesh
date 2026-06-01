@@ -9,7 +9,7 @@ import {
   deleteRepositoryWebhook,
   markRepositoryWebhookConfigured,
   getRepositoryWebhookSecret,
-} from "@/lib/api/connect/repositoryConnect";
+} from "@/lib/api/facade/repositoryConnect";
 import { useCurrentOrg } from "@/stores/auth";
 import type { WebhookStatus, RepositoryData } from "@/lib/viewModels/repository";
 import { cn } from "@/lib/utils";

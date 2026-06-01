@@ -224,6 +224,9 @@ func generateToProtoField(g *protogen.GeneratedFile, msgName protoreflect.Name, 
 	if f.skip {
 		return "", nil
 	}
+	if f.enumFn != "" {
+		return "", fmt.Errorf("%s.%s: field_enum_map is not implemented — use field_custom for enum bridging until M4 lands", msgName, f.protoFieldName)
+	}
 	rhs := fmt.Sprintf("d.%s", f.domainFieldName)
 	switch {
 	case f.customFn != "":
@@ -242,6 +245,9 @@ func generateToProtoField(g *protogen.GeneratedFile, msgName protoreflect.Name, 
 func generateFromProtoField(g *protogen.GeneratedFile, msgName protoreflect.Name, f *fieldMapping) (string, error) {
 	if f.skip {
 		return "", nil
+	}
+	if f.enumFn != "" {
+		return "", fmt.Errorf("%s.%s: field_enum_map is not implemented — use field_custom for enum bridging until M4 lands", msgName, f.protoFieldName)
 	}
 	rhs := fmt.Sprintf("p.%s", f.protoFieldName)
 	switch {

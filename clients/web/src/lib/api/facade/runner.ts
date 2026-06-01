@@ -1,5 +1,12 @@
 import { getRunnerService } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
+import { create as protoCreate, toBinary, fromBinary } from "@bufbuild/protobuf";
+import {
+  AuthorizeRunnerRequestSchema,
+  AuthorizeRunnerResponseSchema,
+  GetRunnerAuthStatusRequestSchema,
+  RunnerAuthStatusSchema,
+} from "@proto/runner_api/v1/runner_pb";
 import {
   listRunners as listRunnersConnect,
   listAvailableRunners as listAvailableRunnersConnect,
@@ -12,6 +19,7 @@ import {
   requestLogUpload as requestLogUploadConnect,
   upgradeRunner as upgradeRunnerConnect,
 } from "../connect/runnerConnect";
+import { listPods as listPodsConnect } from "../connect/podConnect";
 
 export type { RunnerData, GRPCRegistrationToken, RunnerPodData, SandboxStatus, RelayConnectionInfo, RunnerLogData } from "@/lib/viewModels/runner";
 
@@ -58,13 +66,14 @@ export const runnerApi = {
     const { items, total, limit, offset } = await listRunnerLogsConnect(orgSlug(), id);
     return { logs: items, total, limit, offset };
   },
-  // list_runner_pods isn't owned by proto.runner_api.v1 — it spans pod state
-  // (mesh plane). Keep on legacy wasm surface until the mesh side migrates.
+  // List pods filtered by runner_id via proto.pod.v1.PodService.ListPods.
+  // (The dedicated REST endpoint was retired; ListPods has a runner_id
+  // filter we delegate to here.)
   listPods: async (id: number, filters?: { status?: string; limit?: number; offset?: number }) => {
-    const json = await getRunnerService().list_runner_pods(
-      BigInt(id), filters?.status ?? null, filters?.limit ?? null, filters?.offset ?? null,
-    );
-    return JSON.parse(json);
+    const { items, total } = await listPodsConnect(orgSlug(), {
+      runner_id: id, status: filters?.status, limit: filters?.limit, offset: filters?.offset,
+    });
+    return { items, total };
   },
   querySandboxes: async (id: number, podKeys: string[]) => {
     return await querySandboxesConnect(orgSlug(), id, podKeys);
@@ -78,14 +87,34 @@ export const runnerApi = {
   },
 };
 
-// get_auth_status / authorize_runner aren't part of proto.runner_api.v1 —
-// they live on a separate auth-key flow. Keep the wasm surface here.
+// get_auth_status / authorize_runner aren't part of proto.runner_api.v1's
+// renderer-facing surface today, but the wire format IS proto — the bridge
+// just speaks GetRunnerAuthStatus / AuthorizeRunner directly so renderer
+// encodes/decodes via @bufbuild/protobuf rather than the legacy JSON shim.
 export const runnerAuthApi = {
   getAuthStatus: async (authKey: string): Promise<RunnerAuthStatus> => {
-    const json = await getRunnerService().get_auth_status(authKey);
-    return JSON.parse(json);
+    const req = protoCreate(GetRunnerAuthStatusRequestSchema, { authKey });
+    const respBytes = await getRunnerService().get_auth_status(
+      toBinary(GetRunnerAuthStatusRequestSchema, req),
+    );
+    const resp = fromBinary(RunnerAuthStatusSchema, new Uint8Array(respBytes));
+    return {
+      status: resp.status,
+      runner_id: resp.runnerId !== undefined ? Number(resp.runnerId) : undefined,
+      node_id: resp.nodeId,
+      organization_name: resp.orgSlug,
+    };
   },
-  authorize: async (data: { auth_key: string }) => {
-    await getRunnerService().authorize_runner(JSON.stringify(data));
+  authorize: async (data: { auth_key: string; node_id?: string }) => {
+    const req = protoCreate(AuthorizeRunnerRequestSchema, {
+      authKey: data.auth_key,
+      nodeId: data.node_id ?? "",
+      // orgSlug filled in by the service layer from session if empty.
+      orgSlug: orgSlug(),
+    });
+    const respBytes = await getRunnerService().authorize_runner(
+      toBinary(AuthorizeRunnerRequestSchema, req),
+    );
+    fromBinary(AuthorizeRunnerResponseSchema, new Uint8Array(respBytes));
   },
 };

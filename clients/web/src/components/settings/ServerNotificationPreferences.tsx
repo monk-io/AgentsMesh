@@ -5,7 +5,11 @@ import { BellOff, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useTranslations } from "next-intl";
-import { getNotificationService } from "@/lib/wasm-core";
+import {
+  listPreferencesConnect,
+  setPreferenceConnect,
+} from "@/lib/api/facade/notificationConnect";
+import { readCurrentOrg } from "@/stores/auth";
 import type { NotificationPreference } from "@/lib/api";
 
 const NOTIFICATION_SOURCES = [
@@ -22,6 +26,10 @@ const CHANNEL_LABELS: Record<string, string> = {
   email: "Email",
 };
 
+function orgSlug(): string {
+  return readCurrentOrg()?.slug ?? "";
+}
+
 export function ServerNotificationPreferences() {
   const t = useTranslations();
   const [prefs, setPrefs] = useState<NotificationPreference[]>([]);
@@ -29,8 +37,8 @@ export function ServerNotificationPreferences() {
 
   const fetchPrefs = useCallback(async () => {
     try {
-      const res = JSON.parse(await getNotificationService().get_preferences());
-      setPrefs(res.preferences || []);
+      const items = await listPreferencesConnect(orgSlug());
+      setPrefs(items);
     } catch {
     } finally {
       setLoading(false);
@@ -57,14 +65,30 @@ export function ServerNotificationPreferences() {
   const handleMuteToggle = async (source: string, muted: boolean) => {
     const updated = { ...getPref(source), isMuted: muted };
     updatePref(source, updated);
-    try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
+    try {
+      await setPreferenceConnect({
+        orgSlug: orgSlug(),
+        source: updated.source,
+        entityId: updated.entityId,
+        isMuted: updated.isMuted,
+        channels: updated.channels,
+      });
+    } catch { fetchPrefs(); }
   };
 
   const handleChannelToggle = async (source: string, channel: string, value: boolean) => {
     const current = getPref(source);
     const updated = { ...current, channels: { ...current.channels, [channel]: value } };
     updatePref(source, updated);
-    try { await getNotificationService().set_preference(JSON.stringify(updated)); } catch { fetchPrefs(); }
+    try {
+      await setPreferenceConnect({
+        orgSlug: orgSlug(),
+        source: updated.source,
+        entityId: updated.entityId,
+        isMuted: updated.isMuted,
+        channels: updated.channels,
+      });
+    } catch { fetchPrefs(); }
   };
 
   if (loading) {

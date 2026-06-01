@@ -1,0 +1,123 @@
+// proto.pod_state.v1 — client-side pod state mutation contract.
+//
+// Distinct from proto.pod.v1 (wire schema for Connect-RPC). This package
+// describes the mutation operations the renderer issues against the Rust
+// pod cache through the wasm-bindgen / NAPI bridge. Each message is one
+// SRP-shaped intent — name describes the business event + action, not a
+// generic "update pod" verb.
+//
+// Why a separate package: proto.pod.v1 is the wire shape between client
+// and backend; this package is the in-process contract between TS and
+// Rust. Different evolution rhythms, different review audiences.
+//
+// Naming convention:
+//   * ApplyXxxEventRequest    — realtime-event driven cache mutation
+//   * InsertXxxRequest        — new entity arriving at the cache
+//   * PatchXxxFieldRequest    — single field of an existing entity
+//   * RemoveXxxRequest        — single key deletion
+//   * ReplaceXxxForViewRequest— scoped collection replacement (always
+//                               carries a `view`/`scope` discriminator
+//                               so other views' caches are untouched)
+
+syntax = "proto3";
+
+package proto.pod_state.v1;
+
+import "pod/v1/pod.proto";
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/pod_state/v1;podstatev1";
+
+// ---------------------------------------------------------------------------
+// Insert — workspace just created a new pod. The CreatePod modal success
+// path calls this so the sidebar + workspace tab list reflect the new pod
+// immediately (before realtime broadcast catches up).
+// ---------------------------------------------------------------------------
+message InsertCreatedPodRequest {
+  proto.pod.v1.Pod pod = 1;
+  // Monotonic client clock (ms since epoch). Used to discard stale
+  // updates when this request races a realtime ApplyPodStatusEvent for
+  // the same pod_key.
+  int64 client_timestamp_ms = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Patch perpetual flag — either user toggled the switch in the UI, or a
+// realtime `pod:perpetual_changed` arrived for a pod owned by another
+// tab/user. Same payload either way.
+// ---------------------------------------------------------------------------
+message PatchPodPerpetualRequest {
+  string pod_key = 1;
+  bool perpetual = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Realtime pod:status_changed / pod:terminated events. Status,
+// agent_status and error_* fields arrive together in one payload, so they
+// belong in one mutation. The legacy 6-positional-arg
+// `update_pod_status(pod_key, status, agent_status, error_code,
+// error_message, timestamp)` is the precursor — timestamp was always
+// unused so it's dropped here.
+// ---------------------------------------------------------------------------
+message ApplyPodStatusEventRequest {
+  string pod_key = 1;
+  string status = 2;            // proto.pod.v1 currently uses string wire
+  optional string agent_status = 3;
+  optional string error_code = 4;
+  optional string error_message = 5;
+}
+
+// ---------------------------------------------------------------------------
+// Realtime pod:title_changed event — title only.
+// ---------------------------------------------------------------------------
+message ApplyPodTitleEventRequest {
+  string pod_key = 1;
+  string title = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Realtime pod:alias_changed event — empty string semantics encoded as
+// missing optional (alias cleared = optional unset, alias set = present).
+// ---------------------------------------------------------------------------
+message ApplyPodAliasEventRequest {
+  string pod_key = 1;
+  optional string alias = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Realtime pod:agent_status_changed event — agent_status only. Separate
+// from ApplyPodStatusEvent because the event source is different and the
+// payload carries only this single field.
+// ---------------------------------------------------------------------------
+message ApplyAgentStatusEventRequest {
+  string pod_key = 1;
+  string agent_status = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Replace cached pod list — used by sidebar / workspace tabs after a
+// listPods fetch returns. Wholesale replaces the cache because the
+// caller (fetchSidebarPods) is the SSOT for "what should be visible
+// right now" given the active tab/filter combination. Splitting per-tab
+// scopes would require multi-list state in Rust, which is not yet a
+// design goal — keep it single-list and let the caller drive it.
+// ---------------------------------------------------------------------------
+message ReplaceCachedPodsRequest {
+  repeated proto.pod.v1.Pod pods = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Append pods to the cached list — used by loadMorePods pagination.
+// Skips pods whose pod_key already exists (no duplicates).
+// ---------------------------------------------------------------------------
+message AppendCachedPodsRequest {
+  repeated proto.pod.v1.Pod pods = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Realtime pod:terminated event — same shape as a status event but
+// kept separate so that the realtime handler can choose to also clear
+// init_progress entries for the pod (terminate is final).
+// ---------------------------------------------------------------------------
+message MarkPodTerminatedRequest {
+  string pod_key = 1;
+}

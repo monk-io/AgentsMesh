@@ -9,10 +9,13 @@ load("//build_defs/ios:rust_xcframework.bzl", "rust_xcframework")
 _FFI_DEPS = [
     "//clients/core/crates/api-client:api_client",
     "//clients/core/crates/auth",
+    "//clients/core/crates/events",
     "//clients/core/crates/logging",
     "//clients/core/crates/protocol",
+    "//clients/core/crates/relay",
     "//clients/core/crates/services",
     "//clients/core/crates/state",
+    "//clients/core/crates/transport",
     "//clients/core/crates/types",
     "@crates//:prost",
     "@crates//:serde",

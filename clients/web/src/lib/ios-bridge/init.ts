@@ -16,11 +16,15 @@
 import {
   markServiceReady, registerServiceProvider, setPlatformInit,
 } from "@agentsmesh/service-runtime";
+import type { WasmBlockstoreService } from "agentsmesh-wasm";
 import { RpcBlockstoreService } from "./RpcBlockstoreService";
 
 async function doIosBridgeInit(): Promise<void> {
   registerServiceProvider({
-    blockstoreService: new RpcBlockstoreService(),
+    // iOS bridge supplies an RPC equivalent; cast required because the typed
+    // registry expects the WASM-bindgen class shape (`free` + per-method
+    // proto-binary suffix variants the RPC shim doesn't surface).
+    blockstoreService: new RpcBlockstoreService() as unknown as WasmBlockstoreService,
   });
   markServiceReady();
   if (typeof console !== "undefined") {

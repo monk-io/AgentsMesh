@@ -1,60 +1,19 @@
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_state::pod_state::PodState;
 use agentsmesh_types::proto_pod_v1 as pod_proto;
 use prost::Message;
 
+// Networking-only service for the pod domain. The pod cache lives in the
+// shared `AppState.pods` (dispatch-hook SSOT), reached via the wasm/napi
+// `app_pod*` surface — this service speaks only the Connect-RPC wire.
 pub struct PodService {
     client: Arc<ApiClient>,
-    state: RwLock<PodState>,
 }
 
 impl PodService {
-    pub fn new(client: Arc<ApiClient>, state: PodState) -> Self {
-        Self { client, state: RwLock::new(state) }
-    }
-
-    pub fn pods_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().pods()).unwrap_or_default()
-    }
-
-    pub fn current_pod_json(&self) -> Option<String> {
-        self.state.read().unwrap().current_pod()
-            .map(|pod| serde_json::to_string(pod).unwrap_or_default())
-    }
-
-    pub fn get_pod_json(&self, pod_key: &str) -> Option<String> {
-        self.state.read().unwrap().get_pod(pod_key)
-            .map(|pod| serde_json::to_string(pod).unwrap_or_default())
-    }
-
-    pub fn update_pod_status(
-        &self, pod_key: &str, status: &str,
-        agent_status: Option<String>, error_code: Option<String>,
-        error_message: Option<String>, timestamp: Option<i64>,
-    ) {
-        self.state.write().unwrap().update_pod_status(
-            pod_key, status, agent_status.as_deref(),
-            error_code.as_deref(), error_message.as_deref(), timestamp,
-        );
-    }
-
-    pub fn update_pod_title(&self, pod_key: &str, title: &str, timestamp: Option<i64>) {
-        self.state.write().unwrap().update_pod_title(pod_key, title, timestamp);
-    }
-
-    pub fn update_pod_alias(&self, pod_key: &str, alias: &str) {
-        self.state.write().unwrap().update_pod_alias(pod_key, alias);
-    }
-
-    pub fn update_agent_status(&self, pod_key: &str, agent_status: &str) {
-        self.state.write().unwrap().update_agent_status(pod_key, agent_status);
-    }
-
-    pub fn remove_pod(&self, pod_key: &str) {
-        self.state.write().unwrap().remove_pod(pod_key);
+    pub fn new(client: Arc<ApiClient>) -> Self {
+        Self { client }
     }
 
     // -------- Connect-RPC (binary wire) --------

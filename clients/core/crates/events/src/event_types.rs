@@ -14,6 +14,8 @@ pub enum EventType {
     PodTitleChanged,
     #[serde(rename = "pod:alias_changed")]
     PodAliasChanged,
+    #[serde(rename = "pod:perpetual_changed")]
+    PodPerpetualChanged,
     #[serde(rename = "pod:init_progress")]
     PodInitProgress,
     #[serde(rename = "pod:restarting")]
@@ -25,6 +27,10 @@ pub enum EventType {
     ChannelMessageEdited,
     #[serde(rename = "channel:message_deleted")]
     ChannelMessageDeleted,
+    #[serde(rename = "channel:member_added")]
+    ChannelMemberAdded,
+    #[serde(rename = "channel:member_removed")]
+    ChannelMemberRemoved,
 
     #[serde(rename = "ticket:created")]
     TicketCreated,
@@ -105,11 +111,14 @@ impl EventType {
             Self::PodTerminated => "pod:terminated",
             Self::PodTitleChanged => "pod:title_changed",
             Self::PodAliasChanged => "pod:alias_changed",
+            Self::PodPerpetualChanged => "pod:perpetual_changed",
             Self::PodInitProgress => "pod:init_progress",
             Self::PodRestarting => "pod:restarting",
             Self::ChannelMessage => "channel:message",
             Self::ChannelMessageEdited => "channel:message_edited",
             Self::ChannelMessageDeleted => "channel:message_deleted",
+            Self::ChannelMemberAdded => "channel:member_added",
+            Self::ChannelMemberRemoved => "channel:member_removed",
             Self::TicketCreated => "ticket:created",
             Self::TicketUpdated => "ticket:updated",
             Self::TicketStatusChanged => "ticket:status_changed",

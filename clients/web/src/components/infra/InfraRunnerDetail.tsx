@@ -116,6 +116,7 @@ export function InfraRunnerDetail({ runnerId, onBack }: Props) {
           {(["overview", "pods"] as const).map((tab) => (
             <button
               key={tab}
+              data-testid={`runner-detail-tab-${tab}`}
               onClick={() => state.setActiveTab(tab)}
               className={cn(
                 "border-b-2 px-1 py-4 text-sm font-medium transition-colors",

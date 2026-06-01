@@ -80,11 +80,28 @@ func (d *daemonServer) handleClient(conn net.Conn) {
 		return
 	}
 
-	// Set as current client — swap pointer under lock, close old conn outside.
+	// Become the current client and replay the DETACHED-window buffer, so a
+	// runner that attached after the child already produced output — or
+	// reattached after a restart while the child kept running — sees that gap
+	// instead of a blank screen. The buffer is cleared on snapshot, so output a
+	// previous client already consumed live is never re-sent. connWriteMu spans
+	// the swap+replay so ptyReader can't interleave live output ahead of the
+	// replay; the snapshot+clear+swap under clientMu deliver a racing chunk
+	// exactly once (this replay or live, never both/neither).
+	d.connWriteMu.Lock()
 	d.clientMu.Lock()
+	replay := make([]byte, len(d.history))
+	copy(replay, d.history)
+	d.history = d.history[:0] // replayed now — must not re-send on the next attach
 	oldClient := d.client
 	d.client = conn
 	d.clientMu.Unlock()
+	if len(replay) > 0 {
+		if err := WriteMessage(conn, MsgOutput, replay); err != nil {
+			log.Debug("replay buffered output failed", "error", err)
+		}
+	}
+	d.connWriteMu.Unlock()
 	if oldClient != nil {
 		oldClient.Close()
 	}
@@ -186,6 +203,15 @@ func (d *daemonServer) ptyReader() {
 
 			d.clientMu.Lock()
 			client := d.client
+			if client == nil {
+				// Buffer ONLY while detached. Output delivered live to an
+				// attached client must never be replayed on a later attach —
+				// that re-sends bytes the terminal already painted. The buffer
+				// is cleared on attach, so it only ever holds the no-client gap
+				// (pre-first-attach startup banner, or output produced between
+				// a runner crash and its reconnect).
+				d.appendHistoryLocked(data)
+			}
 			d.clientMu.Unlock()
 
 			if client != nil {

@@ -1,8 +1,14 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import path from "path";
 import { AppState, initLogger, logEvent } from "@agentsmesh/node-bridge";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
+import { ReplaceChannelPodsRequestSchema } from "@proto/channel_state/v1/mutations_pb";
+import { PodSchema } from "@proto/pod/v1/pod_pb";
 import { createLocalRunnerStubs, type LocalRunnerStubMap } from "./local_runner_stubs";
 import { acquireSingleInstance } from "./single_instance";
+import { IPC_ALLOWLIST, IPC_ALLOWLIST_SET } from "./ipc-allowlist.generated";
+import { setupRealtimeBridge, type RealtimeBridge } from "./realtime";
+import { setupRelayBridge, type RelayBridge } from "./relay";
 import {
   registerProtocol,
   attachSecondInstanceUrlHandler,
@@ -43,6 +49,8 @@ const isHeadlessTest = process.env.NODE_ENV === "test";
 let appState: AppState;
 let stubs: LocalRunnerStubMap | null = null;
 let mainWindow: BrowserWindow | null = null;
+let realtimeBridge: RealtimeBridge | null = null;
+let relayBridge: RelayBridge | null = null;
 const appStateHandlers = new Set<string>();
 
 const getMainWindow = () => mainWindow;
@@ -94,6 +102,14 @@ function createWindow() {
 
 // Called at boot and after server switch (new AppState). MUST removeHandler first
 // because ipcMain.handle throws on duplicate registration.
+//
+// Allowlist-driven (vs reflect-everything): the set of methods exposed as IPC
+// channels comes from `ipc-allowlist.generated.ts` — auto-generated from the
+// same NAPI binary symbol enumeration that drives e2e contract specs, so the
+// two stay in lock-step. Any NAPI method not in the allowlist is unreachable
+// from the renderer even if it exists on AppState.prototype. Drift (allowlist
+// references a method that's missing from AppState, or vice-versa) is logged
+// at boot.
 function bindAppStateHandlers() {
   for (const ch of appStateHandlers) {
     ipcMain.removeHandler(ch);
@@ -101,10 +117,38 @@ function bindAppStateHandlers() {
   appStateHandlers.clear();
 
   const proto = Object.getPrototypeOf(appState);
-  const methodNames = Object.getOwnPropertyNames(proto).filter(
-    (k) => k !== "constructor" && typeof (appState as any)[k] === "function",
+  const protoMethods = new Set(
+    Object.getOwnPropertyNames(proto).filter(
+      (k) => k !== "constructor" && typeof (appState as any)[k] === "function",
+    ),
   );
-  for (const m of methodNames) {
+
+  // Drift detection: warn (don't crash) on either side mismatching the
+  // allowlist. Crash would block legitimate dev workflows after a Bazel
+  // rebuild lag; a warn surfaces the issue immediately in the dev log
+  // while keeping renderer paths working.
+  const missingFromBinary: string[] = [];
+  for (const name of IPC_ALLOWLIST) {
+    if (!protoMethods.has(name)) missingFromBinary.push(name);
+  }
+  const missingFromAllowlist: string[] = [];
+  for (const name of protoMethods) {
+    if (!IPC_ALLOWLIST_SET.has(name)) missingFromAllowlist.push(name);
+  }
+  if (missingFromBinary.length > 0) {
+    console.warn(
+      `[electron] IPC allowlist drift: ${missingFromBinary.length} methods listed but not in AppState.prototype — regenerate with \`pnpm --filter desktop e2e:gen\``,
+    );
+  }
+  if (missingFromAllowlist.length > 0) {
+    console.warn(
+      `[electron] IPC allowlist drift: ${missingFromAllowlist.length} AppState methods not in allowlist (denied to renderer) — regenerate with \`pnpm --filter desktop e2e:gen\``,
+    );
+  }
+
+  let registered = 0;
+  for (const m of IPC_ALLOWLIST) {
+    if (!protoMethods.has(m)) continue; // skip missing methods (logged above)
     ipcMain.handle(m, async (_e, ...args: unknown[]) => {
       try {
         if (stubs && m in stubs) {
@@ -116,19 +160,34 @@ function bindAppStateHandlers() {
       }
     });
     appStateHandlers.add(m);
+    registered++;
   }
-  console.log(`[electron] Registered ${methodNames.length} IPC handlers`);
+  console.log(`[electron] Registered ${registered} IPC handlers (allowlist: ${IPC_ALLOWLIST.length}, AppState methods: ${protoMethods.size})`);
 }
 
 // Known leak: LocalRunnerManager / RelayManager have no shutdown hook, so their tokio
 // tasks may outlive the rebind. Rare in practice (server switches are uncommon).
 function rebindAppState(newApiUrl: string) {
   console.log(`[electron] Rebinding AppState: ${currentApiUrl} → ${newApiUrl}`);
+  // Dispose old realtime bridge before swapping AppState — its NAPI
+  // callbacks would otherwise keep firing into a stale Rust handle.
+  if (realtimeBridge) {
+    void realtimeBridge.dispose();
+    realtimeBridge = null;
+  }
+  if (relayBridge) {
+    relayBridge.dispose();
+    relayBridge = null;
+  }
   appState = new AppState(newApiUrl, storageDir);
   if (isHeadlessTest) {
     stubs = createLocalRunnerStubs();
   }
   bindAppStateHandlers();
+  void setupRealtimeBridge(appState, getMainWindow).then((bridge) => {
+    realtimeBridge = bridge;
+  });
+  relayBridge = setupRelayBridge(appState, getMainWindow);
   currentApiUrl = newApiUrl;
 }
 
@@ -272,7 +331,8 @@ function registerLegacyApiAliases() {
   // exposes these aliases for desktop e2e specs that still invoke through
   // IPC by name. The cache update is necessary because main's AppState
   // holds a separate Rust state from the renderer wasm — without the
-  // set_channel_pods_local fan-out, channelChannelPodsJson stays empty.
+  // app_channel_replace_pods fan-out into runtime.state, appChannelPodsJson
+  // returns empty.
   //
   // Connect-JSON serializes int64 as a JSON string to preserve precision —
   // IPC callers parse the channel response and forward `id` to us as a
@@ -338,13 +398,29 @@ function registerLegacyApiAliases() {
       "ListChannelPods",
       { orgSlug: orgSlug(), id: channelId },
     );
-    const parsed = JSON.parse(raw) as { items?: unknown[] };
-    // Items are ChannelPod {id, pod_key, status, agent_status, alias}. Apply
-    // snake_case + int64 coerce so the cache deserializer (#[serde(default)]
-    // proto_pod_v1::Pod) accepts the shape.
-    const pods = (parsed.items ?? []).map((p) => coerceInt64(snakeCaseDeep(p)));
-    await (appState as { channelSetChannelPodsLocal: (id: number, json: string) => Promise<void> })
-      .channelSetChannelPodsLocal(channelId, JSON.stringify(pods));
+    const parsed = JSON.parse(raw) as { items?: Array<Record<string, unknown>> };
+    // Wrap the 5 ChannelPod summary fields into proto.pod.v1.Pod (other
+    // fields default to proto3 zeros) and dispatch via the cross-domain
+    // SSOT mutator on the NAPI bridge.
+    const protoPods = (parsed.items ?? []).map((p) => protoCreate(PodSchema, {
+      id: BigInt(typeof p.id === "number" ? p.id : Number(p.id ?? 0)),
+      podKey: String(p.podKey ?? p.pod_key ?? ""),
+      alias: p.alias != null ? String(p.alias) : undefined,
+      status: String(p.status ?? ""),
+      agentStatus: String(p.agentStatus ?? p.agent_status ?? ""),
+    }));
+    const req = protoCreate(ReplaceChannelPodsRequestSchema, {
+      channelId: BigInt(channelId),
+      pods: protoPods,
+    });
+    const bytes = toBinary(ReplaceChannelPodsRequestSchema, req);
+    // napi-rs Vec<u8> binding expects `Array<number>` over the JS boundary;
+    // Uint8Array works in some paths but the channelJoinChannel ipcMain
+    // handler (called from renderer through serialised IPC) sees the value
+    // as an opaque object without a `length` accessor. Materialise as a
+    // plain array to match the rest of the proto-bytes NAPI surface.
+    await (appState as { appChannelReplacePods: (b: number[]) => Promise<void> })
+      .appChannelReplacePods(Array.from(bytes));
   };
 
   const fetchChannelEnvelope = async (channelId: number): Promise<string> => {
@@ -387,8 +463,8 @@ function registerLegacyApiAliases() {
     // legacy envelope `{pods: [...], total: N}` so it can mirror the array
     // into its renderer-side cache. The Rust cache JSON is a bare array —
     // wrap it back into the legacy shape.
-    const cacheJson = await (appState as { channelChannelPodsJson: (id: number) => Promise<string> })
-      .channelChannelPodsJson(channelId);
+    const cacheJson = await (appState as { appChannelPodsJson: (id: number) => Promise<string> })
+      .appChannelPodsJson(channelId);
     const pods = JSON.parse(cacheJson) as unknown[];
     return JSON.stringify({ pods, total: pods.length });
   });
@@ -451,6 +527,17 @@ function registerLegacyApiAliases() {
     );
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return JSON.stringify(snakeCaseDeep(parsed));
+  });
+
+  // Counterpart to podCreatePod. The realtime bridge e2e specs depend on
+  // it for cleanup. Renderer hands us a pod_key string; we route to
+  // Connect proto.pod.v1.PodService/TerminatePod.
+  ipcMain.handle("podTerminatePod", async (_e, podKey: string) => {
+    await callConnectJson(
+      "proto.pod.v1.PodService",
+      "TerminatePod",
+      { orgSlug: orgSlug(), podKey },
+    );
   });
 
   // Generic binary Connect-RPC proxy. Web's wasm-side services expose
@@ -530,6 +617,14 @@ app.whenReady().then(() => {
   }
   registerStaticHandlers();
   bindAppStateHandlers();
+  // Wire the realtime EventBus bridge BEFORE createWindow() so the renderer's
+  // EventSubscriptionManager finds `realtime:connect` etc. registered as soon
+  // as preload runs. The stream itself doesn't start until renderer calls
+  // electronAPI.invoke("realtime:connect").
+  void setupRealtimeBridge(appState, getMainWindow).then((bridge) => {
+    realtimeBridge = bridge;
+  });
+  relayBridge = setupRelayBridge(appState, getMainWindow);
   buildMenu();
   installOpenUrlHandler(getMainWindow);
   createWindow();

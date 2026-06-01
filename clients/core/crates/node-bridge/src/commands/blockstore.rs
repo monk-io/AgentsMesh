@@ -1,14 +1,10 @@
 use napi_derive::napi;
+use agentsmesh_types::proto_blockstore_state_v1::ApplyRemoteOpRequest;
+use prost::Message;
 use crate::{AppState, err};
 
 #[napi]
 impl AppState {
-    #[napi]
-    pub async fn blockstore_apply_ops(&self, req_json: String) -> napi::Result<String> {
-        let svc = self.blockstore.lock().await;
-        svc.apply_ops(&req_json).await.map_err(err)
-    }
-
     #[napi]
     pub async fn blockstore_list_workspaces(&self) -> napi::Result<String> {
         let svc = self.blockstore.lock().await;
@@ -40,15 +36,43 @@ impl AppState {
     }
 
     #[napi]
-    pub async fn blockstore_semantic_search(&self, workspace_id: String, req_json: String) -> napi::Result<String> {
+    pub async fn blockstore_apply_remote_op(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let req = ApplyRemoteOpRequest::decode(req_bytes.as_slice())
+            .map_err(|e| err(format!("decode ApplyRemoteOpRequest: {e}")))?;
         let svc = self.blockstore.lock().await;
-        svc.semantic_search(&workspace_id, &req_json).await.map_err(err)
+        svc.apply_remote_op(&req.op_json).map_err(err)
+    }
+
+    // Bulk state population — proto envelopes (matching wasm bridge).
+
+    #[napi]
+    pub async fn blockstore_replace_workspaces(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let svc = self.blockstore.lock().await;
+        svc.replace_workspaces(&req_bytes).map_err(err)
     }
 
     #[napi]
-    pub async fn blockstore_apply_remote_op(&self, op_json: String) -> napi::Result<()> {
+    pub async fn blockstore_upsert_workspace(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
         let svc = self.blockstore.lock().await;
-        svc.apply_remote_op(&op_json).map_err(err)
+        svc.upsert_workspace(&req_bytes).map_err(err)
+    }
+
+    #[napi]
+    pub async fn blockstore_upsert_blocks(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let svc = self.blockstore.lock().await;
+        svc.upsert_blocks(&req_bytes).map_err(err)
+    }
+
+    #[napi]
+    pub async fn blockstore_upsert_refs(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let svc = self.blockstore.lock().await;
+        svc.upsert_refs(&req_bytes).map_err(err)
+    }
+
+    #[napi]
+    pub async fn blockstore_project_local_ops(&self, req_bytes: Vec<u8>) -> napi::Result<()> {
+        let svc = self.blockstore.lock().await;
+        svc.project_local_ops(&req_bytes).map_err(err)
     }
 
     #[napi]

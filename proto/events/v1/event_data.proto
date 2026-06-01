@@ -1,0 +1,237 @@
+syntax = "proto3";
+
+package proto.events.v1;
+
+option go_package = "github.com/anthropics/agentsmesh/proto/gen/go/events/v1;eventsv1";
+
+// Typed payloads for the realtime EventsService stream. Each message is the
+// schema of Event.data_json for one event type (see events.proto for the
+// envelope). Wire format stays JSON (protojson UseProtoNames) so existing
+// clients keep parsing snake_case keys.
+
+message PodStatusChangedEventData {
+  string pod_key = 1;
+  string status = 2;
+  string previous_status = 3;
+  string agent_status = 4;
+  string error_code = 5;
+  string error_message = 6;
+}
+
+message PodCreatedEventData {
+  string pod_key = 1;
+  string status = 2;
+  string agent_status = 3;
+  int64 runner_id = 4;
+  optional int64 ticket_id = 5;
+  string ticket_slug = 6;
+  int64 created_by_id = 7;
+}
+
+message PodTitleChangedEventData {
+  string pod_key = 1;
+  string title = 2;
+}
+
+message PodAliasChangedEventData {
+  string pod_key = 1;
+  optional string alias = 2;
+}
+
+message PodInitProgressEventData {
+  string pod_key = 1;
+  string phase = 2;
+  int32 progress = 3;
+  string message = 4;
+}
+
+message PodRestartingEventData {
+  string pod_key = 1;
+  int32 exit_code = 2;
+  int32 restart_count = 3;
+}
+
+message PodPerpetualChangedEventData {
+  string pod_key = 1;
+  bool perpetual = 2;
+}
+
+message RunnerStatusEventData {
+  int64 runner_id = 1;
+  string node_id = 2;
+  string status = 3;
+  int32 current_pods = 4;
+  string last_heartbeat = 5;
+}
+
+message TicketStatusChangedEventData {
+  string slug = 1;
+  string status = 2;
+  string previous_status = 3;
+}
+
+message SenderPodAgentEventData {
+  string name = 1;
+}
+
+message SenderPodInfoEventData {
+  string pod_key = 1;
+  optional string alias = 2;
+  optional SenderPodAgentEventData agent = 3;
+}
+
+message ChannelMessageEventData {
+  int64 id = 1;
+  int64 channel_id = 2;
+  optional string sender_pod = 3;
+  optional int64 sender_user_id = 4;
+  string sender_name = 5;
+  optional SenderPodInfoEventData sender_pod_info = 6;
+  string message_type = 7;
+  string body = 8;
+  // Lexical/Slate AST — per-node variant schemas owned by renderer.
+  string content_json = 9;
+  string mentions_json = 10;
+  optional int64 reply_to = 11;
+  string created_at = 12;
+}
+
+message ChannelMessageEditedEventData {
+  int64 id = 1;
+  int64 channel_id = 2;
+  string body = 3;
+  string content_json = 4;
+  string mentions_json = 5;
+  string edited_at = 6;
+}
+
+message ChannelMessageDeletedEventData {
+  int64 id = 1;
+  int64 channel_id = 2;
+}
+
+message ChannelMemberChangedEventData {
+  int64 channel_id = 1;
+  int64 user_id = 2;
+  string role = 3;
+}
+
+message AutopilotStatusChangedEventData {
+  string autopilot_controller_key = 1;
+  string pod_key = 2;
+  string phase = 3;
+  int32 current_iteration = 4;
+  int32 max_iterations = 5;
+  string circuit_breaker_state = 6;
+  string circuit_breaker_reason = 7;
+  bool user_takeover = 8;
+}
+
+message AutopilotIterationEventData {
+  string autopilot_controller_key = 1;
+  int32 iteration = 2;
+  string phase = 3;
+  string summary = 4;
+  repeated string files_changed = 5;
+  int64 duration_ms = 6;
+}
+
+message AutopilotCreatedEventData {
+  string autopilot_controller_key = 1;
+  string pod_key = 2;
+}
+
+message AutopilotTerminatedEventData {
+  string autopilot_controller_key = 1;
+  string phase = 2;
+  string reason = 3;
+}
+
+message AutopilotActionEventData {
+  string type = 1;
+  string content = 2;
+  string reason = 3;
+}
+
+message AutopilotProgressEventData {
+  string summary = 1;
+  repeated string completed_steps = 2;
+  repeated string remaining_steps = 3;
+  int32 percent = 4;
+}
+
+message AutopilotHelpSuggestionEventData {
+  string action = 1;
+  string label = 2;
+}
+
+message AutopilotHelpRequestEventData {
+  string reason = 1;
+  string context = 2;
+  string terminal_excerpt = 3;
+  repeated AutopilotHelpSuggestionEventData suggestions = 4;
+}
+
+message AutopilotThinkingEventData {
+  string autopilot_controller_key = 1;
+  int32 iteration = 2;
+  string decision_type = 3;
+  string reasoning = 4;
+  double confidence = 5;
+  optional AutopilotActionEventData action = 6;
+  optional AutopilotProgressEventData progress = 7;
+  optional AutopilotHelpRequestEventData help_request = 8;
+}
+
+message MrEventData {
+  int64 mr_id = 1;
+  int32 mr_iid = 2;
+  string mr_url = 3;
+  string source_branch = 4;
+  string target_branch = 5;
+  string title = 6;
+  string state = 7;
+  string action = 8;
+  optional int64 ticket_id = 9;
+  string ticket_slug = 10;
+  optional int64 pod_id = 11;
+  int64 repository_id = 12;
+  string pipeline_status = 13;
+}
+
+message PipelineEventData {
+  int64 mr_id = 1;
+  int64 pipeline_id = 2;
+  string pipeline_status = 3;
+  string pipeline_url = 4;
+  string source_branch = 5;
+  optional int64 ticket_id = 6;
+  string ticket_slug = 7;
+  optional int64 pod_id = 8;
+  int64 repository_id = 9;
+}
+
+message LoopRunWarningEventData {
+  int64 loop_id = 1;
+  int64 run_id = 2;
+  int32 run_number = 3;
+  string warning = 4;
+  string detail = 5;
+}
+
+message LoopRunEventData {
+  int64 loop_id = 1;
+  int64 run_id = 2;
+  int32 run_number = 3;
+  string status = 4;
+  optional string pod_key = 5;
+}
+
+message NotificationPayloadEventData {
+  string source = 1;
+  string title = 2;
+  string body = 3;
+  string link = 4;
+  string priority = 5;
+  map<string, bool> channels = 6;
+}

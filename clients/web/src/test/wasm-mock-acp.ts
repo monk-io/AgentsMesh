@@ -3,6 +3,14 @@
  * Implements the same aggregation/sealing logic as the Rust WASM AcpManager.
  */
 
+import { fromBinary } from "@bufbuild/protobuf";
+import {
+  UpdateToolCallRequestSchema,
+  UpdatePlanRequestSchema,
+  AddPermissionRequestRequestSchema,
+  UpdateConfigurationRequestSchema,
+} from "@proto/acp_state/v1/acp_state_pb";
+
 interface AcpMsg { text: string; role: string; timestamp: number; complete?: boolean }
 interface AcpTC { id: string; name: string; status: string; args: unknown; result_text?: string; error_message?: string; success?: boolean; timestamp: number }
 interface AcpThink { text: string; timestamp: number; complete?: boolean }
@@ -74,10 +82,11 @@ export function createAcpManager() {
       s.messages[s.messages.length - 1].complete = true;
     },
 
-    update_tool_call: (podKey: string, json: string) => {
-      const s = getOrCreate(podKey);
-      sealThinking(podKey);
-      const tc = JSON.parse(json) as AcpTC;
+    update_tool_call: (bytes: Uint8Array) => {
+      const req = fromBinary(UpdateToolCallRequestSchema, bytes);
+      const s = getOrCreate(req.podKey);
+      sealThinking(req.podKey);
+      const tc = JSON.parse(req.toolCallJson) as AcpTC;
       const existing = s.tool_calls[tc.id];
       if (existing) {
         s.tool_calls[tc.id] = { ...existing, ...tc, timestamp: existing.timestamp };
@@ -99,10 +108,11 @@ export function createAcpManager() {
       tc.status = 'completed';
     },
 
-    update_plan: (podKey: string, json: string) => {
-      const s = getOrCreate(podKey);
-      sealThinking(podKey);
-      s.plan = JSON.parse(json);
+    update_plan: (bytes: Uint8Array) => {
+      const req = fromBinary(UpdatePlanRequestSchema, bytes);
+      const s = getOrCreate(req.podKey);
+      sealThinking(req.podKey);
+      s.plan = JSON.parse(req.stepsJson);
     },
 
     add_thinking: (podKey: string, text: string) => {
@@ -116,10 +126,11 @@ export function createAcpManager() {
       while (s.thinkings.length > MAX_THINKINGS) s.thinkings.shift();
     },
 
-    add_permission_request: (podKey: string, json: string) => {
-      const s = getOrCreate(podKey);
-      sealThinking(podKey);
-      s.pending_permissions.push(JSON.parse(json));
+    add_permission_request: (bytes: Uint8Array) => {
+      const req = fromBinary(AddPermissionRequestRequestSchema, bytes);
+      const s = getOrCreate(req.podKey);
+      sealThinking(req.podKey);
+      s.pending_permissions.push(JSON.parse(req.requestJson));
     },
 
     remove_permission_request: (podKey: string, id: string) => {
@@ -139,9 +150,10 @@ export function createAcpManager() {
       s.logs.push({ level, message, timestamp: Date.now() });
     },
 
-    update_configuration: (podKey: string, json: string) => {
-      const s = getOrCreate(podKey);
-      const cfg = JSON.parse(json) as Partial<AcpConfig>;
+    update_configuration: (bytes: Uint8Array) => {
+      const req = fromBinary(UpdateConfigurationRequestSchema, bytes);
+      const s = getOrCreate(req.podKey);
+      const cfg = JSON.parse(req.configJson) as Partial<AcpConfig>;
       if (cfg.permission_mode) s.configuration.permission_mode = cfg.permission_mode;
       if (cfg.model) s.configuration.model = cfg.model;
     },

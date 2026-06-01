@@ -16,11 +16,14 @@ ts_project(
         ["src/**/*.ts"],
         exclude = ["src/**/*.test.ts"],
     ),
-    declaration = True,
+    declaration = False,
+    no_emit = True,
     tsconfig = "tsconfig.json",
     visibility = ["//visibility:public"],
     deps = [
+        "//:node_modules/@agentsmesh/proto",
         "//:node_modules/@agentsmesh/service-interface",
+        "//:node_modules/@bufbuild/protobuf",
     ],
 )
 
@@ -32,7 +35,9 @@ internal_npm_package(
         exclude = ["src/**/*.test.ts"],
     ),
     dependencies = {
+        "@agentsmesh/proto": "*",
         "@agentsmesh/service-interface": "*",
+        "@bufbuild/protobuf": "*",
     },
     main = "src/index.ts",
 )

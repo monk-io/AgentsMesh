@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 // bundle module, causing two ThemeContext instances + "useTheme must be used within ThemeProvider".
 import { ThemeProvider } from "next-themes";
 import { DesktopIntlProvider } from "./IntlProvider";
-import { RealtimeProvider } from "./RealtimeProvider";
 import { Toaster } from "sonner";
 import { ensurePlatformReady } from "@agentsmesh/service-runtime";
 import { useAuthStore } from "@/stores/auth";
@@ -26,13 +25,15 @@ function PlatformGate({ children }: { children: React.ReactNode }) {
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
+  // RealtimeProvider is mounted inside DashboardShell (and PopoutTerminalPage)
+  // — both rely on `currentOrg` being known to filter events. Mounting it
+  // here as well would cause double `subscribeAll` registration, with each
+  // event dispatched twice (channel:message duplicates, etc).
   return (
     <ThemeProvider defaultTheme="system" attribute="class">
       <DesktopIntlProvider>
         <PlatformGate>
-          <RealtimeProvider>
-            {children}
-          </RealtimeProvider>
+          {children}
         </PlatformGate>
         <Toaster richColors position="top-right" />
       </DesktopIntlProvider>

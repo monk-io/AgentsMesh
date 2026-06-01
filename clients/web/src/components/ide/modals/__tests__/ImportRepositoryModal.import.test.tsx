@@ -4,6 +4,7 @@ import {
   setupProviderMocks,
   mockRepositoryCreate,
   stableRepoSvc,
+  lastCreateRepoCall,
 } from "./ImportRepositoryModal.utils";
 
 const stable = vi.hoisted(() => ({
@@ -59,12 +60,11 @@ describe("ImportRepositoryModal - Import Actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Import Repository" }));
 
-    // Production calls getRepositoryService().create(JSON.stringify({...})) over the
-    // wasm bridge. Assert the request payload after JSON-decoding.
+    // Production calls createRepositoryConnect with proto-encoded bytes
+    // over the wasm bridge. Assert on the decoded request body.
     await waitFor(() => {
-      expect(stableRepoSvc.create).toHaveBeenCalled();
-      const arg = stableRepoSvc.create.mock.calls[0][0];
-      expect(JSON.parse(arg as string)).toEqual(
+      expect(stableRepoSvc.createRepositoryConnect).toHaveBeenCalled();
+      expect(lastCreateRepoCall()).toEqual(
         expect.objectContaining({ provider_type: "github" }),
       );
     });

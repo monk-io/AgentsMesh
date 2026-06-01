@@ -128,10 +128,19 @@ function assertReturnShape(method: string, returnType: string, result: unknown):
     /^Array<\s*number\s*>$/.test(rt) ||
     /^Array<\s*u8\s*>$/.test(rt)
   ) {
+    // A Uint8Array returned through page.evaluate() loses its type across the
+    // CDP boundary and arrives as a numeric-keyed plain object ({"0":..,"1":..}).
+    // Real ipcRenderer paths (structured clone) preserve it — this only bites
+    // the probe. Accept that shape so non-empty binary returns validate.
+    const isSerializedBytes =
+      typeof result === "object" && result !== null && !Array.isArray(result) &&
+      Object.keys(result as object).length > 0 &&
+      Object.keys(result as object).every((k) => /^\d+$/.test(k));
     const ok =
       result instanceof Uint8Array ||
       (typeof result === "object" && result !== null && "byteLength" in (result as object)) ||
-      Array.isArray(result);
+      Array.isArray(result) ||
+      isSerializedBytes;
     expect(
       ok,
       `${method}: returnType=${returnType} expects byte container, got ${typeof result}`,

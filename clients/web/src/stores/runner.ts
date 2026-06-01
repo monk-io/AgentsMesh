@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { useMemo } from "react";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import type { RunnerData } from "@/lib/api";
 import { reconnectRegistry } from "@/lib/realtime";
 import { getErrorMessage } from "@/lib/utils";
-import { getRunnerService } from "@/lib/wasm-core";
+import { getRunnerState } from "@/lib/wasm-core";
 import { readCurrentOrg } from "@/stores/auth";
 import {
   listRunners as listRunnersConnect,
@@ -13,6 +14,15 @@ import {
   deleteRunner as deleteRunnerConnect,
   createRunnerToken as createRunnerTokenConnect,
 } from "@/lib/api/facade/runnerConnect";
+import {
+  ApplyRunnerStatusEventRequestSchema,
+  ReplaceCachedRunnersRequestSchema,
+  ReplaceAvailableRunnersRequestSchema,
+  SetCurrentRunnerRequestSchema,
+  PatchCachedRunnerRequestSchema,
+  RemoveCachedRunnerRequestSchema,
+} from "@proto/runner_state/v1/runner_state_pb";
+import { runnerToProtoRunner } from "@/lib/api/runnerProtoMap";
 
 export type RunnerStatus = "online" | "offline" | "maintenance" | "busy";
 export type Runner = RunnerData;
@@ -30,11 +40,51 @@ interface RunnerState {
   clearError: () => void;
 }
 
-const svc = () => getRunnerService();
+// Runner state SSOT is the shared AppState (runtime.state) via getRunnerState
+// (web: WasmRunnerState; desktop: ElectronRunnerService). This is the SAME
+// state the EventBus dispatch + desktop snapshot mirror write, so realtime
+// runner changes flow without a JS pure-patch. Connect-RPC stays on the
+// runnerConnect facade (which still uses getRunnerService).
+const svc = () => getRunnerState();
 const bump = () => useRunnerStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 function orgSlug(): string {
   return readCurrentOrg()?.slug ?? "";
+}
+
+function dispatchReplaceCachedRunners(items: Runner[]) {
+  const req = protoCreate(ReplaceCachedRunnersRequestSchema, {
+    runners: items.map(runnerToProtoRunner),
+  });
+  svc().replace_cached_runners(toBinary(ReplaceCachedRunnersRequestSchema, req));
+}
+
+function dispatchReplaceAvailableRunners(items: Runner[]) {
+  const req = protoCreate(ReplaceAvailableRunnersRequestSchema, {
+    runners: items.map(runnerToProtoRunner),
+  });
+  svc().replace_available_runners(toBinary(ReplaceAvailableRunnersRequestSchema, req));
+}
+
+function dispatchSetCurrentRunner(runner: Runner | null) {
+  const req = protoCreate(SetCurrentRunnerRequestSchema, {
+    runner: runner ? runnerToProtoRunner(runner) : undefined,
+  });
+  svc().set_current_runner_proto(toBinary(SetCurrentRunnerRequestSchema, req));
+}
+
+function dispatchPatchCachedRunner(runner: Runner) {
+  const req = protoCreate(PatchCachedRunnerRequestSchema, {
+    runner: runnerToProtoRunner(runner),
+  });
+  svc().patch_cached_runner(toBinary(PatchCachedRunnerRequestSchema, req));
+}
+
+function dispatchRemoveCachedRunner(id: number) {
+  const req = protoCreate(RemoveCachedRunnerRequestSchema, {
+    runnerId: BigInt(id),
+  });
+  svc().remove_cached_runner(toBinary(RemoveCachedRunnerRequestSchema, req));
 }
 
 export function useRunners(): Runner[] {
@@ -58,6 +108,13 @@ export function useCurrentRunner(): Runner | null {
   }, [tick]);
 }
 
+export function applyRunnerStatusEvent(runnerId: number, status: string) {
+  const req = protoCreate(ApplyRunnerStatusEventRequestSchema, {
+    runnerId: BigInt(runnerId), status,
+  });
+  svc().apply_runner_status_event(toBinary(ApplyRunnerStatusEventRequestSchema, req));
+}
+
 export const useRunnerStore = create<RunnerState>((set, get) => ({
   _tick: 0, loading: false, fetched: false, error: null,
 
@@ -65,7 +122,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { items } = await listRunnersConnect(orgSlug(), { status });
-      svc().set_runners(JSON.stringify(items));
+      dispatchReplaceCachedRunners(items);
       set({ loading: false, fetched: true, _tick: get()._tick + 1 });
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch runners"), loading: false }); }
   },
@@ -73,7 +130,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   fetchAvailableRunners: async () => {
     try {
       const { items } = await listAvailableRunnersConnect(orgSlug());
-      svc().set_available_runners(JSON.stringify(items));
+      dispatchReplaceAvailableRunners(items);
       bump();
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch available runners") }); }
   },
@@ -81,7 +138,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   fetchRunner: async (id) => {
     try {
       const { runner } = await getRunnerConnect(orgSlug(), id);
-      if (runner) svc().set_current_runner(JSON.stringify(runner));
+      if (runner) dispatchSetCurrentRunner(runner);
       bump();
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch runner") }); }
   },
@@ -89,7 +146,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   updateRunner: async (id, data) => {
     try {
       const runner = await updateRunnerConnect(orgSlug(), id, data);
-      svc().update_runner(BigInt(id), JSON.stringify(runner));
+      dispatchPatchCachedRunner(runner);
       bump();
       return runner;
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update runner") }); throw e; }
@@ -98,7 +155,7 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   deleteRunner: async (id) => {
     try {
       await deleteRunnerConnect(orgSlug(), id);
-      svc().remove_runner(BigInt(id));
+      dispatchRemoveCachedRunner(id);
       bump();
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to delete runner") }); throw e; }
   },
@@ -111,12 +168,12 @@ export const useRunnerStore = create<RunnerState>((set, get) => ({
   },
 
   setCurrentRunner: (runner) => {
-    svc().set_current_runner(runner ? JSON.stringify(runner) : "");
+    dispatchSetCurrentRunner(runner);
     bump();
   },
 
   updateRunnerStatus: (runnerId, status) => {
-    svc().update_runner_status(BigInt(runnerId), status);
+    applyRunnerStatusEvent(runnerId, status);
     bump();
   },
 
@@ -132,9 +189,6 @@ export const getRunnerStatusInfo = (status: RunnerStatus) => {
   };
   return m[status];
 };
-
-export const canAcceptPods = (runner: Runner): boolean =>
-  runner.status === "online" && runner.current_pods < runner.max_concurrent_pods;
 
 export const formatHostInfo = (hostInfo?: Runner["host_info"]) => {
   if (!hostInfo) return "Unknown";

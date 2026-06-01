@@ -10,7 +10,8 @@ use parking_lot::RwLock;
 use crate::error::RelayError;
 use crate::retry;
 use crate::types::{
-    AcpCallback, ConnectionHandle, ConnectionState, OutputCallback, RelayStatus, StatusCallback,
+    AcpCallback, ConnectionHandle, ConnectionState, DisconnectCallback, OutputCallback,
+    RelayStatus, StatusCallback,
 };
 
 #[derive(Clone)]
@@ -26,6 +27,7 @@ pub(crate) struct PoolInner<R: Runtime = PlatformRuntime> {
     pub last_inputs: HashMap<String, (String, Instant)>,
     pub resize_debounce: HashMap<String, R::TaskHandle>,
     pub unsubscribe_tx: mpsc::UnboundedSender<(String, String)>,
+    pub on_pod_disconnected: Option<DisconnectCallback>,
 }
 
 impl RelayConnectionPool<PlatformRuntime> {
@@ -44,6 +46,7 @@ impl<R: Runtime> RelayConnectionPool<R> {
             last_inputs: HashMap::new(),
             resize_debounce: HashMap::new(),
             unsubscribe_tx: tx,
+            on_pod_disconnected: None,
         };
         (
             Self {
@@ -52,6 +55,14 @@ impl<R: Runtime> RelayConnectionPool<R> {
             },
             rx,
         )
+    }
+
+    /// Register the single pod-disconnected sink. Called once per platform
+    /// manager at construction; fired from `disconnect_inner` with the pod_key
+    /// after its listeners are cleared, so the adapter can reset its
+    /// register-once guard and re-wire on the next subscribe.
+    pub fn set_on_pod_disconnected(&self, callback: DisconnectCallback) {
+        self.inner.write().on_pod_disconnected = Some(callback);
     }
 
     pub async fn subscribe(

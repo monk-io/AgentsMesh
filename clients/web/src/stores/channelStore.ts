@@ -1,7 +1,8 @@
 import { create } from "zustand";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { getErrorMessage } from "@/lib/utils";
-import { getChannelService } from "@/lib/wasm-core";
-import { readCurrentOrg } from "@/stores/auth";
+import { getChannelState } from "@/lib/wasm-core";
+import { readCurrentOrg, readCurrentUser } from "@/stores/auth";
 import {
   listChannels,
   getChannel as getChannelConnect,
@@ -16,17 +17,27 @@ import {
   inviteChannelMembers,
   listChannelMembers,
 } from "@/lib/api/facade/channelConnect";
+import {
+  ReplaceCachedChannelsRequestSchema,
+  InsertChannelRequestSchema,
+  PatchChannelMemberCountRequestSchema,
+} from "@proto/channel_state/v1/mutations_pb";
+import { channelToProtoChannel } from "@/lib/api/channelProtoMap";
 import type { Channel } from "./channelTypes";
-import { readChannel } from "./channelSelectors";
 
 export type { Channel, ChannelLastMessage, ChannelMember } from "./channelTypes";
 export { useChannels, useCurrentChannel, useChannelMembers, getLastMessage } from "./channelSelectors";
 
-const svc = () => getChannelService();
+const svc = () => getChannelState();
 const bump = () => useChannelStore.setState((s) => ({ _tick: s._tick + 1 }));
 
 function orgSlug(): string {
   return readCurrentOrg()?.slug ?? "";
+}
+
+function dispatchInsertChannel(channel: Channel) {
+  const req = protoCreate(InsertChannelRequestSchema, { channel: channelToProtoChannel(channel) });
+  svc().insert_channel(toBinary(InsertChannelRequestSchema, req));
 }
 
 interface ChannelState {
@@ -76,7 +87,15 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
       const { items } = await listChannels(orgSlug(), {
         includeArchived: filters?.includeArchived,
       });
-      svc().set_channels(JSON.stringify(items));
+      const req = protoCreate(ReplaceCachedChannelsRequestSchema, {
+        channels: items.map(channelToProtoChannel),
+      });
+      svc().replace_cached_channels(toBinary(ReplaceCachedChannelsRequestSchema, req));
+      // Teach Rust Core who the current user is so its realtime
+      // on_new_message can compute unread/mention with the self-message
+      // rule. Without this the SSOT can't tell "my own message" apart.
+      const uid = readCurrentUser()?.id;
+      svc().set_current_user_id(uid != null ? BigInt(uid) : undefined);
       bump();
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch channels") }); }
   },
@@ -85,7 +104,14 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     set({ channelLoading: true, error: null });
     try {
       const channel = await getChannelConnect(orgSlug(), id);
-      svc().update_channel_local(BigInt(id), JSON.stringify(channel));
+      dispatchInsertChannel(channel as unknown as Channel);
+      // Re-anchor current_channel from the freshly-inserted entry. The async
+      // gap between `set({channelLoading})` above and here can trigger a
+      // useChannelChat cleanup that nulls current_channel; without this
+      // re-anchor the header reads stale defaults (member_count=0).
+      if (get().selectedChannelId === id) {
+        svc().set_current_channel(BigInt(id));
+      }
       set({ channelLoading: false, _tick: get()._tick + 1 });
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to fetch channel"), channelLoading: false }); }
   },
@@ -98,7 +124,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
         repository_id: data.repositoryId, ticket_slug: data.ticketSlug,
         visibility: data.visibility, member_ids: data.memberIds,
       });
-      svc().add_channel_local(JSON.stringify(channel));
+      dispatchInsertChannel(channel as unknown as Channel);
       bump();
       return channel as unknown as Channel;
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to create channel") }); throw e; }
@@ -107,7 +133,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   updateChannel: async (id, data) => {
     try {
       const channel = await updateChannelConnect(orgSlug(), id, data);
-      svc().update_channel_local(BigInt(id), JSON.stringify(channel));
+      dispatchInsertChannel(channel as unknown as Channel);
       bump();
       return channel as unknown as Channel;
     } catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to update channel") }); throw e; }
@@ -116,8 +142,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   archiveChannel: async (id) => {
     try {
       await archiveChannelConnect(orgSlug(), id);
-      const current = readChannel(id);
-      if (current) svc().update_channel_local(BigInt(id), JSON.stringify({ ...current, is_archived: true }));
+      const fresh = await getChannelConnect(orgSlug(), id);
+      dispatchInsertChannel({ ...(fresh as unknown as Channel), is_archived: true });
       bump();
     }
     catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to archive channel") }); throw e; }
@@ -126,8 +152,8 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   unarchiveChannel: async (id) => {
     try {
       await unarchiveChannelConnect(orgSlug(), id);
-      const current = readChannel(id);
-      if (current) svc().update_channel_local(BigInt(id), JSON.stringify({ ...current, is_archived: false }));
+      const fresh = await getChannelConnect(orgSlug(), id);
+      dispatchInsertChannel({ ...(fresh as unknown as Channel), is_archived: false });
       bump();
     }
     catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to unarchive channel") }); throw e; }
@@ -137,7 +163,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     try {
       await joinChannelPod(orgSlug(), channelId, podKey);
       const fresh = await getChannelConnect(orgSlug(), channelId);
-      svc().update_channel_local(BigInt(channelId), JSON.stringify(fresh));
+      dispatchInsertChannel(fresh as unknown as Channel);
       bump();
     }
     catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to join channel") }); throw e; }
@@ -147,7 +173,7 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
     try {
       await leaveChannelPod(orgSlug(), channelId, podKey);
       const fresh = await getChannelConnect(orgSlug(), channelId);
-      svc().update_channel_local(BigInt(channelId), JSON.stringify(fresh));
+      dispatchInsertChannel(fresh as unknown as Channel);
       bump();
     }
     catch (e: unknown) { set({ error: getErrorMessage(e, "Failed to leave channel") }); throw e; }
@@ -176,10 +202,10 @@ export const useChannelStore = create<ChannelState>((set, get) => ({
   },
 
   patchChannelMemberCount: (channelId, delta) => {
-    const current = readChannel(channelId);
-    if (!current) return;
-    const next = { ...current, member_count: Math.max(0, current.member_count + delta) };
-    svc().update_channel_local(BigInt(channelId), JSON.stringify(next));
+    const req = protoCreate(PatchChannelMemberCountRequestSchema, {
+      channelId: BigInt(channelId), delta,
+    });
+    svc().patch_channel_member_count(toBinary(PatchChannelMemberCountRequestSchema, req));
     bump();
   },
 

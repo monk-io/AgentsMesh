@@ -103,24 +103,18 @@ test.describe("Desktop pod realtime", () => {
       await invokeIpc(page, "authBootstrap");
       await gotoHash(page, `/${TEST_ORG_SLUG}/workspace`);
 
-      // DEBUG: inspect what pods the sidebar fetched + which DOM nodes contain "1-standa".
-      await page.waitForTimeout(3000);
-      const dbg = await page.evaluate(() => {
-        try {
-          const html = document.body.innerText.slice(0, 2000);
-          return { html };
-        } catch { return { html: "(eval failed)" }; }
-      });
-      console.log("DEBUG body text head:", dbg.html);
-
-      // Sidebar should render the new pod entry. PodListItem renders the
-      // display name through `getPodDisplayName`, which truncates pod_key
-      // to the first 8 chars (`getShortPodKey`) when no alias / ticket /
-      // loop / OSC title is set. Match on the prefix to track the actual
-      // UX and stay resilient to pod_key tweaks.
-      const podPrefix = pod.pod_key.slice(0, 8);
-      const sidebarPod = page.getByText(podPrefix, { exact: false }).first();
-      await expect(sidebarPod, "new pod must appear in sidebar").toBeVisible({ timeout: 15_000 });
+      // Sidebar should render the new pod entry. Target by the stable
+      // `data-pod-key` attribute on PodListItem rather than a text-prefix
+      // match — under full-suite load the dev DB accumulates hundreds of
+      // pods and a `getByText(prefix).first()` substring match becomes
+      // non-deterministic (wrong row / detached node). The attribute
+      // selector is the same robust pattern pod-sidebar-realtime-update
+      // uses. 20s window covers reload + authBootstrap + listPods round
+      // trip under load.
+      const sidebarPod = page.locator(
+        `[data-testid="pod-list-item"][data-pod-key="${pod.pod_key}"]`,
+      );
+      await expect(sidebarPod, "new pod must appear in sidebar").toBeVisible({ timeout: 20_000 });
 
       // Click to open terminal pane. Pre-fix: the click made the pod
       // disappear from the sidebar (camel/snake mismatch made React keys

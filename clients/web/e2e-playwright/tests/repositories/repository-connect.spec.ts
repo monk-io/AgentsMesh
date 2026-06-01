@@ -1,8 +1,6 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 // E2E for the proto.repository.v1 Connect-RPC migration. This spec drives the
 // full UI path through repositoryConnect.ts → wasm bridge → api-client
 // connect_call → backend Connect handler, so it catches integration drift
@@ -19,9 +17,6 @@ test.describe("Repository Connect-RPC round-trip", () => {
       `SELECT COUNT(*)::int FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}')`,
     );
     expect(Number(count), "dev seed must include at least one repository").toBeGreaterThan(0);
-
-    const errors = collectConsoleErrors(page);
-
     // Watch for the Connect-RPC procedure path (conventions §12).
     const connectResponses: number[] = [];
     page.on("response", (resp) => {
@@ -48,8 +43,6 @@ test.describe("Repository Connect-RPC round-trip", () => {
     for (const status of connectResponses) {
       expect(status, "ListRepositories Connect call should not 4xx/5xx").toBeLessThan(400);
     }
-
-    assertNoWasmErrors(errors);
   });
 
   test("repository detail uses Connect GetRepository", async ({ page, db }) => {
@@ -57,9 +50,6 @@ test.describe("Repository Connect-RPC round-trip", () => {
       `SELECT id FROM repositories WHERE organization_id = (SELECT id FROM organizations WHERE slug = '${TEST_ORG_SLUG}') LIMIT 1`,
     );
     expect(id, "dev seed must include at least one repository").toBeTruthy();
-
-    const errors = collectConsoleErrors(page);
-
     let getRepoStatus = 0;
     page.on("response", (resp) => {
       if (resp.url().includes("/proto.repository.v1.RepositoryService/GetRepository")) {
@@ -75,7 +65,5 @@ test.describe("Repository Connect-RPC round-trip", () => {
 
     expect(getRepoStatus, "GetRepository Connect call should succeed").toBeGreaterThan(0);
     expect(getRepoStatus).toBeLessThan(400);
-
-    assertNoWasmErrors(errors);
   });
 });

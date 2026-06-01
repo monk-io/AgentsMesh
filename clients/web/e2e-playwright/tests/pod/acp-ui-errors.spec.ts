@@ -11,8 +11,8 @@ test.describe("ACP UI: error and degradation paths", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
   test.afterEach(async () => { await terminateAllPods(); });
 
-  test("tool_call_failed renders the failed status without crashing UI", async ({ page, api }) => {
-    const ctx = await setupAcpScenarioPage(page, api, {
+  test("tool_call_failed renders the failed status without crashing UI", async ({ page, api, monitor }) => {
+    const ctx = await setupAcpScenarioPage(page, api, monitor, {
       mode: "acp", scenario: "tool_call_failed", prompt: "edit me",
     });
 
@@ -21,8 +21,8 @@ test.describe("ACP UI: error and degradation paths", () => {
     ctx.assertWasmHealthy();
   });
 
-  test("malformed_json output does not break subsequent valid messages", async ({ page, api }) => {
-    const ctx = await setupAcpScenarioPage(page, api, {
+  test("malformed_json output does not break subsequent valid messages", async ({ page, api, monitor }) => {
+    const ctx = await setupAcpScenarioPage(page, api, monitor, {
       mode: "acp", scenario: "malformed_json", prompt: "garbled",
     });
 
@@ -30,17 +30,18 @@ test.describe("ACP UI: error and degradation paths", () => {
     ctx.assertWasmHealthy();
   });
 
-  test("log_warnings surfaces warn/error stderr lines in activity stream", async ({ page, api }) => {
-    const ctx = await setupAcpScenarioPage(page, api, {
+  test("log_warnings surfaces warn/error stderr lines in activity stream", async ({ page, api, monitor }) => {
+    const ctx = await setupAcpScenarioPage(page, api, monitor, {
       mode: "acp", scenario: "log_warnings", prompt: "noisy run",
     });
 
     await expect(page.getByText(/degraded connection/i)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Completed with warnings: noisy run")).toBeVisible({ timeout: 15_000 });
+    ctx.assertWasmHealthy();
   });
 
-  test("fail_after_1s does not leave the UI wedged in a processing state", async ({ page, api }) => {
-    const ctx = await setupAcpScenarioPage(page, api, {
+  test("fail_after_1s does not leave the UI wedged in a processing state", async ({ page, api, monitor }) => {
+    const ctx = await setupAcpScenarioPage(page, api, monitor, {
       mode: "acp", scenario: "fail_after_1s", prompt: "crash test",
     });
 

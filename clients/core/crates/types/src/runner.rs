@@ -1,22 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-// REST-only request payloads not covered by proto.runner_api.v1. The wasm
-// bridge accepts a JSON string from JS/NAPI, deserializes into these, then
-// re-encodes onto the matching proto type before calling Connect-RPC. Once
-// these REST surfaces grow proto coverage these can move into the proto-
-// driven path and disappear from this file.
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateRunnerRequest {
-    pub description: Option<String>,
-    pub max_concurrent_pods: Option<i32>,
-    pub is_enabled: Option<bool>,
-    pub visibility: Option<String>,
-}
-
 // Interactive registration (Tailscale-style device authorization). The
 // browser polls /runners/grpc/auth-status while the runner waits for
-// authorization. No proto coverage — backend keeps these on REST.
+// authorization. These two structs are Swift-friendly DTOs consumed by the
+// iOS UniFFI bridge — converted to proto.runner_api.v1.* on the api-client
+// boundary. They're STRIPPED projections of the proto messages (omit
+// org_slug + sensitive mTLS cert fields), kept as Rust types so:
+//   1. The wasm-bindgen surface doesn't leak certs into renderer memory.
+//   2. UniFFI Swift consumers see typed Codable structs without re-implementing
+//      proto codegen for two single-use messages.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthorizeRunnerRequest {

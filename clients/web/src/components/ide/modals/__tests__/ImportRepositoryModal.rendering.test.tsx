@@ -33,8 +33,11 @@ describe("ImportRepositoryModal - Rendering", () => {
   });
 
   it("should show loading state while fetching providers", async () => {
-    stableCredSvc.list_repo_providers.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(JSON.stringify({ providers: [] })), 100))
+    // Connect path returns Uint8Array; for the loading-state test we
+    // just need a never-resolving (well, slow-resolving) promise so the
+    // spinner mounts before the wizard transitions.
+    stableCredSvc.listRepositoryProvidersConnect.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(new Uint8Array()), 100))
     );
 
     render(

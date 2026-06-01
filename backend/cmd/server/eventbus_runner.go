@@ -7,6 +7,7 @@ import (
 
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
 	"github.com/anthropics/agentsmesh/backend/internal/service/runner"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 	runnerv1 "github.com/anthropics/agentsmesh/proto/gen/go/runner/v1"
 	"gorm.io/gorm"
 )
@@ -33,11 +34,11 @@ func setupRunnerEventCallbacks(db *gorm.DB, runnerConnMgr *runner.RunnerConnecti
 		}
 
 		if r.Status != "online" {
-			eventData := &eventbus.RunnerStatusData{
-				RunnerID:    runnerID,
-				NodeID:      r.NodeID,
+			eventData := &eventsv1.RunnerStatusEventData{
+				RunnerId:    runnerID,
+				NodeId:      r.NodeID,
 				Status:      "online",
-				CurrentPods: len(data.Pods),
+				CurrentPods: int32(len(data.Pods)),
 			}
 			event, err := eventbus.NewEntityEvent(eventbus.EventRunnerOnline, r.OrganizationID, "runner", fmt.Sprintf("%d", runnerID), eventData)
 			if err != nil {
@@ -57,9 +58,9 @@ func setupRunnerEventCallbacks(db *gorm.DB, runnerConnMgr *runner.RunnerConnecti
 			NodeID         string `gorm:"column:node_id"`
 		}
 		if err := db.Table("runners").Where("id = ?", runnerID).First(&r).Error; err == nil {
-			eventData := &eventbus.RunnerStatusData{
-				RunnerID: runnerID,
-				NodeID:   r.NodeID,
+			eventData := &eventsv1.RunnerStatusEventData{
+				RunnerId: runnerID,
+				NodeId:   r.NodeID,
 				Status:   "offline",
 			}
 			event, err := eventbus.NewEntityEvent(eventbus.EventRunnerOffline, r.OrganizationID, "runner", fmt.Sprintf("%d", runnerID), eventData)

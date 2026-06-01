@@ -3,10 +3,13 @@ import { getPodState } from "@/lib/wasm-core";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useMeshStore } from "@/stores/mesh";
 import type { DebounceRef } from "./realtimeEventHandlers";
-import type {
-  RealtimeEvent, PodStatusChangedData, PodCreatedData,
-  PodTitleChangedData, PodAliasChangedData, PodInitProgressData,
-  PodPerpetualChangedData,
+import {
+  type RealtimeEvent,
+  decodeEventData,
+  PodStatusChangedEventDataSchema,
+  PodCreatedEventDataSchema,
+  PodInitProgressEventDataSchema,
+  PodRestartingEventDataSchema,
 } from "@/lib/realtime";
 
 function debouncedSidebarRefresh(ref?: DebounceRef) {
@@ -32,68 +35,67 @@ function debouncedFetchTopology() {
   }, 500);
 }
 
+// Rust event_dispatch owns the pod state mutation (status/agent/title/alias/
+// perpetual) in runtime.state; this bump triggers the React selectors to
+// re-read it. On web getPodState() IS runtime.state; on desktop the main→
+// renderer snapshot mirror (realtime-mirror.ts) has already upserted the
+// renderer cache and bumped — this extra bump is a harmless no-op there.
+const bumpPods = () => usePodStore.setState((s) => ({ _tick: s._tick + 1 }));
+
 export function handlePodEvent(event: RealtimeEvent, sidebarDebounceRef?: DebounceRef) {
   switch (event.type) {
     case "pod:created": {
-      const data = event.data as PodCreatedData;
-      usePodStore.getState().fetchPod?.(data.pod_key);
+      const data = decodeEventData(PodCreatedEventDataSchema, event.data);
+      usePodStore.getState().fetchPod?.(data.podKey);
       debouncedSidebarRefresh(sidebarDebounceRef);
       debouncedFetchTopology();
       break;
     }
     case "pod:status_changed": {
-      const data = event.data as PodStatusChangedData;
-      const podState = usePodStore.getState();
-      const existingPodJson = getPodState().get_pod_json(data.pod_key);
-      if (!existingPodJson) {
-        podState.fetchPod?.(data.pod_key);
+      const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
+      // Rust dispatch patches a cached pod; a not-yet-cached pod needs the
+      // full entity from the server, which dispatch can't synthesize.
+      if (!getPodState().get_pod_json(data.podKey)) {
+        usePodStore.getState().fetchPod?.(data.podKey);
       } else {
-        podState.updatePodStatus(data.pod_key, data.status as "running" | "initializing" | "failed" | "paused" | "terminated" | "error", data.agent_status, data.error_code, data.error_message);
+        bumpPods();
       }
       if (data.status === "terminated" || data.status === "failed" || data.status === "error") {
-        useWorkspaceStore.getState().removePaneByPodKey(data.pod_key);
+        useWorkspaceStore.getState().removePaneByPodKey(data.podKey);
       }
       debouncedSidebarRefresh(sidebarDebounceRef);
       debouncedFetchTopology();
       break;
     }
     case "pod:agent_status_changed": {
-      const data = event.data as PodStatusChangedData;
-      if (data.agent_status) usePodStore.getState().updateAgentStatus(data.pod_key, data.agent_status);
+      bumpPods();
       break;
     }
     case "pod:terminated": {
-      const data = event.data as PodStatusChangedData;
-      usePodStore.getState().updatePodStatus?.(data.pod_key, "terminated");
-      useWorkspaceStore.getState().removePaneByPodKey(data.pod_key);
+      const data = decodeEventData(PodStatusChangedEventDataSchema, event.data);
+      useWorkspaceStore.getState().removePaneByPodKey(data.podKey);
+      bumpPods();
       debouncedSidebarRefresh(sidebarDebounceRef);
       debouncedFetchTopology();
       break;
     }
-    case "pod:title_changed": {
-      const data = event.data as PodTitleChangedData;
-      usePodStore.getState().updatePodTitle(data.pod_key, data.title);
-      break;
-    }
-    case "pod:alias_changed": {
-      const data = event.data as PodAliasChangedData;
-      usePodStore.getState().updatePodAliasFromEvent(data.pod_key, data.alias);
+    case "pod:title_changed":
+    case "pod:alias_changed":
+    case "pod:perpetual_changed": {
+      bumpPods();
       break;
     }
     case "pod:init_progress": {
-      const data = event.data as PodInitProgressData;
-      usePodStore.getState().updatePodInitProgress(data.pod_key, data.phase, data.progress, data.message);
+      // Init progress lives in a transient side-map (creating-pod UI), not the
+      // pod list — keep the explicit apply path.
+      const data = decodeEventData(PodInitProgressEventDataSchema, event.data);
+      usePodStore.getState().updatePodInitProgress(data.podKey, data.phase, data.progress, data.message);
       break;
     }
     case "pod:restarting": {
-      const data = event.data as { pod_key: string };
-      usePodStore.getState().fetchPod?.(data.pod_key);
+      const data = decodeEventData(PodRestartingEventDataSchema, event.data);
+      usePodStore.getState().fetchPod?.(data.podKey);
       debouncedSidebarRefresh(sidebarDebounceRef);
-      break;
-    }
-    case "pod:perpetual_changed": {
-      const data = event.data as PodPerpetualChangedData;
-      usePodStore.getState().updatePodPerpetualFromEvent(data.pod_key, data.perpetual);
       break;
     }
   }

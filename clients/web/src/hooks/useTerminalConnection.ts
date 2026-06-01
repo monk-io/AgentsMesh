@@ -3,7 +3,7 @@ import { MutableRefObject } from "react";
 import { relayPool, useWorkspaceStore } from "@/stores/workspace";
 import type { ConnectionStatus } from "@/stores/relayConnection";
 import { TerminalWriteScheduler } from "@/lib/terminalScheduler";
-import { isResourceNotFound } from "@/lib/errors/serviceError";
+import { isResourceNotFound, isPodNotConnectable } from "@/lib/errors/serviceError";
 
 export interface TerminalConnection {
   send: (data: string) => void;
@@ -40,6 +40,11 @@ export function setupConnection(
         useWorkspaceStore.getState().removePaneByPodKey(podKey);
         return;
       }
+      // Pod is spinning up or just completed — a benign lifecycle transient,
+      // not a connection failure. The relay status listener + the pod-status
+      // effect dep re-drive subscribe once it's connectable again, so don't
+      // flip to "error" (which conflates "starting" with "broken").
+      if (isPodNotConnectable(error)) return;
       console.error("Failed to connect terminal:", error);
       setConnectionStatus("error");
     }

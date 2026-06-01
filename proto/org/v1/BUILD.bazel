@@ -19,6 +19,11 @@ proto_library(
     name = "org_proto",
     srcs = ["org.proto"],
     data = [":org_serde_transform"],
+    # Strip the `proto/` workspace prefix so downstream `proto_library`
+    # targets can `import "org/v1/org.proto"` (the form buf v2's
+    # module-root `path: proto` config emits). Required for cross-package
+    # imports from proto/auth_state/v1/.
+    strip_import_prefix = "/proto",
     visibility = ["//visibility:public"],
 )
 

@@ -38,6 +38,8 @@ export function ChannelListItem({
     <button
       type="button"
       onClick={onClick}
+      data-testid="channel-list-item"
+      data-channel-id={String(channel.id)}
       className={cn(
         "group flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left transition-colors",
         isSelected ? "bg-muted" : "hover:bg-muted/50",

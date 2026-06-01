@@ -10,11 +10,11 @@ test.describe("IPC · local_runner", () => {
   });
 
   test("localRunnerFallbackVersion", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "localRunnerFallbackVersion", returnType: "any" });
+    await invokeIpcContract(sharedPage, { method: "localRunnerFallbackVersion", returnType: "string" });
   });
 
   test("localRunnerHostTarget", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "localRunnerHostTarget", returnType: "string | null" });
+    await invokeIpcContract(sharedPage, { method: "localRunnerHostTarget", returnType: "string | undefined | null" });
   });
 
   test("localRunnerInstallBinary", async ({ sharedPage }) => {
@@ -22,7 +22,7 @@ test.describe("IPC · local_runner", () => {
   });
 
   test("localRunnerInstalledVersion", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "localRunnerInstalledVersion", returnType: "string | null" });
+    await invokeIpcContract(sharedPage, { method: "localRunnerInstalledVersion", returnType: "string | undefined | null" });
   });
 
   test("localRunnerIsInstalled", async ({ sharedPage }) => {
@@ -34,7 +34,7 @@ test.describe("IPC · local_runner", () => {
   });
 
   test("localRunnerLocalNodeId", async ({ sharedPage }) => {
-    await invokeIpcContract(sharedPage, { method: "localRunnerLocalNodeId", returnType: "string | null" });
+    await invokeIpcContract(sharedPage, { method: "localRunnerLocalNodeId", returnType: "string | undefined | null" });
   });
 
   test("localRunnerRegister", async ({ sharedPage }) => {

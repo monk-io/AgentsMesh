@@ -2,7 +2,12 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::AuthTokenStore;
 use agentsmesh_auth::{AuthManager, PersistentStorage};
+use agentsmesh_state::auth_types::{AuthSession, Organization as AuthOrg};
+use agentsmesh_types::proto_auth_state_v1 as auth_state;
+use prost::Message;
 use wasm_bindgen::prelude::*;
+
+use crate::auth_proto_convert::{org_from_proto, user_from_proto};
 
 #[wasm_bindgen]
 extern "C" {
@@ -127,27 +132,35 @@ impl WasmAuthManager {
         serde_json::to_string(&self.manager.get_organizations()).unwrap_or_default()
     }
 
-    pub fn apply_session(&self, session_json: &str) -> Result<(), String> {
-        let session: agentsmesh_state::auth_types::AuthSession = serde_json::from_str(session_json)
-            .map_err(agentsmesh_services::wire)?;
+    pub fn apply_session(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = auth_state::ApplySessionRequest::decode(req_bytes)
+            .map_err(|e| format!("decode ApplySessionRequest: {e}"))?;
+        let user_proto = req.user.ok_or_else(|| "ApplySessionRequest.user missing".to_string())?;
+        let session = AuthSession {
+            token: req.token,
+            refresh_token: req.refresh_token,
+            user: user_from_proto(&user_proto),
+            expires_in: None,
+            message: None,
+        };
         self.manager.apply_session(&session);
         Ok(())
     }
 
-    pub fn set_organizations(&self, orgs_json: &str) -> Result<(), String> {
-        let orgs: Vec<agentsmesh_state::auth_types::Organization> = serde_json::from_str(orgs_json)
-            .map_err(agentsmesh_services::wire)?;
+    pub fn set_organizations(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = auth_state::SetOrganizationsRequest::decode(req_bytes)
+            .map_err(|e| format!("decode SetOrganizationsRequest: {e}"))?;
+        let orgs: Vec<AuthOrg> = req.items.iter().map(org_from_proto).collect();
         self.manager.replace_organizations(orgs);
         Ok(())
     }
 
-    pub fn set_current_org(&self, org_json: &str) -> Result<(), String> {
-        if org_json.is_empty() {
-            self.manager.set_current_org(None);
-        } else {
-            let org: agentsmesh_state::auth_types::Organization = serde_json::from_str(org_json)
-                .map_err(agentsmesh_services::wire)?;
-            self.manager.set_current_org(Some(org));
+    pub fn set_current_org(&self, req_bytes: &[u8]) -> Result<(), String> {
+        let req = auth_state::SetCurrentOrgRequest::decode(req_bytes)
+            .map_err(|e| format!("decode SetCurrentOrgRequest: {e}"))?;
+        match req.org.as_ref() {
+            Some(o) => self.manager.set_current_org(Some(org_from_proto(o))),
+            None => self.manager.set_current_org(None),
         }
         Ok(())
     }

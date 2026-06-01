@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import { useMemo } from "react";
+import { create as protoCreate, toBinary } from "@bufbuild/protobuf";
 import { getRepoState } from "@/lib/wasm-core";
 import { getErrorMessage } from "@/lib/utils";
 import { repositoryApi } from "@/lib/api/facade/repository";
+import { repositoryToProto } from "@/lib/api/repoProtoMap";
 import type { RepositoryData } from "@/lib/viewModels/repository";
+import {
+  ReplaceCachedRepositoriesRequestSchema,
+} from "@proto/repo_state/v1/repo_state_pb";
 
 export type Repository = RepositoryData;
 
@@ -25,6 +30,13 @@ export function useRepositories(): Repository[] {
   return useMemo(() => JSON.parse(rs().repositories_json()), [tick]);
 }
 
+function dispatchReplaceCachedRepositories(items: RepositoryData[]): void {
+  const req = protoCreate(ReplaceCachedRepositoriesRequestSchema, {
+    repositories: items.map(repositoryToProto),
+  });
+  rs().replace_cached_repositories(toBinary(ReplaceCachedRepositoriesRequestSchema, req));
+}
+
 export const useRepositoryStore = create<RepositoryState>((set) => ({
   _tick: 0,
   isLoading: false,
@@ -35,7 +47,7 @@ export const useRepositoryStore = create<RepositoryState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const { items } = await repositoryApi.list();
-      rs().set_repositories(JSON.stringify(items));
+      dispatchReplaceCachedRepositories(items);
       bump();
       set({ isLoading: false, fetched: true });
     } catch (e) {

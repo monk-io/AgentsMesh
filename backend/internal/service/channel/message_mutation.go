@@ -2,13 +2,15 @@ package channel
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/anthropics/agentsmesh/backend/internal/domain/channel"
 	"github.com/anthropics/agentsmesh/backend/internal/infra/eventbus"
+	eventsv1 "github.com/anthropics/agentsmesh/proto/gen/go/events/v1"
 )
 
 func (s *Service) EditMessage(ctx context.Context, channelID, messageID, senderUserID int64, newContent channel.MessageContent) (*channel.Message, error) {
@@ -54,13 +56,13 @@ func (s *Service) EditMessage(ctx context.Context, channelID, messageID, senderU
 		return nil, err
 	}
 
-	editedData := eventbus.ChannelMessageEditedData{
-		ID:        messageID,
-		ChannelID: channelID,
-		Body:      newBody,
-		Content:   &newContent,
-		Mentions:  newMentions,
-		EditedAt:  time.Now().Format(time.RFC3339),
+	editedData := &eventsv1.ChannelMessageEditedEventData{
+		Id:           messageID,
+		ChannelId:    channelID,
+		Body:         newBody,
+		ContentJson:  marshalJSONField(&newContent),
+		MentionsJson: marshalJSONField(newMentions),
+		EditedAt:     time.Now().Format(time.RFC3339),
 	}
 	s.publishChannelEvent(ch.OrganizationID, ch.ID, eventbus.EventChannelMessageEdited, editedData)
 
@@ -91,20 +93,20 @@ func (s *Service) DeleteMessage(ctx context.Context, channelID, messageID, sende
 		return err
 	}
 
-	deletedData := eventbus.ChannelMessageDeletedData{
-		ID:        messageID,
-		ChannelID: channelID,
+	deletedData := &eventsv1.ChannelMessageDeletedEventData{
+		Id:        messageID,
+		ChannelId: channelID,
 	}
 	s.publishChannelEvent(ch.OrganizationID, ch.ID, eventbus.EventChannelMessageDeleted, deletedData)
 
 	return nil
 }
 
-func (s *Service) publishChannelEvent(orgID, channelID int64, eventType eventbus.EventType, data interface{}) {
+func (s *Service) publishChannelEvent(orgID, channelID int64, eventType eventbus.EventType, data proto.Message) {
 	if s.eventBus == nil {
 		return
 	}
-	payload, err := json.Marshal(data)
+	payload, err := eventbus.MarshalEventData(data)
 	if err != nil {
 		slog.Error("failed to marshal message event", "error", err)
 		return

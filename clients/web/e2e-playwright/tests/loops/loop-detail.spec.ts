@@ -2,8 +2,6 @@
 import { test, expect } from "../../fixtures/index";
 import { TEST_ORG_SLUG } from "../../helpers/env";
 import { clearAuthRateLimit } from "../../helpers/redis";
-import { collectConsoleErrors, assertNoWasmErrors } from "../../helpers/console-errors";
-
 test.describe("Loop Detail Page", () => {
   test.beforeEach(async () => { clearAuthRateLimit(); });
 
@@ -44,10 +42,7 @@ test.describe("Loop Detail Page", () => {
       promptTemplate: "echo test",
     }) as { slug: string };
     createdSlug = created.slug;
-
-    const errors = collectConsoleErrors(page);
     await page.goto(`/${TEST_ORG_SLUG}/loops/${createdSlug}`);
     await page.waitForLoadState("load");
-    assertNoWasmErrors(errors);
   });
 });

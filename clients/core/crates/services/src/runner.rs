@@ -1,122 +1,48 @@
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use agentsmesh_api_client::ApiClient;
-use agentsmesh_state::runner_state::RunnerState;
 use agentsmesh_types::proto_runner_api_v1 as runner_proto;
-use agentsmesh_types::proto_runner_api_v1::Runner;
-use agentsmesh_types::UpdateRunnerRequest;
 use prost::Message;
 
+// Networking-only service for the runner domain. The runner cache lives in the
+// shared `AppState.runners` (dispatch-hook SSOT), reached via the wasm/napi
+// `app_runner*` surface — this service speaks only the Connect-RPC wire
+// (including the registration-bootstrap auth RPCs).
 pub struct RunnerService {
     client: Arc<ApiClient>,
-    state: RwLock<RunnerState>,
 }
 
 impl RunnerService {
-    pub fn new(client: Arc<ApiClient>, state: RunnerState) -> Self {
-        Self { client, state: RwLock::new(state) }
+    pub fn new(client: Arc<ApiClient>) -> Self {
+        Self { client }
     }
 
-    pub fn runners_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().runners()).unwrap_or_default()
-    }
-
-    pub fn available_runners_json(&self) -> String {
-        serde_json::to_string(self.state.read().unwrap().available_runners()).unwrap_or_default()
-    }
-
-    pub fn current_runner_json(&self) -> Option<String> {
-        self.state.read().unwrap().current_runner()
-            .map(|r| serde_json::to_string(r).unwrap_or_default())
-    }
-
-    pub fn get_runner_json(&self, id: i64) -> Option<String> {
-        self.state.read().unwrap().get_runner(id)
-            .map(|r| serde_json::to_string(r).unwrap_or_default())
-    }
-
-    pub fn set_runners(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Runner>>(json) {
-            self.state.write().unwrap().set_runners(v);
-        }
-    }
-
-    pub fn set_available_runners(&self, json: &str) {
-        if let Ok(v) = serde_json::from_str::<Vec<Runner>>(json) {
-            self.state.write().unwrap().set_available_runners(v);
-        }
-    }
-
-    pub fn set_current_runner(&self, json: &str) {
-        let r = if json.is_empty() { None } else { serde_json::from_str::<Runner>(json).ok() };
-        self.state.write().unwrap().set_current_runner(r);
-    }
-
-    pub fn update_runner_local(&self, id: f64, json: &str) {
-        if let Ok(r) = serde_json::from_str::<Runner>(json) {
-            self.state.write().unwrap().update_runner(id as i64, r);
-        }
-    }
-
-    pub fn update_runner_status(&self, id: i64, status: &str) {
-        self.state.write().unwrap().update_runner_status(id, status);
-    }
-
-    pub fn remove_runner_local(&self, id: i64) {
-        self.state.write().unwrap().remove_runner(id);
-    }
-
-    pub async fn update_runner(&self, id: i64, request_json: &str) -> Result<String, String> {
-        let req_legacy: UpdateRunnerRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let req = runner_proto::UpdateRunnerRequest {
-            org_slug: self.client.current_org_slug(),
-            id,
-            description: req_legacy.description,
-            max_concurrent_pods: req_legacy.max_concurrent_pods,
-            is_enabled: req_legacy.is_enabled,
-            visibility: req_legacy.visibility,
-            tags: None,
-        };
-        let runner = self.client.update_runner_connect(&req).await.map_err(crate::wire)?;
-        self.state.write().unwrap().update_runner(id, runner.clone());
-        serde_json::to_string(&runner).map_err(crate::wire)
-    }
-
-    pub async fn list_runner_pods(
-        &self, id: i64, status: Option<String>, limit: Option<u32>, offset: Option<u32>,
-    ) -> Result<String, String> {
-        // proto.runner_api.v1 doesn't expose runner-scoped pod listing — the
-        // proto SSOT routes per-runner pod lookup through QuerySandboxes
-        // for sandbox state. Keep the legacy REST path here so existing
-        // callers (web's runner detail view) keep working until proto.pod.v1
-        // adds a runner_id filter. Touches:
-        //   - clients/web/src/lib/api/runner.ts (legacy fetch path)
+    pub async fn get_auth_status_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        // No proto coverage on the wire for /runners/auth/<key> per se, but
+        // GetRunnerAuthStatus is a Connect RPC — same path the legacy JSON
+        // helper used, just expressed as wire-aligned proto bytes.
+        let req = runner_proto::GetRunnerAuthStatusRequest::decode(request_bytes)
+            .map_err(|e| format!("decode GetRunnerAuthStatusRequest: {e}"))?;
         let resp = self.client
-            .list_runner_pods(id, status.as_deref(), limit, offset)
+            .get_runner_auth_status_connect(&req)
             .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
+        Ok(resp.encode_to_vec())
     }
 
-    pub async fn get_auth_status(&self, auth_key: &str) -> Result<String, String> {
-        // No proto coverage for /runners/auth/<key> — registration flow is
-        // a backend-side bootstrap kept on REST until the runner-mgmt RPCs
-        // land (see runbook §"Service-specific deviations").
+    pub async fn authorize_runner_connect(&self, request_bytes: &[u8]) -> Result<Vec<u8>, String> {
+        // Same reason as get_auth_status_connect — registration bootstrap.
+        let mut req = runner_proto::AuthorizeRunnerRequest::decode(request_bytes)
+            .map_err(|e| format!("decode AuthorizeRunnerRequest: {e}"))?;
+        // The renderer can't always populate org_slug (registration happens
+        // before the session knows which org the runner will land in). Fill
+        // it from the session here for parity with the legacy helper.
+        if req.org_slug.is_empty() {
+            req.org_slug = self.client.current_org_slug();
+        }
         let resp = self.client
-            .get_runner_auth_status(auth_key)
+            .authorize_runner_connect(&req)
             .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
-    }
-
-    pub async fn authorize_runner(&self, request_json: &str) -> Result<String, String> {
-        // Same reason as get_auth_status — registration bootstrap.
-        let req: agentsmesh_types::AuthorizeRunnerRequest = serde_json::from_str(request_json)
-            .map_err(crate::wire)?;
-        let resp = self.client
-            .authorize_runner(&req)
-            .await.map_err(crate::wire)?;
-        serde_json::to_string(&resp).map_err(crate::wire)
+        Ok(resp.encode_to_vec())
     }
 
     // -------- Connect-RPC (binary wire) --------

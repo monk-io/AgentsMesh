@@ -68,6 +68,17 @@ impl RunnerState {
         }
     }
 
+    /// Update in place if present, else append. Used by the realtime/fetch
+    /// patch path (a runner can arrive before its first list fetch).
+    pub fn upsert_runner(&mut self, runner: Runner) {
+        if self.runners.iter().any(|r| r.id == runner.id) {
+            self.update_runner(runner.id, runner);
+        } else {
+            if let Some(repo) = &self.repo { let _ = repo.save(&runner); }
+            self.runners.push(runner);
+        }
+    }
+
     pub fn update_runner_status(&mut self, id: i64, status: &str) {
         for r in &mut self.runners {
             if r.id == id {
