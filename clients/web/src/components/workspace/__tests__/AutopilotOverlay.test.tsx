@@ -10,13 +10,8 @@ let mockController: AutopilotController | undefined;
 let mockThinkingMap: Record<string, AutopilotThinking | null> = {};
 
 vi.mock("@/stores/autopilot", () => ({
-  useAutopilotStore: (selector?: (s: Record<string, unknown>) => unknown) => {
-    const state = {
-      getAutopilotControllerByPodKey: (podKey: string) =>
-        mockController?.pod_key === podKey ? mockController : undefined,
-    };
-    return selector ? selector(state) : state;
-  },
+  useAutopilotControllerByPodKey: (podKey: string) =>
+    mockController?.pod_key === podKey ? mockController : undefined,
   useAutopilotThinking: (key: string | null | undefined) =>
     key ? (mockThinkingMap[key] ?? null) : null,
   useAutopilotIterations: () => [],

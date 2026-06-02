@@ -6,7 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore, type SplitDirection } from "@/stores/workspace";
 import { usePodStore } from "@/stores/pod";
-import { useAutopilotStore } from "@/stores/autopilot";
+import { useAutopilotControllerByPodKey } from "@/stores/autopilot";
 import { usePodStatus, useTerminal, useTouchScroll } from "@/hooks";
 import { TerminalPaneHeader } from "./TerminalPaneHeader";
 import { PaneLoadingState, PaneErrorState, PaneReconnectingState } from "./PaneStateViews";
@@ -47,7 +47,7 @@ export function TerminalPane({
   const splitPane = useWorkspaceStore((s) => s.splitPane);
   const panes = useWorkspaceStore((s) => s.panes);
   const initProgress = usePodStore((state) => state.initProgress[podKey]);
-  const hasAutopilot = useAutopilotStore((state) => !!state.getAutopilotControllerByPodKey(podKey));
+  const hasAutopilot = !!useAutopilotControllerByPodKey(podKey);
 
   const openPodKeys = useMemo(() => panes.map((p) => p.podKey), [panes]);
 

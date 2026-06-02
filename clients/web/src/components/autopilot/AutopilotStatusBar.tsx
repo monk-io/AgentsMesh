@@ -126,6 +126,8 @@ export function AutopilotStatusBar({
 
   return (
     <div
+      data-testid="autopilot-status-bar"
+      data-phase={autopilotController.phase}
       className={cn(
         "flex items-center gap-2 px-3 py-1.5 border-b",
         needsHelp ? "bg-orange-500/5 border-orange-500/30" : phaseInfo.bgColor,

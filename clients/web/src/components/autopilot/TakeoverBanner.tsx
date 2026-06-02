@@ -12,7 +12,7 @@ interface TakeoverBannerProps {
 }
 
 export function TakeoverBanner({ autopilotController, className }: TakeoverBannerProps) {
-  const { handbackAutopilotController } = useAutopilotStore();
+  const handbackAutopilotController = useAutopilotStore((s) => s.handbackAutopilotController);
 
   if (!autopilotController.user_takeover && autopilotController.phase !== "user_takeover") {
     return null;

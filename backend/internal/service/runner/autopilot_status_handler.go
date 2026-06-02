@@ -105,7 +105,7 @@ func (pc *PodCoordinator) handleAutopilotControllerCreated(runnerID int64, data 
 
 	if pc.onAutopilotStatusChange != nil {
 		rp, err := pc.autopilotRepo.GetByKey(ctx, data.GetAutopilotKey())
-		if err == nil {
+		if err == nil && rp != nil {
 			pc.onAutopilotStatusChange(
 				data.GetAutopilotKey(),
 				data.GetPodKey(),
@@ -156,7 +156,7 @@ func (pc *PodCoordinator) handleAutopilotControllerTerminated(runnerID int64, da
 
 	if pc.onAutopilotStatusChange != nil {
 		rp, err := pc.autopilotRepo.GetByKey(ctx, data.GetAutopilotKey())
-		if err == nil {
+		if err == nil && rp != nil {
 			pc.onAutopilotStatusChange(
 				data.GetAutopilotKey(),
 				rp.PodKey,

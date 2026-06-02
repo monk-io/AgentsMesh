@@ -40,7 +40,7 @@ export type AutopilotIteration = AutopilotIterationData;
 export type AutopilotThinking = AutopilotThinkingData;
 export type { CreateAutopilotControllerRequest, ApproveRequest };
 export {
-  useAutopilotControllers, useCurrentAutopilotController,
+  useAutopilotControllers, useCurrentAutopilotController, useAutopilotControllerByPodKey,
   useAutopilotIterations, useAutopilotThinking, useAutopilotThinkingHistory,
 } from "./autopilotSelectors";
 

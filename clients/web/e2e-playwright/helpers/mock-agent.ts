@@ -17,6 +17,8 @@ export type MockAgentMode = "pty" | "acp";
 // Keep in sync with that file and backend/migrations/000151..000153.
 export type MockAgentScenario =
   | "echo"
+  | "autopilot"
+  | "autopilot_fs"
   | "streaming_3"
   | "thinking_then_answer"
   | "tool_call_edit"
