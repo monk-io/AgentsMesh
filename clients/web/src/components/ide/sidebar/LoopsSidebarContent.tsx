@@ -168,6 +168,8 @@ function LoopListItem({
 
   return (
     <button
+      data-testid="loop-row"
+      data-loop-slug={loop.slug}
       className={cn(
         "w-full text-left px-2.5 py-2 rounded-md",
         "transition-colors duration-150 cursor-pointer",
