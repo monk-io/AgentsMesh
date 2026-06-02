@@ -1,6 +1,6 @@
 import { useAutopilotStore } from "@/stores/autopilot";
 import { useLoopStore } from "@/stores/loop";
-import { getLoopService, parseWasmAny } from "@/lib/wasm-core";
+import { getLoopState, parseWasmAny } from "@/lib/wasm-core";
 import type { DebounceRef } from "./realtimeEventHandlers";
 import {
   type RealtimeEvent,
@@ -47,11 +47,21 @@ export function handleLoopEvent(
         debounceRef.current = null;
         const s = useLoopStore.getState();
         s.fetchLoops?.();
-        const currentLoop = parseWasmAny<{ id: number; slug: string }>(getLoopService().current_loop_json());
+        const currentLoop = parseWasmAny<{ id: number; slug: string }>(getLoopState().current_loop_json());
         const loopRunData = decodeEventData(LoopRunEventDataSchema, event.data);
         if (currentLoop?.id === Number(loopRunData.loopId)) {
           s.fetchLoop?.(currentLoop.slug);
-          s.fetchRuns?.(currentLoop.slug, { limit: 20, offset: 0 });
+          // Eventual-consistency retry: if the first fetch races the
+          // publish path and returns no new rows, retry once at 750ms.
+          // Cheap insurance against the multitab broadcast race.
+          const slug = currentLoop.slug;
+          const expectedRunId = Number(loopRunData.runId);
+          s.fetchRuns?.(slug, { limit: 20, offset: 0 }).then(() => {
+            if (!Number.isFinite(expectedRunId) || expectedRunId <= 0) return;
+            const seen = parseWasmAny<Array<{ id?: number | string }>>(getLoopState().runs_json()) ?? [];
+            const found = seen.some((r) => Number(r.id) === expectedRunId);
+            if (!found) setTimeout(() => s.fetchRuns?.(slug, { limit: 20, offset: 0 }), 750);
+          });
         }
       }, 500);
       break;

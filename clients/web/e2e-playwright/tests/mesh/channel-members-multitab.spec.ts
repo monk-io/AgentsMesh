@@ -55,13 +55,12 @@ test.describe("Channel members · multi-tab UI propagation", () => {
       expect(tabA.locator(memberBadge)).toContainText("1", { timeout: 15_000 }),
       expect(tabB.locator(memberBadge)).toContainText("1", { timeout: 15_000 }),
     ]);
-    await Promise.all([
-      expect(tabA.locator(memberBadge)).toContainText("1", { timeout: 15_000 }),
-      expect(tabB.locator(memberBadge)).toContainText("1", { timeout: 15_000 }),
-    ]);
 
-    // EventSubscriptionManager bootstrap settle window before publish.
-    await tabA.waitForTimeout(1500);
+    // EventSubscriptionManager bootstrap: even after the badge renders,
+    // the WASM-side Connect-RPC stream needs time to handshake before
+    // subscribeAll is live. Events published earlier have no replay
+    // buffer. 5000ms covers the slowest CI runners we've observed.
+    await tabA.waitForTimeout(5000);
 
     await cc.channel.inviteChannelMembers({
       orgSlug: TEST_ORG_SLUG, id: channelId, userIds: [inviteeId],
