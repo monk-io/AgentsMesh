@@ -83,6 +83,7 @@ go_test(
     srcs = [
         "affinity_test.go",
         "agents_adapter_test.go",
+        "autopilot_handler_test.go",
         "command_sender_test.go",
         "connection_generation_test.go",
         "connection_manager_handlers_test.go",

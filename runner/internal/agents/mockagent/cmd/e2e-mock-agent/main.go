@@ -25,9 +25,20 @@ import (
 func main() {
 	mode := flag.String("mode", envDefault("E2E_MOCK_MODE", "pty"), "runtime mode: pty | acp")
 	scenario := flag.String("scenario", envDefault("E2E_MOCK_SCENARIO", "echo"), "behavior scenario name")
+	// Autopilot launches its control agent as
+	// `<slug> --dangerously-skip-permissions --mcp-config <path>` (claude CLI
+	// flags, no --mode). Declaring these flags lets the parser tolerate that
+	// invocation; --dangerously-skip-permissions doubles as the signal to run
+	// the claude-stream control-agent runtime instead of a target pod.
+	controlAgent := flag.Bool("dangerously-skip-permissions", false, "run as autopilot control agent (claude-stream)")
+	mcpConfig := flag.String("mcp-config", "", "path to .mcp.json (control-agent mode)")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	if *controlAgent {
+		os.Exit(mockagent.RunControlAgent(*mcpConfig, logger))
+	}
 
 	switch *mode {
 	case "pty":

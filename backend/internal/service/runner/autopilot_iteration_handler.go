@@ -14,9 +14,16 @@ func (pc *PodCoordinator) handleAutopilotIteration(runnerID int64, data *runnerv
 
 	rp, err := pc.autopilotRepo.GetByKey(ctx, data.GetAutopilotKey())
 	if err != nil {
-		pc.logger.Error("failed to find autopilot pod for iteration",
+		pc.logger.Error("failed to find autopilot controller for iteration",
 			"autopilot_controller_key", data.GetAutopilotKey(),
 			"error", err)
+		return
+	}
+	// GetByKey returns (nil, nil) when the record is absent (already deleted /
+	// key mismatch). Guard before dereferencing rp.ID below.
+	if rp == nil {
+		pc.logger.Warn("autopilot controller not found for iteration, skipping",
+			"autopilot_controller_key", data.GetAutopilotKey())
 		return
 	}
 

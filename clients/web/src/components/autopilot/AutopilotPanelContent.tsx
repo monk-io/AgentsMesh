@@ -62,7 +62,7 @@ export function AutopilotPanelContent({ podKey, className }: AutopilotPanelConte
   const progress = (autopilotController.current_iteration / autopilotController.max_iterations) * 100;
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div data-testid="autopilot-panel" className={cn("flex flex-col h-full", className)}>
       {/* Header with status and controls */}
       <div className="flex items-center gap-3 px-3 py-2 border-b border-border/50">
         {/* Status */}

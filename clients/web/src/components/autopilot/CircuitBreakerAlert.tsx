@@ -17,7 +17,7 @@ export function CircuitBreakerAlert({
   className,
   approvalTimeoutMin = 30,
 }: CircuitBreakerAlertProps) {
-  const { approveAutopilotController } = useAutopilotStore();
+  const approveAutopilotController = useAutopilotStore((s) => s.approveAutopilotController);
   const [additionalIterations, setAdditionalIterations] = React.useState(5);
   const [timeRemaining, setTimeRemaining] = React.useState<string | null>(null);
 

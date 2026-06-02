@@ -45,6 +45,24 @@ func TestRunPTY_UnknownScenario(t *testing.T) {
 	}
 }
 
+// The autopilot scenario must echo `got: <line>` then leave a prompt symbol as
+// the trailing screen line so the runner's PTY state detector classifies the
+// pod as waiting. Without it the AutopilotController never fires an iteration.
+// Tested via promptEchoLoop directly (turnDelay=0) to avoid the production
+// turn delay that holds the pod executing past the controller's MinTriggerGap.
+func TestPromptEchoLoop_EchoesThenPrompt(t *testing.T) {
+	in := strings.NewReader("echo step1\necho step2\n")
+	var out bytes.Buffer
+	promptEchoLoop(in, &out, 0)
+	got := out.String()
+	if !strings.Contains(got, "got: echo step1\n") || !strings.Contains(got, "got: echo step2\n") {
+		t.Errorf("missing echo round-trips: %q", got)
+	}
+	if !strings.HasSuffix(got, autopilotPrompt) {
+		t.Errorf("output must end with prompt %q, got tail %q", autopilotPrompt, got)
+	}
+}
+
 func TestEchoLoop_PreservesLineOrder(t *testing.T) {
 	in := strings.NewReader("a\nb\nc\n")
 	var out bytes.Buffer

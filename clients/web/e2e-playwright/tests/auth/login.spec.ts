@@ -29,9 +29,11 @@ test.describe("Login Flow", () => {
   test("successful login redirects to workspace", async ({ page }) => {
     await loginPage.login(TEST_USER.email, TEST_USER.password);
 
-    // Should redirect away from /login
+    // Post-login navigateAfterLogin blocks on resolvePostLoginUrlLight →
+    // fetchFirstOrgSlug (a network round-trip) before router.push; under a
+    // loaded CI shard that org fetch is slow, so allow generous headroom.
     await page.waitForURL((url) => !url.pathname.includes("/login"), {
-      timeout: 15_000,
+      timeout: 30_000,
     });
 
     // Should land on workspace or dashboard

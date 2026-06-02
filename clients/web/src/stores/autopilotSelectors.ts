@@ -19,6 +19,12 @@ export function useCurrentAutopilotController(): Ctrl | null {
   return useMemo(() => parseWasmAny<Ctrl>(svc().current_controller_json()), [tick]);
 }
 
+export function useAutopilotControllerByPodKey(podKey: string): Ctrl | undefined {
+  const tick = useAutopilotStore((s) => s._tick);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => useAutopilotStore.getState().getAutopilotControllerByPodKey(podKey), [tick, podKey]);
+}
+
 export function useAutopilotIterations(key: string | null | undefined): AutopilotIterationData[] {
   const tick = useAutopilotStore((s) => s._tick);
   return useMemo(() => {
