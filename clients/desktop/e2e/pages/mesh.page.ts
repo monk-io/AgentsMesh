@@ -15,7 +15,7 @@ export class MeshPage {
   constructor(private page: Page) {
     this.topologyCanvas = page.locator('.react-flow, [data-section="mesh-topology"]').first();
     this.runnerNodes = page.locator('[data-node-type="runner"]');
-    this.podNodes = page.locator('[data-node-type="pod"]');
+    this.podNodes = page.locator('[data-testid="mesh-pod-node"]');
     this.filterControls = page.locator('[data-section="mesh-filters"]');
   }
 

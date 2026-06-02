@@ -9,6 +9,7 @@ import { gotoHash, expectHashMatches } from "../helpers/nav";
 export class LoopsPage {
   readonly newLoopButton: Locator;
   readonly loopList: Locator;
+  readonly loopRows: Locator;
   readonly runHistoryTable: Locator;
   readonly promptEditor: Locator;
   readonly scheduleInput: Locator;
@@ -16,6 +17,7 @@ export class LoopsPage {
   constructor(private page: Page) {
     this.newLoopButton = page.getByRole("button", { name: /new loop|new/i }).first();
     this.loopList = page.locator('[data-section="loop-list"]');
+    this.loopRows = page.locator('[data-testid="loop-row"]');
     this.runHistoryTable = page.locator('[data-section="run-history"], table').first();
     this.promptEditor = page.locator('textarea[name="prompt"], [data-editor="prompt"]').first();
     this.scheduleInput = page.locator('input[name="schedule"]');
