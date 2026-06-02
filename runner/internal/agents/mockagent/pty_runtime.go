@@ -78,7 +78,7 @@ func promptEchoLoop(in io.Reader, out io.Writer, turnDelay time.Duration) {
 		if turnDelay > 0 {
 			time.Sleep(turnDelay)
 		}
-		fmt.Fprint(out, autopilotPrompt)
+		_, _ = fmt.Fprint(out, autopilotPrompt)
 	}
 }
 
