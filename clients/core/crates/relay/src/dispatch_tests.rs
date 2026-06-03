@@ -39,7 +39,6 @@ fn snapshot_sends_clear_and_content() {
     assert_eq!(
         action,
         DispatchAction::Snapshot(SnapshotPayload {
-            content: Some("screen data".into()),
             cols: 80,
             rows: 24,
         })

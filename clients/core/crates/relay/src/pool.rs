@@ -1,33 +1,38 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use web_time::Instant;
 
-use agentsmesh_protocol::{encode_json_message, encode_message, MsgType};
-use agentsmesh_transport::runtime::{PlatformRuntime, Runtime, TaskHandle};
+use agentsmesh_transport::runtime::{PlatformRuntime, Runtime};
 use futures::channel::mpsc;
 use parking_lot::RwLock;
 
+use crate::command::Command;
+use crate::driver::Driver;
 use crate::error::RelayError;
-use crate::retry;
 use crate::types::{
-    AcpCallback, ConnectionHandle, ConnectionState, DisconnectCallback, OutputCallback,
-    RelayStatus, StatusCallback,
+    AcpCallback, ConnectionHandle, DisconnectCallback, OutputCallback, RelayStatus, RelayStatusInfo,
+    StatusCallback, StatusSnapshot,
 };
 
+/// Thin routing table over per-pod driver actors. Holds only each pod's command
+/// sender + status mirror, plus pool-scoped listeners (which may be registered
+/// before a driver exists). All connection state lives inside the drivers.
 #[derive(Clone)]
 pub struct RelayConnectionPool<R: Runtime = PlatformRuntime> {
-    pub(crate) inner: Arc<RwLock<PoolInner<R>>>,
-    pub(crate) runtime: R,
+    inner: Arc<RwLock<PoolRouter>>,
+    runtime: R,
+    unsubscribe_tx: mpsc::UnboundedSender<(String, String)>,
 }
 
-pub(crate) struct PoolInner<R: Runtime = PlatformRuntime> {
-    pub connections: HashMap<String, ConnectionState<R>>,
+pub(crate) struct PoolRouter {
+    pub pods: HashMap<String, PodHandle>,
     pub status_listeners: HashMap<String, Vec<StatusCallback>>,
     pub acp_listeners: HashMap<String, Vec<AcpCallback>>,
-    pub last_inputs: HashMap<String, (String, Instant)>,
-    pub resize_debounce: HashMap<String, R::TaskHandle>,
-    pub unsubscribe_tx: mpsc::UnboundedSender<(String, String)>,
     pub on_pod_disconnected: Option<DisconnectCallback>,
+}
+
+pub(crate) struct PodHandle {
+    cmd_tx: mpsc::UnboundedSender<Command>,
+    snapshot: Arc<RwLock<StatusSnapshot>>,
 }
 
 impl RelayConnectionPool<PlatformRuntime> {
@@ -39,28 +44,22 @@ impl RelayConnectionPool<PlatformRuntime> {
 impl<R: Runtime> RelayConnectionPool<R> {
     pub fn with_runtime(runtime: R) -> (Self, mpsc::UnboundedReceiver<(String, String)>) {
         let (tx, rx) = mpsc::unbounded();
-        let inner = PoolInner {
-            connections: HashMap::new(),
+        let inner = PoolRouter {
+            pods: HashMap::new(),
             status_listeners: HashMap::new(),
             acp_listeners: HashMap::new(),
-            last_inputs: HashMap::new(),
-            resize_debounce: HashMap::new(),
-            unsubscribe_tx: tx,
             on_pod_disconnected: None,
         };
         (
             Self {
                 inner: Arc::new(RwLock::new(inner)),
                 runtime,
+                unsubscribe_tx: tx,
             },
             rx,
         )
     }
 
-    /// Register the single pod-disconnected sink. Called once per platform
-    /// manager at construction; fired from `disconnect_inner` with the pod_key
-    /// after its listeners are cleared, so the adapter can reset its
-    /// register-once guard and re-wire on the next subscribe.
     pub fn set_on_pod_disconnected(&self, callback: DisconnectCallback) {
         self.inner.write().on_pod_disconnected = Some(callback);
     }
@@ -73,129 +72,72 @@ impl<R: Runtime> RelayConnectionPool<R> {
         relay_token: &str,
         callback: OutputCallback,
     ) -> ConnectionHandle {
-        let needs_connect = {
-            let mut inner = self.inner.write();
-            let is_new = !inner.connections.contains_key(pod_key);
-            let conn = inner
-                .connections
-                .entry(pod_key.to_string())
-                .or_insert_with(|| ConnectionState::new(relay_url.into(), relay_token.into()));
-
-            if let Some(h) = conn.disconnect_handle.take() {
-                h.abort();
+        let cmd_tx = {
+            let mut router = self.inner.write();
+            if let Some(handle) = router.pods.get(pod_key) {
+                let tx = handle.cmd_tx.clone();
+                let _ = tx.unbounded_send(Command::AddSubscriber {
+                    sub_id: subscription_id.to_string(),
+                    cb: callback,
+                });
+                tx
+            } else {
+                let (cmd_tx, cmd_rx) = mpsc::unbounded();
+                // Mirror starts at Connecting (matching the driver's initial
+                // state), so get_status during the first connect window doesn't
+                // read the StatusSnapshot::default() Disconnected.
+                let snapshot = Arc::new(RwLock::new(StatusSnapshot {
+                    status: RelayStatus::Connecting,
+                    runner_disconnected: false,
+                    pod_size: None,
+                }));
+                router.pods.insert(
+                    pod_key.to_string(),
+                    PodHandle {
+                        cmd_tx: cmd_tx.clone(),
+                        snapshot: Arc::clone(&snapshot),
+                    },
+                );
+                Driver::spawn(
+                    self.runtime.clone(),
+                    Arc::clone(&self.inner),
+                    pod_key.to_string(),
+                    relay_url.to_string(),
+                    relay_token.to_string(),
+                    snapshot,
+                    cmd_rx,
+                    (subscription_id.to_string(), callback),
+                );
+                cmd_tx
             }
-            conn.subscribers
-                .insert(subscription_id.to_string(), callback);
-
-            if !is_new && conn.status == RelayStatus::Connected {
-                if let Some(tx) = &conn.ws_write_tx {
-                    let _ = tx.unbounded_send(encode_message(MsgType::Resync, &[]));
-                }
-            }
-            is_new
         };
-
-        if needs_connect {
-            let pool = self.clone();
-            let pk = pod_key.to_string();
-            self.runtime.spawn(Box::pin(async move {
-                if let Err(e) = pool.connect_pod(&pk).await {
-                    tracing::warn!("connect_pod failed for {pk}: {e}");
-                    pool.schedule_reconnect(&pk);
-                }
-            }));
-        }
-
-        let inner = self.inner.read();
-        let conn = inner.connections.get(pod_key);
-        let write_tx = conn
-            .and_then(|c| c.ws_write_tx.clone())
-            .unwrap_or_else(|| mpsc::unbounded().0);
         ConnectionHandle::new(
             pod_key.to_string(),
             subscription_id.to_string(),
-            write_tx,
-            inner.unsubscribe_tx.clone(),
+            cmd_tx,
+            self.unsubscribe_tx.clone(),
         )
     }
 
     pub async fn unsubscribe(&self, pod_key: &str, subscription_id: &str) {
-        let pool = self.inner.clone();
-        let mut inner = pool.write();
-        let Some(conn) = inner.connections.get_mut(pod_key) else {
-            return;
-        };
-        conn.subscribers.remove(subscription_id);
-
-        if conn.subscribers.is_empty() && conn.disconnect_handle.is_none() {
-            let pool_ref = self.inner.clone();
-            let pk = pod_key.to_string();
-            let rt = self.runtime.clone();
-            conn.disconnect_handle = Some(self.runtime.spawn(Box::pin(async move {
-                rt.sleep(std::time::Duration::from_millis(retry::DISCONNECT_DELAY_MS))
-                    .await;
-                let mut inner = pool_ref.write();
-                if let Some(c) = inner.connections.get(pk.as_str()) {
-                    if c.subscribers.is_empty() {
-                        Self::disconnect_inner(&mut inner, &pk);
-                    }
-                }
-            })));
-        }
+        self.send_command(
+            pod_key,
+            Command::RemoveSubscriber {
+                sub_id: subscription_id.to_string(),
+            },
+        );
     }
 
     pub async fn send(&self, pod_key: &str, data: &str) {
-        let mut inner = self.inner.write();
-        let Some(conn) = inner.connections.get(pod_key) else {
-            return;
-        };
-        if conn.status != RelayStatus::Connected {
-            return;
-        }
-        let tx = match &conn.ws_write_tx {
-            Some(tx) => tx.clone(),
-            None => return,
-        };
-
-        if data.len() > 1 {
-            let now = Instant::now();
-            if let Some((last_data, last_time)) = inner.last_inputs.get(pod_key) {
-                if last_data == data
-                    && now.duration_since(*last_time).as_millis()
-                        < retry::INPUT_DEDUP_WINDOW_MS as u128
-                {
-                    return;
-                }
-            }
-            inner
-                .last_inputs
-                .insert(pod_key.to_string(), (data.to_string(), now));
-        }
-
-        let msg = encode_message(MsgType::Input, data.as_bytes());
-        let _ = tx.unbounded_send(msg);
+        self.send_command(pod_key, Command::Send { data: data.to_string() });
     }
 
     pub async fn send_resize(&self, pod_key: &str, cols: u16, rows: u16) {
-        if cols == 0 || rows == 0 {
-            return;
-        }
-        let mut inner = self.inner.write();
-        if let Some(h) = inner.resize_debounce.remove(pod_key) {
-            h.abort();
-        }
-        let pool = self.inner.clone();
-        let pk = pod_key.to_string();
-        let rt = self.runtime.clone();
-        let handle = self.runtime.spawn(Box::pin(async move {
-            rt.sleep(std::time::Duration::from_millis(retry::RESIZE_DEBOUNCE_MS))
-                .await;
-            let inner = pool.read();
-            if let Some(conn) = inner.connections.get(&pk) {
-                Self::do_send_resize(conn, cols, rows);
-            }
-        }));
-        inner.resize_debounce.insert(pod_key.to_string(), handle);
+        self.send_command(pod_key, Command::Resize { cols, rows, force: false });
+    }
+
+    pub async fn force_resize(&self, pod_key: &str, cols: u16, rows: u16) {
+        self.send_command(pod_key, Command::Resize { cols, rows, force: true });
     }
 
     pub async fn send_acp_command(
@@ -203,19 +145,117 @@ impl<R: Runtime> RelayConnectionPool<R> {
         pod_key: &str,
         command: &serde_json::Value,
     ) -> Result<(), RelayError> {
-        let inner = self.inner.read();
-        let conn = inner
-            .connections
+        // Only a data-ready link can carry ACP. Check the mirror (not just driver
+        // existence): a driver that's connecting/backing-off returns NotConnected
+        // instead of returning Ok while the command is silently dropped offline.
+        let ready = self
+            .inner
+            .read()
+            .pods
             .get(pod_key)
-            .ok_or_else(|| RelayError::NotConnected(pod_key.into()))?;
-        let tx = conn
-            .ws_write_tx
-            .as_ref()
-            .ok_or_else(|| RelayError::NotConnected(pod_key.into()))?;
-        let msg = encode_json_message(MsgType::AcpCommand, command)?;
-        tx.unbounded_send(msg)
-            .map_err(|e| RelayError::Send(e.to_string()))?;
-        Ok(())
+            .map(|h| h.snapshot.read().status == RelayStatus::Connected)
+            .unwrap_or(false);
+        if !ready {
+            return Err(RelayError::NotConnected(pod_key.into()));
+        }
+        if self.send_command(pod_key, Command::SendAcp { command: command.clone() }) {
+            Ok(())
+        } else {
+            Err(RelayError::NotConnected(pod_key.into()))
+        }
+    }
+
+    pub async fn disconnect(&self, pod_key: &str) {
+        self.send_command(pod_key, Command::Disconnect);
+    }
+
+    pub async fn disconnect_all(&self) {
+        let txs: Vec<_> = self
+            .inner
+            .read()
+            .pods
+            .values()
+            .map(|h| h.cmd_tx.clone())
+            .collect();
+        for tx in txs {
+            let _ = tx.unbounded_send(Command::Disconnect);
+        }
+    }
+
+    pub async fn on_status_change(&self, pod_key: &str, listener: StatusCallback) {
+        {
+            let mut router = self.inner.write();
+            router
+                .status_listeners
+                .entry(pod_key.to_string())
+                .or_default()
+                .push(Arc::clone(&listener));
+        }
+        // Fire current status AFTER registering, reading the LATEST snapshot (not
+        // one captured before the push): if the driver changes status between the
+        // push and this fire, the listener still ends on the freshest value rather
+        // than a stale captured one.
+        let info = {
+            let router = self.inner.read();
+            router
+                .pods
+                .get(pod_key)
+                .map(|h| {
+                    let s = h.snapshot.read();
+                    RelayStatusInfo {
+                        status: s.status,
+                        runner_disconnected: s.runner_disconnected,
+                    }
+                })
+                .unwrap_or(RelayStatusInfo {
+                    status: RelayStatus::Disconnected,
+                    runner_disconnected: false,
+                })
+        };
+        listener(info);
+    }
+
+    pub async fn on_acp_message(&self, pod_key: &str, listener: AcpCallback) {
+        self.inner
+            .write()
+            .acp_listeners
+            .entry(pod_key.to_string())
+            .or_default()
+            .push(listener);
+    }
+
+    pub async fn get_status(&self, pod_key: &str) -> RelayStatus {
+        self.inner
+            .read()
+            .pods
+            .get(pod_key)
+            .map(|h| h.snapshot.read().status)
+            .unwrap_or(RelayStatus::Disconnected)
+    }
+
+    pub async fn is_runner_disconnected(&self, pod_key: &str) -> bool {
+        self.inner
+            .read()
+            .pods
+            .get(pod_key)
+            .map(|h| h.snapshot.read().runner_disconnected)
+            .unwrap_or(false)
+    }
+
+    pub async fn get_pod_size(&self, pod_key: &str) -> Option<(u16, u16)> {
+        self.inner
+            .read()
+            .pods
+            .get(pod_key)
+            .and_then(|h| h.snapshot.read().pod_size)
+    }
+
+    /// Forward a command to a live driver; false if the pod has no driver.
+    fn send_command(&self, pod_key: &str, cmd: Command) -> bool {
+        match self.inner.read().pods.get(pod_key) {
+            Some(h) => h.cmd_tx.unbounded_send(cmd).is_ok(),
+            None => false,
+        }
     }
 }
 

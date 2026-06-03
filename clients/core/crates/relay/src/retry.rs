@@ -2,11 +2,20 @@ use std::time::Duration;
 
 use rand::Rng;
 
-pub const MAX_RECONNECT_ATTEMPTS: u32 = 50;
 pub const BASE_RECONNECT_DELAY_MS: u64 = 1000;
 pub const MAX_RECONNECT_DELAY_MS: u64 = 30_000;
 pub const SNAPSHOT_TIMEOUT_MS: u64 = 2000;
-pub const MAX_SNAPSHOT_RETRIES: u32 = 3;
+// Consecutive Resync attempts (SNAPSHOT_TIMEOUT_MS apart) tolerated while the
+// transport is up but no snapshot has arrived. Past this the connection is
+// data-dead — force a reconnect to rebuild it rather than sit Connected-but-
+// blank forever. Re-requesting persists across reconnects, so the terminal
+// self-heals once the relay/runner path recovers (no manual restart needed).
+pub const SNAPSHOT_GIVEUP_ATTEMPTS: u32 = 15;
+// Cap a single connect attempt: a hung TCP/WS handshake has no OS-level timeout
+// here, so without this the driver could block in connect().await forever and
+// never see a queued Disconnect. On timeout we fall through to backoff, which
+// does drain commands.
+pub const CONNECT_TIMEOUT_MS: u64 = 15_000;
 pub const DISCONNECT_DELAY_MS: u64 = 30_000;
 pub const RESIZE_DEBOUNCE_MS: u64 = 150;
 pub const INPUT_DEDUP_WINDOW_MS: u64 = 50;
@@ -21,10 +30,6 @@ pub fn compute_reconnect_delay(attempt: u32, base_delay_ms: u64) -> Duration {
     let jitter = rand::rng().random_range(-jitter_range / 2.0..jitter_range / 2.0);
     let delay = (base as f64 + jitter).round().max(0.0) as u64;
     Duration::from_millis(delay)
-}
-
-pub fn should_reconnect(attempt: u32) -> bool {
-    attempt < MAX_RECONNECT_ATTEMPTS
 }
 
 #[cfg(test)]
@@ -82,14 +87,6 @@ mod tests {
     }
 
     #[test]
-    fn should_reconnect_within_limit() {
-        assert!(should_reconnect(0));
-        assert!(should_reconnect(49));
-        assert!(!should_reconnect(50));
-        assert!(!should_reconnect(100));
-    }
-
-    #[test]
     fn zero_base_delay() {
         let d = compute_reconnect_delay(0, 0);
         assert_eq!(d.as_millis(), 0);
@@ -104,9 +101,8 @@ mod tests {
 
     #[test]
     fn constants_are_correct() {
-        assert_eq!(MAX_RECONNECT_ATTEMPTS, 50);
         assert_eq!(SNAPSHOT_TIMEOUT_MS, 2000);
-        assert_eq!(MAX_SNAPSHOT_RETRIES, 3);
+        assert_eq!(SNAPSHOT_GIVEUP_ATTEMPTS, 15);
         assert_eq!(DISCONNECT_DELAY_MS, 30_000);
         assert_eq!(RESIZE_DEBOUNCE_MS, 150);
         assert_eq!(INPUT_DEDUP_WINDOW_MS, 50);
