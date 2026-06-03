@@ -18,7 +18,6 @@ pub enum DispatchAction {
 
 #[derive(Debug, PartialEq)]
 pub struct SnapshotPayload {
-    pub content: Option<String>,
     pub cols: u16,
     pub rows: u16,
 }
@@ -91,8 +90,9 @@ fn handle_snapshot(payload: &[u8], subscribers: &[&OutputCallback]) -> DispatchA
                 broadcast(subscribers, ANSI_CLEAR);
                 broadcast(subscribers, content.as_bytes());
             }
+            // serialized_content is broadcast above; the action only carries the
+            // dimensions (the driver reads cols/rows, never the content again).
             DispatchAction::Snapshot(SnapshotPayload {
-                content: snap.serialized_content,
                 cols: snap.cols,
                 rows: snap.rows,
             })
@@ -121,8 +121,9 @@ fn handle_control(payload: &[u8]) -> DispatchAction {
 }
 
 fn broadcast(subscribers: &[&OutputCallback], data: &[u8]) {
-    let owned = data.to_vec();
+    // Each callback takes an owned Vec, so N copies are unavoidable — but skip the
+    // extra up-front `owned` clone (that made it N+1). Copy straight per callback.
     for cb in subscribers {
-        cb(owned.clone());
+        cb(data.to_vec());
     }
 }
