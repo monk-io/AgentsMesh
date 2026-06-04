@@ -47,3 +47,13 @@ pub trait EventCallback: Send + Sync {
 pub trait TickCallback: Send + Sync {
     fn on_tick(&self, tick: u64);
 }
+
+/// Fires whenever the realtime stream's connection state changes
+/// (connecting / connected / reconnecting / disconnected). iOS keeps an
+/// `@Observable` store and shows a reconnect banner when the state is not
+/// "connected" past a debounce. Runs on a tokio worker — hop to `@MainActor`
+/// before mutating SwiftUI state.
+#[uniffi::export(callback_interface)]
+pub trait ConnectionStateCallback: Send + Sync {
+    fn on_connection_state_change(&self, state: String);
+}

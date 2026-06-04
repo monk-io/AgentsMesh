@@ -1,4 +1,4 @@
-use crate::{EventType, EventCategory, ConnectionState, RealtimeEvent, PingMessage};
+use crate::{EventType, EventCategory, ConnectionState, RealtimeEvent};
 
 #[test]
 fn test_all_event_types_serialize() {
@@ -178,14 +178,6 @@ fn test_realtime_event_minimal_json() {
     assert_eq!(event.organization_id, 0);
     assert_eq!(event.target_user_id, None);
     assert!(event.data.is_null());
-}
-
-#[test]
-fn test_ping_message_serialize() {
-    let ping = PingMessage::new(1712345678000);
-    let json = serde_json::to_string(&ping).unwrap();
-    assert!(json.contains("\"type\":\"ping\""));
-    assert!(json.contains("\"timestamp\":1712345678000"));
 }
 
 #[test]

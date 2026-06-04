@@ -73,6 +73,12 @@ impl WasmEventsManager {
         self.inner.disconnect().await;
     }
 
+    /// Interrupt the reconnect backoff and retry now (network regained / tab
+    /// refocused). No-op when already connected or shut down.
+    pub async fn nudge(&self) {
+        self.inner.nudge().await;
+    }
+
     pub async fn subscribe(
         &self,
         event_type: String,

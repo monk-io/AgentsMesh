@@ -91,38 +91,26 @@ pub trait TickListener: Send + Sync {
     fn on_tick(&self, tick: u64);
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct PingMessage {
-    #[serde(rename = "type")]
-    pub msg_type: String,
-    pub timestamp: i64,
-}
-
-impl PingMessage {
-    pub fn new(timestamp: i64) -> Self {
-        Self {
-            msg_type: "ping".to_string(),
-            timestamp,
-        }
-    }
-}
-
 pub struct EventSubscriptionManagerOptions {
-    pub max_reconnect_attempts: u32,
     pub initial_reconnect_delay_ms: u64,
     pub max_reconnect_delay_ms: u64,
-    pub ping_interval_ms: u64,
-    pub pong_timeout_ms: u64,
+    /// No inbound events for this long → treat the stream as stalled and
+    /// reconnect (0 = use the loop's built-in default). Replaces the legacy
+    /// ping/pong knobs: Connect server-streaming has no app-level ping, the
+    /// idle gap is the "still receiving?" signal.
+    pub idle_timeout_ms: u64,
+    /// Cap a single connect attempt (0 = loop default). A hung handshake has
+    /// no OS-level timeout here; without this the loop blocks forever.
+    pub connect_timeout_ms: u64,
 }
 
 impl Default for EventSubscriptionManagerOptions {
     fn default() -> Self {
         Self {
-            max_reconnect_attempts: 10,
             initial_reconnect_delay_ms: 1000,
             max_reconnect_delay_ms: 30000,
-            ping_interval_ms: 30000,
-            pong_timeout_ms: 10000,
+            idle_timeout_ms: 60000,
+            connect_timeout_ms: 15000,
         }
     }
 }

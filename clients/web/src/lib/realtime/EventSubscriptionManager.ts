@@ -100,6 +100,12 @@ export class EventSubscriptionManager {
     this.setConnectionState("disconnected");
   }
 
+  // Interrupt the reconnect backoff and retry now (network regained / tab
+  // refocused). Forwarded to the Rust loop; no-op before first construction.
+  async nudge(): Promise<void> {
+    if (this.wasm) await this.wasm.nudge();
+  }
+
   subscribe<T = unknown>(eventType: EventType, handler: EventHandler<T>): () => void {
     if (!this.handlers.has(eventType)) this.handlers.set(eventType, new Set());
     this.handlers.get(eventType)!.add(handler as EventHandler);

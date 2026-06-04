@@ -20,6 +20,14 @@ impl AppState {
         Ok(())
     }
 
+    /// Interrupt the reconnect backoff and retry now (network regained / app
+    /// foregrounded). No-op when already connected or shut down.
+    #[napi]
+    pub async fn events_nudge(&self) -> napi::Result<()> {
+        self.events.nudge().await;
+        Ok(())
+    }
+
     #[napi]
     pub async fn events_subscribe_all(
         &self,

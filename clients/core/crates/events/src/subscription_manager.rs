@@ -8,6 +8,7 @@ use futures::channel::mpsc;
 use parking_lot::RwLock;
 
 use crate::event_types::EventType;
+use crate::stream_source::{ApiClientStreamSource, EventStreamSource};
 use crate::types::{
     ConnectionState, EventDispatchHook, EventHandler, EventSubscriptionManagerOptions,
     RealtimeEvent, StateListener, SubscriptionId, TickListener,
@@ -44,12 +45,15 @@ pub(crate) struct Inner {
     /// pass it to `AppRuntime` without `Rc<RefCell<...>>` or `&mut`
     /// borrow contortions.
     pub shutdown_tx: Option<mpsc::UnboundedSender<()>>,
+    /// Interrupts the current backoff sleep so a reconnect happens now
+    /// (network regained / app foregrounded). None when no loop is running.
+    pub nudge_tx: Option<mpsc::UnboundedSender<()>>,
 }
 
 pub struct EventSubscriptionManager<R: Runtime = PlatformRuntime> {
     pub(crate) inner: Arc<RwLock<Inner>>,
     pub(crate) options: EventSubscriptionManagerOptions,
-    api_client: Arc<ApiClient>,
+    source: Arc<dyn EventStreamSource>,
     runtime: R,
 }
 
@@ -69,6 +73,21 @@ impl<R: Runtime> EventSubscriptionManager<R> {
         api_client: Arc<ApiClient>,
         options: EventSubscriptionManagerOptions,
     ) -> Self {
+        Self::with_stream_source(
+            runtime,
+            Arc::new(ApiClientStreamSource::new(api_client)),
+            options,
+        )
+    }
+
+    /// Construct over an arbitrary stream source. Production goes through
+    /// `with_runtime` (real ApiClient); tests inject a scripted source to
+    /// exercise reconnect / data-ready / timeout without a live server.
+    pub(crate) fn with_stream_source(
+        runtime: R,
+        source: Arc<dyn EventStreamSource>,
+        options: EventSubscriptionManagerOptions,
+    ) -> Self {
         Self {
             inner: Arc::new(RwLock::new(Inner {
                 handlers: HashMap::new(),
@@ -79,9 +98,10 @@ impl<R: Runtime> EventSubscriptionManager<R> {
                 tick: AtomicU64::new(0),
                 tick_listener: None,
                 shutdown_tx: None,
+                nudge_tx: None,
             })),
             options,
-            api_client,
+            source,
             runtime,
         }
     }
@@ -119,24 +139,43 @@ impl<R: Runtime> EventSubscriptionManager<R> {
         }
 
         let (shutdown_tx, shutdown_rx) = mpsc::unbounded();
-        self.inner.write().shutdown_tx = Some(shutdown_tx);
+        let (nudge_tx, nudge_rx) = mpsc::unbounded();
+        {
+            let mut w = self.inner.write();
+            w.shutdown_tx = Some(shutdown_tx);
+            w.nudge_tx = Some(nudge_tx);
+        }
 
         let inner = Arc::clone(&self.inner);
-        let api_client = Arc::clone(&self.api_client);
+        let source = Arc::clone(&self.source);
         let opts = crate::connection_loop::ManagerOpts::from_options(&self.options);
         let rt = self.runtime.clone();
 
         self.runtime.spawn(Box::pin(
-            crate::connection_loop::connection_loop(rt, inner, api_client, opts, shutdown_rx),
+            crate::connection_loop::connection_loop(rt, inner, source, opts, shutdown_rx, nudge_rx),
         ));
     }
 
     pub async fn disconnect(&self) {
-        let tx = self.inner.write().shutdown_tx.take();
+        let tx = {
+            let mut w = self.inner.write();
+            w.nudge_tx = None;
+            w.shutdown_tx.take()
+        };
         if let Some(tx) = tx {
             let _ = tx.unbounded_send(());
         }
         set_state(&self.inner, ConnectionState::Disconnected);
+    }
+
+    /// Interrupt the current reconnect backoff and retry immediately. Front-ends
+    /// call this on network-regained / app-foreground so recovery doesn't wait
+    /// out the (capped, up to 30s) backoff. No-op when connected or shut down.
+    pub async fn nudge(&self) {
+        let tx = self.inner.read().nudge_tx.clone();
+        if let Some(tx) = tx {
+            let _ = tx.unbounded_send(());
+        }
     }
 
     pub async fn subscribe(

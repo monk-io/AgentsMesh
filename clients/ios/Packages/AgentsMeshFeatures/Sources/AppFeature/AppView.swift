@@ -26,6 +26,7 @@ public struct AppView: View {
                 }
             }
         }
+        .overlay(alignment: .top) { EventsConnectionBanner() }
         .onAppear { store.send(.onLaunch) }
     }
 }

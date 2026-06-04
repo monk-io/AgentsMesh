@@ -103,6 +103,7 @@ export const IPC_ALLOWLIST: ReadonlyArray<string> = [
   "eventsDisconnect",
   "eventsGetConnectionState",
   "eventsGetTick",
+  "eventsNudge",
   "eventsUnsubscribe",
   "extensionCreateSkillRegistryConnect",
   "extensionDeleteSkillRegistryConnect",
