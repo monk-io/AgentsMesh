@@ -61,6 +61,22 @@ export function useRealtimeConnection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrg?.id, user?.id]);
 
+  // Re-arm: when the tab refocuses or the network returns, skip the reconnect
+  // backoff and retry now. The Rust loop already self-heals on its own
+  // schedule; this just shortcuts the wait after a laptop wake / flaky network.
+  useEffect(() => {
+    const nudge = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void managerRef.current.nudge();
+    };
+    window.addEventListener("online", nudge);
+    document.addEventListener("visibilitychange", nudge);
+    return () => {
+      window.removeEventListener("online", nudge);
+      document.removeEventListener("visibilitychange", nudge);
+    };
+  }, []);
+
   const reconnect = useCallback(() => {
     resetEventSubscriptionManager();
     managerRef.current = getEventSubscriptionManager();

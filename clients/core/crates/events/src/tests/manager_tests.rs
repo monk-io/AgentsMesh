@@ -108,19 +108,19 @@ async fn test_unsubscribe_nonexistent_id_is_noop() {
 #[tokio::test]
 async fn test_options_default() {
     let opts = EventSubscriptionManagerOptions::default();
-    assert_eq!(opts.max_reconnect_attempts, 10);
     assert_eq!(opts.initial_reconnect_delay_ms, 1000);
     assert_eq!(opts.max_reconnect_delay_ms, 30000);
+    assert_eq!(opts.idle_timeout_ms, 60000);
+    assert_eq!(opts.connect_timeout_ms, 15000);
 }
 
 #[tokio::test]
 async fn test_custom_options() {
     let opts = EventSubscriptionManagerOptions {
-        max_reconnect_attempts: 5,
         initial_reconnect_delay_ms: 500,
         max_reconnect_delay_ms: 15000,
-        ping_interval_ms: 10000,
-        pong_timeout_ms: 5000,
+        idle_timeout_ms: 5000,
+        connect_timeout_ms: 2000,
     };
     let mgr = EventSubscriptionManager::new(make_client(), opts);
     assert_eq!(mgr.get_connection_state().await, ConnectionState::Disconnected);
@@ -154,7 +154,7 @@ fn test_realtime_event_deserialization_variations() {
 
 #[tokio::test]
 async fn test_disconnect_without_connect() {
-    let mut mgr = EventSubscriptionManager::with_default_options(make_client());
+    let mgr = EventSubscriptionManager::with_default_options(make_client());
     mgr.disconnect().await;
     assert_eq!(mgr.get_connection_state().await, ConnectionState::Disconnected);
 }

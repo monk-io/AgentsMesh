@@ -336,7 +336,8 @@
     "connecting": "接続中",
     "disconnected": "切断",
     "error": "エラー",
-    "unknown": "不明"
+    "unknown": "不明",
+    "eventsReconnecting": "リアルタイム更新が切断されました — 再接続中…"
   },
   "terminalTabs": {
     "singleView": "シングルビュー",

@@ -5,6 +5,8 @@ import AppFeature
 
 @main
 struct AgentsMeshApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
     init() {
         let env = ProcessInfo.processInfo.environment
         // Bootstrap Rust core once per process. Resolution order:
@@ -31,7 +33,19 @@ struct AgentsMeshApp: App {
                 // Wire the Rust dispatch tick → CoreTickStore once per launch.
                 // Reducers observe it (via CoreClient.tickStream) to re-derive
                 // state from runtime.state selectors after each realtime event.
-                .task { CoreTickStore.shared.install(on: CoreBridge.shared.core) }
+                .task {
+                    CoreTickStore.shared.install(on: CoreBridge.shared.core)
+                    CoreConnectionStore.shared.install(on: CoreBridge.shared.core)
+                }
+                // Re-arm the realtime stream on foreground: skip the Rust
+                // reconnect backoff after suspension (the socket is released on
+                // background). No-op when already connected. iOS-16 onChange
+                // (single-arg closure) — deployment target predates iOS 17.
+                .onChange(of: scenePhase) { phase in
+                    if phase == .active {
+                        Task { await CoreBridge.shared.core.eventsNudge() }
+                    }
+                }
         }
     }
 }

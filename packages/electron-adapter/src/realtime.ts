@@ -79,4 +79,8 @@ export class ElectronEventsManager {
   async disconnect(): Promise<void> {
     await invoke("realtime:disconnect");
   }
+
+  async nudge(): Promise<void> {
+    await invoke("realtime:nudge");
+  }
 }

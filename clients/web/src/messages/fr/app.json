@@ -336,7 +336,8 @@
     "connecting": "Connexion en cours",
     "disconnected": "Déconnecté",
     "error": "Erreur",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "eventsReconnecting": "Mises à jour en direct déconnectées – reconnexion…"
   },
   "terminalTabs": {
     "singleView": "Vue unique",

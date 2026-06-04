@@ -438,7 +438,8 @@
     "connecting": "连接中",
     "disconnected": "已断开",
     "error": "错误",
-    "unknown": "未知"
+    "unknown": "未知",
+    "eventsReconnecting": "实时更新已断开，正在重连…"
   },
   "terminalTabs": {
     "singleView": "单视图",

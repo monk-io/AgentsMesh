@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use agentsmesh_api_client::ApiClient;
 use agentsmesh_auth::AuthManager;
-use agentsmesh_events::types::TickListener;
+use agentsmesh_events::types::{StateListener, TickListener};
 use agentsmesh_events::{EventSubscriptionManager, EventSubscriptionManagerOptions};
 use agentsmesh_services::BlockstoreService;
 use agentsmesh_state::app_state::AppRuntime;
 use agentsmesh_state::blockstore_state::BlockstoreState;
 use agentsmesh_transport::runtime::PlatformRuntime;
 
-use crate::callbacks::{StorageCallback, TickCallback};
+use crate::callbacks::{ConnectionStateCallback, StorageCallback, TickCallback};
 use crate::dto::{BootstrapResultDto, OrganizationDto, UserDto};
 use crate::error::CoreError;
 use crate::storage_bridge::StorageBridge;
@@ -227,6 +227,25 @@ impl AgentsMeshCore {
     /// this on background to release the socket.
     pub async fn events_disconnect(&self) {
         self.events.disconnect().await;
+    }
+
+    /// Interrupt the reconnect backoff and retry now (network regained / scene
+    /// foregrounded). No-op when already connected or shut down.
+    pub async fn events_nudge(&self) {
+        self.events.nudge().await;
+    }
+
+    /// Register a connection-state listener. Swift keeps an `@Observable` store
+    /// and shows a reconnect banner when the state is not "connected".
+    pub async fn events_on_connection_state_change(
+        &self,
+        callback: Box<dyn ConnectionStateCallback>,
+    ) {
+        let cb: Arc<dyn ConnectionStateCallback> = Arc::from(callback);
+        let listener: StateListener = Arc::new(move |state| {
+            cb.on_connection_state_change(state.to_string());
+        });
+        let _ = self.events.on_connection_state_change(listener).await;
     }
 }
 

@@ -16,6 +16,7 @@ import {
 } from "@/lib/wasm-core";
 import { usePodStore } from "@/stores/pod";
 import { useTicketStore } from "@/stores/ticket";
+import { EventsConnectionBanner } from "@/components/realtime/EventsConnectionBanner";
 
 interface RealtimeContextValue {
   connectionState: ConnectionState;
@@ -158,5 +159,10 @@ export function RealtimeProvider({ children, onEvent }: RealtimeProviderProps) {
 
   const value = useMemo<RealtimeContextValue>(() => ({ connectionState, reconnect }), [connectionState, reconnect]);
 
-  return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
+  return (
+    <RealtimeContext.Provider value={value}>
+      <EventsConnectionBanner connectionState={connectionState} />
+      {children}
+    </RealtimeContext.Provider>
+  );
 }

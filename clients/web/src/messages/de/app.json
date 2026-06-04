@@ -336,7 +336,8 @@
     "connecting": "Verbindung wird hergestellt",
     "disconnected": "Getrennt",
     "error": "Fehler",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "eventsReconnecting": "Live-Updates getrennt – Verbindung wird wiederhergestellt …"
   },
   "terminalTabs": {
     "singleView": "Einzelansicht",

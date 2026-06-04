@@ -438,7 +438,8 @@
     "connecting": "Connecting",
     "disconnected": "Disconnected",
     "error": "Error",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "eventsReconnecting": "Live updates disconnected — reconnecting…"
   },
   "terminalTabs": {
     "singleView": "Single view",

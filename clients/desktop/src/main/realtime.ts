@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow, ipcMain, app, powerMonitor } from "electron";
 import type { AppState } from "@agentsmesh/node-bridge";
 
 // Bridges the backend EventBus realtime stream into the Electron renderer.
@@ -222,14 +222,27 @@ export async function setupRealtimeBridge(
 
   ipcMain.handle("realtime:connect", () => connectHandler());
   ipcMain.handle("realtime:disconnect", () => disconnectHandler());
+  ipcMain.handle("realtime:nudge", () => appState.eventsNudge());
   ipcMain.handle("realtime:getState", () => getStateHandler());
+
+  // Re-arm on laptop wake / app refocus: skip the Rust reconnect backoff and
+  // retry now. nudge() is a no-op when already connected, so firing it on every
+  // focus is harmless. powerMonitor covers system resume the renderer can't see.
+  const reArm = () => {
+    void appState.eventsNudge();
+  };
+  powerMonitor.on("resume", reArm);
+  app.on("browser-window-focus", reArm);
 
   return {
     currentState: () => state,
     dispose: async () => {
       ipcMain.removeHandler("realtime:connect");
       ipcMain.removeHandler("realtime:disconnect");
+      ipcMain.removeHandler("realtime:nudge");
       ipcMain.removeHandler("realtime:getState");
+      powerMonitor.removeListener("resume", reArm);
+      app.removeListener("browser-window-focus", reArm);
       try { await appState.eventsDisconnect(); } catch { /* best-effort */ }
       try { await appState.eventsUnsubscribe(eventSubId); } catch { /* best-effort */ }
       try { await appState.eventsUnsubscribe(stateSubId); } catch { /* best-effort */ }

@@ -336,7 +336,8 @@
     "connecting": "Conectando",
     "disconnected": "Desconectado",
     "error": "Error",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "eventsReconnecting": "Actualizaciones en vivo desconectadas: reconectando…"
   },
   "terminalTabs": {
     "singleView": "Vista única",
