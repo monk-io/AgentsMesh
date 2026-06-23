@@ -1,0 +1,919 @@
+namespace: agentsmesh
+
+postgres:
+  defines: runnable
+  inherits: agentsmesh-postgres/base
+  metadata:
+    name: AgentsMesh PostgreSQL
+    description: |
+      Production-intended pgvector-enabled PostgreSQL database for the AgentsMesh standalone stack. It stays private to Monk workloads and receives a generated per-deploy password from the stack.
+    tags: agentsmesh, postgresql, pgvector, database, production
+    website: https://www.postgresql.org/
+    source: https://github.com/pgvector/pgvector
+    publisher: monk.io
+    private: false
+  permitted-secrets:
+    agentsmesh-postgres-password: true
+  variables:
+    agentsmesh-postgres-password:
+      type: string
+      value: <- secret("agentsmesh-postgres-password")
+      description: Sensitive PostgreSQL password read from the plain Monk secret agentsmesh-postgres-password and shared with the backend.
+  services:
+    postgres:
+      container: postgres
+      port: 5432
+      protocol: tcp
+      description: Private PostgreSQL TCP endpoint consumed by AgentsMesh services.
+
+postgres-local:
+  defines: runnable
+  inherits: agentsmesh-postgres/base
+  metadata:
+    name: AgentsMesh PostgreSQL Local
+    description: |
+      Local verification pgvector-enabled PostgreSQL flavor. It uses a separate volume so local smoke tests do not share state with production-intended deployments.
+    tags: agentsmesh, postgresql, pgvector, database, local
+    website: https://www.postgresql.org/
+    source: https://github.com/pgvector/pgvector
+    publisher: monk.io
+    private: false
+  permitted-secrets:
+    agentsmesh-postgres-password: true
+  variables:
+    agentsmesh-postgres-password:
+      type: string
+      value: <- secret("agentsmesh-postgres-password")
+      description: Sensitive PostgreSQL password read from the plain Monk secret agentsmesh-postgres-password and shared with the local backend.
+    postgres-image-tag:
+      type: string
+      value: pg16
+      description: Public pgvector/pgvector Docker image tag to run in the local stack.
+  services:
+    postgres:
+      container: postgres
+      port: 5432
+      protocol: tcp
+      description: Private local PostgreSQL TCP endpoint consumed by AgentsMesh services.
+
+redis:
+  defines: runnable
+  metadata:
+    name: AgentsMesh Redis
+    description: |
+      Private Redis cache, pub/sub, and ephemeral coordination service for AgentsMesh. It stays inside the Monk network and uses a generated password in standalone stacks.
+    tags: agentsmesh, redis, cache, queue, pub-sub
+    website: https://redis.io/
+    source: https://github.com/redis/redis
+    publisher: monk.io
+    private: false
+  variables:
+    redis-image-tag:
+      type: string
+      value: 7-alpine
+      description: Public Redis Docker image tag to run.
+    redis-storage-name:
+      type: string
+      value: agentsmesh-redis
+      description: Monk volume subdirectory used for durable Redis append-only data.
+    redis-port:
+      type: int
+      env: REDIS_PORT
+      value: 6379
+      description: Redis TCP port inside the container and Monk network.
+    agentsmesh-redis-password:
+      type: string
+      env: REDIS_PASSWORD
+      value: <- secret("agentsmesh-redis-password")
+      description: Sensitive Redis AUTH password read from the plain Monk secret agentsmesh-redis-password. Set this secret when inheriting or deploying standalone stacks.
+  permitted-secrets:
+    agentsmesh-redis-password: true
+  containers:
+    redis:
+      image: redis
+      image-tag: <- $redis-image-tag
+      restart: unless-stopped
+      paths:
+        - <- `${volume-path}/${redis-storage-name}:/data`
+      bash: |
+        /bin/sh -ec 'exec redis-server --appendonly yes --requirepass "$REDIS_PASSWORD" --port "$REDIS_PORT" --dir /data'
+  services:
+    redis:
+      container: redis
+      port: <- $redis-port
+      protocol: tcp
+      description: Private Redis TCP endpoint consumed by AgentsMesh backend and relay services.
+  checks:
+    readiness:
+      attempts: 24
+      initialDelay: 5
+      period: 5
+      code: exec("redis", "/bin/sh", "-c", "echo ready") contains?("ready")
+
+redis-local:
+  defines: runnable
+  inherits: agentsmesh/redis
+  metadata:
+    name: AgentsMesh Redis Local
+    description: |
+      Local verification Redis flavor for the AgentsMesh standalone stack. It uses a separate volume so local smoke tests do not share state with production-intended deployments.
+    tags: agentsmesh, redis, cache, local
+    website: https://redis.io/
+    source: https://github.com/redis/redis
+    publisher: monk.io
+    private: false
+  variables:
+    redis-storage-name:
+      type: string
+      value: agentsmesh-redis-local
+      description: Monk volume subdirectory used for local Redis append-only data.
+
+minio:
+  defines: runnable
+  metadata:
+    name: AgentsMesh MinIO
+    description: |
+      Private S3-compatible object storage for AgentsMesh file uploads and artifacts. It stays private by default; inheriting production templates may expose the console or API only through authenticated routes when required.
+    tags: agentsmesh, minio, s3, object-storage, artifacts
+    website: https://min.io/
+    source: https://github.com/minio/minio
+    publisher: monk.io
+    private: false
+  variables:
+    minio-image-tag:
+      type: string
+      value: latest
+      description: Public minio/minio Docker image tag to run.
+    minio-storage-name:
+      type: string
+      value: agentsmesh-minio
+      description: Monk volume subdirectory used for durable object data.
+    minio-api-port:
+      type: int
+      value: 9000
+      description: MinIO S3 API port inside the container and Monk network.
+    minio-console-port:
+      type: int
+      env: MINIO_CONSOLE_PORT
+      value: 9001
+      description: MinIO management console port inside the container.
+    minio-root-user:
+      type: string
+      env: MINIO_ROOT_USER
+      value: agentsmesh
+      description: MinIO root access key name used by the backend.
+    agentsmesh-minio-root-password:
+      type: string
+      env: MINIO_ROOT_PASSWORD
+      value: <- secret("agentsmesh-minio-root-password")
+      description: Sensitive MinIO root password read from the plain Monk secret agentsmesh-minio-root-password. Set this secret when inheriting or deploying standalone stacks.
+  permitted-secrets:
+    agentsmesh-minio-root-password: true
+  containers:
+    minio:
+      image: minio/minio
+      image-tag: <- $minio-image-tag
+      restart: unless-stopped
+      paths:
+        - <- `${volume-path}/${minio-storage-name}:/data`
+      bash: minio server /data --console-address ":$MINIO_CONSOLE_PORT"
+  services:
+    api:
+      container: minio
+      port: <- $minio-api-port
+      protocol: tcp
+      description: Private S3-compatible API endpoint consumed by AgentsMesh backend.
+    console:
+      container: minio
+      port: <- $minio-console-port
+      protocol: tcp
+      description: Private MinIO management console endpoint for authenticated operators.
+  checks:
+    readiness:
+      attempts: 30
+      initialDelay: 10
+      period: 5
+      code: exec("minio", "/bin/sh", "-c", "echo ready") contains?("ready")
+
+minio-local:
+  defines: runnable
+  inherits: agentsmesh/minio
+  metadata:
+    name: AgentsMesh MinIO Local
+    description: |
+      Local verification MinIO flavor for the AgentsMesh standalone stack. It uses a separate volume and remains private to Monk workloads.
+    tags: agentsmesh, minio, object-storage, local
+    website: https://min.io/
+    source: https://github.com/minio/minio
+    publisher: monk.io
+    private: false
+  variables:
+    minio-storage-name:
+      type: string
+      value: agentsmesh-minio-local
+      description: Monk volume subdirectory used for local MinIO object data.
+
+backend:
+  defines: runnable
+  metadata:
+    name: AgentsMesh Backend API
+    description: |
+      AgentsMesh backend API server. It reads PostgreSQL, Redis, and MinIO endpoints from Monk connections and exposes HTTP API and health endpoints. gRPC/mTLS runner communication is disabled unless inherited templates provide PKI CA file paths or mounted certificate files.
+    tags: agentsmesh, backend, api, go, production
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    agentsmesh-image-tag:
+      type: string
+      value: latest
+      description: Public AgentsMesh Docker image tag to use for backend, web, web-admin, and relay images.
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: agentsmesh.local
+      description: External domain or host:port used by AgentsMesh when generating browser and runner URLs.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "true"
+      description: Whether AgentsMesh should generate HTTPS and WSS URLs for public endpoints.
+    db-host:
+      type: string
+      env: DB_HOST
+      value: <- connection-hostname("postgres")
+      description: PostgreSQL hostname read from the Monk connection.
+    db-port:
+      type: int
+      env: DB_PORT
+      value: <- connection-port("postgres")
+      description: PostgreSQL port read from the Monk connection.
+    db-user:
+      type: string
+      env: DB_USER
+      value: agentsmesh
+      description: PostgreSQL user used by AgentsMesh.
+    db-name:
+      type: string
+      env: DB_NAME
+      value: agentsmesh
+      description: PostgreSQL database name used by AgentsMesh.
+    db-sslmode:
+      type: string
+      env: DB_SSLMODE
+      value: disable
+      description: PostgreSQL SSL mode for the database connection.
+    agentsmesh-postgres-password:
+      type: string
+      env: DB_PASSWORD
+      value: <- secret("agentsmesh-postgres-password")
+      description: Sensitive PostgreSQL password read from the plain Monk secret agentsmesh-postgres-password and shared with the database runnable.
+    redis-host:
+      type: string
+      value: <- connection-hostname("redis")
+      description: Redis hostname read from the Monk connection.
+    redis-port:
+      type: int
+      value: <- connection-port("redis")
+      description: Redis port read from the Monk connection.
+    agentsmesh-redis-password:
+      type: string
+      value: <- secret("agentsmesh-redis-password")
+      description: Sensitive Redis AUTH password read from the plain Monk secret agentsmesh-redis-password and shared with the Redis runnable.
+    redis-url:
+      type: string
+      env: REDIS_URL
+      value: <- `redis://:${agentsmesh-redis-password}@${redis-host}:${redis-port}`
+      description: Redis connection URL built from Monk connection details and the shared password.
+    jwt-secret:
+      type: string
+      env: JWT_SECRET
+      value: <- $agentsmesh-jwt-secret
+      description: Sensitive JWT signing secret. Inheriting production templates that need stable credentials must set agentsmesh-jwt-secret with secret("agentsmesh-jwt-secret").
+    agentsmesh-jwt-secret:
+      type: string
+      value: <- secret("agentsmesh-jwt-secret")
+      description: Sensitive JWT signing secret read from the plain Monk secret agentsmesh-jwt-secret and shared by backend and relay.
+    internal-api-secret:
+      type: string
+      env: INTERNAL_API_SECRET
+      value: <- $agentsmesh-internal-api-secret
+      description: Sensitive service-to-service API secret. Inheriting production templates that need stable credentials must set agentsmesh-internal-api-secret with secret("agentsmesh-internal-api-secret").
+    agentsmesh-internal-api-secret:
+      type: string
+      value: <- secret("agentsmesh-internal-api-secret")
+      description: Sensitive service-to-service API secret read from the plain Monk secret agentsmesh-internal-api-secret and shared by backend and relay.
+    server-address:
+      type: string
+      env: SERVER_ADDRESS
+      value: :8080
+      description: HTTP listen address for the backend container.
+    grpc-address:
+      type: string
+      env: GRPC_ADDRESS
+      value: :9090
+      description: gRPC listen address for runner communication when PKI is configured.
+    grpc-public-endpoint:
+      type: string
+      env: GRPC_PUBLIC_ENDPOINT
+      value: ""
+      description: Public gRPC endpoint advertised to runners. Leave empty for local HTTP-only verification; inheriting production templates may set a grpcs:// endpoint.
+    debug:
+      type: string
+      env: DEBUG
+      value: "false"
+      description: Backend debug mode flag.
+    cors-allowed-origins:
+      type: string
+      env: CORS_ALLOWED_ORIGINS
+      value: "*"
+      description: Comma-separated browser origins allowed to call the backend API.
+    log-level:
+      type: string
+      env: LOG_LEVEL
+      value: info
+      description: Backend log level.
+    log-format:
+      type: string
+      env: LOG_FORMAT
+      value: json
+      description: Backend log format.
+    log-file:
+      type: string
+      env: LOG_FILE
+      value: /dev/stdout
+      description: Backend log file destination.
+    email-provider:
+      type: string
+      env: EMAIL_PROVIDER
+      value: console
+      description: Email provider. The console provider logs mail locally and needs no external credentials.
+    storage-host:
+      type: string
+      value: <- connection-hostname("minio")
+      description: MinIO hostname read from the Monk connection.
+    storage-port:
+      type: int
+      value: <- connection-port("minio")
+      description: MinIO S3 API port read from the Monk connection.
+    storage-endpoint:
+      type: string
+      env: STORAGE_ENDPOINT
+      value: <- `${storage-host}:${storage-port}`
+      description: Internal S3-compatible storage endpoint built from Monk connection details.
+    storage-public-endpoint:
+      type: string
+      env: STORAGE_PUBLIC_ENDPOINT
+      value: <- $primary-domain
+      description: Public endpoint used for presigned storage URLs. Inheriting templates should set this to the externally reachable MinIO or API endpoint.
+    storage-region:
+      type: string
+      env: STORAGE_REGION
+      value: us-east-1
+      description: S3 region name used by MinIO-compatible storage.
+    storage-bucket:
+      type: string
+      env: STORAGE_BUCKET
+      value: agentsmesh
+      description: S3 bucket name used by AgentsMesh.
+    minio-root-user:
+      type: string
+      env: STORAGE_ACCESS_KEY
+      value: agentsmesh
+      description: MinIO access key name shared with the MinIO runnable.
+    agentsmesh-minio-root-password:
+      type: string
+      env: STORAGE_SECRET_KEY
+      value: <- secret("agentsmesh-minio-root-password")
+      description: Sensitive MinIO secret key read from the plain Monk secret agentsmesh-minio-root-password and shared with the MinIO runnable.
+    storage-use-ssl:
+      type: string
+      env: STORAGE_USE_SSL
+      value: "false"
+      description: Whether the backend should use TLS when talking to the internal storage endpoint.
+    storage-use-path-style:
+      type: string
+      env: STORAGE_USE_PATH_STYLE
+      value: "true"
+      description: Whether S3 path-style addressing is used.
+    storage-max-file-size:
+      type: int
+      env: STORAGE_MAX_FILE_SIZE
+      value: 10
+      description: Maximum upload size in MiB.
+    storage-allowed-types:
+      type: string
+      env: STORAGE_ALLOWED_TYPES
+      value: image/jpeg,image/png,image/gif,image/webp,application/pdf
+      description: Comma-separated list of MIME types accepted for uploads.
+    admin-enabled:
+      type: string
+      env: ADMIN_ENABLED
+      value: "true"
+      description: Enables the web-admin console routes in the backend.
+    deployment-type:
+      type: string
+      env: DEPLOYMENT_TYPE
+      value: selfhosted
+      description: AgentsMesh deployment type label.
+  permitted-secrets:
+    agentsmesh-postgres-password: true
+    agentsmesh-redis-password: true
+    agentsmesh-minio-root-password: true
+    agentsmesh-jwt-secret: true
+    agentsmesh-internal-api-secret: true
+  containers:
+    backend:
+      image: agentsmesh/backend
+      image-tag: <- $agentsmesh-image-tag
+      restart: unless-stopped
+  services:
+    http:
+      container: backend
+      port: 8080
+      protocol: tcp
+      ingress-routes:
+        api:
+          path-prefix: /api
+        health:
+          path-prefix: /health
+      description: Backend HTTP API and health endpoint exposed through production ingress.
+    grpc:
+      container: backend
+      port: 9090
+      protocol: tcp
+      description: Private gRPC endpoint for runner communication when PKI is configured.
+  connections:
+    postgres:
+      target: agentsmesh/postgres
+      service: postgres
+      description: PostgreSQL metadata database connection.
+    redis:
+      target: agentsmesh/redis
+      service: redis
+      description: Redis cache and event bus connection.
+    minio:
+      target: agentsmesh/minio
+      service: api
+      description: S3-compatible object storage connection.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/postgres
+        - agentsmesh/redis
+        - agentsmesh/minio
+      timeout: 240
+  checks:
+    readiness:
+      attempts: 60
+      initialDelay: 20
+      period: 5
+      code: http-get("http://localhost:8080/health") contains?("agentsmesh-api")
+
+backend-local:
+  defines: runnable
+  inherits: agentsmesh/backend
+  metadata:
+    name: AgentsMesh Backend API Local
+    description: |
+      Local verification backend flavor. It uses local dependency runnables, publishes the backend health/API endpoint on a non-privileged host port, and avoids ingress because ingress does not work on local Monk targets.
+    tags: agentsmesh, backend, api, local
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: localhost:18080
+      description: Local host:port used by AgentsMesh when generating browser and runner URLs.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "false"
+      description: Local verification uses plain HTTP.
+    backend-local-http-port:
+      type: int
+      value: 18080
+      description: Non-privileged host port published by the local backend HTTP endpoint.
+  services:
+    http:
+      container: backend
+      port: 8080
+      protocol: tcp
+      publish: true
+      host-port: <- $backend-local-http-port
+      description: Published local backend HTTP API and health endpoint for external verification.
+    grpc:
+      container: backend
+      port: 9090
+      protocol: tcp
+      description: Private local gRPC endpoint; PKI is not configured in the local smoke flavor.
+  connections:
+    postgres:
+      target: agentsmesh/postgres-local
+      service: postgres
+      description: Local PostgreSQL metadata database connection.
+    redis:
+      target: agentsmesh/redis-local
+      service: redis
+      description: Local Redis cache and event bus connection.
+    minio:
+      target: agentsmesh/minio-local
+      service: api
+      description: Local S3-compatible object storage connection.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/postgres-local
+        - agentsmesh/redis-local
+        - agentsmesh/minio-local
+      timeout: 240
+
+web:
+  defines: runnable
+  metadata:
+    name: AgentsMesh Web Console
+    description: |
+      AgentsMesh user web console. The production-intended service is exposed through Monk ingress while backend calls route through the public domain configured on the backend.
+    tags: agentsmesh, frontend, web, nextjs, production
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    agentsmesh-image-tag:
+      type: string
+      value: latest
+      description: Public AgentsMesh Docker image tag to use for the web image.
+    node-env:
+      type: string
+      env: NODE_ENV
+      value: production
+      description: Node runtime environment for the web console.
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: agentsmesh.local
+      description: External domain or host:port used by the browser runtime.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "true"
+      description: Whether the browser runtime should generate HTTPS and WSS URLs.
+    posthog-key:
+      type: string
+      env: POSTHOG_KEY
+      value: ""
+      description: Optional PostHog project key. Leave empty to disable analytics.
+    posthog-host:
+      type: string
+      env: POSTHOG_HOST
+      value: ""
+      description: Optional PostHog host. Leave empty to disable analytics.
+  containers:
+    web:
+      image: agentsmesh/web
+      image-tag: <- $agentsmesh-image-tag
+      restart: unless-stopped
+  services:
+    http:
+      container: web
+      port: 3000
+      protocol: tcp
+      ingress-routes:
+        web:
+          path-prefix: /
+      description: User web console exposed through production ingress.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/backend
+      timeout: 300
+  checks:
+    readiness:
+      attempts: 60
+      initialDelay: 20
+      period: 5
+      code: http-get("http://localhost:3000") error? not
+
+web-local:
+  defines: runnable
+  inherits: agentsmesh/web
+  metadata:
+    name: AgentsMesh Web Console Local
+    description: |
+      Local verification web console flavor. It depends on the local backend and publishes the console on a non-privileged host port.
+    tags: agentsmesh, frontend, web, local
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: localhost:18080
+      description: Local host:port used by the browser runtime for API URLs.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "false"
+      description: Local verification uses plain HTTP.
+    web-local-http-port:
+      type: int
+      value: 13000
+      description: Non-privileged host port published by the local web console.
+  services:
+    http:
+      container: web
+      port: 3000
+      protocol: tcp
+      publish: true
+      host-port: <- $web-local-http-port
+      description: Published local web console endpoint.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/backend-local
+      timeout: 300
+
+web-admin:
+  defines: runnable
+  metadata:
+    name: AgentsMesh Admin Console
+    description: |
+      AgentsMesh administrative web console. It is intended for authenticated operators and is exposed through a dedicated production ingress path or host when inherited for production use.
+    tags: agentsmesh, admin, frontend, web, production
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    agentsmesh-image-tag:
+      type: string
+      value: latest
+      description: Public AgentsMesh Docker image tag to use for the web-admin image.
+    node-env:
+      type: string
+      env: NODE_ENV
+      value: production
+      description: Node runtime environment for the admin console.
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: agentsmesh.local
+      description: External domain or host:port used by the admin browser runtime.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "true"
+      description: Whether the admin browser runtime should generate HTTPS and WSS URLs.
+  containers:
+    web-admin:
+      image: agentsmesh/web-admin
+      image-tag: <- $agentsmesh-image-tag
+      restart: unless-stopped
+  services:
+    http:
+      container: web-admin
+      port: 3001
+      protocol: tcp
+      ingress-routes:
+        admin:
+          path-prefix: /admin
+      description: Authenticated admin console exposed through production ingress.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/backend
+      timeout: 300
+  checks:
+    readiness:
+      attempts: 60
+      initialDelay: 20
+      period: 5
+      code: http-get("http://localhost:3001") error? not
+
+web-admin-local:
+  defines: runnable
+  inherits: agentsmesh/web-admin
+  metadata:
+    name: AgentsMesh Admin Console Local
+    description: |
+      Local verification admin console flavor. It depends on the local backend and publishes the admin console on a non-privileged host port.
+    tags: agentsmesh, admin, frontend, local
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: localhost:18080
+      description: Local host:port used by the admin browser runtime for API URLs.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "false"
+      description: Local verification uses plain HTTP.
+    web-admin-local-http-port:
+      type: int
+      value: 13001
+      description: Non-privileged host port published by the local admin console.
+  services:
+    http:
+      container: web-admin
+      port: 3001
+      protocol: tcp
+      publish: true
+      host-port: <- $web-admin-local-http-port
+      description: Published local admin console endpoint.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/backend-local
+      timeout: 300
+
+relay:
+  defines: runnable
+  metadata:
+    name: AgentsMesh Relay
+    description: |
+      AgentsMesh terminal streaming relay. It reads the backend service URL from Monk connections and uses the same generated JWT and internal API secrets as the backend.
+    tags: agentsmesh, relay, websocket, terminal, production
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    agentsmesh-image-tag:
+      type: string
+      value: latest
+      description: Public AgentsMesh Docker image tag to use for the relay image.
+    relay-server-address:
+      type: string
+      env: SERVER_ADDRESS
+      value: :8090
+      description: HTTP listen address for the relay container.
+    ws-read-buffer-size:
+      type: int
+      env: WS_READ_BUFFER_SIZE
+      value: 4096
+      description: WebSocket read buffer size.
+    ws-write-buffer-size:
+      type: int
+      env: WS_WRITE_BUFFER_SIZE
+      value: 4096
+      description: WebSocket write buffer size.
+    backend-host:
+      type: string
+      value: <- connection-hostname("backend")
+      description: Backend hostname read from the Monk connection.
+    backend-port:
+      type: int
+      value: <- connection-port("backend")
+      description: Backend HTTP port read from the Monk connection.
+    backend-url:
+      type: string
+      env: BACKEND_URL
+      value: <- `http://${backend-host}:${backend-port}`
+      description: Backend URL built from Monk connection details.
+    jwt-secret:
+      type: string
+      env: JWT_SECRET
+      value: <- $agentsmesh-jwt-secret
+      description: Sensitive JWT signing secret shared with the backend. Inheriting production templates that need stable credentials must set agentsmesh-jwt-secret with secret("agentsmesh-jwt-secret").
+    agentsmesh-jwt-secret:
+      type: string
+      value: <- secret("agentsmesh-jwt-secret")
+      description: Sensitive JWT signing secret read from the plain Monk secret agentsmesh-jwt-secret and shared by backend and relay.
+    internal-api-secret:
+      type: string
+      env: INTERNAL_API_SECRET
+      value: <- $agentsmesh-internal-api-secret
+      description: Sensitive service-to-service API secret shared with the backend. Inheriting production templates that need stable credentials must set agentsmesh-internal-api-secret with secret("agentsmesh-internal-api-secret").
+    agentsmesh-internal-api-secret:
+      type: string
+      value: <- secret("agentsmesh-internal-api-secret")
+      description: Sensitive service-to-service API secret read from the plain Monk secret agentsmesh-internal-api-secret and shared by backend and relay.
+    relay-id:
+      type: string
+      env: RELAY_ID
+      value: monk-relay-1
+      description: Relay identifier advertised to the backend.
+    relay-region:
+      type: string
+      env: RELAY_REGION
+      value: local
+      description: Relay region label advertised to the backend.
+    relay-capacity:
+      type: int
+      env: RELAY_CAPACITY
+      value: 1000
+      description: Maximum relay capacity advertised to the backend.
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: agentsmesh.local
+      description: External domain or host:port used when generating browser relay URLs.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "true"
+      description: Whether the relay should generate secure websocket URLs.
+    session-keep-alive-duration:
+      type: string
+      env: SESSION_KEEP_ALIVE_DURATION
+      value: 30s
+      description: Duration between relay session keepalive checks.
+    debug:
+      type: string
+      env: DEBUG
+      value: "false"
+      description: Relay debug mode flag.
+  permitted-secrets:
+    agentsmesh-jwt-secret: true
+    agentsmesh-internal-api-secret: true
+  containers:
+    relay:
+      image: agentsmesh/relay
+      image-tag: <- $agentsmesh-image-tag
+      restart: unless-stopped
+  services:
+    http:
+      container: relay
+      port: 8090
+      protocol: tcp
+      ingress-routes:
+        relay:
+          path-prefix: /relay
+          path-rewrite:
+            regex: "^/relay/?(.*)"
+            to: "/$1"
+      description: Relay websocket and HTTP health endpoint exposed through production ingress.
+  connections:
+    backend:
+      target: agentsmesh/backend
+      service: http
+      description: Backend API connection used by the relay.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/backend
+      timeout: 300
+  checks:
+    readiness:
+      attempts: 60
+      initialDelay: 10
+      period: 5
+      code: http-get("http://localhost:8090/health") contains?("ok")
+
+relay-local:
+  defines: runnable
+  inherits: agentsmesh/relay
+  metadata:
+    name: AgentsMesh Relay Local
+    description: |
+      Local verification relay flavor. It connects to the local backend and publishes its health endpoint on a non-privileged host port.
+    tags: agentsmesh, relay, websocket, local
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  variables:
+    primary-domain:
+      type: string
+      env: PRIMARY_DOMAIN
+      value: localhost:18080
+      description: Local host:port used when generating browser relay URLs.
+    use-https:
+      type: string
+      env: USE_HTTPS
+      value: "false"
+      description: Local verification uses plain HTTP and websocket URLs.
+    relay-local-http-port:
+      type: int
+      value: 18090
+      description: Non-privileged host port published by the local relay endpoint.
+  services:
+    http:
+      container: relay
+      port: 8090
+      protocol: tcp
+      publish: true
+      host-port: <- $relay-local-http-port
+      description: Published local relay HTTP and websocket endpoint.
+  connections:
+    backend:
+      target: agentsmesh/backend-local
+      service: http
+      description: Local backend API connection used by the relay.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh/backend-local
+      timeout: 300
