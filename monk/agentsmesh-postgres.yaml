@@ -1,0 +1,183 @@
+namespace: agentsmesh-postgres
+
+base:
+  defines: runnable
+  inherits: postgresql/db-v16
+  metadata:
+    name: AgentsMesh PostgreSQL with pgvector
+    description: |
+      Reusable PostgreSQL component for AgentsMesh metadata, durable job state, and vector-backed block embeddings. It inherits the catalog PostgreSQL package and swaps the public image to pgvector/pgvector:pg16 so AgentsMesh migrations can enable the optional pgvector extension when available. This component is the database itself and does not require a backing service. Applications may also satisfy this dependency with the catalog postgresql/db package or a hosted Neon PostgreSQL package when pgvector support is available there.
+    tags: agentsmesh, postgresql, pgvector, database, component
+    website: https://www.postgresql.org/
+    source: https://github.com/pgvector/pgvector
+    publisher: monk.io
+    private: false
+  variables:
+    postgres-image-tag:
+      type: string
+      value: pg16
+      description: Public pgvector/pgvector Docker image tag to run.
+    db_user:
+      type: string
+      env: POSTGRES_USER
+      value: agentsmesh
+      description: PostgreSQL user created for AgentsMesh database access.
+    db_name:
+      type: string
+      env: POSTGRES_DB
+      value: agentsmesh
+      description: PostgreSQL database name used by AgentsMesh.
+    db_pass:
+      type: string
+      env: POSTGRES_PASSWORD
+      value: <- $agentsmesh-postgres-password
+      description: Sensitive PostgreSQL password supplied by the stack. Inheriting templates that need stable credentials must set agentsmesh-postgres-password with secret("agentsmesh-postgres-password").
+    agentsmesh-postgres-password:
+      type: string
+      value: <- random-uuid
+      description: Sensitive generated PostgreSQL password for self-contained deployments. Inheriting production templates that need stable credentials must set this with secret("agentsmesh-postgres-password").
+  containers:
+    postgres:
+      image: pgvector/pgvector
+      image-tag: <- $postgres-image-tag
+      bash: sh /usr/local/bin/entrypoint.sh
+      restart: unless-stopped
+  services:
+    postgres:
+      container: postgres
+      port: 5432
+      protocol: tcp
+      description: Private PostgreSQL TCP endpoint consumed by AgentsMesh services.
+  checks:
+    readiness:
+      attempts: 30
+      initialDelay: 5
+      period: 5
+      code: exec("postgres", "/bin/sh", "-c", "echo ready") contains?("ready")
+
+example-postgres:
+  defines: runnable
+  inherits: agentsmesh-postgres/base
+  metadata:
+    name: AgentsMesh PostgreSQL Component Example Database
+    description: |
+      Local example database that inherits the reusable AgentsMesh PostgreSQL component. It uses a separate volume and keeps PostgreSQL private to Monk workloads.
+    tags: agentsmesh, postgresql, pgvector, example, local
+    website: https://www.postgresql.org/
+    source: https://github.com/pgvector/pgvector
+    publisher: monk.io
+    private: false
+  variables:
+    postgres-image-tag:
+      type: string
+      value: pg16
+      description: Public pgvector/pgvector Docker image tag to run in the example.
+
+example-health:
+  defines: runnable
+  metadata:
+    name: AgentsMesh PostgreSQL Component Example Health
+    description: |
+      Local HTTP health workload for the PostgreSQL component example. It reads database host and port from Monk connections and returns HTTP 200 from /health after a TCP connection to PostgreSQL succeeds.
+    tags: agentsmesh, postgresql, healthcheck, example, local
+    website: https://www.postgresql.org/
+    source: https://github.com/pgvector/pgvector
+    publisher: monk.io
+    private: false
+  variables:
+    postgres-host:
+      type: string
+      env: POSTGRES_HOST
+      value: <- connection-hostname("postgres")
+      description: PostgreSQL hostname read from the Monk connection.
+    postgres-port:
+      type: int
+      env: POSTGRES_PORT
+      value: <- connection-port("postgres")
+      description: PostgreSQL port read from the Monk connection.
+    health-port:
+      type: int
+      env: HEALTH_PORT
+      value: 8087
+      description: HTTP health service port inside the health container.
+    health-host-port:
+      type: int
+      value: 18087
+      description: Non-privileged host port published by the component example health endpoint.
+  containers:
+    health:
+      image: python
+      image-tag: 3.13-alpine
+      restart: unless-stopped
+      bash: |
+        python - <<'PY'
+        import os
+        import socket
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+
+        host = os.environ["POSTGRES_HOST"]
+        port = int(os.environ["POSTGRES_PORT"])
+        health_port = int(os.environ.get("HEALTH_PORT", "8087"))
+
+        def postgres_ready():
+            with socket.create_connection((host, port), timeout=2):
+                return True
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path != "/health":
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                try:
+                    ok = postgres_ready()
+                except Exception:
+                    ok = False
+                self.send_response(200 if ok else 503)
+                self.send_header("content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status":"ok"}\n' if ok else b'{"status":"error"}\n')
+
+            def log_message(self, fmt, *args):
+                return
+
+        HTTPServer(("0.0.0.0", health_port), Handler).serve_forever()
+        PY
+  services:
+    health:
+      container: health
+      port: <- $health-port
+      protocol: tcp
+      publish: true
+      host-port: <- $health-host-port
+      description: Published local HTTP endpoint for component verification.
+  connections:
+    postgres:
+      target: agentsmesh-postgres/example-postgres
+      service: postgres
+      description: Database connection used by the component example health workload.
+  depends:
+    wait-for:
+      runnables:
+        - agentsmesh-postgres/example-postgres
+      timeout: 120
+
+example:
+  defines: process-group
+  metadata:
+    name: AgentsMesh PostgreSQL Component Example
+    description: |
+      Component example that composes the reusable pgvector-enabled PostgreSQL database with a connected HTTP health workload for local verification.
+    tags: agentsmesh, postgresql, pgvector, example, local
+    website: https://www.postgresql.org/
+    source: https://github.com/pgvector/pgvector
+    publisher: monk.io
+    private: false
+  runnable-list:
+    - agentsmesh-postgres/example-postgres
+    - agentsmesh-postgres/example-health
+  variables:
+    agentsmesh-postgres-password:
+      type: string
+      value: <- random-uuid
+      description: Sensitive generated PostgreSQL password shared by the example database. Inheriting templates that need stable credentials must set this with secret("agentsmesh-postgres-password").

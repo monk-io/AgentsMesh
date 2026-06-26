@@ -1,0 +1,41 @@
+namespace: agentsmesh
+
+stack:
+  defines: process-group
+  metadata:
+    name: AgentsMesh Standalone Stack
+    description: |
+      Secure production-intended AgentsMesh stack with pgvector-enabled PostgreSQL, Redis, MinIO, backend API, user web console, admin console, and relay. Public web-facing services use Monk ingress; PostgreSQL, Redis, MinIO, and backend gRPC stay private. Sensitive values are read with secret(...) from plain Monk secret names such as agentsmesh-postgres-password and are not declared as required MANIFEST secrets.
+    tags: agentsmesh, standalone, postgresql, redis, minio, production
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  runnable-list:
+    - agentsmesh/postgres
+    - agentsmesh/redis
+    - agentsmesh/minio
+    - agentsmesh/backend
+    - agentsmesh/web
+    - agentsmesh/web-admin
+    - agentsmesh/relay
+
+stack-local:
+  defines: process-group
+  metadata:
+    name: AgentsMesh Standalone Local Stack
+    description: |
+      Local verification flavor of the AgentsMesh standalone stack. It uses separate local volumes, publishes HTTP services on non-privileged host ports, and avoids ingress because ingress does not work on local Monk targets.
+    tags: agentsmesh, standalone, postgresql, redis, minio, local
+    website: https://agentsmesh.ai/
+    source: https://github.com/AgentsMesh/AgentsMesh
+    publisher: monk.io
+    private: false
+  runnable-list:
+    - agentsmesh/postgres-local
+    - agentsmesh/redis-local
+    - agentsmesh/minio-local
+    - agentsmesh/backend-local
+    - agentsmesh/web-local
+    - agentsmesh/web-admin-local
+    - agentsmesh/relay-local

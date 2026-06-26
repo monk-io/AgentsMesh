@@ -1,0 +1,5 @@
+LOAD monk/agentsmesh-postgres.yaml
+LOAD monk/agentsmesh-app.yaml
+LOAD monk/agentsmesh-stack.yaml
+
+ENTRY agentsmesh/stack-local
