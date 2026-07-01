@@ -148,7 +148,6 @@ example-health:
       container: health
       port: <- $health-port
       protocol: tcp
-      publish: true
       host-port: <- $health-host-port
       description: Published local HTTP endpoint for component verification.
   connections:

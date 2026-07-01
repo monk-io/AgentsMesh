@@ -493,7 +493,6 @@ backend-local:
       container: backend
       port: 8080
       protocol: tcp
-      publish: true
       host-port: <- $backend-local-http-port
       description: Published local backend HTTP API and health endpoint for external verification.
     grpc:
@@ -621,7 +620,6 @@ web-local:
       container: web
       port: 3000
       protocol: tcp
-      publish: true
       host-port: <- $web-local-http-port
       description: Published local web console endpoint.
   depends:
@@ -719,7 +717,6 @@ web-admin-local:
       container: web-admin
       port: 3001
       protocol: tcp
-      publish: true
       host-port: <- $web-admin-local-http-port
       description: Published local admin console endpoint.
   depends:
@@ -894,7 +891,6 @@ relay-local:
       container: relay
       port: 8090
       protocol: tcp
-      publish: true
       host-port: <- $relay-local-http-port
       description: Published local relay HTTP and websocket endpoint.
   connections:
