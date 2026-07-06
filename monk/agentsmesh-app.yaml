@@ -417,6 +417,9 @@ backend:
       env: DEPLOYMENT_TYPE
       value: selfhosted
       description: AgentsMesh deployment type label.
+    self-path:
+      type: string
+      value: <- self-path
   permitted-secrets:
     agentsmesh-postgres-password: true
     agentsmesh-redis-password: true
@@ -469,7 +472,7 @@ backend:
       attempts: 60
       initialDelay: 20
       period: 5
-      code: http-get("http://localhost:8080/health") contains?("agentsmesh-api")
+      code: http-get-service($self-path, "http", "/health") get-member("body") contains?("agentsmesh-api")
 
 backend-local:
   defines: runnable
@@ -573,6 +576,9 @@ web:
       env: POSTHOG_HOST
       value: ""
       description: Optional PostHog host. Leave empty to disable analytics.
+    self-path:
+      type: string
+      value: <- self-path
   containers:
     web:
       image: agentsmesh/web
@@ -597,7 +603,7 @@ web:
       attempts: 60
       initialDelay: 20
       period: 5
-      code: http-get("http://localhost:3000") error? not
+      code: http-get-service($self-path, "http", "/") get-member("status") 200 equal?
 
 web-local:
   defines: runnable
@@ -671,6 +677,9 @@ web-admin:
       env: USE_HTTPS
       value: "true"
       description: Whether the admin browser runtime should generate HTTPS and WSS URLs.
+    self-path:
+      type: string
+      value: <- self-path
   containers:
     web-admin:
       image: agentsmesh/web-admin
@@ -695,7 +704,7 @@ web-admin:
       attempts: 60
       initialDelay: 20
       period: 5
-      code: http-get("http://localhost:3001") error? not
+      code: http-get-service($self-path, "http", "/") get-member("status") 200 equal?
 
 web-admin-local:
   defines: runnable
@@ -835,6 +844,9 @@ relay:
       env: DEBUG
       value: "false"
       description: Relay debug mode flag.
+    self-path:
+      type: string
+      value: <- self-path
   permitted-secrets:
     agentsmesh-jwt-secret: true
     agentsmesh-internal-api-secret: true
@@ -870,7 +882,7 @@ relay:
       attempts: 60
       initialDelay: 10
       period: 5
-      code: http-get("http://localhost:8090/health") contains?("ok")
+      code: http-get-service($self-path, "http", "/health") get-member("body") contains?("ok")
 
 relay-local:
   defines: runnable
