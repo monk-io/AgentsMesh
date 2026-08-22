@@ -72,10 +72,6 @@ redis:
       type: string
       value: 7-alpine
       description: Public Redis Docker image tag to run.
-    redis-storage-name:
-      type: string
-      value: agentsmesh-redis
-      description: Monk volume subdirectory used for durable Redis append-only data.
     redis-port:
       type: int
       env: REDIS_PORT
@@ -93,10 +89,14 @@ redis:
       image: redis
       image-tag: <- $redis-image-tag
       restart: unless-stopped
-      paths:
-        - <- `${volume-path}/${redis-storage-name}:/data`
+      mounted-volumes:
+        redis-data:
+          path: /data
       bash: |
         /bin/sh -ec 'exec redis-server --appendonly yes --requirepass "$REDIS_PASSWORD" --port "$REDIS_PORT" --dir /data'
+  volumes:
+    redis-data:
+      kind: local
   services:
     redis:
       container: redis
@@ -122,11 +122,6 @@ redis-local:
     source: https://github.com/redis/redis
     publisher: monk.io
     private: false
-  variables:
-    redis-storage-name:
-      type: string
-      value: agentsmesh-redis-local
-      description: Monk volume subdirectory used for local Redis append-only data.
 
 minio:
   defines: runnable
@@ -144,10 +139,6 @@ minio:
       type: string
       value: latest
       description: Public minio/minio Docker image tag to run.
-    minio-storage-name:
-      type: string
-      value: agentsmesh-minio
-      description: Monk volume subdirectory used for durable object data.
     minio-api-port:
       type: int
       value: 9000
@@ -174,9 +165,13 @@ minio:
       image: minio/minio
       image-tag: <- $minio-image-tag
       restart: unless-stopped
-      paths:
-        - <- `${volume-path}/${minio-storage-name}:/data`
+      mounted-volumes:
+        minio-data:
+          path: /data
       bash: minio server /data --console-address ":$MINIO_CONSOLE_PORT"
+  volumes:
+    minio-data:
+      kind: local
   services:
     api:
       container: minio
@@ -207,11 +202,6 @@ minio-local:
     source: https://github.com/minio/minio
     publisher: monk.io
     private: false
-  variables:
-    minio-storage-name:
-      type: string
-      value: agentsmesh-minio-local
-      description: Monk volume subdirectory used for local MinIO object data.
 
 backend:
   defines: runnable
